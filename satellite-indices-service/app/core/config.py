@@ -1,0 +1,42 @@
+from pydantic_settings import BaseSettings
+from typing import List
+import os
+
+class Settings(BaseSettings):
+    # Service configuration
+    SERVICE_NAME: str = "satellite-indices-service"
+    VERSION: str = "1.0.0"
+    DEBUG: bool = False
+    
+    # API Configuration
+    API_PREFIX: str = "/api"
+    PORT: int = 8000
+    HOST: str = "0.0.0.0"
+    
+    # CORS
+    CORS_ORIGINS: List[str] = ["*"]
+    
+    # Google Earth Engine
+    GEE_SERVICE_ACCOUNT: str = os.getenv("GEE_SERVICE_ACCOUNT", "")
+    GEE_PRIVATE_KEY: str = os.getenv("GEE_PRIVATE_KEY", "")
+    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "agrisat-463314")
+    
+    # Supabase integration
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+    
+    # Storage
+    TEMP_STORAGE_PATH: str = "/tmp/satellite-data"
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
+    
+    # Processing limits
+    MAX_CLOUD_COVERAGE: float = 10.0
+    DEFAULT_SCALE: int = 10  # meters
+    MAX_PIXELS: int = 1e13
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+settings = Settings()

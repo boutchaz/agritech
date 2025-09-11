@@ -1,0 +1,281 @@
+import ee
+import json
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+class EarthEngineService:
+    def __init__(self):
+        self.initialized = False
+        
+    def initialize(self):
+        """Initialize Earth Engine with service account credentials"""
+        if self.initialized:
+            return
+            
+        try:
+            if settings.GEE_SERVICE_ACCOUNT and settings.GEE_PRIVATE_KEY:
+                credentials = ee.ServiceAccountCredentials(
+                    settings.GEE_SERVICE_ACCOUNT,
+                    key_data=settings.GEE_PRIVATE_KEY
+                )
+                ee.Initialize(credentials, project=settings.GEE_PROJECT_ID)
+            else:
+                # Fallback to default authentication for development
+                ee.Initialize(project=settings.GEE_PROJECT_ID)
+            
+            self.initialized = True
+            logger.info("Earth Engine initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Earth Engine: {e}")
+            raise
+    
+    def get_sentinel2_collection(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        max_cloud_coverage: float = None
+    ) -> ee.ImageCollection:
+        """Get Sentinel-2 image collection for given parameters"""
+        self.initialize()
+        
+        aoi = ee.Geometry(geometry)
+        max_cloud = max_cloud_coverage or settings.MAX_CLOUD_COVERAGE
+        
+        collection = (
+            ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+            .filterBounds(aoi)
+            .filterDate(start_date, end_date)
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud))
+        )
+        
+        return collection
+    
+    def calculate_vegetation_indices(
+        self,
+        image: ee.Image,
+        indices: List[str]
+    ) -> Dict[str, ee.Image]:
+        """Calculate requested vegetation indices"""
+        
+        # Select bands
+        bands = {
+            'blue': image.select('B2'),
+            'green': image.select('B3'),
+            'red': image.select('B4'),
+            'red_edge': image.select('B5'),
+            'red_edge_2': image.select('B6'),
+            'red_edge_3': image.select('B7'),
+            'nir': image.select('B8'),
+            'nir_narrow': image.select('B8A'),
+            'swir1': image.select('B11'),
+            'swir2': image.select('B12')
+        }
+        
+        results = {}
+        
+        # NDVI
+        if 'NDVI' in indices:
+            results['NDVI'] = bands['nir'].subtract(bands['red']).divide(
+                bands['nir'].add(bands['red'])
+            ).rename('NDVI')
+        
+        # NDRE
+        if 'NDRE' in indices:
+            results['NDRE'] = bands['nir'].subtract(bands['red_edge']).divide(
+                bands['nir'].add(bands['red_edge'])
+            ).rename('NDRE')
+        
+        # NDMI
+        if 'NDMI' in indices:
+            results['NDMI'] = bands['nir'].subtract(bands['swir1']).divide(
+                bands['nir'].add(bands['swir1'])
+            ).rename('NDMI')
+        
+        # MNDWI
+        if 'MNDWI' in indices:
+            results['MNDWI'] = bands['green'].subtract(bands['swir1']).divide(
+                bands['green'].add(bands['swir1'])
+            ).rename('MNDWI')
+        
+        # GCI
+        if 'GCI' in indices:
+            results['GCI'] = bands['nir'].divide(bands['green']).subtract(1).rename('GCI')
+        
+        # SAVI
+        if 'SAVI' in indices:
+            L = 0.5
+            results['SAVI'] = bands['nir'].subtract(bands['red']).multiply(1 + L).divide(
+                bands['nir'].add(bands['red']).add(L)
+            ).rename('SAVI')
+        
+        # OSAVI
+        if 'OSAVI' in indices:
+            results['OSAVI'] = bands['nir'].subtract(bands['red']).divide(
+                bands['nir'].add(bands['red']).add(0.16)
+            ).rename('OSAVI')
+        
+        # MSAVI2
+        if 'MSAVI2' in indices:
+            results['MSAVI2'] = (
+                bands['nir'].multiply(2).add(1).subtract(
+                    bands['nir'].multiply(2).add(1).pow(2).subtract(
+                        bands['nir'].subtract(bands['red']).multiply(8)
+                    ).sqrt()
+                ).divide(2)
+            ).rename('MSAVI2')
+        
+        # PRI
+        if 'PRI' in indices:
+            results['PRI'] = bands['red_edge'].subtract(bands['red_edge_2']).divide(
+                bands['red_edge'].add(bands['red_edge_2'])
+            ).rename('PRI')
+        
+        # MSI
+        if 'MSI' in indices:
+            results['MSI'] = bands['swir1'].divide(bands['nir']).rename('MSI')
+        
+        # MCARI
+        if 'MCARI' in indices:
+            results['MCARI'] = (
+                bands['red_edge'].subtract(bands['red']).subtract(
+                    bands['red_edge'].subtract(bands['green']).multiply(0.2)
+                ).multiply(bands['red_edge'].divide(bands['green']))
+            ).rename('MCARI')
+        
+        # TCARI
+        if 'TCARI' in indices:
+            results['TCARI'] = ee.Image(3).multiply(
+                bands['red_edge'].subtract(bands['red']).subtract(
+                    bands['red_edge'].subtract(bands['green']).multiply(0.2).multiply(
+                        bands['red_edge'].divide(bands['red'])
+                    )
+                )
+            ).rename('TCARI')
+        
+        return results
+    
+    def get_time_series(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        index: str,
+        interval: str = 'month'
+    ) -> List[Dict]:
+        """Get time series data for a specific index"""
+        self.initialize()
+        
+        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
+        aoi = ee.Geometry(geometry)
+        
+        # Calculate index for each image
+        def calculate_index(image):
+            indices = self.calculate_vegetation_indices(image, [index])
+            return image.set({
+                'date': image.date().format('YYYY-MM-dd'),
+                'mean_value': indices[index].reduceRegion(
+                    reducer=ee.Reducer.mean(),
+                    geometry=aoi,
+                    scale=settings.DEFAULT_SCALE,
+                    maxPixels=settings.MAX_PIXELS
+                ).get(index)
+            })
+        
+        # Map over collection
+        processed = collection.map(calculate_index)
+        
+        # Extract time series
+        features = processed.reduceColumns(
+            ee.Reducer.toList(2),
+            ['date', 'mean_value']
+        ).get('list')
+        
+        # Convert to Python list
+        time_series = features.getInfo()
+        
+        return [
+            {'date': item[0], 'value': item[1]} 
+            for item in time_series if item[1] is not None
+        ]
+    
+    def export_index_map(
+        self,
+        geometry: Dict,
+        date: str,
+        index: str,
+        scale: int = None
+    ) -> str:
+        """Export index map as GeoTIFF URL"""
+        self.initialize()
+        
+        # Get the image for the specific date
+        collection = self.get_sentinel2_collection(
+            geometry,
+            date,
+            (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        )
+        
+        if collection.size().getInfo() == 0:
+            raise ValueError(f"No images found for date {date}")
+        
+        image = ee.Image(collection.first())
+        indices = self.calculate_vegetation_indices(image, [index])
+        index_image = indices[index]
+        
+        # Clip to AOI
+        aoi = ee.Geometry(geometry)
+        clipped = index_image.clip(aoi)
+        
+        # Get download URL
+        url = clipped.getDownloadUrl({
+            'scale': scale or settings.DEFAULT_SCALE,
+            'crs': 'EPSG:4326',
+            'fileFormat': 'GeoTIFF',
+            'region': aoi
+        })
+        
+        return url
+    
+    def get_statistics(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        indices: List[str]
+    ) -> Dict:
+        """Calculate statistics for multiple indices over a date range"""
+        self.initialize()
+        
+        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
+        aoi = ee.Geometry(geometry)
+        
+        # Get the median composite
+        composite = collection.median()
+        
+        # Calculate all indices
+        index_images = self.calculate_vegetation_indices(composite, indices)
+        
+        statistics = {}
+        for index_name, index_image in index_images.items():
+            stats = index_image.reduceRegion(
+                reducer=ee.Reducer.percentile([2, 25, 50, 75, 98]).combine(
+                    ee.Reducer.mean(), '', True
+                ).combine(
+                    ee.Reducer.stdDev(), '', True
+                ),
+                geometry=aoi,
+                scale=settings.DEFAULT_SCALE,
+                maxPixels=settings.MAX_PIXELS
+            )
+            
+            statistics[index_name] = stats.getInfo()
+        
+        return statistics
+
+# Singleton instance
+earth_engine_service = EarthEngineService()

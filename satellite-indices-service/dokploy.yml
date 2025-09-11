@@ -1,0 +1,51 @@
+name: satellite-indices-service
+type: dockerfile
+
+build:
+  dockerfile: Dockerfile
+  context: .
+
+ports:
+  - 8000:8000
+
+env:
+  - DEBUG=false
+  - GEE_SERVICE_ACCOUNT=${GEE_SERVICE_ACCOUNT}
+  - GEE_PRIVATE_KEY=${GEE_PRIVATE_KEY}
+  - GEE_PROJECT_ID=${GEE_PROJECT_ID}
+  - SUPABASE_URL=${SUPABASE_URL}
+  - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+  - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+
+healthcheck:
+  path: /api/health/ready
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+resources:
+  limits:
+    memory: 2Gi
+    cpu: 1000m
+  requests:
+    memory: 512Mi
+    cpu: 250m
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPU: 70
+  targetMemory: 80
+
+volumes:
+  - name: temp-data
+    path: /tmp/satellite-data
+    size: 10Gi
+
+domains:
+  - satellite-api.yourdomain.com
+
+ssl:
+  enabled: true
+  autoRenew: true
