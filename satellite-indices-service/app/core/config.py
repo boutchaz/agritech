@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     # Google Earth Engine
     GEE_SERVICE_ACCOUNT: str = os.getenv("GEE_SERVICE_ACCOUNT", "")
     GEE_PRIVATE_KEY: str = os.getenv("GEE_PRIVATE_KEY", "")
-    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "agrisat-463314")
+    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "ndvi-460519")
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI")
     
     # Supabase integration
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
