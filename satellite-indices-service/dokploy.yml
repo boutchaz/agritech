@@ -40,7 +40,7 @@ http:
     frontend-dashboard-service:
       loadBalancer:
         servers:
-          - url: http://agritech-dashboard-g6sumg-frontend:80
+          - url: http://agritech-frontend:80
         passHostHeader: true
 
   middlewares:
