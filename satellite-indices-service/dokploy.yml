@@ -14,6 +14,13 @@ http:
       entryPoints:
         - web
 
+    # --- FRONTEND DASHBOARD ---
+    frontend-dashboard-router-http:
+      rule: Host(`agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)
+      service: frontend-dashboard-service
+      entryPoints:
+        - web
+
   services:
     # Dokploy UI service
     dokploy-service-app:
@@ -27,6 +34,13 @@ http:
       loadBalancer:
         servers:
           - url: http://satellite-indices-service:8000
+        passHostHeader: true
+
+    # Frontend dashboard service
+    frontend-dashboard-service:
+      loadBalancer:
+        servers:
+          - url: http://agritech-dashboard-g6sumg-frontend:80
         passHostHeader: true
 
   middlewares:

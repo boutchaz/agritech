@@ -18,7 +18,7 @@ services:
       - ./temp-data:/tmp/satellite-data
     restart: unless-stopped
     networks:
-      - app-network
+      - agritech-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -27,7 +27,7 @@ services:
       start_period: 40s
 
 networks:
-  app-network:
+  agritech-network:
     driver: bridge
 
 volumes:
