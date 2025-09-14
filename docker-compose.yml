@@ -8,11 +8,15 @@ services:
       dockerfile: Dockerfile
     container_name: agritech-frontend
     ports:
-      - "3000:80"
+      - "3002:80"
     environment:
       - NODE_ENV=production
       - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-https://najvfshknxkwzorlozre.supabase.co}
       - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agritech-frontend.rule=Host(`agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)"
+      - "traefik.http.services.agritech-frontend.loadbalancer.server.port=80"
     depends_on:
       - satellite-service
     restart: unless-stopped
