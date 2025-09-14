@@ -6,7 +6,10 @@ from app.core.config import settings
 app = FastAPI(
     title="Satellite Indices Service",
     description="Agricultural satellite imagery analysis service for vegetation indices calculation",
-    version="1.0.0"
+    version="1.0.0",
+    root_path="/",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Configure CORS
