@@ -1,49 +1,36 @@
-name: satellite-indices-service
-type: dockerfile
+http:
+  routers:
+    # --- DOKPLOY UI ---
+    dokploy-router-app:
+      rule: Host(`dokploy.docker.localhost`) && PathPrefix(`/`)
+      service: dokploy-service-app
+      entryPoints:
+        - web
 
-build:
-  dockerfile: Dockerfile
-  context: .
+    # --- SATELLITE INDICES SERVICE ---
+    satellite-indices-router-http:
+      rule: Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)
+      service: satellite-indices-service
+      entryPoints:
+        - web
 
-ports:
-  - 8000:8000
+  services:
+    # Dokploy UI service
+    dokploy-service-app:
+      loadBalancer:
+        servers:
+          - url: http://dokploy:3000
+        passHostHeader: true
 
-env:
-  - DEBUG=false
-  - GEE_SERVICE_ACCOUNT=${GEE_SERVICE_ACCOUNT}
-  - GEE_PRIVATE_KEY=${GEE_PRIVATE_KEY}
-  - GEE_PROJECT_ID=${GEE_PROJECT_ID}
-  - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-  - SUPABASE_URL=${SUPABASE_URL}
-  - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    # Satellite indices service
+    satellite-indices-service:
+      loadBalancer:
+        servers:
+          - url: http://satellite-indices-service:8000
+        passHostHeader: true
 
-healthcheck:
-  path: /api/health/
-  interval: 30s
-  timeout: 10s
-  retries: 3
-
-resources:
-  limits:
-    memory: 2Gi
-    cpu: 1000m
-  requests:
-    memory: 512Mi
-    cpu: 250m
-
-autoscaling:
-  enabled: true
-  minReplicas: 1
-  maxReplicas: 5
-  targetCPU: 70
-  targetMemory: 80
-
-volumes:
-  - name: temp-data
-    path: /tmp/satellite-data
-    size: 10Gi
-
-
-ssl:
-  enabled: true
-  autoRenew: true
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true

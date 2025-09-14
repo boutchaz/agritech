@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # Google Earth Engine
     GEE_SERVICE_ACCOUNT: str = os.getenv("GEE_SERVICE_ACCOUNT", "")
     GEE_PRIVATE_KEY: str = os.getenv("GEE_PRIVATE_KEY", "")
-    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "ndvi-460519")
+    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "sublime-seat-428722-n5")
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI")
     
     # Supabase integration
