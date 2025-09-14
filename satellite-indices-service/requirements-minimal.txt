@@ -1,0 +1,26 @@
+# Minimal requirements for basic functionality
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Google Earth Engine
+earthengine-api>=0.1.380
+google-auth>=2.23.0
+
+# Basic data processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# HTTP Client
+httpx>=0.25.0
+aiofiles>=23.2.0
+
+# Supabase Integration
+supabase>=2.0.0
+
+# Logging
+python-json-logger>=2.0.0
+
+# Environment
+python-dotenv>=1.0.0

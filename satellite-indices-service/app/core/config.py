@@ -23,9 +23,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI")
     
     # Supabase integration
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "http://agritech-supabase-652186-5-75-154-125.traefik.me")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ")
     
     # Storage
     TEMP_STORAGE_PATH: str = "/tmp/satellite-data"

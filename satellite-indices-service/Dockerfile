@@ -6,18 +6,31 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     gcc \
     g++ \
+    build-essential \
+    libproj-dev \
+    libgeos-dev \
+    libspatialite-dev \
+    libsqlite3-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Set GDAL environment variables
 ENV GDAL_CONFIG=/usr/bin/gdal-config
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
+ENV PROJ_LIB=/usr/share/proj
 
 WORKDIR /app
 
+# Upgrade pip first
+RUN pip install --upgrade pip
+
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Python dependencies with better error handling
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
