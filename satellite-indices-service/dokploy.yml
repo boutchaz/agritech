@@ -45,5 +45,4 @@ volumes:
 
 
 ssl:
-  enabled: true
-  autoRenew: true
+  enabled: false
