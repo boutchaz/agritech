@@ -18,7 +18,7 @@ env:
   - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 
 healthcheck:
-  path: /api/health/ready
+  path: /api/health/
   interval: 30s
   timeout: 10s
   retries: 3
@@ -43,8 +43,6 @@ volumes:
     path: /tmp/satellite-data
     size: 10Gi
 
-domains:
-  - satellite-api.yourdomain.com
 
 ssl:
   enabled: true
