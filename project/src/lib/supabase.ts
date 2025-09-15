@@ -9,5 +9,55 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Default farm ID for demo purposes
-export const DEFAULT_FARM_ID = '123e4567-e89b-12d3-a456-426614174000';
+// Database types for better TypeScript support
+export type Database = {
+  public: {
+    Tables: {
+      organizations: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          name: string;
+          slug: string;
+          description?: string;
+        };
+        Update: {
+          name?: string;
+          slug?: string;
+          description?: string;
+        };
+      };
+      farms: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          location: string;
+          size: number;
+          manager_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          organization_id: string;
+          name: string;
+          location: string;
+          size: number;
+          manager_id?: string;
+        };
+        Update: {
+          name?: string;
+          location?: string;
+          size?: number;
+          manager_id?: string;
+        };
+      };
+    };
+  };
+};

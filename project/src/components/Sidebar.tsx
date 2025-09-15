@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 import { Menu, Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet } from 'lucide-react';
 import type { Module } from '../types';
 
@@ -20,6 +20,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const currentPath = currentPath;
 
   const getModuleIcon = (iconName: string) => {
     switch (iconName) {
@@ -54,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleNavigation = (path: string) => {
     onModuleChange(path.replace('/', ''));
-    navigate(path);
+    navigate({ to: path });
   };
 
   const agricultureModules = modules.filter(m => m.category === 'agriculture');
@@ -73,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/dashboard')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            location.pathname === '/dashboard'
+            currentPath === '/dashboard'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
@@ -85,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/soil-analysis')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            location.pathname === '/soil-analysis'
+            currentPath === '/soil-analysis'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
@@ -97,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/parcels')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            location.pathname === '/parcels'
+            currentPath === '/parcels'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
@@ -109,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/stock')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            location.pathname === '/stock'
+            currentPath === '/stock'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
@@ -121,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/infrastructure')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            location.pathname === '/infrastructure'
+            currentPath === '/infrastructure'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
@@ -138,7 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={() => handleNavigation('/employees')}
             className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              location.pathname === '/employees'
+              currentPath === '/employees'
                 ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
@@ -149,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={() => handleNavigation('/day-laborers')}
             className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              location.pathname === '/day-laborers'
+              currentPath === '/day-laborers'
                 ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
@@ -167,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={() => handleNavigation('/utilities')}
             className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              location.pathname === '/utilities'
+              currentPath === '/utilities'
                 ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
@@ -186,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               key={module.id}
               onClick={() => handleNavigation(`/${module.id}`)}
               className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-                location.pathname === `/${module.id}`
+                currentPath === `/${module.id}`
                   ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
@@ -206,7 +208,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               key={module.id}
               onClick={() => handleNavigation(`/${module.id}`)}
               className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-                location.pathname === `/${module.id}`
+                currentPath === `/${module.id}`
                   ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
@@ -230,7 +232,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleNavigation('/reports')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${
-            location.pathname === '/reports' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : ''
+            currentPath === '/reports' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : ''
           }`}
         >
           <FileSpreadsheet className="h-5 w-5" />

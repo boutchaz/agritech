@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
-import { supabase, DEFAULT_FARM_ID } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface TaskCategory {
   id: string;
@@ -35,6 +36,7 @@ interface DayLaborer {
 }
 
 const DayLaborerManagement: React.FC = () => {
+  const { currentOrganization, currentFarm } = useAuth();
   const [laborers, setLaborers] = useState<DayLaborer[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ const DayLaborerManagement: React.FC = () => {
             )
           )
         `)
-        .eq('farm_id', DEFAULT_FARM_ID)
+        .eq('organization_id', currentOrganization?.id)
         .order('last_name');
 
       if (error) throw error;
@@ -108,7 +110,7 @@ const DayLaborerManagement: React.FC = () => {
     try {
       const { data: laborer, error: laborerError } = await supabase
         .from('day_laborers')
-        .insert([{ ...newLaborer, farm_id: DEFAULT_FARM_ID }])
+        .insert([{ ...newLaborer, organization_id: currentOrganization?.id }])
         .select()
         .single();
 
@@ -155,7 +157,7 @@ const DayLaborerManagement: React.FC = () => {
         .from('day_laborers')
         .update(laborer)
         .eq('id', laborer.id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 
@@ -175,7 +177,7 @@ const DayLaborerManagement: React.FC = () => {
         .from('day_laborers')
         .delete()
         .eq('id', id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Package, ShoppingCart, AlertTriangle, Search, Edit2, Trash2, X } from 'lucide-react';
-import { supabase, DEFAULT_FARM_ID } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface Product {
   id: string;
@@ -35,6 +36,7 @@ interface Purchase {
 }
 
 const StockManagement: React.FC = () => {
+  const { currentOrganization, currentFarm } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +67,14 @@ const StockManagement: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [currentOrganization]);
 
   const fetchProducts = async () => {
+    if (!currentOrganization) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('inventory')
@@ -82,7 +89,7 @@ const StockManagement: React.FC = () => {
             code
           )
         `)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization.id);
 
       if (error) throw error;
       setProducts(data || []);
@@ -100,7 +107,8 @@ const StockManagement: React.FC = () => {
         .from('inventory')
         .insert([{
           ...newProduct,
-          farm_id: DEFAULT_FARM_ID
+          organization_id: currentOrganization.id,
+          farm_id: currentFarm?.id || null
         }])
         .select()
         .single();
@@ -132,7 +140,8 @@ const StockManagement: React.FC = () => {
         .from('purchases')
         .insert([{
           ...newPurchase,
-          farm_id: DEFAULT_FARM_ID,
+          organization_id: currentOrganization.id,
+          farm_id: currentFarm?.id || null,
           total_price: newPurchase.quantity * newPurchase.price_per_unit
         }])
         .select()
@@ -152,7 +161,7 @@ const StockManagement: React.FC = () => {
             supplier: newPurchase.supplier
           })
           .eq('id', product.id)
-          .eq('farm_id', DEFAULT_FARM_ID);
+          .eq('organization_id', currentOrganization.id);
 
         if (updateError) throw updateError;
 
@@ -192,7 +201,7 @@ const StockManagement: React.FC = () => {
         .from('inventory')
         .delete()
         .eq('id', id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization.id);
 
       if (error) throw error;
 

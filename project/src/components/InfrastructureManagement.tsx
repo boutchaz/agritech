@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask } from 'lucide-react';
-import { supabase, DEFAULT_FARM_ID } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface Structure {
   id: string;
@@ -57,6 +58,7 @@ const BASIN_SHAPES = [
 ];
 
 const InfrastructureManagement: React.FC = () => {
+  const { currentOrganization, currentFarm } = useAuth();
   const [structures, setStructures] = useState<Structure[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ const InfrastructureManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('structures')
         .select('*')
-        .eq('farm_id', DEFAULT_FARM_ID)
+        .eq('organization_id', currentOrganization?.id)
         .order('name');
 
       if (error) throw error;
@@ -515,7 +517,7 @@ const InfrastructureManagement: React.FC = () => {
         .from('structures')
         .insert([{
           ...newStructure,
-          farm_id: DEFAULT_FARM_ID
+          organization_id: currentOrganization?.id
         }])
         .select()
         .single();
@@ -547,7 +549,7 @@ const InfrastructureManagement: React.FC = () => {
         .from('structures')
         .update(editingStructure)
         .eq('id', editingStructure.id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 
@@ -569,7 +571,7 @@ const InfrastructureManagement: React.FC = () => {
         .from('structures')
         .delete()
         .eq('id', id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone } from 'lucide-react';
-import { supabase, DEFAULT_FARM_ID } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface Utility {
   id: string;
@@ -21,6 +22,7 @@ const UTILITY_TYPES = [
 ];
 
 const UtilitiesManagement: React.FC = () => {
+  const { currentOrganization, currentFarm } = useAuth();
   const [utilities, setUtilities] = useState<Utility[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ const UtilitiesManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('utilities')
         .select('*')
-        .eq('farm_id', DEFAULT_FARM_ID)
+        .eq('organization_id', currentOrganization?.id)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -62,7 +64,7 @@ const UtilitiesManagement: React.FC = () => {
         .from('utilities')
         .insert([{
           ...newUtility,
-          farm_id: DEFAULT_FARM_ID
+          organization_id: currentOrganization?.id
         }])
         .select()
         .single();
@@ -91,7 +93,7 @@ const UtilitiesManagement: React.FC = () => {
         .from('utilities')
         .update(editingUtility)
         .eq('id', editingUtility.id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 
@@ -113,7 +115,7 @@ const UtilitiesManagement: React.FC = () => {
         .from('utilities')
         .delete()
         .eq('id', id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 

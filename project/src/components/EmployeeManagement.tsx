@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
-import { supabase, DEFAULT_FARM_ID } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface Employee {
   id: string;
@@ -16,6 +17,7 @@ interface Employee {
 }
 
 const EmployeeManagement: React.FC = () => {
+  const { currentOrganization, currentFarm } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ const EmployeeManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('farm_id', DEFAULT_FARM_ID)
+        .eq('organization_id', currentOrganization?.id)
         .order('last_name');
 
       if (error) throw error;
@@ -62,7 +64,7 @@ const EmployeeManagement: React.FC = () => {
         .from('employees')
         .insert([{
           ...newEmployee,
-          farm_id: DEFAULT_FARM_ID
+          organization_id: currentOrganization?.id
         }])
         .select()
         .single();
@@ -96,7 +98,7 @@ const EmployeeManagement: React.FC = () => {
         .from('employees')
         .update(editingEmployee)
         .eq('id', editingEmployee.id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 
@@ -118,7 +120,7 @@ const EmployeeManagement: React.FC = () => {
         .from('employees')
         .delete()
         .eq('id', id)
-        .eq('farm_id', DEFAULT_FARM_ID);
+        .eq('organization_id', currentOrganization?.id);
 
       if (error) throw error;
 

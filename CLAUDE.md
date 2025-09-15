@@ -47,7 +47,8 @@ npm run preview    # Preview production build
 - **Vite** as build tool
 - **Tailwind CSS** for styling
 - **Supabase** for backend services
-- **React Router** for navigation
+- **TanStack Query** for data fetching and caching
+- **TanStack Router** for type-safe routing and navigation
 - **Recharts** for data visualization
 - **OpenLayers** (`ol`) for mapping
 - **Lucide React** for icons
@@ -56,6 +57,42 @@ npm run preview    # Preview production build
 The application manages various agricultural modules:
 - **Agriculture**: Fruit Trees, Mushrooms, Greenhouses, Hydroponics, Market Gardening, Aquaculture, Beekeeping
 - **Livestock**: Cattle, Camels, Goats, Laying Hens, Chicks, Broilers, Incubators
+
+### Data Fetching Guidelines
+**ALWAYS use TanStack Query for all data fetching operations.** This includes:
+- API calls to Supabase
+- Calls to the Satellite Indices Service
+- Any external API requests
+- Local state management for server data
+
+**Do NOT use:**
+- `useEffect` with `fetch` or `axios` directly
+- `useState` for server state
+- Manual loading/error state management
+
+**Use TanStack Query patterns:**
+- `useQuery` for fetching data
+- `useMutation` for creating/updating/deleting data
+- `useQueryClient` for cache management
+- Custom hooks that wrap TanStack Query hooks
+
+### Routing Guidelines
+**ALWAYS use TanStack Router for all navigation and routing.** This includes:
+- File-based routing in `/src/routes/` directory
+- Type-safe navigation with `useNavigate()` hook
+- Route parameters and search params with full TypeScript support
+- Route guards and data loading with `beforeLoad`
+
+**Do NOT use:**
+- React Router (`react-router-dom`)
+- Manual URL manipulation
+- `window.location` for navigation
+
+**Use TanStack Router patterns:**
+- `useNavigate()` for programmatic navigation
+- `useLocation()` for current route information
+- `createFileRoute()` for route definitions
+- `beforeLoad` for route guards and data loading
 
 ### Environment Variables
 ```
