@@ -190,6 +190,30 @@ CREATE TABLE IF NOT EXISTS public.activities (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Soil analyses table (for soil testing and analysis data)
+CREATE TABLE IF NOT EXISTS public.soil_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parcel_id UUID REFERENCES public.parcels(id) ON DELETE CASCADE,
+    test_type_id UUID, -- Reference to test type (can be extended later)
+    analysis_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    physical JSONB, -- {texture, ph, organicMatter, moisture, temperature, etc.}
+    chemical JSONB, -- {nitrogen, phosphorus, potassium, micronutrients, etc.}
+    biological JSONB, -- {microbialActivity, earthwormCount, etc.}
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Test types table (for different types of soil analysis)
+CREATE TABLE IF NOT EXISTS public.test_types (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT,
+    parameters JSONB, -- Define what parameters this test type measures
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =====================================================
 -- STEP 2: CREATE HELPFUL FUNCTIONS
 -- =====================================================
@@ -398,6 +422,8 @@ DROP TRIGGER IF EXISTS update_farms_updated_at ON public.farms;
 DROP TRIGGER IF EXISTS update_parcels_updated_at ON public.parcels;
 DROP TRIGGER IF EXISTS update_inventory_updated_at ON public.inventory;
 DROP TRIGGER IF EXISTS update_activities_updated_at ON public.activities;
+DROP TRIGGER IF EXISTS update_soil_analyses_updated_at ON public.soil_analyses;
+DROP TRIGGER IF EXISTS update_test_types_updated_at ON public.test_types;
 
 -- Create trigger to auto-create user profiles
 CREATE TRIGGER on_auth_user_created
@@ -433,6 +459,14 @@ CREATE TRIGGER update_activities_updated_at
     BEFORE UPDATE ON public.activities
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER update_soil_analyses_updated_at
+    BEFORE UPDATE ON public.soil_analyses
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_test_types_updated_at
+    BEFORE UPDATE ON public.test_types
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 -- =====================================================
 -- STEP 4: GRANT PERMISSIONS
 -- =====================================================
@@ -466,6 +500,9 @@ CREATE INDEX IF NOT EXISTS idx_activities_organization_id ON public.activities(o
 CREATE INDEX IF NOT EXISTS idx_activities_farm_id ON public.activities(farm_id);
 CREATE INDEX IF NOT EXISTS idx_activities_activity_type ON public.activities(activity_type);
 CREATE INDEX IF NOT EXISTS idx_activities_status ON public.activities(status);
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_parcel_id ON public.soil_analyses(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_analysis_date ON public.soil_analyses(analysis_date);
+CREATE INDEX IF NOT EXISTS idx_test_types_name ON public.test_types(name);
 
 -- =====================================================
 -- STEP 6: INSERT SAMPLE DATA (Optional)

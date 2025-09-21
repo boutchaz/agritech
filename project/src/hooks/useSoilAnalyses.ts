@@ -30,10 +30,25 @@ export function useSoilAnalyses(farmId: string) {
       setLoading(true);
       setError(null);
 
+      // First get all parcels for this farm
+      const { data: parcels, error: parcelsError } = await supabase
+        .from('parcels')
+        .select('id')
+        .eq('farm_id', farmId);
+
+      if (parcelsError) throw parcelsError;
+
+      if (!parcels || parcels.length === 0) {
+        setAnalyses([]);
+        return;
+      }
+
+      // Then get soil analyses for those parcels
+      const parcelIds = parcels.map(p => p.id);
       const { data, error: supabaseError } = await supabase
         .from('soil_analyses')
-        .select('*, parcels!inner(*, crops!inner(farm_id))')
-        .eq('parcels.crops.farm_id', farmId)
+        .select('*')
+        .in('parcel_id', parcelIds)
         .order('analysis_date', { ascending: false });
 
       if (supabaseError) throw supabaseError;
