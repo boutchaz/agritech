@@ -64,3 +64,23 @@ export interface UserProfile {
   timezone: string;
   language: string;
 }
+
+// Soil Analysis types
+export interface SoilAnalysis {
+  physical: {
+    texture: string;
+    ph: number;
+    organicMatter: number;
+    soilType: string;
+  };
+  chemical: {
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+  };
+  biological: {
+    microbialActivity: string;
+    earthwormCount: number;
+  };
+  recommendations: string[];
+}

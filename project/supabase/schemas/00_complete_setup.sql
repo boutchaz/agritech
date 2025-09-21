@@ -1,16 +1,15 @@
 -- =====================================================
--- COMPLETE SUPABASE SETUP FOR AGRITECH PLATFORM
+-- COMPLETE AGRITECH DATABASE SETUP
 -- =====================================================
--- Single script to set up everything for self-hosted Supabase
+-- Single script to set up everything for the AgriTech platform
+-- This consolidates all previous SQL files into one organized setup
 -- Run this once on a fresh Supabase instance to configure the entire database
--- Compatible with MCP (Model Context Protocol) integration
--- Harmonized schema with all required columns
 
 -- =====================================================
 -- STEP 1: CREATE CORE TABLES
 -- =====================================================
 
--- User profiles table (MCP compatible)
+-- User profiles table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT,
@@ -35,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Organizations table (MCP compatible with all required columns)
+-- Organizations table
 CREATE TABLE IF NOT EXISTS public.organizations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -73,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.organization_users (
     UNIQUE(organization_id, user_id)
 );
 
--- Farms table (enhanced for AgriTech)
+-- Farms table
 CREATE TABLE IF NOT EXISTS public.farms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -101,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.farms (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Parcels table (enhanced for precision agriculture)
+-- Parcels table
 CREATE TABLE IF NOT EXISTS public.parcels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     farm_id UUID REFERENCES public.farms(id) ON DELETE CASCADE,
@@ -148,6 +147,45 @@ CREATE TABLE IF NOT EXISTS public.crops (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Test types table (for different types of soil analysis)
+CREATE TABLE IF NOT EXISTS public.test_types (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT,
+    parameters JSONB, -- Define what parameters this test type measures
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Soil analyses table
+CREATE TABLE IF NOT EXISTS public.soil_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parcel_id UUID REFERENCES public.parcels(id) ON DELETE CASCADE,
+    test_type_id UUID REFERENCES public.test_types(id) ON DELETE SET NULL,
+    analysis_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    physical JSONB NOT NULL DEFAULT '{}', -- {ph, texture, moisture, etc.}
+    chemical JSONB NOT NULL DEFAULT '{}', -- {nitrogen, phosphorus, potassium, etc.}
+    biological JSONB NOT NULL DEFAULT '{}', -- {microbialActivity, earthwormCount, etc.}
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Structures table (for infrastructure management)
+CREATE TABLE IF NOT EXISTS public.structures (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('stable', 'technical_room', 'basin', 'well')),
+    location JSONB NOT NULL DEFAULT '{"lat": 0, "lng": 0}',
+    installation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    condition TEXT NOT NULL DEFAULT 'good' CHECK (condition IN ('excellent', 'good', 'fair', 'poor')),
+    usage TEXT,
+    structure_details JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Inventory table (for stock management)
 CREATE TABLE IF NOT EXISTS public.inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -186,30 +224,6 @@ CREATE TABLE IF NOT EXISTS public.activities (
     materials_used JSONB,
     weather_conditions JSONB,
     notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Soil analyses table (for soil testing and analysis data)
-CREATE TABLE IF NOT EXISTS public.soil_analyses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    parcel_id UUID REFERENCES public.parcels(id) ON DELETE CASCADE,
-    test_type_id UUID, -- Reference to test type (can be extended later)
-    analysis_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    physical JSONB, -- {texture, ph, organicMatter, moisture, temperature, etc.}
-    chemical JSONB, -- {nitrogen, phosphorus, potassium, micronutrients, etc.}
-    biological JSONB, -- {microbialActivity, earthwormCount, etc.}
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Test types table (for different types of soil analysis)
-CREATE TABLE IF NOT EXISTS public.test_types (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    description TEXT,
-    parameters JSONB, -- Define what parameters this test type measures
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -420,10 +434,12 @@ DROP TRIGGER IF EXISTS update_organizations_updated_at ON public.organizations;
 DROP TRIGGER IF EXISTS update_organization_users_updated_at ON public.organization_users;
 DROP TRIGGER IF EXISTS update_farms_updated_at ON public.farms;
 DROP TRIGGER IF EXISTS update_parcels_updated_at ON public.parcels;
+DROP TRIGGER IF EXISTS update_crops_updated_at ON public.crops;
+DROP TRIGGER IF EXISTS update_test_types_updated_at ON public.test_types;
+DROP TRIGGER IF EXISTS update_soil_analyses_updated_at ON public.soil_analyses;
+DROP TRIGGER IF EXISTS update_structures_updated_at ON public.structures;
 DROP TRIGGER IF EXISTS update_inventory_updated_at ON public.inventory;
 DROP TRIGGER IF EXISTS update_activities_updated_at ON public.activities;
-DROP TRIGGER IF EXISTS update_soil_analyses_updated_at ON public.soil_analyses;
-DROP TRIGGER IF EXISTS update_test_types_updated_at ON public.test_types;
 
 -- Create trigger to auto-create user profiles
 CREATE TRIGGER on_auth_user_created
@@ -451,6 +467,22 @@ CREATE TRIGGER update_parcels_updated_at
     BEFORE UPDATE ON public.parcels
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER update_crops_updated_at
+    BEFORE UPDATE ON public.crops
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_test_types_updated_at
+    BEFORE UPDATE ON public.test_types
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_soil_analyses_updated_at
+    BEFORE UPDATE ON public.soil_analyses
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_structures_updated_at
+    BEFORE UPDATE ON public.structures
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 CREATE TRIGGER update_inventory_updated_at
     BEFORE UPDATE ON public.inventory
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -459,16 +491,61 @@ CREATE TRIGGER update_activities_updated_at
     BEFORE UPDATE ON public.activities
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER update_soil_analyses_updated_at
-    BEFORE UPDATE ON public.soil_analyses
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+-- =====================================================
+-- STEP 4: CREATE INDEXES
+-- =====================================================
 
-CREATE TRIGGER update_test_types_updated_at
-    BEFORE UPDATE ON public.test_types
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+-- User profiles indexes
+CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
+
+-- Organizations indexes
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON public.organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_organizations_email ON public.organizations(email);
+CREATE INDEX IF NOT EXISTS idx_organizations_status ON public.organizations(status);
+
+-- Organization users indexes
+CREATE INDEX IF NOT EXISTS idx_organization_users_user_id ON public.organization_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_organization_users_org_id ON public.organization_users(organization_id);
+
+-- Farms indexes
+CREATE INDEX IF NOT EXISTS idx_farms_organization_id ON public.farms(organization_id);
+CREATE INDEX IF NOT EXISTS idx_farms_status ON public.farms(status);
+
+-- Parcels indexes
+CREATE INDEX IF NOT EXISTS idx_parcels_farm_id ON public.parcels(farm_id);
+CREATE INDEX IF NOT EXISTS idx_parcels_status ON public.parcels(status);
+CREATE INDEX IF NOT EXISTS idx_parcels_crop_type ON public.parcels(crop_type);
+
+-- Crops indexes
+CREATE INDEX IF NOT EXISTS idx_crops_name ON public.crops(name);
+CREATE INDEX IF NOT EXISTS idx_crops_category ON public.crops(category);
+
+-- Test types indexes
+CREATE INDEX IF NOT EXISTS idx_test_types_name ON public.test_types(name);
+
+-- Soil analyses indexes
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_parcel_id ON public.soil_analyses(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_analysis_date ON public.soil_analyses(analysis_date);
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_test_type_id ON public.soil_analyses(test_type_id);
+
+-- Structures indexes
+CREATE INDEX IF NOT EXISTS idx_structures_organization_id ON public.structures(organization_id);
+CREATE INDEX IF NOT EXISTS idx_structures_type ON public.structures(type);
+CREATE INDEX IF NOT EXISTS idx_structures_condition ON public.structures(condition);
+
+-- Inventory indexes
+CREATE INDEX IF NOT EXISTS idx_inventory_organization_id ON public.inventory(organization_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_farm_id ON public.inventory(farm_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_status ON public.inventory(status);
+
+-- Activities indexes
+CREATE INDEX IF NOT EXISTS idx_activities_organization_id ON public.activities(organization_id);
+CREATE INDEX IF NOT EXISTS idx_activities_farm_id ON public.activities(farm_id);
+CREATE INDEX IF NOT EXISTS idx_activities_activity_type ON public.activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_activities_status ON public.activities(status);
 
 -- =====================================================
--- STEP 4: GRANT PERMISSIONS
+-- STEP 5: GRANT PERMISSIONS
 -- =====================================================
 
 -- Grant basic permissions to anon and authenticated roles
@@ -478,34 +555,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, anon, service_role;
 
 -- =====================================================
--- STEP 5: CREATE INDEXES
--- =====================================================
-
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_organization_users_user_id ON public.organization_users(user_id);
-CREATE INDEX IF NOT EXISTS idx_organization_users_org_id ON public.organization_users(organization_id);
-CREATE INDEX IF NOT EXISTS idx_farms_organization_id ON public.farms(organization_id);
-CREATE INDEX IF NOT EXISTS idx_parcels_farm_id ON public.parcels(farm_id);
-CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
-CREATE INDEX IF NOT EXISTS idx_organizations_slug ON public.organizations(slug);
-CREATE INDEX IF NOT EXISTS idx_organizations_email ON public.organizations(email);
-CREATE INDEX IF NOT EXISTS idx_organizations_status ON public.organizations(status);
-CREATE INDEX IF NOT EXISTS idx_farms_status ON public.farms(status);
-CREATE INDEX IF NOT EXISTS idx_parcels_status ON public.parcels(status);
-CREATE INDEX IF NOT EXISTS idx_parcels_crop_type ON public.parcels(crop_type);
-CREATE INDEX IF NOT EXISTS idx_inventory_organization_id ON public.inventory(organization_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_farm_id ON public.inventory(farm_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_status ON public.inventory(status);
-CREATE INDEX IF NOT EXISTS idx_activities_organization_id ON public.activities(organization_id);
-CREATE INDEX IF NOT EXISTS idx_activities_farm_id ON public.activities(farm_id);
-CREATE INDEX IF NOT EXISTS idx_activities_activity_type ON public.activities(activity_type);
-CREATE INDEX IF NOT EXISTS idx_activities_status ON public.activities(status);
-CREATE INDEX IF NOT EXISTS idx_soil_analyses_parcel_id ON public.soil_analyses(parcel_id);
-CREATE INDEX IF NOT EXISTS idx_soil_analyses_analysis_date ON public.soil_analyses(analysis_date);
-CREATE INDEX IF NOT EXISTS idx_test_types_name ON public.test_types(name);
-
--- =====================================================
--- STEP 6: INSERT SAMPLE DATA (Optional)
+-- STEP 6: INSERT SAMPLE DATA
 -- =====================================================
 
 -- Insert sample crops data
@@ -515,6 +565,53 @@ INSERT INTO public.crops (name, scientific_name, category, days_to_harvest, yiel
 ('Tomatoes', 'Solanum lycopersicum', 'vegetables', 75, 45000),
 ('Potatoes', 'Solanum tuberosum', 'vegetables', 100, 25000),
 ('Olive Trees', 'Olea europaea', 'fruits', 1825, 8000)
+ON CONFLICT DO NOTHING;
+
+-- Insert default test types
+INSERT INTO public.test_types (id, name, description, parameters) VALUES
+('123e4567-e89b-12d3-a456-426614174002', 'Basic Soil Analysis', 'Standard soil analysis including pH, nutrients, and organic matter', 
+ '{"physical": ["texture", "ph", "organicMatter", "moisture", "temperature"], "chemical": ["nitrogen", "phosphorus", "potassium"], "biological": ["microbialActivity"]}'),
+('123e4567-e89b-12d3-a456-426614174003', 'Complete Soil Analysis', 'Comprehensive soil analysis including all physical, chemical, and biological properties', 
+ '{"physical": ["texture", "ph", "organicMatter", "moisture", "temperature", "density"], "chemical": ["nitrogen", "phosphorus", "potassium", "calcium", "magnesium", "sulfur"], "biological": ["microbialActivity", "earthwormCount", "bacteriaCount"]}'),
+('123e4567-e89b-12d3-a456-426614174004', 'Quick Soil Test', 'Rapid soil test for basic parameters', 
+ '{"physical": ["ph", "moisture"], "chemical": ["nitrogen", "phosphorus", "potassium"]}')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert sample organization and farm data
+INSERT INTO public.organizations (id, name, slug, description, email, phone, address, city, state, country) VALUES
+('123e4567-e89b-12d3-a456-426614174000', 'AgriTech Demo', 'agritech-demo', 'Demo agricultural organization', 'demo@agritech.com', '+1234567890', '123 Farm Road', 'Farm City', 'FC', 'Demo Country')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.farms (id, organization_id, name, description, location, size, size_unit, manager_name, manager_email, status) VALUES
+('123e4567-e89b-12d3-a456-426614174000', '123e4567-e89b-12d3-a456-426614174000', 'Main Farm', 'Primary agricultural operation', 'Demo Location', 50.0, 'hectares', 'John Manager', 'john@agritech.com', 'active')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.parcels (id, farm_id, name, description, area, area_unit, crop_type, status) VALUES
+('123e4567-e89b-12d3-a456-426614174000', '123e4567-e89b-12d3-a456-426614174000', 'Parcel 1', 'Main field', 5.5, 'hectares', 'Wheat', 'active'),
+('123e4567-e89b-12d3-a456-426614174001', '123e4567-e89b-12d3-a456-426614174000', 'Parcel 2', 'Secondary field', 3.2, 'hectares', 'Corn', 'active')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.structures (organization_id, name, type, location, installation_date, condition, usage, structure_details) VALUES
+('123e4567-e89b-12d3-a456-426614174000', 'Écurie Principale', 'stable', '{"lat": 36.8065, "lng": 10.1815}', '2023-01-15', 'good', 'Élevage bovin', '{"width": 20, "length": 15, "height": 4, "construction_type": "concrete"}'),
+('123e4567-e89b-12d3-a456-426614174000', 'Local Technique', 'technical_room', '{"lat": 36.8067, "lng": 10.1817}', '2023-02-20', 'excellent', 'Stockage équipements', '{"width": 8, "length": 6, "height": 3, "equipment": ["Générateur", "Pompe à eau", "Outils agricoles"]}'),
+('123e4567-e89b-12d3-a456-426614174000', 'Bassin de Stockage', 'basin', '{"lat": 36.8063, "lng": 10.1813}', '2023-03-10', 'good', 'Irrigation', '{"shape": "rectangular", "dimensions": {"width": 10, "length": 8, "height": 2}, "volume": 160}'),
+('123e4567-e89b-12d3-a456-426614174000', 'Puits Artésien', 'well', '{"lat": 36.8061, "lng": 10.1811}', '2023-04-05', 'excellent', 'Approvisionnement eau', '{"depth": 45, "pump_type": "submersible", "pump_power": 5.5, "condition": "excellent"}')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert sample soil analysis data
+INSERT INTO public.soil_analyses (parcel_id, test_type_id, physical, chemical, biological, notes) VALUES
+('123e4567-e89b-12d3-a456-426614174000',
+ '123e4567-e89b-12d3-a456-426614174002',
+ '{"ph": 6.5, "texture": "loam", "moisture": 45}',
+ '{"nitrogen": 25, "phosphorus": 15, "potassium": 200}',
+ '{"earthworm_count": 12, "microbial_activity": "high"}',
+ 'Initial soil analysis'),
+('123e4567-e89b-12d3-a456-426614174001',
+ '123e4567-e89b-12d3-a456-426614174002',
+ '{"ph": 7.2, "texture": "clay", "moisture": 38}',
+ '{"nitrogen": 18, "phosphorus": 22, "potassium": 180}',
+ '{"earthworm_count": 8, "microbial_activity": "medium"}',
+ 'Secondary field analysis')
 ON CONFLICT DO NOTHING;
 
 -- =====================================================
@@ -530,12 +627,15 @@ NOTIFY pgrst, 'reload schema';
 
 -- Return success message with table counts
 SELECT 
-    'Setup complete! Database configured for AgriTech platform with MCP compatibility.' as status,
+    'Complete AgriTech database setup completed successfully!' as status,
     (SELECT COUNT(*) FROM public.user_profiles) as user_profiles_count,
     (SELECT COUNT(*) FROM public.organizations) as organizations_count,
     (SELECT COUNT(*) FROM public.organization_users) as organization_users_count,
     (SELECT COUNT(*) FROM public.farms) as farms_count,
     (SELECT COUNT(*) FROM public.parcels) as parcels_count,
     (SELECT COUNT(*) FROM public.crops) as crops_count,
+    (SELECT COUNT(*) FROM public.test_types) as test_types_count,
+    (SELECT COUNT(*) FROM public.soil_analyses) as soil_analyses_count,
+    (SELECT COUNT(*) FROM public.structures) as structures_count,
     (SELECT COUNT(*) FROM public.inventory) as inventory_count,
     (SELECT COUNT(*) FROM public.activities) as activities_count;

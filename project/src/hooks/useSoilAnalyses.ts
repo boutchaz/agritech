@@ -64,24 +64,37 @@ export function useSoilAnalyses(farmId: string) {
 
   const addAnalysis = async (
     parcelId: string,
-    testTypeId: string,
+    testTypeId: string | null,
     data: SoilAnalysis,
     notes?: string
   ) => {
     try {
+      console.log('addAnalysis called with parcelId:', parcelId); // Debug log
+      // Map form data to database structure
+      const dbData = {
+        parcel_id: parcelId,
+        test_type_id: testTypeId,
+        analysis_date: new Date().toISOString(),
+        physical: {
+          ph: data.physical.ph,
+          texture: data.physical.texture,
+          moisture: data.physical.organicMatter // Map organicMatter to moisture for now
+        },
+        chemical: {
+          nitrogen: data.chemical.nitrogen,
+          phosphorus: data.chemical.phosphorus,
+          potassium: data.chemical.potassium
+        },
+        biological: {
+          earthworm_count: data.biological.earthwormCount,
+          microbial_activity: data.biological.microbialActivity
+        },
+        notes
+      };
+
       const { data: newAnalysis, error: supabaseError } = await supabase
         .from('soil_analyses')
-        .insert([
-          {
-            parcel_id: parcelId,
-            test_type_id: testTypeId,
-            analysis_date: new Date().toISOString(),
-            physical: data.physical,
-            chemical: data.chemical,
-            biological: data.biological,
-            notes
-          }
-        ])
+        .insert([dbData])
         .select()
         .single();
 

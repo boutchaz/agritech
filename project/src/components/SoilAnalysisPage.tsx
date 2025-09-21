@@ -5,7 +5,7 @@ import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import type { SoilAnalysis } from '../types';
 
 const MOCK_FARM_ID = '123e4567-e89b-12d3-a456-426614174000'; // À remplacer par l'ID réel de la ferme
-const MOCK_PARCEL_ID = '123e4567-e89b-12d3-a456-426614174001'; // À remplacer par l'ID réel de la parcelle
+const MOCK_PARCEL_ID = '123e4567-e89b-12d3-a456-426614174000'; // À remplacer par l'ID réel de la parcelle
 const MOCK_TEST_TYPE_ID = '123e4567-e89b-12d3-a456-426614174002'; // Default test type ID
 
 const SoilAnalysisPage: React.FC = () => {
@@ -14,7 +14,8 @@ const SoilAnalysisPage: React.FC = () => {
 
   const handleSave = async (data: SoilAnalysis) => {
     try {
-      await addAnalysis(MOCK_PARCEL_ID, MOCK_TEST_TYPE_ID, data);
+      console.log('Using parcel ID:', MOCK_PARCEL_ID); // Debug log
+      await addAnalysis(MOCK_PARCEL_ID, null, data);
       setShowForm(false);
     } catch (err) {
       console.error('Error saving soil analysis:', err);
@@ -98,7 +99,7 @@ const SoilAnalysisPage: React.FC = () => {
                     Analyse du {new Date(analysis.analysis_date).toLocaleDateString()}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {analysis.physical.soilType}
+                    {analysis.physical.texture || 'N/A'}
                   </p>
                 </div>
                 <button
@@ -124,8 +125,8 @@ const SoilAnalysisPage: React.FC = () => {
                       <span>{analysis.physical.ph}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Matière organique</span>
-                      <span>{analysis.physical.organicMatter}%</span>
+                      <span>Humidité</span>
+                      <span>{analysis.physical.moisture}%</span>
                     </div>
                   </div>
                 </div>
@@ -149,6 +150,22 @@ const SoilAnalysisPage: React.FC = () => {
                         <span>{analysis.chemical.nitrogen} g/kg N</span>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Propriétés Biologiques
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Activité microbienne</span>
+                      <span>{analysis.biological.microbial_activity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Vers de terre</span>
+                      <span>{analysis.biological.earthworm_count}/m²</span>
+                    </div>
                   </div>
                 </div>
 

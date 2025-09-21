@@ -22,6 +22,10 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
       phosphorus: 0,
       potassium: 0
     },
+    biological: {
+      microbialActivity: 'medium',
+      earthwormCount: 0
+    },
     recommendations: []
   });
 
@@ -132,7 +136,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Matière Organique (%)
+                Humidité (%)
               </label>
               <input
                 type="number"
@@ -221,6 +225,53 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
                 />
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Biological Properties */}
+        <div>
+          <h4 className="font-medium mb-4">Propriétés Biologiques</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Activité Microbienne
+              </label>
+              <select
+                value={formData.biological.microbialActivity}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  biological: {
+                    ...formData.biological,
+                    microbialActivity: e.target.value
+                  }
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="low">Faible</option>
+                <option value="medium">Moyenne</option>
+                <option value="high">Élevée</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Nombre de Vers de Terre (par m²)
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={formData.biological.earthwormCount}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  biological: {
+                    ...formData.biological,
+                    earthwormCount: parseInt(e.target.value) || 0
+                  }
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
           </div>
         </div>
 
