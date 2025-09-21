@@ -1,30 +1,51 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { useAuth } from '../hooks/useAuth'
 
 export const Route = createFileRoute('/')({
-  component: () => (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+  beforeLoad: async ({ context }) => {
+    // Check if user is authenticated and redirect accordingly
+    const { user } = context.auth || {}
+    if (user) {
+      throw redirect({
+        to: '/dashboard',
+      })
+    }
+  },
+  component: HomePage,
+})
+
+function HomePage() {
+  const { user } = useAuth()
+
+  // If user is logged in, redirect to dashboard
+  if (user) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+      <div className="text-center max-w-2xl px-6">
+        <h1 className="text-5xl font-bold text-gray-900 mb-4">
           AgroSmart Dashboard
         </h1>
-        <p className="text-gray-600 mb-8">
-          TanStack Router is working! 🎉
+        <p className="text-xl text-gray-600 mb-8">
+          Modern farm management platform for sustainable agriculture
         </p>
         <div className="space-x-4">
-          <a 
-            href="/dashboard" 
-            className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+          <Link
+            to="/login"
+            className="inline-block bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
           >
-            Go to Dashboard
-          </a>
-          <a 
-            href="/settings" 
-            className="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+            Sign In
+          </Link>
+          <Link
+            to="/register"
+            className="inline-block bg-white text-green-600 border-2 border-green-600 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors font-semibold"
           >
-            Go to Settings
-          </a>
+            Get Started
+          </Link>
         </div>
       </div>
     </div>
-  ),
-})
+  )
+}

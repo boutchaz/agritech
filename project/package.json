@@ -15,6 +15,7 @@
     "@tanstack/react-query-devtools": "^5.87.4",
     "@tanstack/react-router": "^1.131.41",
     "@tanstack/router-devtools": "^1.131.42",
+    "@tanstack/router-plugin": "^1.131.49",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.344.0",

@@ -20,8 +20,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const currentPath = currentPath;
+
+  const currentPath = location.pathname;
 
   const getModuleIcon = (iconName: string) => {
     switch (iconName) {

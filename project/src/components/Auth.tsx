@@ -24,7 +24,10 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              email_confirm: false
+            }
           }
         });
 
@@ -32,10 +35,27 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           if (signUpError.message.includes('User already registered')) {
             throw new Error('Un compte existe déjà avec cette adresse email');
           }
+          if (signUpError.message.includes('Error sending confirmation email')) {
+            // Try to sign in directly if email confirmation fails
+            const { data: signInData } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (signInData?.user) {
+              onAuthSuccess();
+              return;
+            }
+
+            throw new Error('Inscription réussie mais l\'envoi d\'email a échoué. Essayez de vous connecter.');
+          }
           throw signUpError;
         }
 
-        if (data?.user) {
+        if (data?.user && data.user.email_confirmed_at) {
+          // If auto-confirmed, sign them in
+          onAuthSuccess();
+        } else if (data?.user) {
           setError('Vérifiez votre email pour confirmer votre inscription');
         }
       } else {

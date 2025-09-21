@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Building, Users, MapPin, Check } from 'lucide-react';
 
@@ -34,7 +34,12 @@ interface FarmData {
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [existingOrgId, setExistingOrgId] = useState<string | null>(null);
+  const [hasExistingProfile, setHasExistingProfile] = useState<boolean>(false);
+  const [hasExistingOrg, setHasExistingOrg] = useState<boolean>(false);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
   const [profileData, setProfileData] = useState<ProfileData>({
     first_name: '',
@@ -60,6 +65,78 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     description: ''
   });
 
+  // Check for existing data on component mount
+  useEffect(() => {
+    const checkExistingData = async () => {
+      setInitialLoading(true);
+      let profileExists = false;
+      let orgExists = false;
+      const completed: number[] = [];
+
+      try {
+        // Check for existing profile
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileData && profileData.first_name && profileData.last_name) {
+          profileExists = true;
+          setHasExistingProfile(true);
+          completed.push(1);
+          setProfileData({
+            first_name: profileData.first_name || '',
+            last_name: profileData.last_name || '',
+            phone: profileData.phone || '',
+            timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+          });
+        }
+
+        // Check for existing organization
+        const { data: orgData } = await supabase
+          .from('organization_users')
+          .select('organization_id, organizations(*)')
+          .eq('user_id', user.id)
+          .single();
+
+        if (orgData?.organizations) {
+          orgExists = true;
+          setHasExistingOrg(true);
+          setExistingOrgId(orgData.organization_id);
+          completed.push(2);
+          setOrganizationData({
+            name: orgData.organizations.name || '',
+            slug: orgData.organizations.slug || '',
+            description: orgData.organizations.description || '',
+            phone: orgData.organizations.phone || '',
+            email: orgData.organizations.email || user?.email || ''
+          });
+        }
+
+        setCompletedSteps(completed);
+
+        // Determine which step to show
+        if (profileExists && orgExists) {
+          // Both exist, go to farm step
+          setCurrentStep(3);
+        } else if (profileExists) {
+          // Only profile exists, go to organization step
+          setCurrentStep(2);
+        } else {
+          // Start from beginning
+          setCurrentStep(1);
+        }
+      } catch (error) {
+        console.log('Error checking existing data:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    checkExistingData();
+  }, [user]);
+
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -83,6 +160,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
   };
 
   const validateStep = (step: number): boolean => {
+    // If step is already completed, it's valid
+    if (completedSteps.includes(step)) {
+      return true;
+    }
+
     switch (step) {
       case 1:
         return profileData.first_name.trim() !== '' && profileData.last_name.trim() !== '';
@@ -104,6 +186,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     }
   };
 
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+      setError(null);
+    }
+  };
+
+  const canSkipStep = (step: number): boolean => {
+    return completedSteps.includes(step);
+  };
+
   const handleComplete = async () => {
     if (!validateStep(3)) {
       setError('Veuillez remplir tous les champs obligatoires');
@@ -114,43 +207,56 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     setError(null);
 
     try {
-      // 1. Create user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          id: user.id,
-          ...profileData
-        });
+      let organizationId = existingOrgId;
 
-      if (profileError) throw profileError;
+      // 1. Create or update user profile if not exists
+      if (!hasExistingProfile) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: user.id,
+            ...profileData
+          });
 
-      // 2. Create organization
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert(organizationData)
-        .select()
-        .single();
+        if (profileError) throw profileError;
+      }
 
-      if (orgError) throw orgError;
+      // 2. Create organization if not exists
+      if (!organizationId) {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert(organizationData)
+          .select()
+          .single();
 
-      // 3. Add user as organization owner
-      const { error: userOrgError } = await supabase
-        .from('organization_users')
-        .insert({
-          organization_id: orgData.id,
-          user_id: user.id,
-          role: 'owner'
-        });
+        if (orgError) throw orgError;
+        organizationId = orgData.id;
 
-      if (userOrgError) throw userOrgError;
+        // 3. Add user as organization owner
+        const { error: userOrgError } = await supabase
+          .from('organization_users')
+          .insert({
+            organization_id: organizationId,
+            user_id: user.id,
+            role: 'owner'
+          });
 
-      // 4. Create farm
+        if (userOrgError) throw userOrgError;
+      }
+
+      // 4. Create farm (always create as this is the missing piece)
       const { error: farmError } = await supabase
         .from('farms')
         .insert({
-          ...farmData,
-          organization_id: orgData.id,
-          manager_id: user.id
+          name: farmData.name,
+          description: farmData.description,
+          location: farmData.location,
+          size: farmData.size,
+          size_unit: farmData.size_unit,
+          organization_id: organizationId,
+          manager_name: `${profileData.first_name} ${profileData.last_name}`.trim(),
+          manager_phone: profileData.phone || null,
+          manager_email: user.email
         });
 
       if (farmError) throw farmError;
@@ -170,6 +276,18 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     { number: 3, title: 'Première ferme', icon: MapPin }
   ];
 
+  // Show loading state while checking existing data
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Préparation de votre espace...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
@@ -179,7 +297,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = currentStep === step.number;
-              const isCompleted = currentStep > step.number;
+              const isCompleted = completedSteps.includes(step.number) || currentStep > step.number;
+              const isPrefilled = completedSteps.includes(step.number);
 
               return (
                 <div key={step.number} className="flex items-center">
@@ -222,8 +341,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           {currentStep === 1 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Créez votre profil
+                {hasExistingProfile ? 'Vérifiez votre profil' : 'Créez votre profil'}
               </h2>
+              {hasExistingProfile && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-700">✓ Votre profil existe déjà. Vous pouvez passer à l'étape suivante.</p>
+                </div>
+              )}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -287,8 +411,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           {currentStep === 2 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Créez votre organisation
+                {hasExistingOrg ? 'Votre organisation' : 'Créez votre organisation'}
               </h2>
+              {hasExistingOrg && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-700">✓ Votre organisation existe déjà. Vous pouvez passer à l'étape suivante.</p>
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -442,7 +571,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           {/* Navigation */}
           <div className="flex justify-between mt-8">
             <button
-              onClick={() => setCurrentStep(prev => prev - 1)}
+              onClick={handlePrevious}
               disabled={currentStep === 1}
               className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -454,7 +583,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 onClick={handleNext}
                 className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
-                Suivant
+                {canSkipStep(currentStep) ? 'Continuer' : 'Suivant'}
               </button>
             ) : (
               <button

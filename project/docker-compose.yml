@@ -10,6 +10,8 @@ services:
       - "3002:80"
     environment:
       - NODE_ENV=production
+      - VITE_SUPABASE_URL=http://agritech-supabase-652186-5-75-154-125.traefik.me
+      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ
     restart: unless-stopped
     networks:
       - agritech-network

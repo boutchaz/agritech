@@ -42,6 +42,19 @@ export const useUserProfile = (userId: string | undefined) => {
     queryFn: async (): Promise<UserProfile | null> => {
       if (!userId) return null;
 
+      // Try using RPC function first (more reliable with permissions)
+      try {
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_current_user_profile');
+
+        if (!rpcError && rpcData) {
+          return rpcData as UserProfile;
+        }
+      } catch (e) {
+        console.log('RPC function not available, falling back to direct query');
+      }
+
+      // Fallback to direct query
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -49,13 +62,16 @@ export const useUserProfile = (userId: string | undefined) => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        throw error;
+        console.error('Profile fetch error:', error);
+        // Don't throw, return null to trigger onboarding
+        return null;
       }
 
       return data;
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1, // Reduce retries for 403 errors
   });
 };
 
@@ -70,7 +86,9 @@ export const useUserOrganizations = (userId: string | undefined) => {
         .rpc('get_user_organizations', { user_uuid: userId });
 
       if (error) {
-        throw error;
+        console.error('Organizations fetch error:', error);
+        // Return empty array to trigger onboarding instead of throwing
+        return [];
       }
 
       return data?.map((org: any) => ({
@@ -83,6 +101,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1, // Reduce retries for 403 errors
   });
 };
 
@@ -137,7 +156,7 @@ export const useRefreshUserData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async () => {
       // Invalidate all auth queries to trigger refetch
       await queryClient.invalidateQueries({ queryKey: ['auth'] });
     },

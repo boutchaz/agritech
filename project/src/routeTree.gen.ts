@@ -14,11 +14,14 @@ import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ParcelsRouteImport } from './routes/parcels'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -47,9 +50,19 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ParcelsRoute = ParcelsRouteImport.update({
   id: '/parcels',
   path: '/parcels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InfrastructureRoute = InfrastructureRouteImport.update({
@@ -72,6 +85,10 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModuleIdRoute = ModuleIdRouteImport.update({
   id: '/$moduleId',
   path: '/$moduleId',
@@ -90,7 +107,9 @@ export interface FileRoutesByFullPath {
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/infrastructure': typeof InfrastructureRoute
+  '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
+  '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/soil-analysis': typeof SoilAnalysisRoute
@@ -104,7 +123,9 @@ export interface FileRoutesByTo {
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/infrastructure': typeof InfrastructureRoute
+  '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
+  '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/soil-analysis': typeof SoilAnalysisRoute
@@ -115,11 +136,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
+  '/_authenticated': typeof AuthenticatedRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/infrastructure': typeof InfrastructureRoute
+  '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
+  '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/soil-analysis': typeof SoilAnalysisRoute
@@ -135,7 +159,9 @@ export interface FileRouteTypes {
     | '/day-laborers'
     | '/employees'
     | '/infrastructure'
+    | '/login'
     | '/parcels'
+    | '/register'
     | '/reports'
     | '/settings'
     | '/soil-analysis'
@@ -149,7 +175,9 @@ export interface FileRouteTypes {
     | '/day-laborers'
     | '/employees'
     | '/infrastructure'
+    | '/login'
     | '/parcels'
+    | '/register'
     | '/reports'
     | '/settings'
     | '/soil-analysis'
@@ -159,11 +187,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$moduleId'
+    | '/_authenticated'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
     | '/infrastructure'
+    | '/login'
     | '/parcels'
+    | '/register'
     | '/reports'
     | '/settings'
     | '/soil-analysis'
@@ -174,11 +205,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModuleIdRoute: typeof ModuleIdRoute
+  AuthenticatedRoute: typeof AuthenticatedRoute
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
   EmployeesRoute: typeof EmployeesRoute
   InfrastructureRoute: typeof InfrastructureRoute
+  LoginRoute: typeof LoginRoute
   ParcelsRoute: typeof ParcelsRoute
+  RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SoilAnalysisRoute: typeof SoilAnalysisRoute
@@ -223,11 +257,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/parcels': {
       id: '/parcels'
       path: '/parcels'
       fullPath: '/parcels'
       preLoaderRoute: typeof ParcelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/infrastructure': {
@@ -258,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$moduleId': {
       id: '/$moduleId'
       path: '/$moduleId'
@@ -278,11 +333,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModuleIdRoute: ModuleIdRoute,
+  AuthenticatedRoute: AuthenticatedRoute,
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
   EmployeesRoute: EmployeesRoute,
   InfrastructureRoute: InfrastructureRoute,
+  LoginRoute: LoginRoute,
   ParcelsRoute: ParcelsRoute,
+  RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SoilAnalysisRoute: SoilAnalysisRoute,

@@ -37,3 +37,26 @@ vendor/
 dist/
 build/
 out/
+
+# Large files and binaries
+*.dmg
+*.exe
+*.pkg
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+*.rar
+
+# Research data files
+satellite-indices-service/research/
+**/research/
+**/*.shp
+**/*.dbf
+**/*.prj
+**/*.shx
+**/*.sbn
+**/*.sbx
+**/*.cpg
