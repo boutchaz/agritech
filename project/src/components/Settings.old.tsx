@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { Check, X, Users, Sliders, Boxes, LayoutGrid } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, X, Users, Sliders, Boxes, LayoutGrid, Building, User } from 'lucide-react';
+import { useSearch } from '@tanstack/react-router';
 import type { Module } from '../types';
 import type { DashboardSettings } from '../types';
+import OrganizationSettings from './OrganizationSettings';
+import ProfileSettings from './ProfileSettings';
 
 interface SettingsProps {
   modules: Module[];
@@ -40,8 +43,9 @@ const Settings: React.FC<SettingsProps> = ({
   },
   onDashboardSettingsChange = () => {}
 }) => {
+  const search = useSearch({ from: '/settings' });
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const [activeTab, setActiveTab] = useState<'modules' | 'users' | 'preferences' | 'dashboard'>('modules');
+  const [activeTab, setActiveTab] = useState<'profile' | 'organization' | 'modules' | 'users' | 'preferences' | 'dashboard'>('profile');
   const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>('basic');
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -75,11 +79,23 @@ const Settings: React.FC<SettingsProps> = ({
   });
 
   const tabs = [
+    { id: 'profile', name: 'Mon Profil', icon: User },
+    { id: 'organization', name: 'Organisation', icon: Building },
     { id: 'modules', name: 'Modules', icon: Boxes },
     { id: 'users', name: 'Utilisateurs', icon: Users },
     { id: 'preferences', name: 'Préférences', icon: Sliders },
     { id: 'dashboard', name: 'Tableau de bord', icon: LayoutGrid }
   ];
+
+  // Set active tab based on URL parameter
+  useEffect(() => {
+    if (search?.tab && typeof search.tab === 'string') {
+      const validTabs = ['profile', 'organization', 'modules', 'users', 'preferences', 'dashboard'];
+      if (validTabs.includes(search.tab)) {
+        setActiveTab(search.tab as any);
+      }
+    }
+  }, [search]);
 
   const handleDashboardSettingChange = (key: keyof DashboardSettings, value: boolean) => {
     const newSettings = {
@@ -163,6 +179,14 @@ const Settings: React.FC<SettingsProps> = ({
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'profile' && (
+        <ProfileSettings />
+      )}
+
+      {activeTab === 'organization' && (
+        <OrganizationSettings />
+      )}
+
       {activeTab === 'modules' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">

@@ -10,42 +10,45 @@ interface Parcel {
   id: string;
   name: string;
   boundary: number[][];
-  crop_id: string;
+  farm_id: string;
+  crop_id?: string;
   soil_type: string | null;
   area: number | null;
+  calculated_area?: number | null;
+  perimeter?: number | null;
   planting_density: number | null;
   irrigation_type: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export function useParcels(cropId: string | null) {
+export function useParcels(farmId: string | null) {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (cropId) {
+    if (farmId) {
       fetchParcels();
     } else {
       setParcels([]);
       setLoading(false);
     }
-  }, [cropId]);
+  }, [farmId]);
 
   const fetchParcels = async () => {
-    if (!cropId) return;
+    if (!farmId) return;
 
     try {
       // Validate UUID format
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(cropId)) {
-        throw new Error('Invalid crop ID format. Must be a valid UUID.');
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(farmId)) {
+        throw new Error('Invalid farm ID format. Must be a valid UUID.');
       }
 
       const { data, error } = await supabase
         .from('parcels')
         .select('*')
-        .eq('crop_id', cropId);
+        .eq('farm_id', farmId);
 
       if (error) throw error;
 
@@ -63,11 +66,14 @@ export function useParcels(cropId: string | null) {
     details: {
       soil_type?: string;
       area?: number;
+      calculated_area?: number;
+      perimeter?: number;
       planting_density?: number;
       irrigation_type?: string;
+      crop_id?: string;
     } = {}
   ) => {
-    if (!cropId) throw new Error('No crop ID provided');
+    if (!farmId) throw new Error('No farm ID provided');
 
     try {
       const { data, error } = await supabase
@@ -76,7 +82,7 @@ export function useParcels(cropId: string | null) {
           {
             name,
             boundary,
-            crop_id: cropId,
+            farm_id: farmId,
             ...details
           }
         ])

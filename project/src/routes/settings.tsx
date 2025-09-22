@@ -1,10 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
-import Settings from '../components/Settings'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import SettingsLayout from '../components/SettingsLayout'
 import { useState } from 'react'
-import type { Module, DashboardSettings } from '../types'
+import type { Module } from '../types'
 
 const mockModules: Module[] = [
   {
@@ -22,40 +22,15 @@ const mockModules: Module[] = [
   // ... other modules would be here
 ];
 
-const AppContent: React.FC = () => {
+const SettingsLayoutComponent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('settings');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, setModules] = useState(mockModules);
-  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>({
-    showSoilData: true,
-    showClimateData: true,
-    showIrrigationData: true,
-    showMaintenanceData: true,
-    showProductionData: true,
-    showFinancialData: true,
-    showStockAlerts: true,
-    showTaskAlerts: true,
-    layout: {
-      topRow: ['soil', 'climate', 'irrigation', 'maintenance'],
-      middleRow: ['production', 'financial'],
-      bottomRow: ['alerts', 'tasks']
-    }
-  });
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
-  };
-
-  const handleModuleToggle = (moduleId: string) => {
-    setModules(prevModules =>
-      prevModules.map(module =>
-        module.id === moduleId
-          ? { ...module, active: !module.active }
-          : module
-      )
-    );
   };
 
   if (!currentOrganization) {
@@ -92,17 +67,14 @@ const AppContent: React.FC = () => {
           </div>
           <OrganizationSwitcher />
         </div>
-        <Settings
-          modules={modules}
-          onModuleToggle={handleModuleToggle}
-          dashboardSettings={dashboardSettings}
-          onDashboardSettingsChange={setDashboardSettings}
-        />
+        <SettingsLayout>
+          <Outlet />
+        </SettingsLayout>
       </main>
     </div>
   );
 };
 
 export const Route = createFileRoute('/settings')({
-  component: AppContent,
+  component: SettingsLayoutComponent,
 })

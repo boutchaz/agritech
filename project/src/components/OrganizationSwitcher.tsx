@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useNavigate } from '@tanstack/react-router';
 import { Building, ChevronDown, Check, Settings, Users, LogOut } from 'lucide-react';
 
 const OrganizationSwitcher: React.FC = () => {
@@ -14,9 +15,13 @@ const OrganizationSwitcher: React.FC = () => {
     profile
   } = useAuth();
 
+  const navigate = useNavigate();
+
   const [isOpen, setIsOpen] = useState(false);
   const [showFarms, setShowFarms] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<'left' | 'right'>('left');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -30,6 +35,21 @@ const OrganizationSwitcher: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const dropdownWidth = 320; // w-80 = 20rem = 320px
+
+      // Check if dropdown would overflow on the right
+      if (buttonRect.left + dropdownWidth > windowWidth - 20) {
+        setDropdownPosition('right');
+      } else {
+        setDropdownPosition('left');
+      }
+    }
+  }, [isOpen]);
+
   const handleOrganizationSelect = async (org: any) => {
     setCurrentOrganization(org);
     setShowFarms(true);
@@ -39,6 +59,18 @@ const OrganizationSwitcher: React.FC = () => {
     setCurrentFarm(farm);
     setIsOpen(false);
     setShowFarms(false);
+  };
+
+  const handleOrganizationSettings = () => {
+    setIsOpen(false);
+    setShowFarms(false);
+    navigate({ to: '/settings/organization' });
+  };
+
+  const handleTeamManagement = () => {
+    setIsOpen(false);
+    setShowFarms(false);
+    navigate({ to: '/settings/users' });
   };
 
   const getRoleColor = (role: string) => {
@@ -69,6 +101,7 @@ const OrganizationSwitcher: React.FC = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
@@ -89,7 +122,9 @@ const OrganizationSwitcher: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+        <div className={`absolute top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 ${
+          dropdownPosition === 'right' ? 'right-0' : 'left-0'
+        }`}>
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -117,7 +152,7 @@ const OrganizationSwitcher: React.FC = () => {
                   Organisations
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {organizations.map((org) => (
                   <button
                     key={org.id}
@@ -148,14 +183,14 @@ const OrganizationSwitcher: React.FC = () => {
               <div className="border-t border-gray-200 dark:border-gray-700">
                 <button
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3"
-                  onClick={() => {/* Handle organization settings */}}
+                  onClick={handleOrganizationSettings}
                 >
                   <Settings className="h-4 w-4 text-gray-400" />
                   <span className="text-gray-700 dark:text-gray-300">Paramètres de l'organisation</span>
                 </button>
                 <button
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3"
-                  onClick={() => {/* Handle team management */}}
+                  onClick={handleTeamManagement}
                 >
                   <Users className="h-4 w-4 text-gray-400" />
                   <span className="text-gray-700 dark:text-gray-300">Gérer l'équipe</span>
@@ -183,21 +218,21 @@ const OrganizationSwitcher: React.FC = () => {
                   Fermes - {currentOrganization.name}
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {farms.map((farm) => (
                   <button
                     key={farm.id}
                     onClick={() => handleFarmSelect(farm)}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
                   >
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white truncate">
                         {farm.name}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {farm.location} • {farm.size} ha
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-400 truncate">
                         Gestionnaire: {farm.manager_name}
                       </div>
                     </div>

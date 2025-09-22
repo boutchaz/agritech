@@ -84,6 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>Tableau de bord</span>
         </button>
 
+
         <button
           onClick={() => handleNavigation('/soil-analysis')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
@@ -240,7 +241,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
         
         <button
-          onClick={() => handleNavigation('/settings')}
+          onClick={() => handleNavigation('/settings/profile')}
           className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
         >
           <Settings className="h-5 w-5" />

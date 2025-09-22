@@ -1,0 +1,78 @@
+http:
+  routers:
+    # --- DOKPLOY UI ---
+    dokploy-router-app:
+      rule: Host(`dokploy.docker.localhost`) && PathPrefix(`/`)
+      service: dokploy-service-app
+      entryPoints:
+        - web
+
+    # --- SATELLITE INDICES SERVICE ---
+    satellite-indices-router-http:
+      rule: Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)
+      service: satellite-indices-service
+      entryPoints:
+        - web
+
+    # --- FRONTEND DASHBOARD ---
+    frontend-dashboard-router-http:
+      rule: Host(`agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)
+      service: frontend-dashboard-service
+      entryPoints:
+        - web
+
+    # --- ADMINER DATABASE MANAGEMENT ---
+    adminer-router-http:
+      rule: Host(`adminer-agritech-5-75-154-125.traefik.me`)
+      service: adminer-service
+      entryPoints:
+        - web
+
+    # --- SUPABASE STUDIO ---
+    supabase-studio-router-http:
+      rule: Host(`supabase-studio-agritech-5-75-154-125.traefik.me`)
+      service: supabase-studio-service
+      entryPoints:
+        - web
+
+  services:
+    # Dokploy UI service
+    dokploy-service-app:
+      loadBalancer:
+        servers:
+          - url: http://dokploy:3000
+        passHostHeader: true
+
+    # Satellite indices service
+    satellite-indices-service:
+      loadBalancer:
+        servers:
+          - url: http://satellite-indices-service:8000
+        passHostHeader: true
+
+    # Frontend dashboard service
+    frontend-dashboard-service:
+      loadBalancer:
+        servers:
+          - url: http://agritech-dashboard-g6sumg:80
+        passHostHeader: true
+
+    # Adminer service
+    adminer-service:
+      loadBalancer:
+        servers:
+          - url: http://agritech-supabase-mksx2j-supabase-adminer:8080
+        passHostHeader: true
+
+    # Supabase Studio service
+    supabase-studio-service:
+      loadBalancer:
+        servers:
+          - url: http://agritech-supabase-mksx2j-supabase-studio:3000
+        passHostHeader: true
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true

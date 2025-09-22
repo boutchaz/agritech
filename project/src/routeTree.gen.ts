@@ -24,6 +24,13 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsUsersRouteImport } from './routes/settings.users'
+import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
+import { Route as SettingsPreferencesRouteImport } from './routes/settings.preferences'
+import { Route as SettingsOrganizationRouteImport } from './routes/settings.organization'
+import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
+import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 
 const UtilitiesRoute = UtilitiesRouteImport.update({
   id: '/utilities',
@@ -99,6 +106,41 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsUsersRoute = SettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProfileRoute = SettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsPreferencesRoute = SettingsPreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsOrganizationRoute = SettingsOrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsModulesRoute = SettingsModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => SettingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,10 +153,17 @@ export interface FileRoutesByFullPath {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/settings/dashboard': typeof SettingsDashboardRoute
+  '/settings/modules': typeof SettingsModulesRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/users': typeof SettingsUsersRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -127,10 +176,16 @@ export interface FileRoutesByTo {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
-  '/settings': typeof SettingsRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/settings/dashboard': typeof SettingsDashboardRoute
+  '/settings/modules': typeof SettingsModulesRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/users': typeof SettingsUsersRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -145,10 +200,17 @@ export interface FileRoutesById {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/settings/dashboard': typeof SettingsDashboardRoute
+  '/settings/modules': typeof SettingsModulesRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/users': typeof SettingsUsersRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +229,13 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/settings/dashboard'
+    | '/settings/modules'
+    | '/settings/organization'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/users'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -179,10 +248,16 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/register'
     | '/reports'
-    | '/settings'
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/settings/dashboard'
+    | '/settings/modules'
+    | '/settings/organization'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/users'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -200,6 +275,13 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/settings/dashboard'
+    | '/settings/modules'
+    | '/settings/organization'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/users'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -214,7 +296,7 @@ export interface RootRouteChildren {
   ParcelsRoute: typeof ParcelsRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
-  SettingsRoute: typeof SettingsRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
   UtilitiesRoute: typeof UtilitiesRoute
@@ -327,8 +409,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/users': {
+      id: '/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof SettingsUsersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/profile': {
+      id: '/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/preferences': {
+      id: '/settings/preferences'
+      path: '/preferences'
+      fullPath: '/settings/preferences'
+      preLoaderRoute: typeof SettingsPreferencesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/organization': {
+      id: '/settings/organization'
+      path: '/organization'
+      fullPath: '/settings/organization'
+      preLoaderRoute: typeof SettingsOrganizationRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/modules': {
+      id: '/settings/modules'
+      path: '/modules'
+      fullPath: '/settings/modules'
+      preLoaderRoute: typeof SettingsModulesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/dashboard': {
+      id: '/settings/dashboard'
+      path: '/dashboard'
+      fullPath: '/settings/dashboard'
+      preLoaderRoute: typeof SettingsDashboardRouteImport
+      parentRoute: typeof SettingsRoute
+    }
   }
 }
+
+interface SettingsRouteChildren {
+  SettingsDashboardRoute: typeof SettingsDashboardRoute
+  SettingsModulesRoute: typeof SettingsModulesRoute
+  SettingsOrganizationRoute: typeof SettingsOrganizationRoute
+  SettingsPreferencesRoute: typeof SettingsPreferencesRoute
+  SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsUsersRoute: typeof SettingsUsersRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsDashboardRoute: SettingsDashboardRoute,
+  SettingsModulesRoute: SettingsModulesRoute,
+  SettingsOrganizationRoute: SettingsOrganizationRoute,
+  SettingsPreferencesRoute: SettingsPreferencesRoute,
+  SettingsProfileRoute: SettingsProfileRoute,
+  SettingsUsersRoute: SettingsUsersRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -342,7 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParcelsRoute: ParcelsRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
-  SettingsRoute: SettingsRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,
   UtilitiesRoute: UtilitiesRoute,
