@@ -30,7 +30,7 @@ export interface IndexCalculationRequest {
   aoi: {
     geometry: {
       type: 'Polygon' | 'Point';
-      coordinates: number[][] | number[];
+      coordinates: number[][][] | number[];
     };
     name?: string;
   };
@@ -72,7 +72,7 @@ export interface TimeSeriesResponse {
   };
 }
 
-class SatelliteIndicesService {
+export class SatelliteIndicesService {
   private baseUrl: string;
 
   constructor() {
@@ -186,10 +186,41 @@ class SatelliteIndicesService {
 
   // Helper method to convert parcel boundary to GeoJSON format
   static convertBoundaryToGeoJSON(boundary: number[][]): IndexCalculationRequest['aoi'] {
+    // Check if coordinates are in Web Mercator (EPSG:3857) or geographic (WGS84)
+    const firstCoord = boundary[0];
+    let geoCoordinates: number[][];
+
+    if (Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90) {
+      // Coordinates are in Web Mercator (EPSG:3857), need to convert to WGS84
+      console.log('Converting coordinates from Web Mercator to WGS84');
+      geoCoordinates = boundary.map(coord => {
+        const [x, y] = coord;
+        // Convert from Web Mercator to WGS84
+        const lon = (x / 20037508.34) * 180;
+        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+        return [lon, lat];
+      });
+    } else {
+      // Coordinates are already in geographic (WGS84)
+      console.log('Coordinates are already in WGS84');
+      geoCoordinates = boundary;
+    }
+
+    // Ensure the polygon is closed (first and last points should be the same)
+    if (geoCoordinates.length > 0) {
+      const first = geoCoordinates[0];
+      const last = geoCoordinates[geoCoordinates.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        geoCoordinates.push([first[0], first[1]]);
+      }
+    }
+
+    console.log('Converted coordinates:', geoCoordinates);
+
     return {
       geometry: {
         type: 'Polygon',
-        coordinates: [boundary], // GeoJSON Polygon expects array of rings
+        coordinates: [geoCoordinates], // GeoJSON Polygon expects array of rings
       },
     };
   }

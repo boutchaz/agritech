@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
-import { 
-  satelliteIndicesService, 
-  IndexCalculationRequest, 
+import {
+  satelliteIndicesService,
+  SatelliteIndicesService,
+  IndexCalculationRequest,
   IndexCalculationResponse,
-  TimeSeriesResponse 
+  TimeSeriesResponse
 } from '../services/satelliteIndicesService';
 
 interface UseSatelliteIndicesReturn {
@@ -46,12 +47,12 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     setError(null);
 
     try {
-      const aoi = satelliteIndicesService.convertBoundaryToGeoJSON(boundary);
+      const aoi = SatelliteIndicesService.convertBoundaryToGeoJSON(boundary);
       aoi.name = parcelName;
 
       const request: IndexCalculationRequest = {
         aoi,
-        date_range: dateRange || satelliteIndicesService.getDefaultDateRange(),
+        date_range: dateRange || SatelliteIndicesService.getDefaultDateRange(),
         indices,
         cloud_coverage: 10,
         scale: 10,
@@ -78,12 +79,12 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     setError(null);
 
     try {
-      const aoi = satelliteIndicesService.convertBoundaryToGeoJSON(boundary);
+      const aoi = SatelliteIndicesService.convertBoundaryToGeoJSON(boundary);
       aoi.name = parcelName;
 
       const result = await satelliteIndicesService.getTimeSeries(
         aoi,
-        dateRange || satelliteIndicesService.getDefaultDateRange(),
+        dateRange || SatelliteIndicesService.getDefaultDateRange(),
         index,
         'month'
       );
@@ -108,7 +109,7 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     setError(null);
 
     try {
-      const aoi = satelliteIndicesService.convertBoundaryToGeoJSON(boundary);
+      const aoi = SatelliteIndicesService.convertBoundaryToGeoJSON(boundary);
       aoi.name = parcelName;
 
       const result = await satelliteIndicesService.exportIndexMap(aoi, date, index);

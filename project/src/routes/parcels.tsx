@@ -3,6 +3,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import SatelliteIndices from '../components/SatelliteIndices'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Module, SensorData } from '../types'
@@ -261,6 +262,15 @@ const AppContent: React.FC = () => {
                   setShowAddParcelMap(false);
                 }}
               />
+
+              {/* Satellite Indices Section */}
+              {selectedParcelId && (
+                <div className="mt-6">
+                  <SatelliteIndices
+                    parcel={parcels.find(p => p.id === selectedParcelId)!}
+                  />
+                </div>
+              )}
 
               {parcels.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
