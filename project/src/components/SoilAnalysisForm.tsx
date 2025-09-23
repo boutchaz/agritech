@@ -2,20 +2,27 @@ import React, { useState } from 'react';
 import { Save, X } from 'lucide-react';
 import type { SoilAnalysis } from '../types';
 
+interface Parcel {
+  id: string;
+  name: string;
+  soil_type?: string | null;
+}
+
 interface SoilAnalysisFormProps {
   onSave: (data: SoilAnalysis) => void;
   onCancel: () => void;
   initialData?: SoilAnalysis;
+  selectedParcel?: Parcel | null;
 }
 
-const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, initialData }) => {
+const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, initialData, selectedParcel }) => {
   const [testType, setTestType] = useState('basic');
   const [formData, setFormData] = useState<SoilAnalysis>(initialData || {
     physical: {
       texture: '',
       ph: 7.0,
       organicMatter: 0,
-      soilType: ''
+      soilType: selectedParcel?.soil_type || ''
     },
     chemical: {
       nitrogen: 0,
@@ -47,6 +54,21 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Parcel Information */}
+        {selectedParcel && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+              Parcelle sélectionnée
+            </h4>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>{selectedParcel.name}</strong>
+              {selectedParcel.soil_type && (
+                <span> - Type de sol: {selectedParcel.soil_type}</span>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Test Type Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">
@@ -70,6 +92,11 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
             <div>
               <label className="block text-sm font-medium mb-1">
                 Type de sol
+                {selectedParcel?.soil_type && (
+                  <span className="text-sm text-blue-600 dark:text-blue-400 ml-1">
+                    (depuis la parcelle)
+                  </span>
+                )}
               </label>
               <input
                 type="text"
@@ -82,7 +109,12 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
                   }
                 })}
                 placeholder="Ex: Sols calci-magnésique, carbonatés..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
+                  selectedParcel?.soil_type
+                    ? 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    : ''
+                }`}
+                readOnly={!!selectedParcel?.soil_type}
               />
             </div>
 

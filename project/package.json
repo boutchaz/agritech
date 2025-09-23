@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:migrate": "npx tsx simple-migrate.ts",
     "db:reset": "supabase db reset",
     "db:start": "supabase start",
@@ -28,11 +30,13 @@
     "ol": "^8.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.63.0",
     "recharts": "^2.12.2",
     "socket.io-client": "^4.7.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
@@ -46,6 +50,7 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.20.5",
     "typescript": "^5.2.2",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "zod": "^4.1.11"
   }
 }

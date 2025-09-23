@@ -9,16 +9,6 @@ interface TaskCategory {
   description: string;
 }
 
-interface DayLaborerSpecialty {
-  id: string;
-  day_laborer_id: string;
-  category_id: string;
-  task_categories: {
-    id: string;
-    name: string;
-  };
-}
-
 interface DayLaborer {
   id: string;
   first_name: string;
@@ -31,12 +21,12 @@ interface DayLaborer {
   unit_rate: number | null;
   unit_type: string | null;
   payment_type: 'daily' | 'task' | 'unit';
-  specialties?: DayLaborerSpecialty[];
+  specialties?: string[]; // store category ids or names directly in array column
   farm_id: string;
 }
 
 const DayLaborerManagement: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentFarm } = useAuth();
   const [laborers, setLaborers] = useState<DayLaborer[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -82,18 +72,8 @@ const DayLaborerManagement: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('day_laborers')
-        .select(`
-          *,
-          specialties:day_laborer_specialties(
-            id,
-            category_id,
-            task_categories(
-              id,
-              name
-            )
-          )
-        `)
-        .eq('organization_id', currentOrganization?.id)
+        .select('*')
+        .eq('farm_id', currentFarm?.id)
         .order('last_name');
 
       if (error) throw error;
@@ -108,26 +88,26 @@ const DayLaborerManagement: React.FC = () => {
 
   const handleAddLaborer = async () => {
     try {
-      const { data: laborer, error: laborerError } = await supabase
+      if (!currentFarm?.id) {
+        setError('Sélectionnez une ferme pour ajouter un ouvrier.');
+        return;
+      }
+
+      const payload: any = {
+        first_name: newLaborer.first_name,
+        last_name: newLaborer.last_name,
+        phone: newLaborer.phone ?? null,
+        daily_rate: newLaborer.daily_rate ?? 0,
+        specialties: selectedSpecialties,
+        notes: newLaborer.address ?? null,
+        farm_id: currentFarm.id,
+      };
+
+      const { error: laborerError } = await supabase
         .from('day_laborers')
-        .insert([{ ...newLaborer, organization_id: currentOrganization?.id }])
-        .select()
-        .single();
+        .insert([payload]);
 
       if (laborerError) throw laborerError;
-
-      if (selectedSpecialties.length > 0) {
-        const specialtiesData = selectedSpecialties.map(categoryId => ({
-          day_laborer_id: laborer.id,
-          category_id: categoryId
-        }));
-
-        const { error: specialtiesError } = await supabase
-          .from('day_laborer_specialties')
-          .insert(specialtiesData);
-
-        if (specialtiesError) throw specialtiesError;
-      }
 
       await fetchLaborers();
 
@@ -153,11 +133,19 @@ const DayLaborerManagement: React.FC = () => {
 
   const handleUpdateLaborer = async (laborer: DayLaborer) => {
     try {
+      const payload: any = {
+        first_name: laborer.first_name,
+        last_name: laborer.last_name,
+        phone: laborer.phone ?? null,
+        daily_rate: laborer.daily_rate ?? 0,
+        specialties: laborer.specialties ?? [],
+        notes: laborer.address ?? null,
+      };
       const { error } = await supabase
         .from('day_laborers')
-        .update(laborer)
+        .update(payload)
         .eq('id', laborer.id)
-        .eq('organization_id', currentOrganization?.id);
+        .eq('farm_id', currentFarm?.id ?? '');
 
       if (error) throw error;
 
@@ -177,7 +165,7 @@ const DayLaborerManagement: React.FC = () => {
         .from('day_laborers')
         .delete()
         .eq('id', id)
-        .eq('organization_id', currentOrganization?.id);
+        .eq('farm_id', currentFarm?.id ?? '');
 
       if (error) throw error;
 
@@ -217,19 +205,22 @@ const DayLaborerManagement: React.FC = () => {
 
   const renderSpecialties = (laborer: DayLaborer) => {
     if (!laborer.specialties?.length) return null;
-
+    const idToName = new Map(taskCategories.map(c => [c.id, c.name] as const));
     return (
       <div className="mt-2">
         <p className="font-medium">Spécialités:</p>
         <div className="flex flex-wrap gap-2 mt-1">
-          {laborer.specialties.map((specialty) => (
-            <span
-              key={specialty.id}
-              className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs"
-            >
-              {specialty.task_categories.name}
-            </span>
-          ))}
+          {laborer.specialties.map((value) => {
+            const label = idToName.get(value) || value;
+            return (
+              <span
+                key={value}
+                className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs"
+              >
+                {label}
+              </span>
+            );
+          })}
         </div>
       </div>
     );
@@ -251,7 +242,9 @@ const DayLaborerManagement: React.FC = () => {
         </h2>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          disabled={!currentFarm?.id}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+          title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter un ouvrier' : undefined}
         >
           <Plus className="h-5 w-5" />
           <span>Nouvel Ouvrier</span>
@@ -261,6 +254,25 @@ const DayLaborerManagement: React.FC = () => {
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
+      {!currentFarm?.id && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
+          Sélectionnez une ferme pour gérer les ouvriers journaliers.
+        </div>
+      )}
+
+      {!loading && laborers.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+          <User className="h-12 w-12 text-gray-400" />
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun ouvrier pour l’instant.</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Ajouter votre premier ouvrier
+          </button>
         </div>
       )}
 

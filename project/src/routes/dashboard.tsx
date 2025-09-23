@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
     showStockAlerts: true,
     showTaskAlerts: true,
     layout: {
-      topRow: ['soil', 'climate', 'irrigation', 'maintenance'],
+      topRow: ['farm', 'soil', 'climate', 'irrigation'],
       middleRow: ['production', 'financial'],
       bottomRow: ['alerts', 'tasks']
     }

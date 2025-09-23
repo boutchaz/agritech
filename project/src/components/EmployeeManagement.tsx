@@ -1,30 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface Employee {
   id: string;
   first_name: string;
   last_name: string;
-  cin: string;
+  cin: string; // mapped from employee_id in DB when rendering
   phone: string;
-  address: string;
+  address: string; // mapped from notes in DB when rendering
   hire_date: string;
   position: string;
   salary: number;
   status: 'active' | 'inactive';
 }
 
+const employeeSchema = z.object({
+  first_name: z.string().min(1, 'Prénom requis'),
+  last_name: z.string().min(1, 'Nom requis'),
+  cin: z.string().min(3, 'CIN invalide'),
+  phone: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  hire_date: z.string().min(1, "Date d'embauche requise"),
+  position: z.string().min(1, 'Poste requis'),
+  salary: z.coerce.number().nonnegative('Salaire invalide'),
+  status: z.union([z.literal('active'), z.literal('inactive')]),
+});
+
+type EmployeeFormValues = z.infer<typeof employeeSchema>;
+
 const EmployeeManagement: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { currentFarm } = useAuth();
+  const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
-  const [newEmployee, setNewEmployee] = useState({
+  const farmId = currentFarm?.id;
+
+  const emptyDefaults: EmployeeFormValues = {
     first_name: '',
     last_name: '',
     cin: '',
@@ -33,105 +51,134 @@ const EmployeeManagement: React.FC = () => {
     hire_date: new Date().toISOString().split('T')[0],
     position: '',
     salary: 0,
-    status: 'active' as const
+    status: 'active',
+  };
+
+  const form = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeSchema) as any,
+    defaultValues: emptyDefaults,
   });
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('organization_id', currentOrganization?.id)
-        .order('last_name');
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      setError('Failed to fetch employees');
-    } finally {
-      setLoading(false);
+  const onSubmit: SubmitHandler<EmployeeFormValues> = (values) => {
+    if (editingEmployee) {
+      updateEmployeeMutation.mutate({ id: editingEmployee.id, values });
+    } else {
+      addEmployeeMutation.mutate(values);
     }
   };
 
-  const handleAddEmployee = async () => {
-    try {
+  // Reset form values when switching between add/edit
+  useEffect(() => {
+    if (editingEmployee) {
+      form.reset({
+        first_name: editingEmployee.first_name,
+        last_name: editingEmployee.last_name,
+        cin: editingEmployee.cin,
+        phone: editingEmployee.phone || '',
+        address: editingEmployee.address || '',
+        hire_date: editingEmployee.hire_date,
+        position: editingEmployee.position,
+        salary: editingEmployee.salary,
+        status: editingEmployee.status,
+      });
+    } else if (showAddModal) {
+      form.reset(emptyDefaults);
+    }
+  }, [editingEmployee, showAddModal]);
+
+  const employeesQuery = useQuery({
+    queryKey: ['employees', farmId],
+    queryFn: async (): Promise<Employee[]> => {
+      if (!farmId) return [];
       const { data, error } = await supabase
         .from('employees')
-        .insert([{
-          ...newEmployee,
-          organization_id: currentOrganization?.id
-        }])
+        .select('id, first_name, last_name, phone, position, hire_date, salary, status, cin:employee_id, address:notes, farm_id')
+        .eq('farm_id', farmId)
+        .order('last_name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!farmId,
+  });
+
+  const addEmployeeMutation = useMutation({
+    mutationFn: async (values: EmployeeFormValues) => {
+      if (!farmId) {
+        throw new Error('Aucune ferme sélectionnée. Veuillez sélectionner une ferme.');
+      }
+      const payload = {
+        first_name: values.first_name,
+        last_name: values.last_name,
+        employee_id: values.cin,
+        phone: values.phone || null,
+        position: values.position,
+        hire_date: values.hire_date,
+        salary: values.salary,
+        status: values.status,
+        notes: values.address || null,
+        farm_id: farmId,
+      };
+      const { data, error } = await supabase
+        .from('employees')
+        .insert([payload])
         .select()
         .single();
-
       if (error) throw error;
-
-      setEmployees([...employees, data]);
+      return data as Employee;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
       setShowAddModal(false);
-      setNewEmployee({
-        first_name: '',
-        last_name: '',
-        cin: '',
-        phone: '',
-        address: '',
-        hire_date: new Date().toISOString().split('T')[0],
-        position: '',
-        salary: 0,
-        status: 'active'
-      });
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      setError('Failed to add employee');
-    }
-  };
+    },
+  });
 
-  const handleUpdateEmployee = async () => {
-    if (!editingEmployee) return;
-
-    try {
+  const updateEmployeeMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: EmployeeFormValues }) => {
+      if (!farmId) {
+        throw new Error('Aucune ferme sélectionnée. Veuillez sélectionner une ferme.');
+      }
+      const payload = {
+        first_name: values.first_name,
+        last_name: values.last_name,
+        employee_id: values.cin,
+        phone: values.phone || null,
+        position: values.position,
+        hire_date: values.hire_date,
+        salary: values.salary,
+        status: values.status,
+        notes: values.address || null,
+      };
       const { error } = await supabase
         .from('employees')
-        .update(editingEmployee)
-        .eq('id', editingEmployee.id)
-        .eq('organization_id', currentOrganization?.id);
-
+        .update(payload)
+        .eq('id', id)
+        .eq('farm_id', farmId);
       if (error) throw error;
-
-      setEmployees(employees.map(emp => 
-        emp.id === editingEmployee.id ? editingEmployee : emp
-      ));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
       setEditingEmployee(null);
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      setError('Failed to update employee');
-    }
-  };
+    },
+  });
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) return;
-
-    try {
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!farmId) {
+        throw new Error('Aucune ferme sélectionnée.');
+      }
       const { error } = await supabase
         .from('employees')
         .delete()
         .eq('id', id)
-        .eq('organization_id', currentOrganization?.id);
-
+        .eq('farm_id', farmId);
       if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
+    },
+  });
 
-      setEmployees(employees.filter(emp => emp.id !== id));
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      setError('Failed to delete employee');
-    }
-  };
-
-  if (loading) {
+  if (employeesQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -147,17 +194,43 @@ const EmployeeManagement: React.FC = () => {
           Gestion des Salariés
         </h2>
         <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          onClick={() => { if (!farmId) return; setEditingEmployee(null); setShowAddModal(true); form.reset(emptyDefaults); }}
+          disabled={!farmId}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${farmId ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+          title={!farmId ? 'Sélectionnez une ferme pour ajouter un salarié' : undefined}
         >
           <Plus className="h-5 w-5" />
           <span>Nouveau Salarié</span>
         </button>
       </div>
+      {!farmId && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
+          Sélectionnez une ferme pour gérer les salariés.
+        </div>
+      )}
+
+      {employeesQuery.isError && (
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+          <p className="text-red-600 dark:text-red-400">Impossible de charger les salariés.</p>
+        </div>
+      )}
+
+      {employeesQuery.data && employeesQuery.data.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+          <Calendar className="h-12 w-12 text-gray-400" />
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun salarié pour l’instant.</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Ajouter votre premier salarié
+          </button>
+        </div>
+      )}
 
       {/* Employees List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {employees.map(employee => (
+        {employeesQuery.data?.map(employee => (
           <div
             key={employee.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
@@ -170,14 +243,18 @@ const EmployeeManagement: React.FC = () => {
                 <p className="text-sm text-gray-500">{employee.position}</p>
               </div>
               <div className="flex space-x-2">
-                <button
-                  onClick={() => setEditingEmployee(employee)}
+                 <button
+                  onClick={() => { setShowAddModal(true); setEditingEmployee(employee); }}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <Edit2 className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => handleDeleteEmployee(employee.id)}
+                  onClick={() => {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
+                      deleteEmployeeMutation.mutate(employee.id);
+                    }
+                  }}
                   className="text-red-600 hover:text-red-800"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -236,252 +313,122 @@ const EmployeeManagement: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={editingEmployee?.first_name || newEmployee.first_name}
-                    onChange={(e) => {
-                      if (editingEmployee) {
-                        setEditingEmployee({
-                          ...editingEmployee,
-                          first_name: e.target.value
-                        });
-                      } else {
-                        setNewEmployee({
-                          ...newEmployee,
-                          first_name: e.target.value
-                        });
-                      }
-                    }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={editingEmployee?.last_name || newEmployee.last_name}
-                    onChange={(e) => {
-                      if (editingEmployee) {
-                        setEditingEmployee({
-                          ...editingEmployee,
-                          last_name: e.target.value
-                        });
-                      } else {
-                        setNewEmployee({
-                          ...newEmployee,
-                          last_name: e.target.value
-                        });
-                      }
-                    }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    required
-                  />
-                </div>
-              </div>
+                <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Prénom</label>
+                      <input
+                        type="text"
+                        {...form.register('first_name')}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                      />
+                      <p className="mt-1 text-sm text-red-600">{form.formState.errors.first_name?.message as string}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom</label>
+                      <input
+                        type="text"
+                        {...form.register('last_name')}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                      />
+                      <p className="mt-1 text-sm text-red-600">{form.formState.errors.last_name?.message as string}</p>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  CIN
-                </label>
-                <input
-                  type="text"
-                  value={editingEmployee?.cin || newEmployee.cin}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        cin: e.target.value
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        cin: e.target.value
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CIN</label>
+                    <input
+                      type="text"
+                      {...form.register('cin')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.cin?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={editingEmployee?.phone || newEmployee.phone}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        phone: e.target.value
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        phone: e.target.value
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Téléphone</label>
+                    <input
+                      type="tel"
+                      {...form.register('phone')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.phone?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={editingEmployee?.address || newEmployee.address}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        address: e.target.value
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        address: e.target.value
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse</label>
+                    <input
+                      type="text"
+                      {...form.register('address')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.address?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date d'embauche
-                </label>
-                <input
-                  type="date"
-                  value={editingEmployee?.hire_date || newEmployee.hire_date}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        hire_date: e.target.value
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        hire_date: e.target.value
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date d'embauche</label>
+                    <input
+                      type="date"
+                      {...form.register('hire_date')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.hire_date?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Poste
-                </label>
-                <input
-                  type="text"
-                  value={editingEmployee?.position || newEmployee.position}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        position: e.target.value
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        position: e.target.value
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Poste</label>
+                    <input
+                      type="text"
+                      {...form.register('position')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.position?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Salaire (DH)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingEmployee?.salary || newEmployee.salary}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        salary: Number(e.target.value)
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        salary: Number(e.target.value)
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire (DH)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      {...form.register('salary', { valueAsNumber: true })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    />
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.salary?.message as string}</p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Statut
-                </label>
-                <select
-                  value={editingEmployee?.status || newEmployee.status}
-                  onChange={(e) => {
-                    if (editingEmployee) {
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        status: e.target.value as 'active' | 'inactive'
-                      });
-                    } else {
-                      setNewEmployee({
-                        ...newEmployee,
-                        status: e.target.value as 'active' | 'inactive'
-                      });
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                >
-                  <option value="active">Actif</option>
-                  <option value="inactive">Inactif</option>
-                </select>
-              </div>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Statut</label>
+                    <select
+                      {...form.register('status')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    >
+                      <option value="active">Actif</option>
+                      <option value="inactive">Inactif</option>
+                    </select>
+                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.status?.message as string}</p>
+                  </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingEmployee(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={editingEmployee ? handleUpdateEmployee : handleAddEmployee}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
-                {editingEmployee ? 'Mettre à jour' : 'Ajouter'}
-              </button>
-            </div>
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setEditingEmployee(null);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={addEmployeeMutation.isPending || updateEmployeeMutation.isPending}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-60"
+                    >
+                      {editingEmployee ? 'Mettre à jour' : 'Ajouter'}
+                    </button>
+                  </div>
+                </form>
+            
           </div>
         </div>
       )}

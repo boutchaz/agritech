@@ -14,6 +14,7 @@ interface Parcel {
   farm_id: string;
   area?: number;
   area_unit?: string;
+  soil_type?: string | null;
 }
 
 const SoilAnalysisPage: React.FC = () => {
@@ -52,7 +53,7 @@ const SoilAnalysisPage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('parcels')
-          .select('id, name, farm_id, area, area_unit')
+          .select('id, name, farm_id, area, area_unit, soil_type')
           .eq('farm_id', currentFarm.id)
           .order('name');
 
@@ -117,11 +118,14 @@ const SoilAnalysisPage: React.FC = () => {
   }
 
   if (showForm) {
+    const selectedParcel = parcels.find(p => p.id === selectedParcelId) || null;
+
     return (
       <div className="p-6">
         <SoilAnalysisForm
           onSave={handleSave}
           onCancel={() => setShowForm(false)}
+          selectedParcel={selectedParcel}
         />
       </div>
     );

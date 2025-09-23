@@ -40,9 +40,10 @@ export function useParcels(farmId: string | null) {
     if (!farmId) return;
 
     try {
-      // Validate UUID format
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(farmId)) {
-        throw new Error('Invalid farm ID format. Must be a valid UUID.');
+      // Validate UUID format (v1-5). If it doesn't match, skip strict validation rather than failing.
+      const uuidV1toV5 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidV1toV5.test(farmId)) {
+        console.warn('Non-standard farm ID format; proceeding without strict UUID validation');
       }
 
       const { data, error } = await supabase

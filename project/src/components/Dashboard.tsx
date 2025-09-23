@@ -1,8 +1,12 @@
 import React from 'react';
-import { Activity, Droplets, Thermometer, Wind, Power, Tangent as Tank, Wrench, AlertTriangle, Calendar } from 'lucide-react';
+import { Activity, Droplets, Thermometer, Wrench, AlertTriangle, Calendar, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
+import { useAuth } from './MultiTenantAuthProvider';
+import { useParcels } from '../hooks/useParcels';
+import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import SensorChart from './SensorChart';
+import { useNavigate } from '@tanstack/react-router';
 
 interface DashboardProps {
   sensorData: SensorData[];
@@ -11,6 +15,11 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
   const { latestReadings, sensorData: sensorDataHook, isConnected } = useSensorData();
+  const { currentFarm } = useAuth();
+  const farmId = currentFarm?.id ?? null;
+  const { parcels, loading: parcelsLoading } = useParcels(farmId);
+  const { analyses, loading: analysesLoading } = useSoilAnalyses(currentFarm?.id ?? '');
+  const navigate = useNavigate();
 
   const getSensorValue = (type: string) => {
     return latestReadings[type]?.value.toFixed(1) || '0';
@@ -44,8 +53,52 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
     ]
   };
 
+  const totalArea = parcels.reduce((sum, p: any) => sum + (p.calculated_area ?? p.area ?? 0), 0);
+
   const renderWidget = (type: string) => {
     switch (type) {
+      case 'farm':
+        return (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ferme</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {currentFarm ? currentFarm.name : 'Aucune ferme sélectionnée'}
+                </h3>
+              </div>
+              <MapPin className="h-8 w-8 text-green-500" />
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-gray-500">Parcelles</div>
+                <div className="text-lg font-semibold">{parcelsLoading ? '…' : parcels.length}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Surface totale</div>
+                <div className="text-lg font-semibold">{parcelsLoading ? '…' : totalArea.toFixed(2)} ha</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Analyses de sol</div>
+                <div className="text-lg font-semibold">{analysesLoading ? '…' : analyses.length}</div>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => navigate({ to: '/parcels' })}
+                className="px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
+              >
+                Voir les parcelles
+              </button>
+              <button
+                onClick={() => navigate({ to: '/parcels' })}
+                className="px-3 py-1.5 text-sm rounded-md bg-green-600 hover:bg-green-700 text-white"
+              >
+                Ajouter une parcelle
+              </button>
+            </div>
+          </div>
+        );
       case 'soil':
         return settings.showSoilData && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
@@ -238,6 +291,11 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
 
   return (
     <div className="p-6 space-y-6">
+      {!currentFarm && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">
+          Sélectionnez une ferme pour afficher les parcelles et données associées.
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Tableau de bord
