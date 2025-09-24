@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE public.organizations (
     id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     name text NOT NULL,
+    slug text NOT NULL UNIQUE,
     email text,
     phone text,
     address text,
@@ -332,3 +333,30 @@ CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.crop_varieties FOR EACH
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.crops FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.soil_analysis FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.weather_data FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- Helper functions for frontend queries
+CREATE OR REPLACE FUNCTION public.get_user_organizations(user_uuid uuid)
+RETURNS TABLE(
+  organization_id uuid,
+  organization_name text,
+  organization_slug text,
+  user_role text,
+  is_active boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    o.id as organization_id,
+    o.name as organization_name,
+    o.slug as organization_slug,
+    ou.role as user_role,
+    ou.is_active
+  FROM public.organization_users ou
+  JOIN public.organizations o ON ou.organization_id = o.id
+  WHERE ou.user_id = user_uuid AND ou.is_active = true;
+END;
+$$;
