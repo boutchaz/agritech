@@ -146,11 +146,15 @@ const UtilitiesManagement: React.FC = () => {
     if (!editingUtility) return;
 
     try {
+      if (!currentFarm?.id) {
+        setError('Sélectionnez une ferme pour modifier une charge.');
+        return;
+      }
       const { error } = await supabase
         .from('utilities')
         .update(editingUtility)
         .eq('id', editingUtility.id)
-        .eq('farm_id', currentFarm?.id);
+        .eq('farm_id', currentFarm.id);
 
       if (error) throw error;
 
@@ -168,11 +172,15 @@ const UtilitiesManagement: React.FC = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) return;
 
     try {
+      if (!currentFarm?.id) {
+        setError('Sélectionnez une ferme pour supprimer une charge.');
+        return;
+      }
       const { error } = await supabase
         .from('utilities')
         .delete()
         .eq('id', id)
-        .eq('farm_id', currentFarm?.id);
+        .eq('farm_id', currentFarm.id);
 
       if (error) throw error;
 

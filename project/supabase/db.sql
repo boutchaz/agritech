@@ -1,8 +1,106 @@
--- Adminer 4.8.1 PostgreSQL 15.8 dump
+-- Create the update_updated_at_column function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-\connect "postgres";
+-- Create the calculate_parcel_area_from_boundary function
+CREATE OR REPLACE FUNCTION calculate_parcel_area_from_boundary()
+RETURNS trigger AS $$
+DECLARE
+  i integer;
+  area_sum numeric := 0;
+  x1 numeric;
+  y1 numeric;
+  x2 numeric;
+  y2 numeric;
+  points_count integer;
+  first_coord_x numeric;
+  first_coord_y numeric;
+BEGIN
+  -- Only calculate if boundary exists
+  IF NEW.boundary IS NOT NULL THEN
+    points_count := jsonb_array_length(NEW.boundary);
 
-DROP TABLE IF EXISTS "crop_categories";
+    -- Get first coordinate to detect coordinate system
+    first_coord_x := (NEW.boundary->0->0)::numeric;
+    first_coord_y := (NEW.boundary->0->1)::numeric;
+
+    -- Use Shoelace formula to calculate area
+    FOR i IN 0..(points_count - 2) LOOP
+      x1 := (NEW.boundary->i->0)::numeric;
+      y1 := (NEW.boundary->i->1)::numeric;
+      x2 := (NEW.boundary->(i+1)->0)::numeric;
+      y2 := (NEW.boundary->(i+1)->1)::numeric;
+
+      area_sum := area_sum + (x1 * y2 - x2 * y1);
+    END LOOP;
+
+    -- Check if coordinates are in EPSG:3857 (Web Mercator) or geographic
+    IF ABS(first_coord_x) > 20000 OR ABS(first_coord_y) > 20000 THEN
+      -- Coordinates are in EPSG:3857 (meters), convert directly to hectares
+      NEW.calculated_area := ABS(area_sum / 2) / 10000;
+    ELSE
+      -- Coordinates are geographic (degrees), use the old conversion
+      NEW.calculated_area := ABS(area_sum / 2) * 111.32 * 111.32 / 10000;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create helper functions for RLS policies
+CREATE OR REPLACE FUNCTION get_user_organizations(user_uuid uuid)
+RETURNS TABLE(organization_id uuid) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT ou.organization_id
+  FROM organization_users ou
+  WHERE ou.user_id = user_uuid AND ou.is_active = true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_organization_farms(org_uuid uuid)
+RETURNS TABLE(farm_id uuid) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT f.id
+  FROM farms f
+  WHERE f.organization_id = org_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_farm_parcels(farm_uuid uuid)
+RETURNS TABLE(parcel_id uuid) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT p.id
+  FROM parcels p
+  WHERE p.farm_id = farm_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_current_user_profile()
+RETURNS TABLE(
+  id uuid,
+  email text,
+  full_name text,
+  first_name text,
+  last_name text
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT up.id, up.email, up.full_name, up.first_name, up.last_name
+  FROM user_profiles up
+  WHERE up.id = auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TABLE IF EXISTS "crop_categories" CASCADE;
 CREATE TABLE "public"."crop_categories" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "type_id" uuid NOT NULL,
@@ -15,7 +113,7 @@ CREATE TABLE "public"."crop_categories" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "crop_types";
+DROP TABLE IF EXISTS "crop_types" CASCADE;
 CREATE TABLE "public"."crop_types" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "name" text NOT NULL,
@@ -27,7 +125,7 @@ CREATE TABLE "public"."crop_types" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "crop_varieties";
+DROP TABLE IF EXISTS "crop_varieties" CASCADE;
 CREATE TABLE "public"."crop_varieties" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "category_id" uuid NOT NULL,
@@ -41,7 +139,7 @@ CREATE TABLE "public"."crop_varieties" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "crops";
+DROP TABLE IF EXISTS "crops" CASCADE;
 CREATE TABLE "public"."crops" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -67,7 +165,7 @@ CREATE INDEX "idx_crops_farm_id" ON "public"."crops" USING btree ("farm_id");
 CREATE INDEX "idx_crops_parcel_id" ON "public"."crops" USING btree ("parcel_id");
 
 
-DROP TABLE IF EXISTS "day_laborers";
+DROP TABLE IF EXISTS "day_laborers" CASCADE;
 CREATE TABLE "public"."day_laborers" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -88,7 +186,7 @@ CREATE TABLE "public"."day_laborers" (
 CREATE INDEX "idx_day_laborers_farm_id" ON "public"."day_laborers" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "employees";
+DROP TABLE IF EXISTS "employees" CASCADE;
 CREATE TABLE "public"."employees" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -112,7 +210,7 @@ CREATE TABLE "public"."employees" (
 CREATE INDEX "idx_employees_farm_id" ON "public"."employees" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "farms";
+DROP TABLE IF EXISTS "farms" CASCADE;
 CREATE TABLE "public"."farms" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "organization_id" uuid,
@@ -144,13 +242,9 @@ CREATE TABLE "public"."farms" (
 CREATE INDEX "idx_farms_organization_id" ON "public"."farms" USING btree ("organization_id");
 
 
-DELIMITER ;;
+CREATE TRIGGER "update_farms_updated_at" BEFORE UPDATE ON "public"."farms" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER "update_farms_updated_at" BEFORE UPDATE ON "public"."farms" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();;
-
-DELIMITER ;
-
-DROP TABLE IF EXISTS "financial_transactions";
+DROP TABLE IF EXISTS "financial_transactions" CASCADE;
 CREATE TABLE "public"."financial_transactions" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -174,7 +268,7 @@ CREATE INDEX "idx_financial_transactions_date" ON "public"."financial_transactio
 CREATE INDEX "idx_financial_transactions_farm_id" ON "public"."financial_transactions" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "inventory";
+DROP TABLE IF EXISTS "inventory" CASCADE;
 CREATE TABLE "public"."inventory" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -212,7 +306,7 @@ CREATE TABLE "public"."inventory" (
 CREATE INDEX "idx_inventory_farm_id" ON "public"."inventory" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "livestock";
+DROP TABLE IF EXISTS "livestock" CASCADE;
 CREATE TABLE "public"."livestock" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -233,7 +327,7 @@ CREATE TABLE "public"."livestock" (
 CREATE INDEX "idx_livestock_farm_id" ON "public"."livestock" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "organization_users";
+DROP TABLE IF EXISTS "organization_users" CASCADE;
 CREATE TABLE "public"."organization_users" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "organization_id" uuid,
@@ -247,13 +341,9 @@ CREATE TABLE "public"."organization_users" (
 ) WITH (oids = false);
 
 
-DELIMITER ;;
+CREATE TRIGGER "update_organization_users_updated_at" BEFORE UPDATE ON "public"."organization_users" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER "update_organization_users_updated_at" BEFORE UPDATE ON "public"."organization_users" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();;
-
-DELIMITER ;
-
-DROP TABLE IF EXISTS "organizations";
+DROP TABLE IF EXISTS "organizations" CASCADE;
 CREATE TABLE "public"."organizations" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "name" text NOT NULL,
@@ -295,13 +385,9 @@ COMMENT ON COLUMN "public"."organizations"."contact_person" IS 'Primary contact 
 COMMENT ON COLUMN "public"."organizations"."status" IS 'Organization status (active, inactive, suspended)';
 
 
-DELIMITER ;;
+CREATE TRIGGER "update_organizations_updated_at" BEFORE UPDATE ON "public"."organizations" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER "update_organizations_updated_at" BEFORE UPDATE ON "public"."organizations" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();;
-
-DELIMITER ;
-
-DROP TABLE IF EXISTS "parcels";
+DROP TABLE IF EXISTS "parcels" CASCADE;
 CREATE TABLE "public"."parcels" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "farm_id" uuid,
@@ -309,6 +395,8 @@ CREATE TABLE "public"."parcels" (
     "description" text,
     "area" numeric(10,2),
     "area_unit" text DEFAULT 'hectares',
+    "boundary" jsonb,
+    "calculated_area" numeric(10,2),
     "created_at" timestamptz DEFAULT now(),
     "updated_at" timestamptz DEFAULT now(),
     CONSTRAINT "parcels_pkey" PRIMARY KEY ("id")
@@ -316,8 +404,14 @@ CREATE TABLE "public"."parcels" (
 
 CREATE INDEX "idx_parcels_farm_id" ON "public"."parcels" USING btree ("farm_id");
 
+-- Create trigger to automatically calculate area when boundary is updated
+CREATE TRIGGER "calculate_parcel_area_trigger" 
+    BEFORE INSERT OR UPDATE ON "public"."parcels" 
+    FOR EACH ROW 
+    EXECUTE FUNCTION calculate_parcel_area_from_boundary();
 
-DROP TABLE IF EXISTS "product_categories";
+
+DROP TABLE IF EXISTS "product_categories" CASCADE;
 CREATE TABLE "public"."product_categories" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "name" text NOT NULL,
@@ -329,7 +423,7 @@ CREATE TABLE "public"."product_categories" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "product_subcategories";
+DROP TABLE IF EXISTS "product_subcategories" CASCADE;
 CREATE TABLE "public"."product_subcategories" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "category_id" uuid NOT NULL,
@@ -342,7 +436,7 @@ CREATE TABLE "public"."product_subcategories" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "soil_analyses";
+DROP TABLE IF EXISTS "soil_analyses" CASCADE;
 CREATE TABLE "public"."soil_analyses" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "parcel_id" uuid,
@@ -362,7 +456,7 @@ CREATE INDEX "idx_soil_analyses_analysis_date" ON "public"."soil_analyses" USING
 CREATE INDEX "idx_soil_analyses_parcel_id" ON "public"."soil_analyses" USING btree ("parcel_id");
 
 
-DROP TABLE IF EXISTS "task_categories";
+DROP TABLE IF EXISTS "task_categories" CASCADE;
 CREATE TABLE "public"."task_categories" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "name" text NOT NULL,
@@ -375,7 +469,7 @@ CREATE TABLE "public"."task_categories" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "task_templates";
+DROP TABLE IF EXISTS "task_templates" CASCADE;
 CREATE TABLE "public"."task_templates" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "category_id" uuid NOT NULL,
@@ -390,7 +484,7 @@ CREATE TABLE "public"."task_templates" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "tasks";
+DROP TABLE IF EXISTS "tasks" CASCADE;
 CREATE TABLE "public"."tasks" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -420,7 +514,7 @@ CREATE INDEX "idx_tasks_farm_id" ON "public"."tasks" USING btree ("farm_id");
 CREATE INDEX "idx_tasks_status" ON "public"."tasks" USING btree ("status");
 
 
-DROP TABLE IF EXISTS "test_types";
+DROP TABLE IF EXISTS "test_types" CASCADE;
 CREATE TABLE "public"."test_types" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "name" text NOT NULL,
@@ -432,7 +526,7 @@ CREATE TABLE "public"."test_types" (
 ) WITH (oids = false);
 
 
-DROP TABLE IF EXISTS "user_profiles";
+DROP TABLE IF EXISTS "user_profiles" CASCADE;
 CREATE TABLE "public"."user_profiles" (
     "id" uuid NOT NULL,
     "email" text,
@@ -449,13 +543,9 @@ CREATE TABLE "public"."user_profiles" (
 ) WITH (oids = false);
 
 
-DELIMITER ;;
+CREATE TRIGGER "update_user_profiles_updated_at" BEFORE UPDATE ON "public"."user_profiles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER "update_user_profiles_updated_at" BEFORE UPDATE ON "public"."user_profiles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();;
-
-DELIMITER ;
-
-DROP TABLE IF EXISTS "utilities";
+DROP TABLE IF EXISTS "utilities" CASCADE;
 CREATE TABLE "public"."utilities" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -475,7 +565,7 @@ CREATE TABLE "public"."utilities" (
 CREATE INDEX "idx_utilities_farm_id" ON "public"."utilities" USING btree ("farm_id");
 
 
-DROP TABLE IF EXISTS "work_records";
+DROP TABLE IF EXISTS "work_records" CASCADE;
 CREATE TABLE "public"."work_records" (
     "id" uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
     "farm_id" uuid NOT NULL,
@@ -525,52 +615,7 @@ ALTER TABLE ONLY "public"."tasks" ADD CONSTRAINT "tasks_template_id_fkey" FOREIG
 ALTER TABLE ONLY "public"."user_profiles" ADD CONSTRAINT "user_profiles_id_fkey" FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE NOT DEFERRABLE;
 
 -- 2025-09-21 23:07:30.585761+00-- Fix area calculation for EPSG:3857 coordinates
--- Replace the existing area calculation function to handle Web Mercator coordinates
-
-CREATE OR REPLACE FUNCTION calculate_parcel_area_from_boundary()
-RETURNS trigger AS $$
-DECLARE
-  i integer;
-  area_sum numeric := 0;
-  x1 numeric;
-  y1 numeric;
-  x2 numeric;
-  y2 numeric;
-  points_count integer;
-  first_coord_x numeric;
-  first_coord_y numeric;
-BEGIN
-  -- Only calculate if boundary exists
-  IF NEW.boundary IS NOT NULL THEN
-    points_count := jsonb_array_length(NEW.boundary);
-
-    -- Get first coordinate to detect coordinate system
-    first_coord_x := (NEW.boundary->0->0)::numeric;
-    first_coord_y := (NEW.boundary->0->1)::numeric;
-
-    -- Use Shoelace formula to calculate area
-    FOR i IN 0..(points_count - 2) LOOP
-      x1 := (NEW.boundary->i->0)::numeric;
-      y1 := (NEW.boundary->i->1)::numeric;
-      x2 := (NEW.boundary->(i+1)->0)::numeric;
-      y2 := (NEW.boundary->(i+1)->1)::numeric;
-
-      area_sum := area_sum + (x1 * y2 - x2 * y1);
-    END LOOP;
-
-    -- Check if coordinates are in EPSG:3857 (Web Mercator) or geographic
-    IF ABS(first_coord_x) > 20000 OR ABS(first_coord_y) > 20000 THEN
-      -- Coordinates are in EPSG:3857 (meters), convert directly to hectares
-      NEW.calculated_area := ABS(area_sum / 2) / 10000;
-    ELSE
-      -- Coordinates are geographic (degrees), use the old conversion
-      NEW.calculated_area := ABS(area_sum / 2) * 111.32 * 111.32 / 10000;
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Function moved to top of file for proper ordering
 
 -- Update any existing parcels with boundaries to recalculate their areas
 UPDATE parcels
@@ -581,7 +626,8 @@ WHERE boundary IS NOT NULL;
 UPDATE parcels
 SET boundary = boundary
 WHERE boundary IS NOT NULL;-- Create suppliers table
-CREATE TABLE IF NOT EXISTS "public"."suppliers" (
+DROP TABLE IF EXISTS "suppliers" CASCADE;
+CREATE TABLE "public"."suppliers" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "organization_id" uuid NOT NULL,
     "name" text NOT NULL,
@@ -606,7 +652,8 @@ CREATE TABLE IF NOT EXISTS "public"."suppliers" (
 CREATE INDEX "idx_suppliers_organization_id" ON "public"."suppliers" USING btree ("organization_id");
 
 -- Create warehouses table
-CREATE TABLE IF NOT EXISTS "public"."warehouses" (
+DROP TABLE IF EXISTS "warehouses" CASCADE;
+CREATE TABLE "public"."warehouses" (
     "id" uuid DEFAULT gen_random_uuid() NOT NULL,
     "organization_id" uuid NOT NULL,
     "farm_id" uuid,
@@ -647,6 +694,105 @@ ADD CONSTRAINT "inventory_warehouse_id_fkey" FOREIGN KEY (warehouse_id) REFERENC
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS "idx_inventory_supplier_id" ON "public"."inventory" USING btree ("supplier_id");
 CREATE INDEX IF NOT EXISTS "idx_inventory_warehouse_id" ON "public"."inventory" USING btree ("warehouse_id");
+
+-- Add RLS policies for organizations
+ALTER TABLE "public"."organizations" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view organizations they belong to" ON "public"."organizations"
+    FOR SELECT USING (
+        id IN (
+            SELECT organization_id
+            FROM organization_users
+            WHERE user_id = auth.uid() AND is_active = true
+        )
+    );
+
+CREATE POLICY "Users can insert organizations" ON "public"."organizations"
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update organizations they belong to" ON "public"."organizations"
+    FOR UPDATE USING (
+        id IN (
+            SELECT organization_id
+            FROM organization_users
+            WHERE user_id = auth.uid() AND is_active = true
+        )
+    );
+
+-- Add RLS policies for organization_users
+ALTER TABLE "public"."organization_users" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their organization memberships" ON "public"."organization_users"
+    FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert organization memberships" ON "public"."organization_users"
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update their organization memberships" ON "public"."organization_users"
+    FOR UPDATE USING (user_id = auth.uid());
+
+-- Add RLS policies for farms
+ALTER TABLE "public"."farms" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view farms in their organization" ON "public"."farms"
+    FOR SELECT USING (
+        organization_id IN (
+            SELECT organization_id
+            FROM organization_users
+            WHERE user_id = auth.uid() AND is_active = true
+        )
+    );
+
+CREATE POLICY "Users can insert farms in their organization" ON "public"."farms"
+    FOR INSERT WITH CHECK (
+        organization_id IN (
+            SELECT organization_id
+            FROM organization_users
+            WHERE user_id = auth.uid() AND is_active = true
+        )
+    );
+
+CREATE POLICY "Users can update farms in their organization" ON "public"."farms"
+    FOR UPDATE USING (
+        organization_id IN (
+            SELECT organization_id
+            FROM organization_users
+            WHERE user_id = auth.uid() AND is_active = true
+        )
+    );
+
+-- Add RLS policies for parcels
+ALTER TABLE "public"."parcels" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view parcels in their organization" ON "public"."parcels"
+    FOR SELECT USING (
+        farm_id IN (
+            SELECT f.id
+            FROM farms f
+            JOIN organization_users ou ON f.organization_id = ou.organization_id
+            WHERE ou.user_id = auth.uid() AND ou.is_active = true
+        )
+    );
+
+CREATE POLICY "Users can insert parcels in their organization" ON "public"."parcels"
+    FOR INSERT WITH CHECK (
+        farm_id IN (
+            SELECT f.id
+            FROM farms f
+            JOIN organization_users ou ON f.organization_id = ou.organization_id
+            WHERE ou.user_id = auth.uid() AND ou.is_active = true
+        )
+    );
+
+CREATE POLICY "Users can update parcels in their organization" ON "public"."parcels"
+    FOR UPDATE USING (
+        farm_id IN (
+            SELECT f.id
+            FROM farms f
+            JOIN organization_users ou ON f.organization_id = ou.organization_id
+            WHERE ou.user_id = auth.uid() AND ou.is_active = true
+        )
+    );
 
 -- Add RLS policies for suppliers
 ALTER TABLE "public"."suppliers" ENABLE ROW LEVEL SECURITY;

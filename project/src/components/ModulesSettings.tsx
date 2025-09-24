@@ -20,21 +20,68 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
     switch (module.id) {
       case 'fruit-trees':
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Paramètres des arbres fruitiers</h3>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                <span>Notifications de taille</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                <span>Alertes de maladies</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                <span>Prévisions de récolte</span>
-              </label>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Paramètres des arbres fruitiers</h3>
+              <div className="space-y-3">
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <span>Notifications de taille</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <span>Alertes de maladies</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <span>Prévisions de récolte</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                Gestion des parcelles
+              </h4>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                  Les parcelles peuvent être assignées directement dans le module pour une gestion personnalisée des données et recommandations.
+                </p>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                    <span className="text-sm">Auto-détecter les parcelles avec arbres fruitiers</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                    <span className="text-sm">Suggestions basées sur le type de sol</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" className="rounded border-gray-300" />
+                    <span className="text-sm">Assignment automatique des nouvelles parcelles</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                Intégrations
+              </h4>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <span className="text-sm">Synchroniser avec l'analyse du sol</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <span className="text-sm">Utiliser les données satellite</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded border-gray-300" />
+                  <span className="text-sm">Connecter aux capteurs IoT</span>
+                </label>
+              </div>
             </div>
           </div>
         );

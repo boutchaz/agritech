@@ -13,10 +13,36 @@ const mockModules: Module[] = [
     icon: 'Tree',
     active: true,
     category: 'agriculture',
-    description: 'Gérez vos vergers',
+    description: 'Gérez vos vergers et optimisez votre production fruitière',
     metrics: [
       { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
+      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' },
+      { name: 'Parcelles', value: 3, unit: 'ha', trend: 'stable' },
+      { name: 'Santé', value: 85, unit: '%', trend: 'up' }
+    ]
+  },
+  {
+    id: 'cereals',
+    name: 'Céréales',
+    icon: 'Wheat',
+    active: true,
+    category: 'agriculture',
+    description: 'Gestion des cultures céréalières',
+    metrics: [
+      { name: 'Surface', value: 45, unit: 'ha', trend: 'stable' },
+      { name: 'Rendement', value: 8.2, unit: 't/ha', trend: 'up' }
+    ]
+  },
+  {
+    id: 'vegetables',
+    name: 'Légumes',
+    icon: 'Carrot',
+    active: true,
+    category: 'agriculture',
+    description: 'Production de légumes de saison',
+    metrics: [
+      { name: 'Diversité', value: 12, unit: 'variétés', trend: 'up' },
+      { name: 'Production', value: 25, unit: 't/ha', trend: 'stable' }
     ]
   },
   {
@@ -31,7 +57,18 @@ const mockModules: Module[] = [
       { name: 'Production', value: 45, unit: 'kg/sem', trend: 'up' }
     ]
   },
-  // ... other modules would be here
+  {
+    id: 'livestock',
+    name: 'Élevage',
+    icon: 'Cow',
+    active: false,
+    category: 'elevage',
+    description: 'Gestion du cheptel et alimentation',
+    metrics: [
+      { name: 'Têtes', value: 120, unit: 'animaux', trend: 'stable' },
+      { name: 'Production', value: 850, unit: 'L/jour', trend: 'up' }
+    ]
+  }
 ];
 
 const mockSensorData: SensorData[] = [
@@ -94,7 +131,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full max-w-full overflow-x-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">

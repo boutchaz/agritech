@@ -15,7 +15,16 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:setup": "node setup-database.js",
-    "db:complete-setup": "echo 'Please run the SQL in supabase/schemas/00_complete_setup.sql in your Supabase Dashboard'"
+    "db:complete-setup": "echo 'Please run the SQL in supabase/schemas/00_complete_setup.sql in your Supabase Dashboard'",
+    "db:apply-schema": "supabase db push",
+    "db:generate-types": "supabase gen types typescript --local > src/types/database.types.ts && node scripts/generate-types.js",
+    "db:diff": "supabase db diff --schema public",
+    "db:deploy": "supabase db push --include-seed",
+    "db:apply-schema-remote": "node scripts/apply-schema-api.js",
+    "db:apply-schema-remote-psql": "node scripts/apply-schema-remote.js",
+    "db:generate-types-remote": "node scripts/generate-types-remote.js",
+    "db:deploy-remote": "node scripts/apply-schema-api.js --seed",
+    "db:setup-remote": "npm run db:apply-schema-remote && npm run db:generate-types-remote"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
@@ -24,6 +33,7 @@
     "@tanstack/react-router": "^1.131.41",
     "@tanstack/router-devtools": "^1.131.42",
     "@tanstack/router-plugin": "^1.131.49",
+    "dotenv": "^17.2.2",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.344.0",

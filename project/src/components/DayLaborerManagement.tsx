@@ -51,7 +51,7 @@ const DayLaborerManagement: React.FC = () => {
   useEffect(() => {
     fetchLaborers();
     fetchTaskCategories();
-  }, []);
+  }, [currentFarm?.id]);
 
   const fetchTaskCategories = async () => {
     try {
@@ -70,10 +70,15 @@ const DayLaborerManagement: React.FC = () => {
 
   const fetchLaborers = async () => {
     try {
+      setLoading(true);
+      if (!currentFarm?.id) {
+        setLaborers([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('day_laborers')
         .select('*')
-        .eq('farm_id', currentFarm?.id)
+        .eq('farm_id', currentFarm.id)
         .order('last_name');
 
       if (error) throw error;
@@ -133,6 +138,10 @@ const DayLaborerManagement: React.FC = () => {
 
   const handleUpdateLaborer = async (laborer: DayLaborer) => {
     try {
+      if (!currentFarm?.id) {
+        setError('Sélectionnez une ferme pour modifier un ouvrier.');
+        return;
+      }
       const payload: any = {
         first_name: laborer.first_name,
         last_name: laborer.last_name,
@@ -145,7 +154,7 @@ const DayLaborerManagement: React.FC = () => {
         .from('day_laborers')
         .update(payload)
         .eq('id', laborer.id)
-        .eq('farm_id', currentFarm?.id ?? '');
+        .eq('farm_id', currentFarm.id);
 
       if (error) throw error;
 
@@ -161,11 +170,15 @@ const DayLaborerManagement: React.FC = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')) return;
 
     try {
+      if (!currentFarm?.id) {
+        setError('Sélectionnez une ferme pour supprimer un ouvrier.');
+        return;
+      }
       const { error } = await supabase
         .from('day_laborers')
         .delete()
         .eq('id', id)
-        .eq('farm_id', currentFarm?.id ?? '');
+        .eq('farm_id', currentFarm.id);
 
       if (error) throw error;
 
