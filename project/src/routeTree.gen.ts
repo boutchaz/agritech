@@ -18,6 +18,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
+import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -75,6 +76,11 @@ const LoginRoute = LoginRouteImport.update({
 const InfrastructureRoute = InfrastructureRouteImport.update({
   id: '/infrastructure',
   path: '/infrastructure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FarmHierarchyRoute = FarmHierarchyRouteImport.update({
+  id: '/farm-hierarchy',
+  path: '/farm-hierarchy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmployeesRoute = EmployeesRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
+  '/farm-hierarchy': typeof FarmHierarchyRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
+  '/farm-hierarchy': typeof FarmHierarchyRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
+  '/farm-hierarchy': typeof FarmHierarchyRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
+    | '/farm-hierarchy'
     | '/infrastructure'
     | '/login'
     | '/parcels'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
+    | '/farm-hierarchy'
     | '/infrastructure'
     | '/login'
     | '/parcels'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
+    | '/farm-hierarchy'
     | '/infrastructure'
     | '/login'
     | '/parcels'
@@ -291,6 +303,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
   EmployeesRoute: typeof EmployeesRoute
+  FarmHierarchyRoute: typeof FarmHierarchyRoute
   InfrastructureRoute: typeof InfrastructureRoute
   LoginRoute: typeof LoginRoute
   ParcelsRoute: typeof ParcelsRoute
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       path: '/infrastructure'
       fullPath: '/infrastructure'
       preLoaderRoute: typeof InfrastructureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/farm-hierarchy': {
+      id: '/farm-hierarchy'
+      path: '/farm-hierarchy'
+      fullPath: '/farm-hierarchy'
+      preLoaderRoute: typeof FarmHierarchyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/employees': {
@@ -492,6 +512,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
   EmployeesRoute: EmployeesRoute,
+  FarmHierarchyRoute: FarmHierarchyRoute,
   InfrastructureRoute: InfrastructureRoute,
   LoginRoute: LoginRoute,
   ParcelsRoute: ParcelsRoute,

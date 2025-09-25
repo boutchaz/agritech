@@ -10,7 +10,6 @@ interface OnboardingFlowProps {
 interface OrganizationData {
   name: string;
   slug: string;
-  description: string;
   phone: string;
   email: string;
 }
@@ -27,7 +26,7 @@ interface FarmData {
   location: string;
   size: number;
   size_unit: string;
-  farm_type: string;
+  farm_type: 'main' | 'sub';
   description: string;
 }
 
@@ -39,6 +38,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
   const [existingOrgId, setExistingOrgId] = useState<string | null>(null);
   const [hasExistingProfile, setHasExistingProfile] = useState<boolean>(false);
   const [hasExistingOrg, setHasExistingOrg] = useState<boolean>(false);
+  const [hasExistingFarms, setHasExistingFarms] = useState<boolean>(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -51,7 +51,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
   const [organizationData, setOrganizationData] = useState<OrganizationData>({
     name: '',
     slug: '',
-    description: '',
     phone: '',
     email: user?.email || ''
   });
@@ -61,7 +60,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     location: '',
     size: 0,
     size_unit: 'hectares',
-    farm_type: 'mixed',
+    farm_type: 'main',
     description: ''
   });
 
@@ -71,6 +70,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
       setInitialLoading(true);
       let profileExists = false;
       let orgExists = false;
+      let farmsExist = false;
       const completed: number[] = [];
 
       try {
@@ -101,24 +101,41 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           .single();
 
         if (orgData?.organizations) {
+          const org = orgData.organizations as any;
           orgExists = true;
           setHasExistingOrg(true);
           setExistingOrgId(orgData.organization_id);
           completed.push(2);
           setOrganizationData({
-            name: orgData.organizations.name || '',
-            slug: orgData.organizations.slug || '',
-            description: orgData.organizations.description || '',
-            phone: orgData.organizations.phone || '',
-            email: orgData.organizations.email || user?.email || ''
+            name: org.name || '',
+            slug: org.slug || '',
+            phone: org.phone || '',
+            email: org.email || user?.email || ''
           });
+
+          // Check for existing farms in this organization
+          const { data: farmsData } = await supabase
+            .from('farms')
+            .select('id')
+            .eq('organization_id', orgData.organization_id)
+            .limit(1);
+
+          if (farmsData && farmsData.length > 0) {
+            farmsExist = true;
+            setHasExistingFarms(true);
+            completed.push(3);
+          }
         }
 
         setCompletedSteps(completed);
 
         // Determine which step to show
-        if (profileExists && orgExists) {
-          // Both exist, go to farm step
+        if (profileExists && orgExists && farmsExist) {
+          // All steps completed - call onComplete to exit onboarding
+          onComplete();
+          return;
+        } else if (profileExists && orgExists) {
+          // Profile and org exist, go to farm step
           setCurrentStep(3);
         } else if (profileExists) {
           // Only profile exists, go to organization step
@@ -171,6 +188,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
       case 2:
         return organizationData.name.trim() !== '' && organizationData.slug.trim() !== '';
       case 3:
+        // If farms already exist, step is valid
+        if (hasExistingFarms) return true;
         return farmData.name.trim() !== '' && farmData.location.trim() !== '' && farmData.size > 0;
       default:
         return true;
@@ -215,10 +234,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           .from('user_profiles')
           .upsert({
             id: user.id,
+            email: user.email,
             ...profileData
           });
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw new Error(`Erreur lors de la création du profil: ${profileError.message}`);
+        }
       }
 
       // 2. Create organization if not exists
@@ -229,37 +252,65 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           .select()
           .single();
 
-        if (orgError) throw orgError;
+        if (orgError) {
+          console.error('Organization creation error:', orgError);
+          throw new Error(`Erreur lors de la création de l'organisation: ${orgError.message}`);
+        }
         organizationId = orgData.id;
 
-        // 3. Add user as organization owner
+        // 3. Add user as organization admin
         const { error: userOrgError } = await supabase
           .from('organization_users')
           .insert({
             organization_id: organizationId,
             user_id: user.id,
-            role: 'owner'
+            role: 'admin'
           });
 
-        if (userOrgError) throw userOrgError;
+        if (userOrgError) {
+          console.error('Organization user creation error:', userOrgError);
+          throw new Error(`Erreur lors de l'ajout à l'organisation: ${userOrgError.message}`);
+        }
       }
 
-      // 4. Create farm (always create as this is the missing piece)
-      const { error: farmError } = await supabase
-        .from('farms')
-        .insert({
-          name: farmData.name,
-          description: farmData.description,
-          location: farmData.location,
-          size: farmData.size,
-          size_unit: farmData.size_unit,
-          organization_id: organizationId,
-          manager_name: `${profileData.first_name} ${profileData.last_name}`.trim(),
-          manager_phone: profileData.phone || null,
-          manager_email: user.email
-        });
+      // 4. Create farm only if no farms exist yet
+      if (!hasExistingFarms) {
+        const { data: farmData, error: farmError } = await supabase
+          .from('farms')
+          .insert({
+            name: farmData.name,
+            description: farmData.description,
+            location: farmData.location,
+            size: farmData.size,
+            area_unit: farmData.size_unit,
+            organization_id: organizationId,
+            farm_type: 'main',
+            hierarchy_level: 1,
+            manager_id: user.id
+          })
+          .select()
+          .single();
 
-      if (farmError) throw farmError;
+        if (farmError) {
+          console.error('Farm creation error:', farmError);
+          throw new Error(`Erreur lors de la création de la ferme: ${farmError.message}`);
+        }
+
+        // Assign the user as main manager of the farm
+        const { error: roleError } = await supabase
+          .from('farm_management_roles')
+          .insert({
+            farm_id: farmData.id,
+            user_id: user.id,
+            role: 'main_manager',
+            assigned_by: user.id
+          });
+
+        if (roleError) {
+          console.error('Role assignment error:', roleError);
+          // Don't throw error here as farm creation succeeded
+        }
+      }
 
       onComplete();
     } catch (error: any) {
@@ -298,7 +349,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
               const Icon = step.icon;
               const isActive = currentStep === step.number;
               const isCompleted = completedSteps.includes(step.number) || currentStep > step.number;
-              const isPrefilled = completedSteps.includes(step.number);
 
               return (
                 <div key={step.number} className="flex items-center">
@@ -448,18 +498,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={organizationData.description}
-                    onChange={(e) => setOrganizationData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="Description de votre organisation agricole..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Téléphone
                   </label>
                   <input
@@ -478,8 +516,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           {currentStep === 3 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Créez votre première ferme
+                {hasExistingFarms ? 'Vos fermes' : 'Créez votre première ferme'}
               </h2>
+              {hasExistingFarms && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-700">✓ Vous avez déjà des fermes. Vous pouvez passer à l'étape suivante.</p>
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -489,7 +532,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     type="text"
                     value={farmData.name}
                     onChange={(e) => setFarmData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    disabled={hasExistingFarms}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Ferme principale"
                   />
                 </div>
@@ -501,7 +545,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     type="text"
                     value={farmData.location}
                     onChange={(e) => setFarmData(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    disabled={hasExistingFarms}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Ville, Région, Pays"
                   />
                 </div>
@@ -515,7 +560,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                       step="0.1"
                       value={farmData.size}
                       onChange={(e) => setFarmData(prev => ({ ...prev, size: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      disabled={hasExistingFarms}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="0"
                     />
                   </div>
@@ -526,7 +572,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     <select
                       value={farmData.size_unit}
                       onChange={(e) => setFarmData(prev => ({ ...prev, size_unit: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      disabled={hasExistingFarms}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="hectares">Hectares</option>
                       <option value="acres">Acres</option>
@@ -536,21 +583,23 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type d'exploitation
+                    Type de ferme
                   </label>
                   <select
                     value={farmData.farm_type}
-                    onChange={(e) => setFarmData(prev => ({ ...prev, farm_type: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    onChange={(e) => setFarmData(prev => ({ ...prev, farm_type: e.target.value as 'main' | 'sub' }))}
+                    disabled={hasExistingFarms}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <option value="mixed">Mixte</option>
-                    <option value="dairy">Laitière</option>
-                    <option value="poultry">Aviculture</option>
-                    <option value="fruit">Arboriculture</option>
-                    <option value="vegetable">Maraîchage</option>
-                    <option value="grain">Céréalière</option>
-                    <option value="livestock">Élevage</option>
+                    <option value="main">Ferme principale</option>
+                    <option value="sub">Sous-ferme</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {farmData.farm_type === 'main' 
+                      ? 'Ferme principale - centre de gestion de votre organisation'
+                      : 'Sous-ferme - dépendante d\'une ferme principale'
+                    }
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -560,7 +609,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     value={farmData.description}
                     onChange={(e) => setFarmData(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    disabled={hasExistingFarms}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Description de votre ferme..."
                   />
                 </div>
@@ -571,6 +621,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           {/* Navigation */}
           <div className="flex justify-between mt-8">
             <button
+              type="button"
               onClick={handlePrevious}
               disabled={currentStep === 1}
               className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -580,6 +631,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
             {currentStep < 3 ? (
               <button
+                type="button"
                 onClick={handleNext}
                 className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
@@ -587,6 +639,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleComplete}
                 disabled={loading}
                 className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"

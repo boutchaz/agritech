@@ -387,6 +387,24 @@ const MapComponent: React.FC<MapProps> = ({
     }
   };
 
+  // Normalize irrigation type to DB-allowed tokens
+  const normalizeIrrigationType = (value: string): 'drip' | 'sprinkler' | 'flood' | 'none' | undefined => {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return undefined;
+    const mapping: Record<string, 'drip' | 'sprinkler' | 'flood' | 'none'> = {
+      'Goutte-à-goutte': 'drip',
+      'Aspersion': 'sprinkler',
+      'Micro-aspersion': 'sprinkler',
+      'Gravitaire': 'flood',
+      'Aucune': 'none',
+      'drip': 'drip',
+      'sprinkler': 'sprinkler',
+      'flood': 'flood',
+      'none': 'none'
+    };
+    return mapping[trimmed] ?? undefined;
+  };
+
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -838,8 +856,10 @@ const MapComponent: React.FC<MapProps> = ({
     console.log('Saving parcel with boundary:', tempBoundary[0], 'to', tempBoundary[tempBoundary.length - 1]);
 
     try {
+      const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
       await addParcel(parcelName, tempBoundary, {
         ...parcelDetails,
+        irrigation_type: normalizedIrrigation,
         calculated_area: calculatedArea,
         perimeter: calculatedPerimeter
       });
@@ -999,10 +1019,11 @@ const MapComponent: React.FC<MapProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Sélectionner...</option>
-                    <option value="Goutte-à-goutte">Goutte-à-goutte</option>
-                    <option value="Aspersion">Aspersion</option>
-                    <option value="Micro-aspersion">Micro-aspersion</option>
-                    <option value="Gravitaire">Gravitaire</option>
+                    <option value="drip">Goutte-à-goutte</option>
+                    <option value="sprinkler">Aspersion</option>
+                    <option value="sprinkler">Micro-aspersion</option>
+                    <option value="flood">Gravitaire</option>
+                    <option value="none">Aucune</option>
                   </select>
                 </div>
               </div>

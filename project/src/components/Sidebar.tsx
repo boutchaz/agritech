@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Menu, Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network } from 'lucide-react';
 import type { Module } from '../types';
 
 interface SidebarProps {
@@ -13,7 +13,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({
   modules,
-  activeModule,
   onModuleChange,
   isDarkMode,
   onThemeToggle,
@@ -131,6 +130,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <Building2 className="h-5 w-5" />
           <span>Infrastructure</span>
+        </button>
+
+        <button
+          onClick={() => handleNavigation('/farm-hierarchy')}
+          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            currentPath === '/farm-hierarchy'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <Network className="h-5 w-5" />
+          <span>Gestion des Fermes</span>
         </button>
 
         {/* Personnel Section */}

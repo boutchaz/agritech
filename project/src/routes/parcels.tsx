@@ -7,7 +7,7 @@ import SatelliteIndices from '../components/SatelliteIndices'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Module, SensorData } from '../types'
-import { Edit2, Trash2, MapPin, Ruler, Droplets } from 'lucide-react'
+import { Edit2, Trash2, MapPin, Ruler, Droplets, ChevronRight, Building2, TreePine } from 'lucide-react'
 
 interface Parcel {
   id: string;
@@ -24,6 +24,14 @@ interface Parcel {
   irrigation_type?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Farm {
+  id: string;
+  name: string;
+  location: string | null;
+  size: number | null;
+  manager_name: string | null;
 }
 
 const mockModules: Module[] = [
@@ -48,12 +56,14 @@ const AppContent: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
@@ -61,9 +71,10 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (currentOrganization) {
+      fetchFarms();
       fetchParcels();
     }
-  }, [currentOrganization, currentFarm]);
+  }, [currentOrganization, currentFarm, selectedFarmId]);
 
   const deleteParcel = async (parcelId: string) => {
     try {
@@ -111,30 +122,40 @@ const AppContent: React.FC = () => {
     // Map will automatically center on the selected parcel via the selectedParcelId prop
   };
 
+  const fetchFarms = async () => {
+    try {
+      const { data: farmsData, error: farmsError } = await supabase
+        .from('farms')
+        .select('id, name, location, size, manager_name')
+        .eq('organization_id', currentOrganization?.id)
+        .order('name');
+
+      if (farmsError) {
+        console.error('Error fetching farms:', farmsError);
+      } else {
+        setFarms(farmsData || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchFarms:', error);
+    }
+  };
+
   const fetchParcels = async () => {
     try {
       setLoading(true);
 
-      // First fetch all farms for the organization
-      const { data: farmsData, error: farmsError } = await supabase
-        .from('farms')
-        .select('id, name')
-        .eq('organization_id', currentOrganization?.id);
+      // Determine which farm to fetch parcels for
+      const targetFarmId = selectedFarmId || currentFarm?.id;
 
-      if (farmsError) {
-        console.error('Error fetching farms:', farmsError);
-        return;
-      }
-
-      // Then fetch parcels for all farms or specific farm
+      // Fetch parcels for specific farm or all farms in organization
       let query = supabase
         .from('parcels')
         .select('*');
 
-      if (currentFarm) {
-        query = query.eq('farm_id', currentFarm.id);
-      } else if (farmsData && farmsData.length > 0) {
-        const farmIds = farmsData.map(f => f.id);
+      if (targetFarmId) {
+        query = query.eq('farm_id', targetFarmId);
+      } else if (farms.length > 0) {
+        const farmIds = farms.map(f => f.id);
         query = query.in('farm_id', farmIds);
       }
 
@@ -186,23 +207,67 @@ const AppContent: React.FC = () => {
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {currentOrganization.name}
-            </h1>
-            {currentFarm && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                • {currentFarm.name}
-              </span>
-            )}
+          <div className="flex items-center space-x-2">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center space-x-2 text-sm">
+              <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
+                <Building2 className="h-4 w-4" />
+                <span>{currentOrganization.name}</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
+                <TreePine className="h-4 w-4" />
+                <span>Fermes</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center space-x-1 text-gray-900 dark:text-white font-medium">
+                <MapPin className="h-4 w-4" />
+                <span>Parcelles</span>
+              </div>
+            </div>
           </div>
-          <OrganizationSwitcher />
+          <div className="flex items-center space-x-4">
+            {/* Farm Selector */}
+            {farms.length > 1 && (
+              <select
+                value={selectedFarmId || currentFarm?.id || ''}
+                onChange={(e) => setSelectedFarmId(e.target.value || null)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="">Toutes les fermes</option>
+                {farms.map((farm) => (
+                  <option key={farm.id} value={farm.id}>
+                    {farm.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <OrganizationSwitcher />
+          </div>
         </div>
         <div className="p-6 space-y-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Gestion des Parcelles
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Gestion des Parcelles
+              </h2>
+              {/* Show current context */}
+              <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {selectedFarmId || currentFarm ? (
+                  <>
+                    Parcelles de la ferme: <span className="font-medium text-gray-900 dark:text-white">
+                      {farms.find(f => f.id === (selectedFarmId || currentFarm?.id))?.name || currentFarm?.name}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Parcelles de toutes les fermes dans <span className="font-medium text-gray-900 dark:text-white">
+                      {currentOrganization.name}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               {loading ? (
                 <span>Chargement...</span>
@@ -217,20 +282,64 @@ const AppContent: React.FC = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
             </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                {currentFarm
-                  ? `Aucune parcelle trouvée pour ${currentFarm.name}.`
-                  : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
-              </p>
-              {currentFarm && (
-                <button
-                  onClick={() => setShowAddParcelMap(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Ajouter une parcelle
-                </button>
+            <div className="space-y-6">
+              {/* Show farms overview when no specific farm is selected */}
+              {!selectedFarmId && !currentFarm && farms.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Fermes dans {currentOrganization.name}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {farms.map((farm) => (
+                      <div
+                        key={farm.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-green-500 transition-colors cursor-pointer"
+                        onClick={() => setSelectedFarmId(farm.id)}
+                      >
+                        <div className="flex items-center space-x-2 mb-2">
+                          <TreePine className="h-5 w-5 text-green-600" />
+                          <h4 className="font-medium text-gray-900 dark:text-white">{farm.name}</h4>
+                        </div>
+                        {farm.location && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                            📍 {farm.location}
+                          </p>
+                        )}
+                        {farm.size && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                            📏 {farm.size} hectares
+                          </p>
+                        )}
+                        {farm.manager_name && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            👤 {farm.manager_name}
+                          </p>
+                        )}
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                          Cliquer pour voir les parcelles →
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
+              
+              {/* No parcels message */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {currentFarm || selectedFarmId
+                    ? `Aucune parcelle trouvée pour ${farms.find(f => f.id === (selectedFarmId || currentFarm?.id))?.name || currentFarm?.name}.`
+                    : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
+                </p>
+                {(currentFarm || selectedFarmId) && (
+                  <button
+                    onClick={() => setShowAddParcelMap(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    Ajouter une parcelle
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <>
@@ -274,21 +383,23 @@ const AppContent: React.FC = () => {
 
               {parcels.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {parcels.map((parcel) => (
-                    <div
-                      key={parcel.id}
-                      className={`bg-white dark:bg-gray-800 rounded-lg p-4 border-2 transition-all cursor-pointer hover:shadow-lg ${
-                        selectedParcelId === parcel.id
-                          ? 'border-green-500 shadow-lg'
-                          : 'border-gray-200 dark:border-gray-700'
-                      }`}
-                      onClick={() => handleParcelSelect(parcel.id)}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-green-600" />
-                          <span>{parcel.name}</span>
-                        </h3>
+                  {parcels.map((parcel) => {
+                    const farm = farms.find(f => f.id === parcel.farm_id);
+                    return (
+                      <div
+                        key={parcel.id}
+                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border-2 transition-all cursor-pointer hover:shadow-lg ${
+                          selectedParcelId === parcel.id
+                            ? 'border-green-500 shadow-lg'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
+                        onClick={() => handleParcelSelect(parcel.id)}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                            <MapPin className="h-4 w-4 text-green-600" />
+                            <span>{parcel.name}</span>
+                          </h3>
                         <div className="flex space-x-1">
                           <button
                             onClick={(e) => {
@@ -315,6 +426,16 @@ const AppContent: React.FC = () => {
                           </button>
                         </div>
                       </div>
+
+                      {/* Show farm name when viewing all farms */}
+                      {(!selectedFarmId && !currentFarm) && farm && (
+                        <div className="mb-2">
+                          <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+                            <TreePine className="h-3 w-3" />
+                            <span>{farm.name}</span>
+                          </div>
+                        </div>
+                      )}
 
                       {parcel.description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{parcel.description}</p>
@@ -360,8 +481,9 @@ const AppContent: React.FC = () => {
                           )}
                         </div>
                       )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -426,8 +548,40 @@ const AppContent: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="hectares">Hectares</option>
-                    <option value="m2">m²</option>
+                    <option value="square_meters">m²</option>
                     <option value="acres">Acres</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Type de sol
+                  </label>
+                  <input
+                    type="text"
+                    value={editingParcel.soil_type || ''}
+                    onChange={(e) => setEditingParcel({ ...editingParcel, soil_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="ex: Argileux, Sableux..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Type d'irrigation
+                  </label>
+                  <select
+                    value={editingParcel.irrigation_type || ''}
+                    onChange={(e) => setEditingParcel({ ...editingParcel, irrigation_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="drip">Goutte-à-goutte</option>
+                    <option value="sprinkler">Aspersion</option>
+                    <option value="flood">Inondation</option>
+                    <option value="none">Aucune</option>
                   </select>
                 </div>
               </div>

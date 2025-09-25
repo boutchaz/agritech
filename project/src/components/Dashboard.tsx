@@ -307,15 +307,27 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {settings.layout.topRow.map(widgetType => renderWidget(widgetType))}
+        {settings.layout.topRow.map((widgetType, index) => (
+          <div key={`top-${widgetType}-${index}`}>
+            {renderWidget(widgetType)}
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.layout.middleRow.map(widgetType => renderWidget(widgetType))}
+        {settings.layout.middleRow.map((widgetType, index) => (
+          <div key={`middle-${widgetType}-${index}`}>
+            {renderWidget(widgetType)}
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.layout.bottomRow.map(widgetType => renderWidget(widgetType))}
+        {settings.layout.bottomRow.map((widgetType, index) => (
+          <div key={`bottom-${widgetType}-${index}`}>
+            {renderWidget(widgetType)}
+          </div>
+        ))}
       </div>
     </div>
   );

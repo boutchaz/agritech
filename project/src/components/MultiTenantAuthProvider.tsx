@@ -86,15 +86,13 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Calculate loading state
   const loading = authLoading || profileLoading || orgsLoading || farmsLoading;
 
-  // Calculate onboarding state - check profile, organization, and farms
+  // Calculate onboarding state - check profile and organizations
   const needsOnboarding = !!(
     user && (
       // No profile yet
       (!profile && !profileLoading) ||
       // No organizations yet
-      (organizations.length === 0 && !orgsLoading) ||
-      // Has organization but no farms yet
-      (currentOrganization && farms.length === 0 && !farmsLoading)
+      (organizations.length === 0 && !orgsLoading)
     )
   );
 
