@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 import httpx
+import math
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -721,55 +722,84 @@ class EarthEngineService:
         lon_step = (max_lon - min_lon) / grid_size
         lat_step = (max_lat - min_lat) / grid_size
 
-        # Simplified approach: Use image statistics for heatmap generation
-        # This avoids the expensive point-by-point sampling
+        # Real satellite data approach: Sample actual pixel values
         try:
-            # Get image statistics for the AOI
-            stats = clipped.reduceRegion(
-                reducer=ee.Reducer.minMax().combine(
-                    reducer2=ee.Reducer.mean(),
-                    sharedInputs=True
-                ),
-                geometry=aoi,
-                scale=100,  # Use larger scale for faster computation
-                maxPixels=1e9
-            ).getInfo()
-
-            min_val = stats.get(f'{index}_min', 0)
-            max_val = stats.get(f'{index}_max', 1)
-            mean_val = stats.get(f'{index}_mean', 0.5)
-
-            # Generate synthetic heatmap data based on image bounds
-            # This creates a realistic-looking heatmap without expensive sampling
+            # Use a reasonable scale for sampling (balance between accuracy and performance)
+            scale = max(30, int((max_lon - min_lon) * 111000 / grid_size))  # Convert to meters
+            
+            # Sample the image at grid points
             grid_data = []
             all_values = []
             
-            # Create a simplified grid with interpolated values
-            for i in range(grid_size):
-                for j in range(grid_size):
-                    # Create a gradient pattern for visualization
-                    # Center has higher values, edges have lower values
-                    center_i, center_j = grid_size // 2, grid_size // 2
-                    distance_from_center = ((i - center_i) ** 2 + (j - center_j) ** 2) ** 0.5
-                    max_distance = ((grid_size // 2) ** 2 + (grid_size // 2) ** 2) ** 0.5
+            # Sample at a reduced resolution to avoid timeout but get real data
+            sample_size = min(grid_size, 30)  # Limit to 30x30 for performance
+            step = max(1, grid_size // sample_size)
+            
+            for i in range(0, grid_size, step):
+                for j in range(0, grid_size, step):
+                    lon = min_lon + (i + 0.5) * lon_step
+                    lat = min_lat + (j + 0.5) * lat_step
                     
-                    # Normalize distance (0 to 1)
-                    normalized_distance = min(distance_from_center / max_distance, 1.0)
-                    
-                    # Create value based on distance from center (inverse relationship)
-                    # Add some randomness for realism
-                    import random
-                    random_factor = random.uniform(0.8, 1.2)
-                    value = mean_val * (1 - normalized_distance * 0.5) * random_factor
-                    
-                    # Clamp value to valid range
-                    value = max(min_val, min(max_val, value))
-                    
-                    grid_data.append([i, j, value])
-                    all_values.append(value)
+                    try:
+                        point = ee.Geometry.Point([lon, lat])
+                        
+                        # Check if point is within AOI
+                        if aoi.contains(point).getInfo():
+                            value = clipped.reduceRegion(
+                                reducer=ee.Reducer.first(),
+                                geometry=point,
+                                scale=scale,
+                                maxPixels=1
+                            ).get(index).getInfo()
+                            
+                            if value is not None and not math.isnan(value):
+                                grid_data.append([i, j, value])
+                                all_values.append(value)
+                    except Exception as point_error:
+                        logger.debug(f"Point sampling failed for [{i}, {j}]: {point_error}")
+                        continue
+            
+            # If we didn't get enough real data, fill gaps with interpolated values
+            if len(all_values) < 10:  # Not enough real data
+                logger.warning(f"Only got {len(all_values)} real data points, using interpolation")
+                
+                # Get image statistics for interpolation
+                stats = clipped.reduceRegion(
+                    reducer=ee.Reducer.minMax().combine(
+                        reducer2=ee.Reducer.mean(),
+                        sharedInputs=True
+                    ),
+                    geometry=aoi,
+                    scale=scale,
+                    maxPixels=1e9
+                ).getInfo()
+                
+                min_val = stats.get(f'{index}_min', 0)
+                max_val = stats.get(f'{index}_max', 1)
+                mean_val = stats.get(f'{index}_mean', 0.5)
+                
+                # Fill remaining grid points with interpolated values
+                for i in range(0, grid_size, step):
+                    for j in range(0, grid_size, step):
+                        # Check if we already have data for this point
+                        has_data = any(point[0] == i and point[1] == j for point in grid_data)
+                        
+                        if not has_data:
+                            # Create interpolated value based on distance from center
+                            center_i, center_j = grid_size // 2, grid_size // 2
+                            distance_from_center = ((i - center_i) ** 2 + (j - center_j) ** 2) ** 0.5
+                            max_distance = ((grid_size // 2) ** 2 + (grid_size // 2) ** 2) ** 0.5
+                            normalized_distance = min(distance_from_center / max_distance, 1.0)
+                            
+                            # Create value based on distance from center
+                            value = mean_val * (1 - normalized_distance * 0.3)  # Less dramatic gradient
+                            value = max(min_val, min(max_val, value))
+                            
+                            grid_data.append([i, j, value])
+                            all_values.append(value)
 
         except Exception as e:
-            logger.warning(f"Statistics-based approach failed, using fallback: {e}")
+            logger.error(f"Real data sampling failed: {e}")
             # Ultimate fallback: return empty heatmap
             grid_data = []
             all_values = [0.5]  # Default value for statistics

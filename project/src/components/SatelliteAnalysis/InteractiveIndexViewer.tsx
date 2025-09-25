@@ -79,11 +79,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   };
 
   const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
-    const { heatmap_data, statistics, coordinate_system, visualization, index } = data;
+    const { heatmap_data, statistics, coordinate_system, visualization, index, bounds } = data;
 
-    // Create x and y axis labels
-    const xAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
-    const yAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
+        // Convert heatmap data to scatter plot format for better AOI visualization
+        // This creates a more realistic overlay on the actual parcel boundaries
+        const scatterData = heatmap_data.map(([x, y, value]) => {
+          const lon = coordinate_system.x_axis[x];
+          const lat = coordinate_system.y_axis[y];
+          return [lon, lat, value];
+        });
 
     return {
       title: {
@@ -98,76 +102,96 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       tooltip: {
         position: 'top',
         formatter: function (params: any) {
-          const [x, y, value] = params.data;
-          const lon = coordinate_system.x_axis[x];
-          const lat = coordinate_system.y_axis[y];
+          const [lon, lat, value] = params.data;
           return `
             <div style="padding: 8px;">
               <div><strong>${index}: ${value.toFixed(3)}</strong></div>
               <div>Longitude: ${lon.toFixed(6)}</div>
               <div>Latitude: ${lat.toFixed(6)}</div>
-              <div>Grid: [${x}, ${y}]</div>
             </div>
           `;
         }
       },
       grid: {
-        height: '60%',
+        height: '70%',
         top: '15%',
+        left: '5%',
+        right: '15%',
+        bottom: '10%',
         containLabel: true
       },
       xAxis: {
-        type: 'category',
-        data: xAxisData,
-        splitArea: {
-          show: true
-        },
+        type: 'value',
+        name: 'Longitude',
+        nameLocation: 'middle',
+        nameGap: 30,
+        min: bounds.min_lon,
+        max: bounds.max_lon,
         axisLabel: {
           formatter: function(value: number) {
-            const lon = coordinate_system.x_axis[value];
-            return lon ? lon.toFixed(4) : value.toString();
+            return value.toFixed(4);
+          }
+        },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: '#f0f0f0',
+            type: 'dashed'
           }
         }
       },
       yAxis: {
-        type: 'category',
-        data: yAxisData,
-        splitArea: {
-          show: true
-        },
+        type: 'value',
+        name: 'Latitude',
+        nameLocation: 'middle',
+        nameGap: 50,
+        min: bounds.min_lat,
+        max: bounds.max_lat,
         axisLabel: {
           formatter: function(value: number) {
-            const lat = coordinate_system.y_axis[value];
-            return lat ? lat.toFixed(4) : value.toString();
+            return value.toFixed(4);
+          }
+        },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: '#f0f0f0',
+            type: 'dashed'
           }
         }
       },
       visualMap: {
-        min: visualization.min,
-        max: visualization.max,
+        min: statistics.min,
+        max: statistics.max,
         calculable: true,
         orient: 'vertical',
         left: 'right',
         top: 'middle',
         inRange: {
-          color: visualization.palette
+          color: ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
         },
-        text: [`${visualization.max.toFixed(1)}`, `${visualization.min.toFixed(1)}`],
+        text: [`${statistics.max.toFixed(1)}`, `${statistics.min.toFixed(1)}`],
         textStyle: {
           fontSize: 12
+        },
+        formatter: function(value: number) {
+          return value.toFixed(2);
         }
       },
       series: [{
         name: index,
-        type: 'heatmap',
-        data: heatmap_data,
-        label: {
-          show: false
+        type: 'scatter',
+        data: scatterData,
+        symbolSize: 8,
+        itemStyle: {
+          opacity: 0.8
         },
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+            borderWidth: 2,
+            borderColor: '#fff'
           }
         }
       }],
