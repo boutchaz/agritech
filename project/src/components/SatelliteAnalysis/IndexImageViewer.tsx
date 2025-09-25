@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Grid3X3 } from 'lucide-react';
+import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Grid3X3, Activity, MousePointer } from 'lucide-react';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -9,6 +9,7 @@ import {
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
+import InteractiveIndexViewer from './InteractiveIndexViewer';
 
 interface IndexImageViewerProps {
   parcelId: string;
@@ -26,6 +27,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   const [endDate, setEndDate] = useState('');
   const [cloudCoverage, setCloudCoverage] = useState(10);
   const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
+  const [displayMode, setDisplayMode] = useState<'static' | 'interactive'>('static');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -114,16 +116,56 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Image className="w-5 h-5" />
-        <h2 className="text-xl font-semibold">Vegetation Index Images</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {displayMode === 'static' ? <Image className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
+          <h2 className="text-xl font-semibold">
+            {displayMode === 'static' ? 'Vegetation Index Images' : 'Interactive Vegetation Analysis'}
+          </h2>
+        </div>
+
+        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setDisplayMode('static')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              displayMode === 'static'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Image className="w-4 h-4" />
+            Static Images
+          </button>
+          <button
+            onClick={() => setDisplayMode('interactive')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              displayMode === 'interactive'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <MousePointer className="w-4 h-4" />
+            Interactive
+          </button>
+        </div>
       </div>
 
       <p className="text-gray-600">
-        Generate visual satellite imagery for vegetation indices of {parcelName || `Parcel ${parcelId}`}
+        {displayMode === 'static'
+          ? `Generate visual satellite imagery for vegetation indices of ${parcelName || `Parcel ${parcelId}`}`
+          : `Explore interactive satellite data with hover details, zoom, and pan capabilities for ${parcelName || `Parcel ${parcelId}`}`
+        }
       </p>
 
-      {/* Configuration Panel */}
+      {displayMode === 'interactive' ? (
+        <InteractiveIndexViewer
+          parcelId={parcelId}
+          parcelName={parcelName}
+          boundary={boundary}
+        />
+      ) : (
+        <>
+          {/* Configuration Panel */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
         <h3 className="font-medium text-gray-900">Configuration</h3>
 
@@ -431,6 +473,8 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           <p>• Click download to save high-resolution images for further analysis</p>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

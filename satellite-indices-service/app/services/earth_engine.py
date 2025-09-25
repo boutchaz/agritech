@@ -559,21 +559,259 @@ class EarthEngineService:
             'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
         })
 
+    async def export_interactive_data(
+        self,
+        geometry: Dict,
+        date: str,
+        index: str,
+        scale: int = None,
+        max_pixels: int = 10000
+    ) -> Dict[str, Any]:
+        """Export interactive pixel data for ECharts visualization"""
+        self.initialize()
+
+        # Get the image for the specific date
+        collection = self.get_sentinel2_collection(
+            geometry,
+            date,
+            (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        )
+
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(f"No images found for date {date}")
+
+            image = ee.Image(collection.first())
+        except Exception as e:
+            if "Empty date ranges not supported" in str(e):
+                raise ValueError(f"No images found for date {date}")
+            else:
+                raise e
+
+        indices = self.calculate_vegetation_indices(image, [index])
+        index_image = indices[index]
+
+        # Clip to AOI
+        aoi = ee.Geometry(geometry)
+        clipped = index_image.clip(aoi)
+
+        # Get the bounds of the geometry
+        bounds = aoi.bounds().getInfo()['coordinates'][0]
+        min_lon = min([coord[0] for coord in bounds])
+        max_lon = max([coord[0] for coord in bounds])
+        min_lat = min([coord[1] for coord in bounds])
+        max_lat = max([coord[1] for coord in bounds])
+
+        # Sample the image to get pixel values with coordinates
+        scale = scale or settings.DEFAULT_SCALE
+
+        # Create a grid of points for sampling
+        sample_points = clipped.sample(
+            region=aoi,
+            scale=scale,
+            numPixels=max_pixels,
+            geometries=True
+        )
+
+        # Get the sampled data
+        sampled_data = sample_points.getInfo()
+
+        # Process data for ECharts
+        pixel_data = []
+        values = []
+
+        for feature in sampled_data['features']:
+            if feature['properties'][index] is not None:
+                coords = feature['geometry']['coordinates']
+                value = feature['properties'][index]
+
+                pixel_data.append({
+                    'lon': coords[0],
+                    'lat': coords[1],
+                    'value': value
+                })
+                values.append(value)
+
+        # Calculate statistics
+        if values:
+            stats = {
+                'min': min(values),
+                'max': max(values),
+                'mean': sum(values) / len(values),
+                'count': len(values)
+            }
+
+            # Calculate percentiles
+            sorted_values = sorted(values)
+            n = len(sorted_values)
+            stats['median'] = sorted_values[n//2] if n > 0 else 0
+            stats['p10'] = sorted_values[int(n*0.1)] if n > 0 else 0
+            stats['p90'] = sorted_values[int(n*0.9)] if n > 0 else 0
+            stats['std'] = (sum([(x - stats['mean'])**2 for x in values]) / len(values))**0.5
+        else:
+            stats = {'min': 0, 'max': 0, 'mean': 0, 'median': 0, 'p10': 0, 'p90': 0, 'std': 0, 'count': 0}
+
+        # Get visualization parameters
+        vis_params = self._get_visualization_params(index)
+
+        return {
+            'date': date,
+            'index': index,
+            'bounds': {
+                'min_lon': min_lon,
+                'max_lon': max_lon,
+                'min_lat': min_lat,
+                'max_lat': max_lat
+            },
+            'pixel_data': pixel_data,
+            'statistics': stats,
+            'visualization': vis_params,
+            'metadata': {
+                'scale': scale,
+                'total_pixels': len(pixel_data),
+                'image_date': date
+            }
+        }
+
+    async def export_heatmap_data(
+        self,
+        geometry: Dict,
+        date: str,
+        index: str,
+        grid_size: int = 50
+    ) -> Dict[str, Any]:
+        """Export data optimized for ECharts heatmap visualization"""
+        self.initialize()
+
+        # Get the image for the specific date
+        collection = self.get_sentinel2_collection(
+            geometry,
+            date,
+            (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        )
+
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(f"No images found for date {date}")
+
+            image = ee.Image(collection.first())
+        except Exception as e:
+            if "Empty date ranges not supported" in str(e):
+                raise ValueError(f"No images found for date {date}")
+            else:
+                raise e
+
+        indices = self.calculate_vegetation_indices(image, [index])
+        index_image = indices[index]
+
+        # Clip to AOI
+        aoi = ee.Geometry(geometry)
+        clipped = index_image.clip(aoi)
+
+        # Get the bounds
+        bounds = aoi.bounds().getInfo()['coordinates'][0]
+        min_lon = min([coord[0] for coord in bounds])
+        max_lon = max([coord[0] for coord in bounds])
+        min_lat = min([coord[1] for coord in bounds])
+        max_lat = max([coord[1] for coord in bounds])
+
+        # Create regular grid for heatmap
+        lon_step = (max_lon - min_lon) / grid_size
+        lat_step = (max_lat - min_lat) / grid_size
+
+        # Generate grid points
+        grid_data = []
+        all_values = []
+
+        for i in range(grid_size):
+            for j in range(grid_size):
+                lon = min_lon + (i + 0.5) * lon_step
+                lat = min_lat + (j + 0.5) * lat_step
+
+                # Sample the image at this point
+                point = ee.Geometry.Point([lon, lat])
+
+                try:
+                    # Check if point is within AOI
+                    if aoi.contains(point).getInfo():
+                        value = clipped.reduceRegion(
+                            reducer=ee.Reducer.first(),
+                            geometry=point,
+                            scale=30,
+                            maxPixels=1
+                        ).get(index).getInfo()
+
+                        if value is not None:
+                            grid_data.append([i, j, value])
+                            all_values.append(value)
+                except:
+                    # Skip points that cause errors
+                    continue
+
+        # Calculate statistics
+        if all_values:
+            stats = {
+                'min': min(all_values),
+                'max': max(all_values),
+                'mean': sum(all_values) / len(all_values),
+                'count': len(all_values)
+            }
+
+            sorted_values = sorted(all_values)
+            n = len(sorted_values)
+            stats['median'] = sorted_values[n//2] if n > 0 else 0
+            stats['p10'] = sorted_values[int(n*0.1)] if n > 0 else 0
+            stats['p90'] = sorted_values[int(n*0.9)] if n > 0 else 0
+            stats['std'] = (sum([(x - stats['mean'])**2 for x in all_values]) / len(all_values))**0.5
+        else:
+            stats = {'min': 0, 'max': 0, 'mean': 0, 'median': 0, 'p10': 0, 'p90': 0, 'std': 0, 'count': 0}
+
+        vis_params = self._get_visualization_params(index)
+
+        return {
+            'date': date,
+            'index': index,
+            'bounds': {
+                'min_lon': min_lon,
+                'max_lon': max_lon,
+                'min_lat': min_lat,
+                'max_lat': max_lat
+            },
+            'grid_size': grid_size,
+            'heatmap_data': grid_data,  # Format: [[x, y, value], ...]
+            'statistics': stats,
+            'visualization': vis_params,
+            'coordinate_system': {
+                'lon_step': lon_step,
+                'lat_step': lat_step,
+                'x_axis': [min_lon + i * lon_step for i in range(grid_size + 1)],
+                'y_axis': [min_lat + j * lat_step for j in range(grid_size + 1)]
+            }
+        }
+
     async def export_index_map(
         self,
         geometry: Dict,
         date: str,
         index: str,
         scale: int = None,
-        organization_id: str = None
-    ) -> str:
-        """Export index map as GeoTIFF URL or upload to bucket"""
+        organization_id: str = None,
+        interactive: bool = False
+    ) -> Any:
+        """Export index map as static image URL or interactive data"""
+
+        # Return interactive data for ECharts if requested
+        if interactive:
+            return await self.export_heatmap_data(geometry, date, index)
+
         # First check if file already exists in bucket if organization_id is provided
         if organization_id:
             existing_url = await self.check_existing_file(organization_id, index, date, geometry)
             if existing_url:
                 logger.info(f"Using existing file from bucket: {existing_url}")
-                return existing_url
+                return {"type": "static", "url": existing_url}
 
         self.initialize()
 
@@ -605,15 +843,17 @@ class EarthEngineService:
         
         # If organization_id is provided, export to Supabase Storage
         if organization_id:
-            return await self._export_to_supabase_storage(clipped, aoi, index, date, organization_id, scale)
+            url = await self._export_to_supabase_storage(clipped, aoi, index, date, organization_id, scale)
+            return {"type": "static", "url": url}
         else:
             # For web display, create enhanced visualization with overlays
             vis_params = self._get_visualization_params(index)
 
             # Create enhanced visualization with date, scale bar, and statistics
-            return self._create_enhanced_visualization(
+            enhanced_url = self._create_enhanced_visualization(
                 clipped, index, date, aoi, vis_params
             )
+            return {"type": "static", "url": enhanced_url}
     
     async def _export_to_supabase_storage(
         self,

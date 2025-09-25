@@ -81,6 +81,7 @@ class ExportRequest(BaseModel):
     index: VegetationIndex
     scale: Optional[int] = Field(10, ge=10, le=1000)
     format: Optional[str] = Field("GeoTIFF", description="Export format")
+    interactive: Optional[bool] = Field(False, description="Return interactive data for ECharts")
 
 class StatisticsRequest(BaseModel):
     aoi: AOIRequest
@@ -126,6 +127,68 @@ class ExportResponse(BaseModel):
     file_format: str
     index: str
     metadata: Dict[str, Any]
+
+# Interactive Visualization Models
+
+class VisualizationBounds(BaseModel):
+    min_lon: float
+    max_lon: float
+    min_lat: float
+    max_lat: float
+
+class PixelData(BaseModel):
+    lon: float
+    lat: float
+    value: float
+
+class HeatmapDataPoint(BaseModel):
+    x: int
+    y: int
+    value: float
+
+class CoordinateSystem(BaseModel):
+    lon_step: float
+    lat_step: float
+    x_axis: List[float]
+    y_axis: List[float]
+
+class VisualizationParams(BaseModel):
+    min: float
+    max: float
+    palette: List[str]
+
+class InteractiveDataResponse(BaseModel):
+    date: str
+    index: str
+    bounds: VisualizationBounds
+    pixel_data: List[PixelData]
+    statistics: Dict[str, float]
+    visualization: VisualizationParams
+    metadata: Dict[str, Any]
+
+class HeatmapDataResponse(BaseModel):
+    date: str
+    index: str
+    bounds: VisualizationBounds
+    grid_size: int
+    heatmap_data: List[List[Union[int, float]]]  # [[x, y, value], ...]
+    statistics: Dict[str, float]
+    visualization: VisualizationParams
+    coordinate_system: CoordinateSystem
+
+class InteractiveRequest(BaseModel):
+    aoi: AOIRequest
+    date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$')
+    index: VegetationIndex
+    scale: Optional[int] = Field(30, ge=10, le=1000)
+    max_pixels: Optional[int] = Field(10000, ge=100, le=50000)
+    visualization_type: Optional[str] = Field("scatter", pattern="^(scatter|heatmap)$")
+
+class HeatmapRequest(BaseModel):
+    aoi: AOIRequest
+    date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$')
+    index: VegetationIndex
+    grid_size: Optional[int] = Field(50, ge=10, le=200)
 
 class HealthResponse(BaseModel):
     status: str

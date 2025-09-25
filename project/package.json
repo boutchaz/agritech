@@ -34,6 +34,8 @@
     "@tanstack/router-devtools": "^1.131.42",
     "@tanstack/router-plugin": "^1.131.49",
     "dotenv": "^17.2.2",
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.344.0",

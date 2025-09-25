@@ -206,6 +206,88 @@ export interface IndexImageResponse {
   };
 }
 
+// Interactive Visualization Types
+export interface VisualizationBounds {
+  min_lon: number;
+  max_lon: number;
+  min_lat: number;
+  max_lat: number;
+}
+
+export interface PixelData {
+  lon: number;
+  lat: number;
+  value: number;
+}
+
+export interface CoordinateSystem {
+  lon_step: number;
+  lat_step: number;
+  x_axis: number[];
+  y_axis: number[];
+}
+
+export interface VisualizationParams {
+  min: number;
+  max: number;
+  palette: string[];
+}
+
+export interface InteractiveDataResponse {
+  date: string;
+  index: string;
+  bounds: VisualizationBounds;
+  pixel_data: PixelData[];
+  statistics: {
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    p10: number;
+    p90: number;
+    std: number;
+    count: number;
+  };
+  visualization: VisualizationParams;
+  metadata: Record<string, any>;
+}
+
+export interface HeatmapDataResponse {
+  date: string;
+  index: string;
+  bounds: VisualizationBounds;
+  grid_size: number;
+  heatmap_data: [number, number, number][]; // [x, y, value]
+  statistics: {
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    p10: number;
+    p90: number;
+    std: number;
+    count: number;
+  };
+  visualization: VisualizationParams;
+  coordinate_system: CoordinateSystem;
+}
+
+export interface InteractiveRequest {
+  aoi: AOIRequest;
+  date: string;
+  index: VegetationIndexType;
+  scale?: number;
+  max_pixels?: number;
+  visualization_type?: 'scatter' | 'heatmap';
+}
+
+export interface HeatmapRequest {
+  aoi: AOIRequest;
+  date: string;
+  index: VegetationIndexType;
+  grid_size?: number;
+}
+
 class SatelliteAPIClient {
   private baseUrl: string;
 
@@ -314,14 +396,15 @@ class SatelliteAPIClient {
     });
   }
 
-  // Export data as GeoTIFF
+  // Export data as GeoTIFF or Interactive Data
   async exportGeoTIFF(request: {
     aoi: AOIRequest;
     date: string;
     index: VegetationIndexType;
     scale?: number;
     format?: string;
-  }): Promise<TiffExportResponse> {
+    interactive?: boolean;
+  }): Promise<TiffExportResponse | HeatmapDataResponse> {
     return this.request('/indices/export', {
       method: 'POST',
       body: JSON.stringify(request),
@@ -412,6 +495,46 @@ class SatelliteAPIClient {
     );
 
     return Promise.all(promises);
+  }
+
+  // Get interactive scatter plot data
+  async getInteractiveData(request: InteractiveRequest): Promise<InteractiveDataResponse> {
+    return this.request('/indices/interactive', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Get heatmap data for ECharts
+  async getHeatmapData(request: HeatmapRequest): Promise<HeatmapDataResponse> {
+    return this.request('/indices/heatmap', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Generate interactive visualization (chooses best method based on data size)
+  async generateInteractiveVisualization(
+    aoi: AOIRequest,
+    date: string,
+    index: VegetationIndexType,
+    visualizationType: 'scatter' | 'heatmap' = 'heatmap'
+  ): Promise<InteractiveDataResponse | HeatmapDataResponse> {
+    if (visualizationType === 'heatmap') {
+      return this.getHeatmapData({
+        aoi,
+        date,
+        index,
+        grid_size: 50
+      });
+    } else {
+      return this.getInteractiveData({
+        aoi,
+        date,
+        index,
+        max_pixels: 10000
+      });
+    }
   }
 }
 

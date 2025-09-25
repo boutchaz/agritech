@@ -9,6 +9,10 @@ from app.models.schemas import (
     TimeSeriesResponse,
     ExportRequest,
     ExportResponse,
+    InteractiveRequest,
+    InteractiveDataResponse,
+    HeatmapRequest,
+    HeatmapDataResponse,
     IndexValue,
     ErrorResponse
 )
@@ -118,35 +122,76 @@ async def get_time_series(request: TimeSeriesRequest):
         logger.error(f"Error getting time series: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/export", response_model=ExportResponse)
+@router.post("/export")
 async def export_index_map(request: ExportRequest):
-    """Export vegetation index map as GeoTIFF"""
+    """Export vegetation index map as GeoTIFF or interactive data"""
     try:
-        download_url = earth_engine_service.export_index_map(
+        result = await earth_engine_service.export_index_map(
             request.aoi.geometry.model_dump(),
             request.date,
             request.index.value,
-            request.scale
+            request.scale,
+            interactive=request.interactive
         )
-        
-        from datetime import timedelta
-        expires_at = datetime.utcnow() + timedelta(hours=24)
-        
-        return ExportResponse(
-            request_id=str(uuid.uuid4()),
-            download_url=download_url,
-            expires_at=expires_at,
-            file_format=request.format,
-            index=request.index.value,
-            metadata={
-                "date": request.date,
-                "scale": request.scale,
-                "aoi_name": request.aoi.name
-            }
-        )
-    
+
+        if request.interactive:
+            # Return interactive data for ECharts
+            return HeatmapDataResponse(**result)
+        else:
+            # Return traditional export response
+            from datetime import timedelta
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+
+            return ExportResponse(
+                request_id=str(uuid.uuid4()),
+                download_url=result["url"],
+                expires_at=expires_at,
+                file_format=request.format,
+                index=request.index.value,
+                metadata={
+                    "date": request.date,
+                    "scale": request.scale,
+                    "aoi_name": request.aoi.name
+                }
+            )
+
     except Exception as e:
         logger.error(f"Error exporting index map: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/interactive", response_model=InteractiveDataResponse)
+async def get_interactive_data(request: InteractiveRequest):
+    """Get interactive pixel data for scatter plot visualization"""
+    try:
+        data = await earth_engine_service.export_interactive_data(
+            request.aoi.geometry.model_dump(),
+            request.date,
+            request.index.value,
+            request.scale,
+            request.max_pixels
+        )
+
+        return InteractiveDataResponse(**data)
+
+    except Exception as e:
+        logger.error(f"Error getting interactive data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/heatmap", response_model=HeatmapDataResponse)
+async def get_heatmap_data(request: HeatmapRequest):
+    """Get heatmap data for ECharts heatmap visualization"""
+    try:
+        data = await earth_engine_service.export_heatmap_data(
+            request.aoi.geometry.model_dump(),
+            request.date,
+            request.index.value,
+            request.grid_size
+        )
+
+        return HeatmapDataResponse(**data)
+
+    except Exception as e:
+        logger.error(f"Error getting heatmap data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/available", response_model=List[str])
