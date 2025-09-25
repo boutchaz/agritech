@@ -155,21 +155,55 @@ async def generate_index_image(request: dict):
         logger.info(f"Index: {index}")
         logger.info(f"Cloud coverage: {cloud_coverage}")
 
-        # Get the best available date for the given parameters
-        cloud_result = earth_engine_service.check_cloud_coverage(
-            aoi.get('geometry', {}),
-            date_range.get('start_date'),
-            date_range.get('end_date'),
-            cloud_coverage
-        )
+        # Try progressive cloud coverage thresholds if the initial one is too strict
+        cloud_thresholds = [cloud_coverage, 20, 30, 50, 80]
+        cloud_result = None
+        used_threshold = cloud_coverage
 
-        if not cloud_result['has_suitable_images']:
+        for threshold in cloud_thresholds:
+            try:
+                cloud_result = earth_engine_service.check_cloud_coverage(
+                    aoi.get('geometry', {}),
+                    date_range.get('start_date'),
+                    date_range.get('end_date'),
+                    threshold
+                )
+
+                if cloud_result['has_suitable_images']:
+                    used_threshold = threshold
+                    logger.info(f"Found suitable images with cloud coverage threshold: {threshold}%")
+                    break
+
+            except Exception as e:
+                logger.warning(f"Cloud coverage check failed at threshold {threshold}%: {e}")
+                continue
+
+        if not cloud_result or not cloud_result['has_suitable_images']:
+            # Try with a wider date range (last 30 days) if no images found
+            from datetime import datetime, timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+
+            logger.info("Trying with extended date range (last 30 days)")
+            try:
+                cloud_result = earth_engine_service.check_cloud_coverage(
+                    aoi.get('geometry', {}),
+                    start_date.strftime('%Y-%m-%d'),
+                    end_date.strftime('%Y-%m-%d'),
+                    80  # Very lenient cloud coverage
+                )
+                used_threshold = 80
+            except Exception as e:
+                logger.error(f"Extended date range check failed: {e}")
+
+        if not cloud_result or not cloud_result['has_suitable_images']:
             raise HTTPException(
                 status_code=404,
-                detail=f"No suitable images found with cloud coverage < {cloud_coverage}%"
+                detail=f"No suitable images found for this location. Try a different date range or location."
             )
 
         best_date = cloud_result.get('recommended_date', date_range.get('start_date'))
+        logger.info(f"Using date: {best_date} with cloud threshold: {used_threshold}%")
 
         # Generate the index image URL
         image_url = earth_engine_service.export_index_map(
@@ -185,7 +219,9 @@ async def generate_index_image(request: dict):
             "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
             "metadata": {
                 "available_images": cloud_result.get('available_images_count', 0),
-                "suitable_images": cloud_result.get('suitable_images_count', 0)
+                "suitable_images": cloud_result.get('suitable_images_count', 0),
+                "threshold_used": used_threshold,
+                "requested_threshold": cloud_coverage
             }
         }
 

@@ -264,6 +264,11 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                       <div className="flex items-center gap-1">
                         <Cloud className="w-3 h-3" />
                         {imageData.cloud_coverage.toFixed(1)}%
+                        {imageData.metadata?.threshold_used > imageData.metadata?.requested_threshold && (
+                          <span className="text-xs text-amber-600" title={`Requested ${imageData.metadata.requested_threshold}% but used ${imageData.metadata.threshold_used}%`}>
+                            (relaxed)
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -352,6 +357,11 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                       <div className="flex items-center gap-2">
                         <Cloud className="w-4 h-4" />
                         Cloud Coverage: {images[selectedImageIndex].cloud_coverage.toFixed(1)}%
+                        {images[selectedImageIndex].metadata?.threshold_used > images[selectedImageIndex].metadata?.requested_threshold && (
+                          <span className="text-sm text-amber-600 font-medium" title={`Requested ${images[selectedImageIndex].metadata.requested_threshold}% but used ${images[selectedImageIndex].metadata.threshold_used}%`}>
+                            (threshold relaxed to {images[selectedImageIndex].metadata.threshold_used}%)
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600" />
