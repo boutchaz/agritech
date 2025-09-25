@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, Satellite, Download, BarChart3 } from 'lucide-react';
 import {
   satelliteApi,
@@ -30,6 +30,16 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   const [results, setResults] = useState<IndexCalculationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize with reasonable default dates (last 30 days)
+  useEffect(() => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+
+    setEndDate(endDate.toISOString().split('T')[0]);
+    setStartDate(startDate.toISOString().split('T')[0]);
+  }, []);
+
   const handleIndexToggle = (index: VegetationIndexType) => {
     setSelectedIndices(prev =>
       prev.includes(index)
@@ -41,6 +51,35 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   const handleCalculate = async () => {
     if (!boundary || !startDate || !endDate || selectedIndices.length === 0) {
       setError('Please select date range and at least one vegetation index');
+      return;
+    }
+
+    // Validate date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+
+    if (start >= end) {
+      setError('End date must be after start date');
+      return;
+    }
+
+    if (start >= now) {
+      setError('Start date cannot be in the future');
+      return;
+    }
+
+    if (end >= now) {
+      setError('End date cannot be in the future. Satellite data is not available for future dates.');
+      return;
+    }
+
+    // Check if date range is reasonable (not too old, as very old data might not be available)
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+
+    if (start < threeYearsAgo) {
+      setError('Start date is too far in the past. Please select a date within the last 3 years.');
       return;
     }
 
@@ -110,6 +149,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               <input
                 type="date"
                 value={startDate}
+                max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -119,6 +159,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               <input
                 type="date"
                 value={endDate}
+                max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />

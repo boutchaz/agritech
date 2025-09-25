@@ -42,7 +42,31 @@ class EarthEngineService:
     ) -> ee.ImageCollection:
         """Get Sentinel-2 image collection for given parameters"""
         self.initialize()
-        
+
+        # Validate date range
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            end_dt = datetime.fromisoformat(end_date)
+
+            if start_dt >= end_dt:
+                raise ValueError("Start date must be before end date")
+
+            if start_dt >= datetime.now():
+                raise ValueError("Start date cannot be in the future")
+
+            if end_dt >= datetime.now():
+                raise ValueError("End date cannot be in the future")
+
+            # Sentinel-2 data is available from 2015-06-23
+            sentinel2_start = datetime(2015, 6, 23)
+            if start_dt < sentinel2_start:
+                raise ValueError(f"Start date cannot be before {sentinel2_start.strftime('%Y-%m-%d')} (Sentinel-2 launch date)")
+
+        except ValueError as ve:
+            raise ValueError(f"Invalid date range: {ve}")
+        except Exception as e:
+            raise ValueError(f"Invalid date format. Use YYYY-MM-DD format: {e}")
+
         aoi = ee.Geometry(geometry)
         max_cloud = max_cloud_coverage or settings.MAX_CLOUD_COVERAGE
         
@@ -52,7 +76,17 @@ class EarthEngineService:
             .filterDate(start_date, end_date)
             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud))
         )
-        
+
+        # Check if collection has any images
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(f"No Sentinel-2 images found for the specified area and date range ({start_date} to {end_date}) with cloud coverage < {max_cloud}%. Try expanding the date range or increasing cloud coverage threshold.")
+        except Exception as e:
+            if "No Sentinel-2 images found" in str(e):
+                raise
+            logger.warning(f"Could not check collection size: {e}")
+
         return collection
     
     def calculate_vegetation_indices(
