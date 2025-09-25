@@ -136,49 +136,58 @@ async def check_cloud_coverage(request: CloudCoverageCheckRequest):
         logger.error(f"Error checking cloud coverage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/generate-index-image", response_model=IndexImageResponse)
-async def generate_index_image(request: IndexImageRequest):
+@router.post("/generate-index-image")
+async def generate_index_image(request: dict):
     """Generate a visual image representation of a vegetation index"""
     try:
-        logger.info(f"Received request: {request}")
-        logger.info(f"AOI: {request.aoi}")
-        logger.info(f"Date range: {request.date_range}")
-        logger.info(f"Index: {request.index}")
-        logger.info(f"Cloud coverage: {request.cloud_coverage}")
+        logger.info(f"Received raw request: {request}")
+        logger.info(f"Request type: {type(request)}")
+        logger.info(f"Request keys: {list(request.keys()) if isinstance(request, dict) else 'Not a dict'}")
+
+        # Extract data from request
+        aoi = request.get('aoi', {})
+        date_range = request.get('date_range', {})
+        index = request.get('index')
+        cloud_coverage = request.get('cloud_coverage', 10)
+
+        logger.info(f"AOI: {aoi}")
+        logger.info(f"Date range: {date_range}")
+        logger.info(f"Index: {index}")
+        logger.info(f"Cloud coverage: {cloud_coverage}")
 
         # Get the best available date for the given parameters
         cloud_result = earth_engine_service.check_cloud_coverage(
-            request.aoi.geometry.model_dump(),
-            request.date_range.start_date,
-            request.date_range.end_date,
-            request.cloud_coverage
+            aoi.get('geometry', {}),
+            date_range.get('start_date'),
+            date_range.get('end_date'),
+            cloud_coverage
         )
 
         if not cloud_result['has_suitable_images']:
             raise HTTPException(
                 status_code=404,
-                detail=f"No suitable images found with cloud coverage < {request.cloud_coverage}%"
+                detail=f"No suitable images found with cloud coverage < {cloud_coverage}%"
             )
 
-        best_date = cloud_result.get('recommended_date', request.date_range.start_date)
+        best_date = cloud_result.get('recommended_date', date_range.get('start_date'))
 
         # Generate the index image URL
         image_url = earth_engine_service.export_index_map(
-            request.aoi.geometry.model_dump(),
+            aoi.get('geometry', {}),
             best_date,
-            request.index.value
+            index
         )
 
-        return IndexImageResponse(
-            image_url=image_url,
-            index=request.index,
-            date=best_date,
-            cloud_coverage=cloud_result.get('min_cloud_coverage', 0),
-            metadata={
+        return {
+            "image_url": image_url,
+            "index": index,
+            "date": best_date,
+            "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
+            "metadata": {
                 "available_images": cloud_result.get('available_images_count', 0),
                 "suitable_images": cloud_result.get('suitable_images_count', 0)
             }
-        )
+        }
 
     except Exception as e:
         logger.error(f"Error generating index image: {e}")
