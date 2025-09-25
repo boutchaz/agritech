@@ -108,17 +108,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>Parcelles</span>
         </button>
 
-        <button
-          onClick={() => handleNavigation('/satellite-analysis')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/satellite-analysis'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Satellite className="h-5 w-5" />
-          <span>Analyse Satellite</span>
-        </button>
 
         <button
           onClick={() => handleNavigation('/stock')}

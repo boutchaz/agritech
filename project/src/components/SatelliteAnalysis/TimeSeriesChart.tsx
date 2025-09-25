@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp, TrendingDown, Calendar, BarChart3 } from 'lucide-react';
 import {
@@ -40,14 +40,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     setEndDate(defaultRange.end_date);
   }, []);
 
-  // Auto-fetch data when parameters change
-  useEffect(() => {
-    if (boundary && startDate && endDate) {
-      fetchTimeSeriesData();
-    }
-  }, [selectedIndex, interval, startDate, endDate, boundary]);
-
-  const fetchTimeSeriesData = async () => {
+  const fetchTimeSeriesData = useCallback(async () => {
     if (!boundary || !startDate || !endDate) return;
 
     setIsLoading(true);
@@ -75,7 +68,14 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [boundary, startDate, endDate, selectedIndex, interval, parcelName]);
+
+  // Auto-fetch data when parameters change
+  useEffect(() => {
+    if (boundary && startDate && endDate) {
+      fetchTimeSeriesData();
+    }
+  }, [fetchTimeSeriesData, boundary, startDate, endDate]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -222,7 +222,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           <div className="flex items-center justify-center h-full text-red-500">
             {error}
           </div>
-        ) : timeSeriesData?.data ? (
+        ) : timeSeriesData?.data && timeSeriesData.data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={timeSeriesData.data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -238,7 +238,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                 domain={['dataMin - 0.1', 'dataMax + 0.1']}
               />
               <Tooltip
-                formatter={[formatTooltipValue, selectedIndex]}
+                formatter={(value: number) => [formatTooltipValue(value), selectedIndex]}
                 labelStyle={{ fontWeight: 'bold' }}
               />
               <Line
@@ -254,7 +254,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   y={stats.mean}
                   stroke="#666"
                   strokeDasharray="5 5"
-                  label={{ value: "Mean", position: "topLeft" }}
+                  label={{ value: "Mean", position: "top" }}
                 />
               )}
             </LineChart>

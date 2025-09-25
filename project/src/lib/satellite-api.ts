@@ -135,6 +135,77 @@ export interface SatelliteData {
   created_at: string;
 }
 
+export interface ParcelStatisticsRequest {
+  parcel_id: string;
+  aoi: AOIRequest;
+  date_range: DateRangeRequest;
+  indices: VegetationIndexType[];
+  cloud_coverage?: number;
+  save_tiff?: boolean;
+  scale?: number;
+}
+
+export interface ParcelStatisticsResponse {
+  parcel_id: string;
+  statistics: Record<VegetationIndexType, {
+    mean: number;
+    min: number;
+    max: number;
+    std: number;
+    median: number;
+    percentile_25: number;
+    percentile_75: number;
+    percentile_90: number;
+    pixel_count: number;
+  }>;
+  tiff_files?: Record<VegetationIndexType, {
+    url: string;
+    file_size_mb: number;
+    expires_at: string;
+  }>;
+  cloud_coverage_info: {
+    threshold_used: number;
+    images_found: number;
+    avg_cloud_coverage: number;
+    best_date: string;
+  };
+  metadata: {
+    date_range: DateRangeRequest;
+    processing_date: string;
+    scale: number;
+  };
+}
+
+export interface TiffExportResponse {
+  download_url: string;
+  file_size_mb?: number;
+  expires_at: string;
+  metadata: {
+    index: VegetationIndexType;
+    date: string;
+    scale: number;
+    cloud_coverage: number;
+  };
+}
+
+export interface IndexImageRequest {
+  aoi: AOIRequest;
+  date_range: DateRangeRequest;
+  index: VegetationIndexType;
+  cloud_coverage?: number;
+}
+
+export interface IndexImageResponse {
+  image_url: string;
+  index: VegetationIndexType;
+  date: string;
+  cloud_coverage: number;
+  metadata: {
+    available_images: number;
+    suitable_images: number;
+  };
+}
+
 class SatelliteAPIClient {
   private baseUrl: string;
 
@@ -142,7 +213,7 @@ class SatelliteAPIClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}/api${endpoint}`;
     const response = await fetch(url, {
       headers: {
@@ -250,11 +321,97 @@ class SatelliteAPIClient {
     index: VegetationIndexType;
     scale?: number;
     format?: string;
-  }) {
+  }): Promise<TiffExportResponse> {
     return this.request('/indices/export', {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  // Calculate comprehensive statistics for a parcel with optional TIFF export
+  async calculateParcelStatistics(request: ParcelStatisticsRequest): Promise<ParcelStatisticsResponse> {
+    return this.request('/analysis/parcel-statistics', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Enhanced cloud coverage check with detailed recommendations
+  async checkCloudCoverageDetailed(request: CloudCoverageCheckRequest): Promise<CloudCoverageCheckResponse> {
+    return this.request('/analysis/cloud-coverage', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Bulk export TIFF files for multiple indices
+  async bulkExportTiffs(request: {
+    aoi: AOIRequest;
+    date: string;
+    indices: VegetationIndexType[];
+    scale?: number;
+    cloud_coverage?: number;
+  }) {
+    return this.request('/indices/bulk-export', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Get processing status for batch operations
+  async getBatchProcessingStatus(jobId: string) {
+    return this.request(`/analysis/batch/${jobId}/status`);
+  }
+
+  // Check if cloud-free images are available (quick check)
+  async hasCloudFreeImages(
+    aoi: AOIRequest,
+    dateRange: DateRangeRequest,
+    maxCloudCoverage: number = 10
+  ): Promise<boolean> {
+    try {
+      const result = await this.checkCloudCoverage({
+        geometry: aoi.geometry,
+        date_range: dateRange,
+        max_cloud_coverage: maxCloudCoverage,
+      });
+      return result.has_suitable_images;
+    } catch (error) {
+      console.warn('Cloud coverage check failed:', error);
+      return false;
+    }
+  }
+
+  // Generate vegetation index image
+  async generateIndexImage(request: IndexImageRequest): Promise<IndexImageResponse> {
+    return this.request('/analysis/generate-index-image', {
+      method: 'POST',
+      body: JSON.stringify({
+        aoi: request.aoi.geometry,
+        date_range: request.date_range,
+        index: request.index,
+        cloud_coverage: request.cloud_coverage || 10
+      }),
+    });
+  }
+
+  // Generate multiple index images for comparison
+  async generateMultipleIndexImages(
+    aoi: AOIRequest,
+    dateRange: DateRangeRequest,
+    indices: VegetationIndexType[],
+    cloudCoverage: number = 10
+  ): Promise<IndexImageResponse[]> {
+    const promises = indices.map(index =>
+      this.generateIndexImage({
+        aoi,
+        date_range: dateRange,
+        index,
+        cloud_coverage: cloudCoverage
+      })
+    );
+
+    return Promise.all(promises);
   }
 }
 

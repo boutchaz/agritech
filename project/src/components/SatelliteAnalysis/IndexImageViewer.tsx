@@ -1,0 +1,418 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Grid3X3 } from 'lucide-react';
+import {
+  satelliteApi,
+  VegetationIndexType,
+  VEGETATION_INDICES,
+  VEGETATION_INDEX_DESCRIPTIONS,
+  IndexImageResponse,
+  convertBoundaryToGeoJSON,
+  getDateRangeLastNDays
+} from '../../lib/satellite-api';
+
+interface IndexImageViewerProps {
+  parcelId: string;
+  parcelName?: string;
+  boundary?: number[][];
+}
+
+const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
+  parcelId,
+  parcelName,
+  boundary
+}) => {
+  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [cloudCoverage, setCloudCoverage] = useState(10);
+  const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [images, setImages] = useState<IndexImageResponse[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize with last 7 days for recent imagery
+  useEffect(() => {
+    const defaultRange = getDateRangeLastNDays(7);
+    setStartDate(defaultRange.start_date);
+    setEndDate(defaultRange.end_date);
+  }, []);
+
+  const handleIndexToggle = (index: VegetationIndexType) => {
+    setSelectedIndices(prev =>
+      prev.includes(index)
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const generateImages = useCallback(async () => {
+    if (!boundary || !startDate || !endDate || selectedIndices.length === 0) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const aoi = {
+        geometry: convertBoundaryToGeoJSON(boundary),
+        name: parcelName || 'Selected Parcel'
+      };
+
+      const dateRange = { start_date: startDate, end_date: endDate };
+
+      const results = await satelliteApi.generateMultipleIndexImages(
+        aoi,
+        dateRange,
+        selectedIndices,
+        cloudCoverage
+      );
+
+      setImages(results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate index images');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [boundary, parcelName, startDate, endDate, selectedIndices, cloudCoverage]);
+
+  const getIndexColor = (index: VegetationIndexType) => {
+    const colors: Record<VegetationIndexType, string> = {
+      NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
+      GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
+      PRI: '#ef4444', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+    };
+    return colors[index] || '#6b7280';
+  };
+
+  const downloadImage = (imageUrl: string, index: VegetationIndexType, date: string) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `${parcelName || parcelId}_${index}_${date}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getColorLegend = (index: VegetationIndexType) => {
+    const legends: Record<VegetationIndexType, { min: string, max: string, colors: string[] }> = {
+      NDVI: { min: '-1 (Water/Bare)', max: '+1 (Dense Vegetation)', colors: ['#8B4513', '#FFD700', '#ADFF2F', '#32CD32', '#006400'] },
+      NDRE: { min: '-1 (Low Nitrogen)', max: '+1 (High Nitrogen)', colors: ['#FF4500', '#FFA500', '#FFFF00', '#9ACD32', '#228B22'] },
+      NDMI: { min: '-1 (Dry)', max: '+1 (Wet)', colors: ['#8B4513', '#D2691E', '#F0E68C', '#87CEEB', '#4169E1'] },
+      MNDWI: { min: '-1 (Vegetation)', max: '+1 (Water)', colors: ['#228B22', '#90EE90', '#FFFFE0', '#87CEEB', '#0000FF'] },
+      GCI: { min: '0 (Low Chlorophyll)', max: '50+ (High Chlorophyll)', colors: ['#FFB6C1', '#FFFF00', '#ADFF2F', '#32CD32', '#006400'] },
+      SAVI: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
+      OSAVI: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
+      MSAVI2: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
+      PRI: { min: '-0.2 (Stressed)', max: '+0.2 (Healthy)', colors: ['#FF0000', '#FF8C00', '#FFD700', '#ADFF2F', '#32CD32'] },
+      MSI: { min: '0 (Wet)', max: '2+ (Dry)', colors: ['#0000FF', '#87CEEB', '#FFFFE0', '#FFA500', '#FF4500'] },
+      MCARI: { min: '0 (Low Chlorophyll)', max: '2+ (High Chlorophyll)', colors: ['#FFB6C1', '#FFFF00', '#ADFF2F', '#32CD32', '#006400'] },
+      TCARI: { min: '0 (Low Chlorophyll)', max: '3+ (High Chlorophyll)', colors: ['#FFB6C1', '#FFFF00', '#ADFF2F', '#32CD32', '#006400'] }
+    };
+    return legends[index] || legends.NDVI;
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Image className="w-5 h-5" />
+        <h2 className="text-xl font-semibold">Vegetation Index Images</h2>
+      </div>
+
+      <p className="text-gray-600">
+        Generate visual satellite imagery for vegetation indices of {parcelName || `Parcel ${parcelId}`}
+      </p>
+
+      {/* Configuration Panel */}
+      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+        <h3 className="font-medium text-gray-900">Configuration</h3>
+
+        {/* Date Range & Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Max Cloud Coverage (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={cloudCoverage}
+              onChange={(e) => setCloudCoverage(Number(e.target.value))}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">View Mode</label>
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as 'grid' | 'single')}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            >
+              <option value="grid">Grid View</option>
+              <option value="single">Single View</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Index Selection */}
+        <div>
+          <label className="text-sm font-medium mb-3 block">Select Indices to Visualize</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {VEGETATION_INDICES.map(index => (
+              <label key={index} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={selectedIndices.includes(index)}
+                  onChange={() => handleIndexToggle(index)}
+                  className="mr-2"
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: getIndexColor(index) }}
+                >
+                  {index}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Generate Button */}
+        <button
+          onClick={generateImages}
+          disabled={isLoading || !boundary || selectedIndices.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
+          {isLoading ? 'Generating Images...' : 'Generate Images'}
+        </button>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="font-medium">Error</span>
+          </div>
+          <p className="text-red-700 text-sm mt-1">{error}</p>
+        </div>
+      )}
+
+      {/* Image Display */}
+      {images.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Generated Images</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode(viewMode === 'grid' ? 'single' : 'grid')}
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                {viewMode === 'grid' ? <Eye className="w-3 h-3" /> : <Grid3X3 className="w-3 h-3" />}
+                {viewMode === 'grid' ? 'Single View' : 'Grid View'}
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'grid' ? (
+            /* Grid View */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {images.map((imageData, index) => (
+                <div key={imageData.index} className="bg-white border rounded-lg overflow-hidden shadow-sm">
+                  <div className="p-4 border-b">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4
+                        className="font-medium text-lg"
+                        style={{ color: getIndexColor(imageData.index) }}
+                      >
+                        {imageData.index}
+                      </h4>
+                      <button
+                        onClick={() => downloadImage(imageData.image_url, imageData.index, imageData.date)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {VEGETATION_INDEX_DESCRIPTIONS[imageData.index]}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {imageData.date}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Cloud className="w-3 h-3" />
+                        {imageData.cloud_coverage.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image */}
+                  <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                    <img
+                      src={imageData.image_url}
+                      alt={`${imageData.index} visualization`}
+                      className="max-w-full max-h-full object-contain"
+                      onLoad={() => console.log(`Image loaded: ${imageData.index}`)}
+                      onError={() => console.error(`Failed to load image: ${imageData.index}`)}
+                    />
+                  </div>
+
+                  {/* Color Legend */}
+                  <div className="p-3 bg-gray-50">
+                    <div className="text-xs font-medium mb-2">Value Range</div>
+                    <div className="flex items-center justify-between text-xs text-gray-600">
+                      <span>{getColorLegend(imageData.index).min}</span>
+                      <div className="flex-1 mx-2">
+                        <div
+                          className="h-2 rounded-full"
+                          style={{
+                            background: `linear-gradient(to right, ${getColorLegend(imageData.index).colors.join(', ')})`
+                          }}
+                        />
+                      </div>
+                      <span>{getColorLegend(imageData.index).max}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Single View */
+            <div className="space-y-4">
+              {/* Image Navigation */}
+              <div className="flex items-center justify-center gap-2">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`px-3 py-1 rounded text-sm font-medium ${
+                      selectedImageIndex === index
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {images[index].index}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selected Image */}
+              {images[selectedImageIndex] && (
+                <div className="bg-white border rounded-lg overflow-hidden">
+                  <div className="p-6 border-b">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4
+                        className="text-2xl font-bold"
+                        style={{ color: getIndexColor(images[selectedImageIndex].index) }}
+                      >
+                        {images[selectedImageIndex].index}
+                      </h4>
+                      <button
+                        onClick={() => downloadImage(
+                          images[selectedImageIndex].image_url,
+                          images[selectedImageIndex].index,
+                          images[selectedImageIndex].date
+                        )}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Image
+                      </button>
+                    </div>
+                    <p className="text-gray-700 mb-4">
+                      {VEGETATION_INDEX_DESCRIPTIONS[images[selectedImageIndex].index]}
+                    </p>
+                    <div className="flex items-center gap-6 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Date: {images[selectedImageIndex].date}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Cloud className="w-4 h-4" />
+                        Cloud Coverage: {images[selectedImageIndex].cloud_coverage.toFixed(1)}%
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        {images[selectedImageIndex].metadata.suitable_images} suitable images found
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Large Image Display */}
+                  <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                    <img
+                      src={images[selectedImageIndex].image_url}
+                      alt={`${images[selectedImageIndex].index} visualization`}
+                      className="max-w-full max-h-full object-contain rounded"
+                    />
+                  </div>
+
+                  {/* Enhanced Color Legend */}
+                  <div className="p-6 bg-gray-50">
+                    <h5 className="font-medium mb-3">Color Scale Interpretation</h5>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">
+                        {getColorLegend(images[selectedImageIndex].index).min}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {getColorLegend(images[selectedImageIndex].index).max}
+                      </span>
+                    </div>
+                    <div
+                      className="h-4 rounded-full mb-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorLegend(images[selectedImageIndex].index).colors.join(', ')})`
+                      }}
+                    />
+                    <div className="text-sm text-gray-600">
+                      Colors represent the range of {images[selectedImageIndex].index} values across your parcel.
+                      Darker greens typically indicate healthier vegetation.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Information Panel */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Image className="w-4 h-4 text-blue-600" />
+          <span className="font-medium text-blue-800">Image Generation Information</span>
+        </div>
+        <div className="text-sm text-blue-700 space-y-1">
+          <p>• Images are generated from the best available satellite data within your date range</p>
+          <p>• Lower cloud coverage settings produce higher quality images but may limit availability</p>
+          <p>• Recent imagery (last 7 days) provides the most current field conditions</p>
+          <p>• Click download to save high-resolution images for further analysis</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default IndexImageViewer;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
@@ -7,6 +7,10 @@ import { useRecommendations } from '../hooks/useRecommendations';
 import WeatherForecast from './WeatherForecast';
 import ProductApplications from './ProductApplications';
 import { useNavigate } from '@tanstack/react-router';
+import IndicesCalculator from './SatelliteAnalysis/IndicesCalculator';
+import TimeSeriesChart from './SatelliteAnalysis/TimeSeriesChart';
+import StatisticsCalculator from './SatelliteAnalysis/StatisticsCalculator';
+import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
 
 interface Parcel {
   id: string;
@@ -14,6 +18,11 @@ interface Parcel {
   area: number | null;
   soil_type?: string | null;
   boundary?: number[][];
+  tree_type?: string | null;
+  tree_count?: number | null;
+  planting_year?: number | null;
+  variety?: string | null;
+  rootstock?: string | null;
 }
 
 interface ParcelCardProps {
@@ -37,6 +46,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
     { id: 'soil', name: 'Analyse Sol', icon: Flask },
     { id: 'sensors', name: 'Capteurs', icon: Wifi },
     { id: 'satellite', name: 'Imagerie', icon: Satellite },
+    { id: 'fruit-trees', name: 'Arbres Fruitiers', icon: Tree },
     { id: 'yield', name: 'Rendement', icon: TrendingUp },
     { id: 'applications', name: 'Applications', icon: Sprout },
     { id: 'products', name: 'Produits', icon: Database },
@@ -266,35 +276,201 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
       case 'satellite':
         return (
+          <div className="space-y-6">
+            {parcel.boundary ? (
+              <>
+                <IndexImageViewer
+                  parcelId={parcel.id}
+                  parcelName={parcel.name}
+                  boundary={parcel.boundary}
+                />
+                <StatisticsCalculator
+                  parcelId={parcel.id}
+                  parcelName={parcel.name}
+                  boundary={parcel.boundary}
+                />
+                <IndicesCalculator
+                  parcelId={parcel.id}
+                  parcelName={parcel.name}
+                  boundary={parcel.boundary}
+                />
+                <TimeSeriesChart
+                  parcelId={parcel.id}
+                  parcelName={parcel.name}
+                  boundary={parcel.boundary}
+                />
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Satellite className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  Les données de délimitation de la parcelle sont requises pour l'analyse satellite.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                  Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'fruit-trees':
+        const currentYear = new Date().getFullYear();
+        const treeAge = parcel.planting_year ? currentYear - parcel.planting_year : null;
+
+        return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
-                <h5 className="font-medium mb-2 text-sm">NDVI</h5>
-                <div className="h-24 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center mb-2">
-                  <div className="w-16 h-16 bg-gradient-to-br from-red-400 via-yellow-400 to-green-500 rounded opacity-70"></div>
-                </div>
-                <div className="text-xs text-center">
-                  Valeur: {randomValues.satelliteNdvi}
-                </div>
-              </div>
+            {parcel.tree_type ? (
+              <>
+                {/* Tree Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Tree className="w-5 h-5 text-green-600" />
+                      Informations des Arbres
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Type:</span>
+                        <span className="font-medium">{parcel.tree_type}</span>
+                      </div>
+                      {parcel.variety && (
+                        <div className="flex justify-between">
+                          <span>Variété:</span>
+                          <span className="font-medium">{parcel.variety}</span>
+                        </div>
+                      )}
+                      {parcel.rootstock && (
+                        <div className="flex justify-between">
+                          <span>Porte-greffe:</span>
+                          <span className="font-medium">{parcel.rootstock}</span>
+                        </div>
+                      )}
+                      {parcel.tree_count && (
+                        <div className="flex justify-between">
+                          <span>Nombre d'arbres:</span>
+                          <span className="font-medium">{parcel.tree_count}</span>
+                        </div>
+                      )}
+                      {parcel.planting_year && (
+                        <div className="flex justify-between">
+                          <span>Année de plantation:</span>
+                          <span className="font-medium">{parcel.planting_year}</span>
+                        </div>
+                      )}
+                      {treeAge && (
+                        <div className="flex justify-between">
+                          <span>Âge des arbres:</span>
+                          <span className="font-medium">{treeAge} ans</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
-                <h5 className="font-medium mb-2 text-sm">NDRE</h5>
-                <div className="h-24 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center mb-2">
-                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-300 via-green-400 to-green-600 rounded opacity-70"></div>
+                  <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3">Métriques</h4>
+                    <div className="space-y-2 text-sm">
+                      {parcel.tree_count && parcel.area && (
+                        <div className="flex justify-between">
+                          <span>Densité:</span>
+                          <span className="font-medium">
+                            {Math.round(parcel.tree_count / parcel.area)} arbres/ha
+                          </span>
+                        </div>
+                      )}
+                      {treeAge && (
+                        <div className="flex justify-between">
+                          <span>Phase:</span>
+                          <span className="font-medium">
+                            {treeAge < 3 ? 'Jeune plantation' :
+                             treeAge < 8 ? 'Développement' :
+                             treeAge < 20 ? 'Production optimale' : 'Mature'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>État sanitaire:</span>
+                        <span className="font-medium text-green-600">Bon</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-center">
-                  Valeur: {randomValues.satelliteNdre}
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-              <h6 className="font-medium text-green-900 dark:text-green-100 mb-1 text-sm">État de la végétation</h6>
-              <p className="text-xs text-green-800 dark:text-green-200">
-                La végétation présente un développement {randomValues.vegetation} avec une couverture homogène.
-              </p>
-            </div>
+                {/* Age-based Recommendations */}
+                {treeAge && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-3">
+                      Recommandations selon l'âge ({treeAge} ans)
+                    </h5>
+                    <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                      {treeAge < 3 && (
+                        <>
+                          <p>• Formation des arbres - taille de formation annuelle</p>
+                          <p>• Irrigation régulière et fertilisation azotée</p>
+                          <p>• Protection contre les ravageurs jeunes plants</p>
+                        </>
+                      )}
+                      {treeAge >= 3 && treeAge < 8 && (
+                        <>
+                          <p>• Taille de fructification pour équilibrer croissance/production</p>
+                          <p>• Surveillance sanitaire renforcée</p>
+                          <p>• Ajustement de la fertilisation selon l'analyse foliaire</p>
+                        </>
+                      )}
+                      {treeAge >= 8 && treeAge < 20 && (
+                        <>
+                          <p>• Optimisation de la production - éclaircissage si nécessaire</p>
+                          <p>• Taille d'entretien et renouvellement du bois</p>
+                          <p>• Gestion intégrée des ravageurs et maladies</p>
+                        </>
+                      )}
+                      {treeAge >= 20 && (
+                        <>
+                          <p>• Taille de rajeunissement progressive</p>
+                          <p>• Évaluation pour renouvellement de plantation</p>
+                          <p>• Surveillance accrue des maladies du bois</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Seasonal Actions */}
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                  <h5 className="font-medium text-green-900 dark:text-green-100 mb-3">
+                    Actions saisonnières recommandées
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <h6 className="font-medium text-green-800 dark:text-green-200 mb-2">Printemps</h6>
+                      <ul className="text-green-700 dark:text-green-300 space-y-1">
+                        <li>• Taille de nettoyage après floraison</li>
+                        <li>• Application d'engrais de printemps</li>
+                        <li>• Traitement préventif contre les maladies</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h6 className="font-medium text-green-800 dark:text-green-200 mb-2">Été</h6>
+                      <ul className="text-green-700 dark:text-green-300 space-y-1">
+                        <li>• Surveillance irrigation et stress hydrique</li>
+                        <li>• Éclaircissage des fruits si nécessaire</li>
+                        <li>• Taille verte pour aérer la ramure</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Tree className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  Cette parcelle n'est pas configurée pour les arbres fruitiers.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                  Ajoutez les informations sur les arbres pour accéder aux recommandations spécialisées.
+                </p>
+              </div>
+            )}
           </div>
         );
 

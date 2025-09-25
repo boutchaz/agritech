@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from app.models.schemas import (
     StatisticsRequest,
     StatisticsResponse,
+    CloudCoverageCheckRequest,
+    CloudCoverageCheckResponse,
     ErrorResponse
 )
 from app.services import earth_engine_service
@@ -101,7 +103,80 @@ async def compare_periods(
             "period2": period2,
             "indices": indices
         }
-    
+
     except Exception as e:
         logger.error(f"Error comparing periods: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cloud-coverage", response_model=CloudCoverageCheckResponse)
+async def check_cloud_coverage(request: CloudCoverageCheckRequest):
+    """Check cloud coverage availability for given parameters"""
+    try:
+        result = earth_engine_service.check_cloud_coverage(
+            request.geometry.model_dump(),
+            request.date_range.start_date,
+            request.date_range.end_date,
+            request.max_cloud_coverage or 10.0
+        )
+
+        return CloudCoverageCheckResponse(
+            has_suitable_images=result['has_suitable_images'],
+            available_images_count=result['available_images_count'],
+            suitable_images_count=result.get('suitable_images_count', 0),
+            min_cloud_coverage=result.get('min_cloud_coverage'),
+            max_cloud_coverage=result.get('max_cloud_coverage'),
+            avg_cloud_coverage=result.get('avg_cloud_coverage'),
+            recommended_date=result.get('recommended_date'),
+            metadata=result.get('metadata', {})
+        )
+
+    except Exception as e:
+        logger.error(f"Error checking cloud coverage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-index-image")
+async def generate_index_image(
+    aoi: dict,
+    date_range: dict,
+    index: str,
+    cloud_coverage: float = 10.0
+):
+    """Generate a visual image representation of a vegetation index"""
+    try:
+        # Get the best available date for the given parameters
+        cloud_result = earth_engine_service.check_cloud_coverage(
+            aoi,
+            date_range['start_date'],
+            date_range['end_date'],
+            cloud_coverage
+        )
+
+        if not cloud_result['has_suitable_images']:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No suitable images found with cloud coverage < {cloud_coverage}%"
+            )
+
+        best_date = cloud_result.get('recommended_date', date_range['start_date'])
+
+        # Generate the index image URL
+        image_url = earth_engine_service.export_index_map(
+            aoi,
+            best_date,
+            index
+        )
+
+        return {
+            "image_url": image_url,
+            "index": index,
+            "date": best_date,
+            "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
+            "metadata": {
+                "available_images": cloud_result.get('available_images_count', 0),
+                "suitable_images": cloud_result.get('suitable_images_count', 0)
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating index image: {e}")
         raise HTTPException(status_code=500, detail=str(e))

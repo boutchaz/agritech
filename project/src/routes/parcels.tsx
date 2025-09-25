@@ -3,11 +3,11 @@ import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
-import SatelliteIndices from '../components/SatelliteIndices'
+import ParcelCard from '../components/ParcelCard'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Module, SensorData } from '../types'
-import { Edit2, Trash2, MapPin, Ruler, Droplets, ChevronRight, Building2, TreePine } from 'lucide-react'
+import { Edit2, Trash2, MapPin, Ruler, Droplets, ChevronRight, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
 interface Parcel {
   id: string;
@@ -22,6 +22,12 @@ interface Parcel {
   soil_type?: string | null;
   planting_density?: number | null;
   irrigation_type?: string | null;
+  // Fruit trees specific fields
+  tree_type?: string | null;
+  tree_count?: number | null;
+  planting_year?: number | null;
+  variety?: string | null;
+  rootstock?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +70,7 @@ const AppContent: React.FC = () => {
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [activeParcelTab, setActiveParcelTab] = useState<string>('overview');
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
@@ -372,27 +379,36 @@ const AppContent: React.FC = () => {
                 }}
               />
 
-              {/* Satellite Indices Section */}
+              {/* Selected Parcel Detail View */}
               {selectedParcelId && (
                 <div className="mt-6">
-                  <SatelliteIndices
-                    parcel={parcels.find(p => p.id === selectedParcelId)!}
-                  />
+                  {(() => {
+                    const selectedParcel = parcels.find(p => p.id === selectedParcelId);
+                    if (!selectedParcel) return null;
+
+                    return (
+                      <div className="w-full">
+                        <ParcelCard
+                          parcel={selectedParcel}
+                          activeTab={activeParcelTab}
+                          onTabChange={setActiveParcelTab}
+                          sensorData={sensorData}
+                          isAssigned={true}
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
-              {parcels.length > 0 && (
+              {parcels.length > 0 && !selectedParcelId && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                   {parcels.map((parcel) => {
                     const farm = farms.find(f => f.id === parcel.farm_id);
                     return (
                       <div
                         key={parcel.id}
-                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border-2 transition-all cursor-pointer hover:shadow-lg ${
-                          selectedParcelId === parcel.id
-                            ? 'border-green-500 shadow-lg'
-                            : 'border-gray-200 dark:border-gray-700'
-                        }`}
+                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all cursor-pointer hover:shadow-lg hover:border-green-300"
                         onClick={() => handleParcelSelect(parcel.id)}
                       >
                         <div className="flex justify-between items-start mb-2">
@@ -400,90 +416,125 @@ const AppContent: React.FC = () => {
                             <MapPin className="h-4 w-4 text-green-600" />
                             <span>{parcel.name}</span>
                           </h3>
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingParcel(parcel);
-                              setShowEditDialog(true);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Modifier"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${parcel.name}" ?`)) {
-                                deleteParcel(parcel.id);
-                              }
-                            }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Show farm name when viewing all farms */}
-                      {(!selectedFarmId && !currentFarm) && farm && (
-                        <div className="mb-2">
-                          <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-                            <TreePine className="h-3 w-3" />
-                            <span>{farm.name}</span>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingParcel(parcel);
+                                setShowEditDialog(true);
+                              }}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                              title="Modifier"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${parcel.name}" ?`)) {
+                                  deleteParcel(parcel.id);
+                                }
+                              }}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
-                      )}
 
-                      {parcel.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{parcel.description}</p>
-                      )}
-
-                      <div className="space-y-1">
-                        {(parcel.calculated_area || parcel.area) ? (
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                            <Ruler className="h-3 w-3 mr-1" />
-                            <span>{parcel.calculated_area || parcel.area} {parcel.area_unit}</span>
-                          </div>
-                        ) : null}
-                        {parcel.irrigation_type && (
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                            <Droplets className="h-3 w-3 mr-1" />
-                            <span>{parcel.irrigation_type}</span>
+                        {/* Show farm name when viewing all farms */}
+                        {(!selectedFarmId && !currentFarm) && farm && (
+                          <div className="mb-2">
+                            <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+                              <TreePine className="h-3 w-3" />
+                              <span>{farm.name}</span>
+                            </div>
                           </div>
                         )}
-                      </div>
 
-                      {selectedParcelId === parcel.id && (
-                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        {parcel.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{parcel.description}</p>
+                        )}
+
+                        <div className="space-y-1">
+                          {(parcel.calculated_area || parcel.area) ? (
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                              <Ruler className="h-3 w-3 mr-1" />
+                              <span>{parcel.calculated_area || parcel.area} {parcel.area_unit}</span>
+                            </div>
+                          ) : null}
+                          {parcel.irrigation_type && (
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                              <Droplets className="h-3 w-3 mr-1" />
+                              <span>{parcel.irrigation_type}</span>
+                            </div>
+                          )}
+                          {/* Fruit Trees Information */}
+                          {parcel.tree_type && (
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                              <Tree className="h-3 w-3 mr-1" />
+                              <span>{parcel.tree_type}</span>
+                              {parcel.variety && <span className="text-xs text-gray-400 ml-1">({parcel.variety})</span>}
+                            </div>
+                          )}
+                          {parcel.tree_count && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              <span className="font-medium">{parcel.tree_count}</span> arbres
+                              {parcel.planting_year && (
+                                <span className="text-xs text-gray-400 ml-1">
+                                  • Plantés en {parcel.planting_year}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {parcel.rootstock && (
+                            <div className="text-xs text-gray-400">
+                              Porte-greffe: {parcel.rootstock}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                           {parcel.boundary && parcel.boundary.length > 0 ? (
                             <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                              ✓ Sélectionnée et visible sur la carte
+                              ✓ Limites définies
                             </p>
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                ⚠ Pas de limites géographiques définies
+                                ⚠ Pas de limites géographiques
                               </p>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setShowAddParcelMap(true);
-                                  // You could add specific logic here to edit boundaries for existing parcel
                                 }}
                                 className="text-xs text-blue-600 hover:text-blue-700 underline"
                               >
-                                Définir les limites sur la carte
+                                Définir les limites
                               </button>
                             </div>
                           )}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Cliquer pour voir les détails →
+                          </p>
                         </div>
-                      )}
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Back to list button when viewing parcel details */}
+              {selectedParcelId && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={() => setSelectedParcelId(null)}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                  >
+                    <span>← Retour à la liste des parcelles</span>
+                  </button>
                 </div>
               )}
             </>
