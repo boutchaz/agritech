@@ -76,7 +76,7 @@ async def check_cloud_coverage(request: CloudCoverageCheckRequest):
     """Check cloud coverage availability for given parameters"""
     try:
         result = earth_engine_service.check_cloud_coverage(
-            request.geometry.dict(),
+            request.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
             request.max_cloud_coverage

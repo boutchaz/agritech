@@ -24,7 +24,7 @@ async def calculate_indices(request: IndexCalculationRequest):
     try:
         # Get Sentinel-2 collection
         collection = earth_engine_service.get_sentinel2_collection(
-            request.aoi.geometry.dict(),
+            request.aoi.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
             request.cloud_coverage
@@ -41,7 +41,7 @@ async def calculate_indices(request: IndexCalculationRequest):
         )
         
         # Calculate mean values for each index
-        aoi = ee.Geometry(request.aoi.geometry.dict())
+        aoi = ee.Geometry(request.aoi.geometry.model_dump())
         index_values = []
         
         for index_name, index_image in index_results.items():
@@ -81,7 +81,7 @@ async def get_time_series(request: TimeSeriesRequest):
     """Get time series data for a specific vegetation index"""
     try:
         time_series_data = earth_engine_service.get_time_series(
-            request.aoi.geometry.dict(),
+            request.aoi.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
             request.index.value,
@@ -123,7 +123,7 @@ async def export_index_map(request: ExportRequest):
     """Export vegetation index map as GeoTIFF"""
     try:
         download_url = earth_engine_service.export_index_map(
-            request.aoi.geometry.dict(),
+            request.aoi.geometry.model_dump(),
             request.date,
             request.index.value,
             request.scale

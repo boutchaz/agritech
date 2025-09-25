@@ -263,9 +263,34 @@ export const satelliteApi = new SatelliteAPIClient();
 
 // Utility functions
 export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry => {
+  // Convert boundary coordinates to WGS84 if needed
+  const convertedBoundary = boundary.map(coord => {
+    const [x, y] = coord;
+
+    // Check if coordinates are in Web Mercator (EPSG:3857) or geographic (WGS84)
+    if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+      // Coordinates are in Web Mercator (EPSG:3857), need to convert to WGS84
+      const lon = (x / 20037508.34) * 180;
+      const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+      return [lon, lat];
+    } else {
+      // Coordinates are already in geographic (WGS84)
+      return [x, y];
+    }
+  });
+
+  // Ensure the polygon is closed (first and last points should be the same)
+  if (convertedBoundary.length > 0) {
+    const first = convertedBoundary[0];
+    const last = convertedBoundary[convertedBoundary.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      convertedBoundary.push([first[0], first[1]]);
+    }
+  }
+
   return {
     type: 'Polygon',
-    coordinates: [boundary]
+    coordinates: [convertedBoundary]
   };
 };
 

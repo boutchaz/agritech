@@ -16,7 +16,7 @@ async def get_statistics(request: StatisticsRequest):
     """Calculate statistics for multiple indices over a date range"""
     try:
         statistics = earth_engine_service.get_statistics(
-            request.aoi.geometry.dict(),
+            request.aoi.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
             [idx.value for idx in request.indices]
