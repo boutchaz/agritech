@@ -337,7 +337,7 @@ class EarthEngineService:
             return ee.Feature(None, {
                 'date': date,
                 'cloud_percentage': cloud_percentage,
-                'suitable': cloud_percentage.lt(max_cloud_coverage)
+                'suitable': ee.Number(cloud_percentage).lt(ee.Number(max_cloud_coverage))
             })
         
         # Map over collection to get cloud info
