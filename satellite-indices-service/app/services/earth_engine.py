@@ -3,7 +3,7 @@ import json
 import os
 import uuid
 import httpx
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
 import logging
@@ -271,6 +271,47 @@ class EarthEngineService:
             logger.error(f"Error checking existing files: {e}")
             return None
 
+    def _get_visualization_params(self, index: str) -> Dict[str, Any]:
+        """Get visualization parameters for different vegetation indices"""
+        params = {
+            'NDVI': {
+                'min': -1,
+                'max': 1,
+                'palette': ['red', 'yellow', 'green']
+            },
+            'EVI': {
+                'min': -1,
+                'max': 1,
+                'palette': ['red', 'yellow', 'green']
+            },
+            'SAVI': {
+                'min': -1,
+                'max': 1,
+                'palette': ['red', 'yellow', 'green']
+            },
+            'NDWI': {
+                'min': -1,
+                'max': 1,
+                'palette': ['white', 'blue']
+            },
+            'NBR': {
+                'min': -1,
+                'max': 1,
+                'palette': ['red', 'yellow', 'green']
+            },
+            'GNDVI': {
+                'min': -1,
+                'max': 1,
+                'palette': ['red', 'yellow', 'green']
+            }
+        }
+
+        return params.get(index, {
+            'min': -1,
+            'max': 1,
+            'palette': ['red', 'yellow', 'green']
+        })
+
     async def export_index_map(
         self,
         geometry: Dict,
@@ -319,12 +360,20 @@ class EarthEngineService:
         if organization_id:
             return await self._export_to_supabase_storage(clipped, aoi, index, date, organization_id, scale)
         else:
-            # Get download URL for direct download
-            url = clipped.getDownloadUrl({
-                'scale': scale or settings.DEFAULT_SCALE,
-                'crs': 'EPSG:4326',
-                'fileFormat': 'GeoTIFF',
-                'region': aoi
+            # For web display, use Earth Engine's thumbnail/visualization service
+            # This generates a web-friendly PNG image instead of GeoTIFF
+
+            # Apply visualization parameters for better display
+            vis_params = self._get_visualization_params(index)
+
+            # Generate thumbnail URL that returns a PNG image
+            url = clipped.getThumbUrl({
+                'min': vis_params['min'],
+                'max': vis_params['max'],
+                'palette': vis_params['palette'],
+                'dimensions': 512,
+                'region': aoi,
+                'format': 'png'
             })
             return url
     
