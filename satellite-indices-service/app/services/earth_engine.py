@@ -1,5 +1,7 @@
 import ee
 import json
+import os
+import uuid
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -242,9 +244,10 @@ class EarthEngineService:
         geometry: Dict,
         date: str,
         index: str,
-        scale: int = None
+        scale: int = None,
+        organization_id: str = None
     ) -> str:
-        """Export index map as GeoTIFF URL"""
+        """Export index map as GeoTIFF URL or upload to bucket"""
         self.initialize()
         
         # Get the image for the specific date
@@ -265,6 +268,7 @@ class EarthEngineService:
                 raise ValueError(f"No images found for date {date}")
             else:
                 raise e
+                
         indices = self.calculate_vegetation_indices(image, [index])
         index_image = indices[index]
         
@@ -272,15 +276,75 @@ class EarthEngineService:
         aoi = ee.Geometry(geometry)
         clipped = index_image.clip(aoi)
         
-        # Get download URL
-        url = clipped.getDownloadUrl({
-            'scale': scale or settings.DEFAULT_SCALE,
-            'crs': 'EPSG:4326',
-            'fileFormat': 'GeoTIFF',
-            'region': aoi
-        })
-        
-        return url
+        # If organization_id is provided, export to bucket
+        if organization_id:
+            return self._export_to_bucket(clipped, aoi, index, date, organization_id, scale)
+        else:
+            # Get download URL for direct download
+            url = clipped.getDownloadUrl({
+                'scale': scale or settings.DEFAULT_SCALE,
+                'crs': 'EPSG:4326',
+                'fileFormat': 'GeoTIFF',
+                'region': aoi
+            })
+            return url
+    
+    def _export_to_bucket(
+        self,
+        image: ee.Image,
+        geometry: ee.Geometry,
+        index: str,
+        date: str,
+        organization_id: str,
+        scale: int = None
+    ) -> str:
+        """Export GeoTIFF to Google Cloud Storage bucket"""
+        try:
+            # Create bucket name for organization
+            bucket_name = f"agritech-satellite-data-{organization_id.lower()}"
+            
+            # Generate unique filename
+            file_id = str(uuid.uuid4())[:8]
+            filename = f"{index}_{date}_{file_id}.tif"
+            
+            # Export to Google Cloud Storage
+            task = ee.batch.Export.image.toCloudStorage(
+                image=image,
+                description=f'{index}_{date}_{file_id}',
+                bucket=bucket_name,
+                fileNamePrefix=filename,
+                scale=scale or settings.DEFAULT_SCALE,
+                crs='EPSG:4326',
+                fileFormat='GeoTIFF',
+                region=geometry,
+                maxPixels=settings.MAX_PIXELS
+            )
+            
+            # Start the export task
+            task.start()
+            
+            # Return the expected GCS URL
+            gcs_url = f"gs://{bucket_name}/{filename}"
+            
+            logger.info(f"Started export task {task.id} for {filename} to bucket {bucket_name}")
+            
+            # For now, return the GCS URL. In production, you might want to:
+            # 1. Wait for task completion
+            # 2. Generate a signed URL for download
+            # 3. Store metadata in database
+            
+            return gcs_url
+            
+        except Exception as e:
+            logger.error(f"Failed to export to bucket: {e}")
+            # Fallback to direct download URL
+            url = image.getDownloadUrl({
+                'scale': scale or settings.DEFAULT_SCALE,
+                'crs': 'EPSG:4326',
+                'fileFormat': 'GeoTIFF',
+                'region': geometry
+            })
+            return url
     
     def get_statistics(
         self,

@@ -149,6 +149,7 @@ async def generate_index_image(request: dict):
         date_range = request.get('date_range', {})
         index = request.get('index')
         cloud_coverage = request.get('cloud_coverage', 10)
+        organization_id = request.get('organization_id')
 
         logger.info(f"AOI: {aoi}")
         logger.info(f"Date range: {date_range}")
@@ -224,7 +225,8 @@ async def generate_index_image(request: dict):
                         image_url = earth_engine_service.export_index_map(
                             aoi.get('geometry', {}),
                             best_date,
-                            index
+                            index,
+                            organization_id=organization_id
                         )
                         return {
                             "image_url": image_url,
@@ -260,28 +262,61 @@ async def generate_index_image(request: dict):
                 }
             }
 
-        best_date = cloud_result.get('recommended_date', date_range.get('start_date'))
-        logger.info(f"Using date: {best_date} with cloud threshold: {used_threshold}%")
+        # Use the exact requested date instead of finding the best available date
+        requested_date = date_range.get('start_date')
+        logger.info(f"Using requested date: {requested_date}")
 
-        # Generate the index image URL
-        image_url = earth_engine_service.export_index_map(
-            aoi.get('geometry', {}),
-            best_date,
-            index
-        )
-
-        return {
-            "image_url": image_url,
-            "index": index,
-            "date": best_date,
-            "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
-            "metadata": {
-                "available_images": cloud_result.get('available_images_count', 0),
-                "suitable_images": cloud_result.get('suitable_images_count', 0),
-                "threshold_used": used_threshold,
-                "requested_threshold": cloud_coverage
+        # Generate the index image as GeoTIFF file
+        try:
+            image_url = earth_engine_service.export_index_map(
+                aoi.get('geometry', {}),
+                requested_date,
+                index,
+                organization_id=organization_id
+            )
+            
+            # For now, return the Earth Engine URL, but we'll enhance this to store in buckets
+            return {
+                "image_url": image_url,
+                "index": index,
+                "date": requested_date,
+                "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
+                "metadata": {
+                    "available_images": cloud_result.get('available_images_count', 0),
+                    "suitable_images": cloud_result.get('suitable_images_count', 0),
+                    "threshold_used": used_threshold,
+                    "requested_threshold": cloud_coverage,
+                    "file_type": "geotiff",
+                    "note": "Using exact requested date"
+                }
             }
-        }
+        except Exception as e:
+            logger.warning(f"Failed to generate image for exact date {requested_date}: {e}")
+            # Fallback to best available date if exact date fails
+            best_date = cloud_result.get('recommended_date', requested_date)
+            logger.info(f"Falling back to best available date: {best_date}")
+            
+            image_url = earth_engine_service.export_index_map(
+                aoi.get('geometry', {}),
+                best_date,
+                index,
+                organization_id=organization_id
+            )
+
+            return {
+                "image_url": image_url,
+                "index": index,
+                "date": best_date,
+                "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
+                "metadata": {
+                    "available_images": cloud_result.get('available_images_count', 0),
+                    "suitable_images": cloud_result.get('suitable_images_count', 0),
+                    "threshold_used": used_threshold,
+                    "requested_threshold": cloud_coverage,
+                    "file_type": "geotiff",
+                    "note": f"Using best available date (exact date {requested_date} not available)"
+                }
+            }
 
     except Exception as e:
         logger.error(f"Error generating index image: {e}")
