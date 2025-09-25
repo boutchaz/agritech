@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Optional, Any, Union
 from datetime import datetime
 from enum import Enum
@@ -33,9 +33,10 @@ class GeoJSON(BaseModel):
     type: GeometryType
     coordinates: List[Any]
     
-    @validator('coordinates')
-    def validate_coordinates(cls, v, values):
-        geometry_type = values.get('type')
+    @field_validator('coordinates')
+    @classmethod
+    def validate_coordinates(cls, v, info):
+        geometry_type = info.data.get('type') if info.data else None
         if geometry_type == GeometryType.POINT:
             if len(v) != 2:
                 raise ValueError("Point must have exactly 2 coordinates")
@@ -52,9 +53,10 @@ class DateRangeRequest(BaseModel):
     start_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="Start date in YYYY-MM-DD format")
     end_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="End date in YYYY-MM-DD format")
     
-    @validator('end_date')
-    def validate_date_range(cls, v, values):
-        start = values.get('start_date')
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
+        start = info.data.get('start_date') if info.data else None
         if start and v < start:
             raise ValueError("End date must be after start date")
         return v
@@ -198,12 +200,12 @@ class ProcessingJob(BaseModel):
     organization_id: str
     farm_id: Optional[str] = None
     parcel_id: Optional[str] = None
-    job_type: str = Field("batch_processing", regex="^(batch_processing|single_parcel|cloud_check)$")
+    job_type: str = Field("batch_processing", pattern="^(batch_processing|single_parcel|cloud_check)$")
     indices: List[VegetationIndex]
     date_range: DateRangeRequest
     cloud_coverage: float = Field(10.0, ge=0, le=100)
     scale: int = Field(10, ge=10, le=1000)
-    status: str = Field("pending", regex="^(pending|running|completed|failed|cancelled)$")
+    status: str = Field("pending", pattern="^(pending|running|completed|failed|cancelled)$")
     progress_percentage: float = Field(0.0, ge=0, le=100)
     total_tasks: int = Field(0)
     completed_tasks: int = Field(0)
