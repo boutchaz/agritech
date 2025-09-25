@@ -525,7 +525,7 @@ class SatelliteAPIClient {
         aoi,
         date,
         index,
-        grid_size: 50
+        grid_size: 50 // Default grid size for heatmap visualization
       });
     } else {
       return this.getInteractiveData({
