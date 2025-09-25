@@ -193,6 +193,21 @@ class CloudCoverageCheckResponse(BaseModel):
     recommended_date: Optional[str] = None
     metadata: Dict[str, Any]
 
+# Index Image Generation Models
+
+class IndexImageRequest(BaseModel):
+    aoi: AOIRequest
+    date_range: DateRangeRequest
+    index: VegetationIndex
+    cloud_coverage: Optional[float] = Field(default=10.0, ge=0, le=100)
+
+class IndexImageResponse(BaseModel):
+    image_url: str
+    index: VegetationIndex
+    date: str
+    cloud_coverage: float
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
 # Automated Processing Models
 
 class ProcessingJob(BaseModel):
