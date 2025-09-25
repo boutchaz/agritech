@@ -239,7 +239,38 @@ class EarthEngineService:
             {'date': item[0], 'value': item[1]} 
             for item in time_series if item[1] is not None
         ]
-    
+
+    async def check_existing_file(
+        self,
+        organization_id: str,
+        index: str,
+        date: str,
+        geometry: Dict = None
+    ) -> Optional[str]:
+        """Check if a satellite file already exists in storage"""
+        try:
+            from app.services.supabase_service import supabase_service
+
+            # Get existing files for this organization, index, and date
+            existing_files = await supabase_service.get_satellite_files(
+                organization_id=organization_id,
+                index=index,
+                date_range={'start_date': date, 'end_date': date}
+            )
+
+            # If we have existing files for this exact date, return the first one
+            if existing_files:
+                for file_data in existing_files:
+                    if file_data.get('date') == date and file_data.get('index') == index:
+                        logger.info(f"Found existing file: {file_data['filename']}")
+                        return file_data['public_url']
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error checking existing files: {e}")
+            return None
+
     async def export_index_map(
         self,
         geometry: Dict,
@@ -249,8 +280,15 @@ class EarthEngineService:
         organization_id: str = None
     ) -> str:
         """Export index map as GeoTIFF URL or upload to bucket"""
+        # First check if file already exists in bucket if organization_id is provided
+        if organization_id:
+            existing_url = await self.check_existing_file(organization_id, index, date, geometry)
+            if existing_url:
+                logger.info(f"Using existing file from bucket: {existing_url}")
+                return existing_url
+
         self.initialize()
-        
+
         # Get the image for the specific date
         collection = self.get_sentinel2_collection(
             geometry,
