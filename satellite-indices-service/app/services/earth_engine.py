@@ -82,10 +82,9 @@ class EarthEngineService:
         try:
             collection_size = collection.size().getInfo()
             if collection_size == 0:
-                raise ValueError(f"No Sentinel-2 images found for the specified area and date range ({start_date} to {end_date}) with cloud coverage < {max_cloud}%. Try expanding the date range or increasing cloud coverage threshold.")
+                logger.info(f"No Sentinel-2 images found for the specified area and date range ({start_date} to {end_date}) with cloud coverage < {max_cloud}%")
+                # Don't raise an error here, let the calling code handle empty collections
         except Exception as e:
-            if "No Sentinel-2 images found" in str(e):
-                raise
             logger.warning(f"Could not check collection size: {e}")
 
         return collection
@@ -255,10 +254,17 @@ class EarthEngineService:
             (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
         )
         
-        if collection.size().getInfo() == 0:
-            raise ValueError(f"No images found for date {date}")
-        
-        image = ee.Image(collection.first())
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(f"No images found for date {date}")
+            
+            image = ee.Image(collection.first())
+        except Exception as e:
+            if "Empty date ranges not supported" in str(e):
+                raise ValueError(f"No images found for date {date}")
+            else:
+                raise e
         indices = self.calculate_vegetation_indices(image, [index])
         index_image = indices[index]
         
@@ -366,9 +372,30 @@ class EarthEngineService:
             # Map over collection to get cloud info
             cloud_info = collection.map(get_cloud_info)
             
-            # Get all cloud percentages
-            cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
-            suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
+            # Get all cloud percentages - handle empty collection
+            try:
+                cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
+                suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
+            except Exception as e:
+                if "Empty date ranges not supported" in str(e):
+                    logger.info("No images found in collection, returning empty result")
+                    return {
+                        'has_suitable_images': False,
+                        'available_images_count': 0,
+                        'suitable_images_count': 0,
+                        'min_cloud_coverage': None,
+                        'max_cloud_coverage': None,
+                        'avg_cloud_coverage': None,
+                        'recommended_date': None,
+                        'metadata': {
+                            'max_cloud_threshold': max_cloud_coverage,
+                            'date_range': {'start': start_date, 'end': end_date},
+                            'all_cloud_percentages': [],
+                            'error': 'No images found in date range'
+                        }
+                    }
+                else:
+                    raise e
             
             # Calculate statistics
             available_count = len(cloud_percentages)
