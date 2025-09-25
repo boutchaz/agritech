@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network, Satellite } from 'lucide-react';
 import type { Module } from '../types';
 
 interface SidebarProps {
@@ -106,6 +106,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <Map className="h-5 w-5" />
           <span>Parcelles</span>
+        </button>
+
+        <button
+          onClick={() => handleNavigation('/satellite-analysis')}
+          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            currentPath === '/satellite-analysis'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <Satellite className="h-5 w-5" />
+          <span>Analyse Satellite</span>
         </button>
 
         <button

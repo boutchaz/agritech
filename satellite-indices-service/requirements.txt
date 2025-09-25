@@ -30,6 +30,10 @@ aiofiles>=23.2.0
 # Supabase Integration
 supabase>=2.0.0
 
+# Background Tasks
+celery>=5.3.0
+redis>=5.0.0
+
 # Logging and Monitoring
 python-json-logger>=2.0.0
 prometheus-fastapi-instrumentator>=6.1.0

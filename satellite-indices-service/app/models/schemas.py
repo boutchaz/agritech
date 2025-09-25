@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from datetime import datetime
 from enum import Enum
+import uuid
 
 class VegetationIndex(str, Enum):
     NDVI = "NDVI"
@@ -135,3 +136,151 @@ class ErrorResponse(BaseModel):
     message: str
     details: Optional[Dict[str, Any]] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+# Database Models - These reference the main consolidated schema
+# Note: Actual table structures are defined in the main project schema
+
+# Additional models for satellite processing
+
+class SatelliteAOI(BaseModel):
+    id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    farm_id: Optional[str] = None
+    parcel_id: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    geometry: GeoJSON
+    area_hectares: Optional[float] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Request/Response Models for Supabase Operations
+
+class GetOrganizationFarmsRequest(BaseModel):
+    organization_id: str
+
+class GetFarmParcelsRequest(BaseModel):
+    farm_id: str
+
+class GetParcelSatelliteDataRequest(BaseModel):
+    parcel_id: str
+    date_range: Optional[DateRangeRequest] = None
+    indices: Optional[List[VegetationIndex]] = None
+
+class CreateAOIRequest(BaseModel):
+    organization_id: str
+    farm_id: Optional[str] = None
+    parcel_id: Optional[str] = None
+    name: str
+    geometry: GeoJSON
+    description: Optional[str] = None
+
+# Cloud Coverage Check Models
+
+class CloudCoverageCheckRequest(BaseModel):
+    geometry: GeoJSON
+    date_range: DateRangeRequest
+    max_cloud_coverage: float = Field(10.0, ge=0, le=100)
+
+class CloudCoverageCheckResponse(BaseModel):
+    has_suitable_images: bool
+    available_images_count: int
+    min_cloud_coverage: Optional[float] = None
+    max_cloud_coverage: Optional[float] = None
+    recommended_date: Optional[str] = None
+    metadata: Dict[str, Any]
+
+# Automated Processing Models
+
+class ProcessingJob(BaseModel):
+    id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    farm_id: Optional[str] = None
+    parcel_id: Optional[str] = None
+    job_type: str = Field("batch_processing", regex="^(batch_processing|single_parcel|cloud_check)$")
+    indices: List[VegetationIndex]
+    date_range: DateRangeRequest
+    cloud_coverage: float = Field(10.0, ge=0, le=100)
+    scale: int = Field(10, ge=10, le=1000)
+    status: str = Field("pending", regex="^(pending|running|completed|failed|cancelled)$")
+    progress_percentage: float = Field(0.0, ge=0, le=100)
+    total_tasks: int = Field(0)
+    completed_tasks: int = Field(0)
+    failed_tasks: int = Field(0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    results_summary: Optional[Dict[str, Any]] = None
+
+class BatchProcessingRequest(BaseModel):
+    organization_id: str
+    farm_id: Optional[str] = None  # If None, process all farms in organization
+    parcel_id: Optional[str] = None  # If None, process all parcels in farm
+    indices: List[VegetationIndex]
+    date_range: DateRangeRequest
+    cloud_coverage: float = Field(10.0, ge=0, le=100)
+    scale: int = Field(10, ge=10, le=1000)
+    check_cloud_coverage: bool = Field(True)
+    priority: int = Field(5, ge=1, le=10)
+
+class BatchProcessingResponse(BaseModel):
+    job_id: str
+    total_tasks: int
+    created_at: datetime
+    estimated_completion: Optional[datetime] = None
+
+# Statistics and Results Models
+
+class SatelliteIndicesData(BaseModel):
+    id: Optional[str] = None
+    organization_id: str
+    farm_id: Optional[str] = None
+    parcel_id: str
+    processing_job_id: Optional[str] = None
+    date: str
+    index_name: str
+    mean_value: Optional[float] = None
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    std_value: Optional[float] = None
+    median_value: Optional[float] = None
+    percentile_25: Optional[float] = None
+    percentile_75: Optional[float] = None
+    percentile_90: Optional[float] = None
+    pixel_count: Optional[int] = None
+    cloud_coverage_percentage: Optional[float] = None
+    image_source: str = "Sentinel-2"
+    geotiff_url: Optional[str] = None
+    geotiff_expires_at: Optional[datetime] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ParcelStatistics(BaseModel):
+    parcel_id: str
+    parcel_name: str
+    farm_id: str
+    farm_name: str
+    date_range: DateRangeRequest
+    indices: Dict[str, Dict[str, float]]  # index_name -> statistics
+    geotiff_urls: Dict[str, str]  # index_name -> download_url
+    metadata: Dict[str, Any]
+
+class FarmStatistics(BaseModel):
+    farm_id: str
+    farm_name: str
+    organization_id: str
+    date_range: DateRangeRequest
+    parcel_statistics: List[ParcelStatistics]
+    summary_statistics: Dict[str, Any]
+    generated_at: datetime
+
+class OrganizationStatisticsResponse(BaseModel):
+    organization_id: str
+    organization_name: str
+    date_range: DateRangeRequest
+    farm_statistics: List[FarmStatistics]
+    summary_statistics: Dict[str, Any]
+    generated_at: datetime

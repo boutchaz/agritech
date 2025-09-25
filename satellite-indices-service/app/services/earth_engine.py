@@ -276,6 +276,74 @@ class EarthEngineService:
             statistics[index_name] = stats.getInfo()
         
         return statistics
+    
+    def check_cloud_coverage(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        max_cloud_coverage: float = 10.0
+    ) -> Dict:
+        """Check cloud coverage availability for given parameters"""
+        self.initialize()
+        
+        aoi = ee.Geometry(geometry)
+        
+        # Get all available images (without cloud filter)
+        collection = (
+            ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+            .filterBounds(aoi)
+            .filterDate(start_date, end_date)
+        )
+        
+        # Get cloud coverage info for each image
+        def get_cloud_info(image):
+            cloud_percentage = image.get('CLOUDY_PIXEL_PERCENTAGE')
+            date = image.date().format('YYYY-MM-dd')
+            return ee.Feature(None, {
+                'date': date,
+                'cloud_percentage': cloud_percentage,
+                'suitable': cloud_percentage.lt(max_cloud_coverage)
+            })
+        
+        # Map over collection to get cloud info
+        cloud_info = collection.map(get_cloud_info)
+        
+        # Get all cloud percentages
+        cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
+        suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
+        
+        # Calculate statistics
+        available_count = len(cloud_percentages)
+        suitable_count = suitable_images.size().getInfo()
+        
+        if available_count > 0:
+            min_cloud = min(cloud_percentages)
+            max_cloud = max(cloud_percentages)
+            avg_cloud = sum(cloud_percentages) / available_count
+        else:
+            min_cloud = max_cloud = avg_cloud = None
+        
+        # Get best date (lowest cloud coverage)
+        best_date = None
+        if suitable_count > 0:
+            best_image = suitable_images.sort('cloud_percentage').first()
+            best_date = best_image.get('date').getInfo()
+        
+        return {
+            'has_suitable_images': suitable_count > 0,
+            'available_images_count': available_count,
+            'suitable_images_count': suitable_count,
+            'min_cloud_coverage': min_cloud,
+            'max_cloud_coverage': max_cloud,
+            'avg_cloud_coverage': avg_cloud,
+            'recommended_date': best_date,
+            'metadata': {
+                'max_cloud_threshold': max_cloud_coverage,
+                'date_range': {'start': start_date, 'end': end_date},
+                'all_cloud_percentages': cloud_percentages
+            }
+        }
 
 # Singleton instance
 earth_engine_service = EarthEngineService()

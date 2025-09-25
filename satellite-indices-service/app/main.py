@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import health, indices, analysis
+from app.api import health, indices, analysis, supabase
 from app.core.config import settings
 
 app = FastAPI(
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(indices.router, prefix="/api/indices", tags=["indices"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
+app.include_router(supabase.router, prefix="/api/supabase", tags=["supabase"])
 
 @app.get("/")
 async def root():

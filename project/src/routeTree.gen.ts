@@ -13,6 +13,7 @@ import { Route as UtilitiesRouteImport } from './routes/utilities'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analysis'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ParcelsRouteImport } from './routes/parcels'
@@ -51,6 +52,11 @@ const SoilAnalysisRoute = SoilAnalysisRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SatelliteAnalysisRoute = SatelliteAnalysisRouteImport.update({
+  id: '/satellite-analysis',
+  path: '/satellite-analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/parcels': typeof ParcelsRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/register'
     | '/reports'
+    | '/satellite-analysis'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/register'
     | '/reports'
+    | '/satellite-analysis'
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/register'
     | '/reports'
+    | '/satellite-analysis'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   ParcelsRoute: typeof ParcelsRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
+  SatelliteAnalysisRoute: typeof SatelliteAnalysisRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/satellite-analysis': {
+      id: '/satellite-analysis'
+      path: '/satellite-analysis'
+      fullPath: '/satellite-analysis'
+      preLoaderRoute: typeof SatelliteAnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -518,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParcelsRoute: ParcelsRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
+  SatelliteAnalysisRoute: SatelliteAnalysisRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,
