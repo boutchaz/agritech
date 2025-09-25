@@ -7,6 +7,10 @@ from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
 import logging
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+import io
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -271,45 +275,288 @@ class EarthEngineService:
             logger.error(f"Error checking existing files: {e}")
             return None
 
+    def _create_enhanced_visualization(
+        self,
+        image: ee.Image,
+        index: str,
+        date: str,
+        aoi: ee.Geometry,
+        vis_params: Dict[str, Any]
+    ) -> str:
+        """Create enhanced visualization with date, scale bar, and statistics"""
+        try:
+            # Get the base image as bytes
+            base_url = image.getThumbUrl({
+                'min': vis_params['min'],
+                'max': vis_params['max'],
+                'palette': vis_params['palette'],
+                'dimensions': 512,
+                'region': aoi,
+                'format': 'png'
+            })
+
+            # Download the base image
+            import requests
+            response = requests.get(base_url)
+            base_image = Image.open(io.BytesIO(response.content))
+
+            # Calculate statistics
+            stats = image.reduceRegion(
+                reducer=ee.Reducer.percentile([10, 90]).combine(
+                    ee.Reducer.mean(), '', True
+                ).combine(
+                    ee.Reducer.median(), '', True
+                ).combine(
+                    ee.Reducer.stdDev(), '', True
+                ),
+                geometry=aoi,
+                scale=settings.DEFAULT_SCALE,
+                maxPixels=settings.MAX_PIXELS
+            ).getInfo()
+
+            # Create enhanced image
+            enhanced_image = self._add_overlays(base_image, index, date, stats, vis_params)
+
+            # Convert to base64 data URL
+            buffer = io.BytesIO()
+            enhanced_image.save(buffer, format='PNG')
+            buffer.seek(0)
+
+            # Return as data URL
+            img_data = base64.b64encode(buffer.getvalue()).decode()
+            return f"data:image/png;base64,{img_data}"
+
+        except Exception as e:
+            logger.warning(f"Failed to create enhanced visualization: {e}, falling back to basic")
+            # Fallback to basic visualization
+            return image.getThumbUrl({
+                'min': vis_params['min'],
+                'max': vis_params['max'],
+                'palette': vis_params['palette'],
+                'dimensions': 512,
+                'region': aoi,
+                'format': 'png'
+            })
+
+    def _add_overlays(
+        self,
+        base_image: Image.Image,
+        index: str,
+        date: str,
+        stats: Dict,
+        vis_params: Dict[str, Any]
+    ) -> Image.Image:
+        """Add date label, scale bar, and statistics to the image"""
+        # Create a larger canvas to accommodate overlays
+        width, height = base_image.size
+        new_width = width + 150  # Extra space for scale bar
+        new_height = height + 100  # Extra space for title and stats
+
+        # Create new image with white background
+        enhanced = Image.new('RGB', (new_width, new_height), 'white')
+
+        # Paste the base image
+        enhanced.paste(base_image, (0, 60))  # Leave space for title
+
+        draw = ImageDraw.Draw(enhanced)
+
+        try:
+            # Try to use a system font, fallback to default if not available
+            title_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 24)
+            label_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 14)
+            stats_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)
+        except:
+            # Fallback to default font
+            title_font = ImageFont.load_default()
+            label_font = ImageFont.load_default()
+            stats_font = ImageFont.load_default()
+
+        # Add title
+        title = f"{index} - évolution temporelle"
+        draw.text((10, 10), title, fill='black', font=title_font)
+
+        # Add date
+        draw.text((width//2 - 50, 40), date, fill='black', font=label_font)
+
+        # Add color scale bar
+        self._draw_color_scale(draw, width + 20, 80, vis_params, label_font)
+
+        # Add statistics box
+        self._draw_stats_box(draw, stats, index, 10, height + 70, stats_font)
+
+        return enhanced
+
+    def _draw_color_scale(
+        self,
+        draw: ImageDraw.ImageDraw,
+        x: int,
+        y: int,
+        vis_params: Dict[str, Any],
+        font
+    ):
+        """Draw color scale bar on the right side"""
+        scale_height = 200
+        scale_width = 20
+
+        # Get color palette
+        colors = vis_params.get('palette', ['red', 'yellow', 'green'])
+        min_val = vis_params.get('min', -1)
+        max_val = vis_params.get('max', 1)
+
+        def hex_to_rgb(hex_color):
+            """Convert hex color to RGB tuple"""
+            if hex_color.startswith('#'):
+                hex_color = hex_color[1:]
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+        # Convert color names and hex colors to RGB
+        def get_rgb_color(color):
+            color_map = {
+                'red': (255, 0, 0),
+                'yellow': (255, 255, 0),
+                'green': (0, 255, 0),
+                'blue': (0, 0, 255),
+                'white': (255, 255, 255)
+            }
+            if color.startswith('#'):
+                return hex_to_rgb(color)
+            return color_map.get(color, (0, 255, 0))
+
+        # Draw color gradient
+        for i in range(scale_height):
+            # Calculate color position (0-1)
+            pos = i / scale_height
+
+            # Interpolate between colors
+            if len(colors) > 1:
+                # Calculate which segment we're in
+                segment_size = 1.0 / (len(colors) - 1)
+                segment_idx = int(pos / segment_size)
+
+                # Clamp to valid range
+                segment_idx = min(segment_idx, len(colors) - 2)
+
+                # Calculate position within the segment
+                local_pos = (pos - segment_idx * segment_size) / segment_size
+
+                # Get colors for interpolation
+                color1 = get_rgb_color(colors[segment_idx])
+                color2 = get_rgb_color(colors[segment_idx + 1])
+
+                # Linear interpolation
+                r = int(color1[0] + (color2[0] - color1[0]) * local_pos)
+                g = int(color1[1] + (color2[1] - color1[1]) * local_pos)
+                b = int(color1[2] + (color2[2] - color1[2]) * local_pos)
+                color = (r, g, b)
+            else:
+                color = get_rgb_color(colors[0])
+
+            # Draw horizontal line
+            draw.rectangle([x, y + (scale_height - i), x + scale_width, y + (scale_height - i) + 1], fill=color)
+
+        # Add scale labels
+        for i, val in enumerate([max_val, (max_val + min_val) / 2, min_val]):
+            label_y = y + i * (scale_height // 2)
+            draw.text((x + scale_width + 5, label_y), f"{val:.1f}", fill='black', font=font)
+
+    def _draw_stats_box(
+        self,
+        draw: ImageDraw.ImageDraw,
+        stats: Dict,
+        index: str,
+        x: int,
+        y: int,
+        font
+    ):
+        """Draw statistics box"""
+        # Extract statistics
+        mean = stats.get(f'{index}_mean', 0)
+        median = stats.get(f'{index}_median', 0)
+        p10 = stats.get(f'{index}_p10', 0)
+        p90 = stats.get(f'{index}_p90', 0)
+        std = stats.get(f'{index}_stdDev', 0)
+
+        # Draw background box
+        box_width = 120
+        box_height = 80
+        draw.rectangle([x, y, x + box_width, y + box_height], fill='gray', outline='black')
+
+        # Draw statistics text
+        stats_text = [
+            f"Mean: {mean:.3f}",
+            f"Median: {median:.3f}",
+            f"P10: {p10:.3f}",
+            f"P90: {p90:.3f}",
+            f"Std: {std:.3f}"
+        ]
+
+        for i, text in enumerate(stats_text):
+            draw.text((x + 5, y + 5 + i * 15), text, fill='white', font=font)
+
     def _get_visualization_params(self, index: str) -> Dict[str, Any]:
         """Get visualization parameters for different vegetation indices"""
         params = {
             'NDVI': {
-                'min': -1,
-                'max': 1,
-                'palette': ['red', 'yellow', 'green']
+                'min': 0.1,
+                'max': 0.5,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
             },
-            'EVI': {
+            'NDRE': {
+                'min': -0.2,
+                'max': 0.4,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
+            },
+            'NDMI': {
+                'min': -0.5,
+                'max': 0.5,
+                'palette': ['#8B4513', '#FF4500', '#FFD700', '#00BFFF', '#0000FF']
+            },
+            'MNDWI': {
                 'min': -1,
                 'max': 1,
-                'palette': ['red', 'yellow', 'green']
+                'palette': ['#FFFFFF', '#87CEEB', '#4682B4', '#000080']
+            },
+            'GCI': {
+                'min': 0,
+                'max': 3,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
             },
             'SAVI': {
-                'min': -1,
-                'max': 1,
-                'palette': ['red', 'yellow', 'green']
+                'min': -0.1,
+                'max': 0.6,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
             },
-            'NDWI': {
-                'min': -1,
-                'max': 1,
-                'palette': ['white', 'blue']
+            'OSAVI': {
+                'min': -0.1,
+                'max': 0.6,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
             },
-            'NBR': {
-                'min': -1,
-                'max': 1,
-                'palette': ['red', 'yellow', 'green']
+            'MSAVI2': {
+                'min': -0.1,
+                'max': 0.6,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
             },
-            'GNDVI': {
-                'min': -1,
-                'max': 1,
-                'palette': ['red', 'yellow', 'green']
+            'EVI': {
+                'min': -0.2,
+                'max': 0.8,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
+            },
+            'PRI': {
+                'min': -0.2,
+                'max': 0.2,
+                'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
+            },
+            'MSI': {
+                'min': 0,
+                'max': 3,
+                'palette': ['#00FF00', '#FFD700', '#FF4500', '#8B0000']
             }
         }
 
         return params.get(index, {
-            'min': -1,
-            'max': 1,
-            'palette': ['red', 'yellow', 'green']
+            'min': 0.1,
+            'max': 0.5,
+            'palette': ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
         })
 
     async def export_index_map(
@@ -360,22 +607,13 @@ class EarthEngineService:
         if organization_id:
             return await self._export_to_supabase_storage(clipped, aoi, index, date, organization_id, scale)
         else:
-            # For web display, use Earth Engine's thumbnail/visualization service
-            # This generates a web-friendly PNG image instead of GeoTIFF
-
-            # Apply visualization parameters for better display
+            # For web display, create enhanced visualization with overlays
             vis_params = self._get_visualization_params(index)
 
-            # Generate thumbnail URL that returns a PNG image
-            url = clipped.getThumbUrl({
-                'min': vis_params['min'],
-                'max': vis_params['max'],
-                'palette': vis_params['palette'],
-                'dimensions': 512,
-                'region': aoi,
-                'format': 'png'
-            })
-            return url
+            # Create enhanced visualization with date, scale bar, and statistics
+            return self._create_enhanced_visualization(
+                clipped, index, date, aoi, vis_params
+            )
     
     async def _export_to_supabase_storage(
         self,
