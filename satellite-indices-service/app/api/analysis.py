@@ -264,7 +264,7 @@ async def generate_index_image(request: dict):
 
         # Use the exact requested date instead of finding the best available date
         requested_date = date_range.get('start_date')
-        logger.info(f"Using requested date: {requested_date}")
+        logger.info(f"Using requested date: {requested_date}")  # Process exact date for satellite analysis
 
         # Generate the index image as GeoTIFF file
         try:
