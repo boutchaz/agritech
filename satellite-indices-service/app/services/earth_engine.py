@@ -849,9 +849,9 @@ class EarthEngineService:
         try:
             collection_size = collection.size().getInfo()
             if collection_size == 0:
-            raise ValueError(f"No images found for date {date}")
-        
-        image = ee.Image(collection.first())
+                raise ValueError(f"No images found for date {date}")
+
+            image = ee.Image(collection.first())
         except Exception as e:
             if "Empty date ranges not supported" in str(e):
                 raise ValueError(f"No images found for date {date}")
