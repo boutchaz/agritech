@@ -1075,7 +1075,7 @@ class EarthEngineService:
             
             logger.info(f"Cloud coverage check: {available_count} available, {suitable_count} suitable, best date: {best_date}")
         
-        return {
+            return {
             'has_suitable_images': suitable_count > 0,
             'available_images_count': available_count,
             'suitable_images_count': suitable_count,
