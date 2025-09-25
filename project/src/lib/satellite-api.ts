@@ -387,7 +387,7 @@ class SatelliteAPIClient {
     return this.request('/analysis/generate-index-image', {
       method: 'POST',
       body: JSON.stringify({
-        aoi: request.aoi.geometry,
+        aoi: request.aoi,
         date_range: request.date_range,
         index: request.index,
         cloud_coverage: request.cloud_coverage || 10
