@@ -222,7 +222,7 @@ async def generate_index_image(request: dict):
                 if best_date:
                     # Try to generate image with the best available date despite cloud coverage
                     try:
-                        image_url = earth_engine_service.export_index_map(
+                        image_url = await earth_engine_service.export_index_map(
                             aoi.get('geometry', {}),
                             best_date,
                             index,
@@ -268,7 +268,7 @@ async def generate_index_image(request: dict):
 
         # Generate the index image as GeoTIFF file
         try:
-            image_url = earth_engine_service.export_index_map(
+            image_url = await earth_engine_service.export_index_map(
                 aoi.get('geometry', {}),
                 requested_date,
                 index,
@@ -287,6 +287,7 @@ async def generate_index_image(request: dict):
                     "threshold_used": used_threshold,
                     "requested_threshold": cloud_coverage,
                     "file_type": "geotiff",
+                    "storage_method": "supabase" if organization_id else "direct_download",
                     "note": "Using exact requested date"
                 }
             }
@@ -296,7 +297,7 @@ async def generate_index_image(request: dict):
             best_date = cloud_result.get('recommended_date', requested_date)
             logger.info(f"Falling back to best available date: {best_date}")
             
-            image_url = earth_engine_service.export_index_map(
+            image_url = await earth_engine_service.export_index_map(
                 aoi.get('geometry', {}),
                 best_date,
                 index,
@@ -314,6 +315,7 @@ async def generate_index_image(request: dict):
                     "threshold_used": used_threshold,
                     "requested_threshold": cloud_coverage,
                     "file_type": "geotiff",
+                    "storage_method": "supabase" if organization_id else "direct_download",
                     "note": f"Using best available date (exact date {requested_date} not available)"
                 }
             }

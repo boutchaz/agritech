@@ -1657,5 +1657,55 @@ GRANT EXECUTE ON FUNCTION public.get_parcels_for_satellite_processing(uuid) TO a
 GRANT EXECUTE ON FUNCTION public.get_latest_satellite_data(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_satellite_data_statistics(uuid, text, date, date) TO authenticated;
 
+-- =================================
+-- SATELLITE FILES STORAGE TABLE
+-- =================================
+
+-- Create satellite_files table for storing file metadata
+CREATE TABLE IF NOT EXISTS public.satellite_files (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    parcel_id UUID REFERENCES public.parcels(id) ON DELETE SET NULL,
+    index VARCHAR(50) NOT NULL,
+    date DATE NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    public_url TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_satellite_files_organization_id ON public.satellite_files(organization_id);
+CREATE INDEX IF NOT EXISTS idx_satellite_files_parcel_id ON public.satellite_files(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_satellite_files_index ON public.satellite_files(index);
+CREATE INDEX IF NOT EXISTS idx_satellite_files_date ON public.satellite_files(date);
+CREATE INDEX IF NOT EXISTS idx_satellite_files_created_at ON public.satellite_files(created_at);
+
+-- Create composite index for common queries
+CREATE INDEX IF NOT EXISTS idx_satellite_files_org_index_date ON public.satellite_files(organization_id, index, date);
+
+-- Enable RLS
+ALTER TABLE public.satellite_files ENABLE ROW LEVEL SECURITY;
+
+-- Policy for organization members to access their files
+CREATE POLICY "Users can access satellite files for their organizations" ON public.satellite_files
+    FOR ALL USING (
+        organization_id IN (
+            SELECT organization_id FROM public.organization_users 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+-- Policy for service role to manage all files
+CREATE POLICY "Service role can manage all satellite files" ON public.satellite_files
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- Create updated_at trigger
+CREATE TRIGGER update_satellite_files_updated_at 
+    BEFORE UPDATE ON public.satellite_files 
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
 -- Refresh the schema cache (for PostgREST)
 NOTIFY pgrst, 'reload schema';

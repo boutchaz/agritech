@@ -1,5 +1,7 @@
 import os
 import math
+import uuid
+import base64
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import httpx
@@ -224,6 +226,148 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error fetching user organizations: {e}")
             return []
+    
+    async def upload_satellite_file(
+        self, 
+        file_data: bytes, 
+        filename: str, 
+        organization_id: str,
+        index: str,
+        date: str,
+        parcel_id: Optional[str] = None
+    ) -> Optional[str]:
+        """Upload satellite data file to Supabase Storage"""
+        try:
+            # Create folder structure: satellite-data/{organization_id}/{index}/{date}/
+            folder_path = f"satellite-data/{organization_id}/{index}/{date}"
+            file_path = f"{folder_path}/{filename}"
+            
+            # Upload file to Supabase Storage
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
+                    headers={
+                        'apikey': self.supabase_key,
+                        'Authorization': f'Bearer {self.supabase_key}',
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    content=file_data
+                )
+                response.raise_for_status()
+                
+                # Return the public URL
+                public_url = f"{self.supabase_url}/storage/v1/object/public/satellite-data/{file_path}"
+                
+                # Save file metadata to database
+                await self.save_file_metadata({
+                    'organization_id': organization_id,
+                    'parcel_id': parcel_id,
+                    'index': index,
+                    'date': date,
+                    'filename': filename,
+                    'file_path': file_path,
+                    'public_url': public_url,
+                    'file_size': len(file_data),
+                    'created_at': datetime.utcnow().isoformat()
+                })
+                
+                logger.info(f"Uploaded satellite file: {file_path}")
+                return public_url
+                
+        except Exception as e:
+            logger.error(f"Error uploading satellite file: {e}")
+            return None
+    
+    async def save_file_metadata(self, metadata: Dict[str, Any]) -> Optional[str]:
+        """Save file metadata to database"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.supabase_url}/rest/v1/satellite_files",
+                    headers=self.headers,
+                    json=metadata
+                )
+                response.raise_for_status()
+                result = response.json()
+                return result[0]['id'] if result else None
+        except Exception as e:
+            logger.error(f"Error saving file metadata: {e}")
+            return None
+    
+    async def get_satellite_files(
+        self, 
+        organization_id: str, 
+        index: Optional[str] = None,
+        date_range: Optional[Dict[str, str]] = None
+    ) -> List[Dict[str, Any]]:
+        """Get satellite files for an organization"""
+        try:
+            async with httpx.AsyncClient() as client:
+                params = {'organization_id': f'eq.{organization_id}'}
+                
+                if index:
+                    params['index'] = f'eq.{index}'
+                
+                if date_range:
+                    if date_range.get('start_date'):
+                        params['date'] = f'gte.{date_range["start_date"]}'
+                    if date_range.get('end_date'):
+                        params['date'] = f'lte.{date_range["end_date"]}'
+                
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/satellite_files",
+                    headers=self.headers,
+                    params=params
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching satellite files: {e}")
+            return []
+    
+    async def delete_satellite_file(self, file_id: str) -> bool:
+        """Delete satellite file and its metadata"""
+        try:
+            # First get file metadata
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/satellite_files",
+                    headers=self.headers,
+                    params={'id': f'eq.{file_id}'}
+                )
+                response.raise_for_status()
+                files = response.json()
+                
+                if not files:
+                    return False
+                
+                file_metadata = files[0]
+                file_path = file_metadata['file_path']
+                
+                # Delete from storage
+                delete_response = await client.delete(
+                    f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
+                    headers={
+                        'apikey': self.supabase_key,
+                        'Authorization': f'Bearer {self.supabase_key}'
+                    }
+                )
+                delete_response.raise_for_status()
+                
+                # Delete metadata
+                meta_response = await client.delete(
+                    f"{self.supabase_url}/rest/v1/satellite_files",
+                    headers=self.headers,
+                    params={'id': f'eq.{file_id}'}
+                )
+                meta_response.raise_for_status()
+                
+                logger.info(f"Deleted satellite file: {file_path}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error deleting satellite file: {e}")
+            return False
 
 # Singleton instance
 supabase_service = SupabaseService()

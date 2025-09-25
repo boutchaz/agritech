@@ -2,6 +2,7 @@ import ee
 import json
 import os
 import uuid
+import httpx
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -276,9 +277,9 @@ class EarthEngineService:
         aoi = ee.Geometry(geometry)
         clipped = index_image.clip(aoi)
         
-        # If organization_id is provided, export to bucket
+        # If organization_id is provided, export to Supabase Storage
         if organization_id:
-            return self._export_to_bucket(clipped, aoi, index, date, organization_id, scale)
+            return await self._export_to_supabase_storage(clipped, aoi, index, date, organization_id, scale)
         else:
             # Get download URL for direct download
             url = clipped.getDownloadUrl({
@@ -289,7 +290,7 @@ class EarthEngineService:
             })
             return url
     
-    def _export_to_bucket(
+    async def _export_to_supabase_storage(
         self,
         image: ee.Image,
         geometry: ee.Geometry,
@@ -298,45 +299,46 @@ class EarthEngineService:
         organization_id: str,
         scale: int = None
     ) -> str:
-        """Export GeoTIFF to Google Cloud Storage bucket"""
+        """Export GeoTIFF to Supabase Storage"""
         try:
-            # Create bucket name for organization
-            bucket_name = f"agritech-satellite-data-{organization_id.lower()}"
-            
             # Generate unique filename
             file_id = str(uuid.uuid4())[:8]
             filename = f"{index}_{date}_{file_id}.tif"
             
-            # Export to Google Cloud Storage
-            task = ee.batch.Export.image.toCloudStorage(
-                image=image,
-                description=f'{index}_{date}_{file_id}',
-                bucket=bucket_name,
-                fileNamePrefix=filename,
-                scale=scale or settings.DEFAULT_SCALE,
-                crs='EPSG:4326',
-                fileFormat='GeoTIFF',
-                region=geometry,
-                maxPixels=settings.MAX_PIXELS
+            # Get download URL from Earth Engine
+            download_url = image.getDownloadUrl({
+                'scale': scale or settings.DEFAULT_SCALE,
+                'crs': 'EPSG:4326',
+                'fileFormat': 'GeoTIFF',
+                'region': geometry
+            })
+            
+            # Download the file from Earth Engine
+            async with httpx.AsyncClient() as client:
+                response = await client.get(download_url)
+                response.raise_for_status()
+                file_data = response.content
+            
+            # Upload to Supabase Storage
+            from app.services.supabase_service import supabase_service
+            public_url = await supabase_service.upload_satellite_file(
+                file_data=file_data,
+                filename=filename,
+                organization_id=organization_id,
+                index=index,
+                date=date
             )
             
-            # Start the export task
-            task.start()
-            
-            # Return the expected GCS URL
-            gcs_url = f"gs://{bucket_name}/{filename}"
-            
-            logger.info(f"Started export task {task.id} for {filename} to bucket {bucket_name}")
-            
-            # For now, return the GCS URL. In production, you might want to:
-            # 1. Wait for task completion
-            # 2. Generate a signed URL for download
-            # 3. Store metadata in database
-            
-            return gcs_url
+            if public_url:
+                logger.info(f"Uploaded satellite file to Supabase: {filename}")
+                return public_url
+            else:
+                # Fallback to direct download URL
+                logger.warning("Failed to upload to Supabase, returning direct download URL")
+                return download_url
             
         except Exception as e:
-            logger.error(f"Failed to export to bucket: {e}")
+            logger.error(f"Failed to export to Supabase Storage: {e}")
             # Fallback to direct download URL
             url = image.getDownloadUrl({
                 'scale': scale or settings.DEFAULT_SCALE,
