@@ -984,14 +984,14 @@ class EarthEngineService:
         self.initialize()
         
         try:
-        aoi = ee.Geometry(geometry)
+            aoi = ee.Geometry(geometry)
         
-        # Get all available images (without cloud filter)
-        collection = (
-            ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-            .filterBounds(aoi)
-            .filterDate(start_date, end_date)
-        )
+            # Get all available images (without cloud filter)
+            collection = (
+                ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+                .filterBounds(aoi)
+                .filterDate(start_date, end_date)
+            )
         
             # Check if collection has any images at all
             collection_size = collection.size().getInfo()
@@ -1013,24 +1013,24 @@ class EarthEngineService:
                         'error': 'No images found in date range'
                     }
                 }
-            
-        # Get cloud coverage info for each image
-        def get_cloud_info(image):
-            cloud_percentage = image.get('CLOUDY_PIXEL_PERCENTAGE')
-            date = image.date().format('YYYY-MM-dd')
-            return ee.Feature(None, {
-                'date': date,
-                'cloud_percentage': cloud_percentage,
-                'suitable': ee.Number(cloud_percentage).lt(ee.Number(max_cloud_coverage))
-            })
         
-        # Map over collection to get cloud info
-        cloud_info = collection.map(get_cloud_info)
+            # Get cloud coverage info for each image
+            def get_cloud_info(image):
+                cloud_percentage = image.get('CLOUDY_PIXEL_PERCENTAGE')
+                date = image.date().format('YYYY-MM-dd')
+                return ee.Feature(None, {
+                    'date': date,
+                    'cloud_percentage': cloud_percentage,
+                    'suitable': ee.Number(cloud_percentage).lt(ee.Number(max_cloud_coverage))
+                })
+        
+            # Map over collection to get cloud info
+            cloud_info = collection.map(get_cloud_info)
         
             # Get all cloud percentages - handle empty collection
             try:
-        cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
-        suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
+                cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
+                suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
             except Exception as e:
                 if "Empty date ranges not supported" in str(e):
                     logger.info("No images found in collection, returning empty result")
@@ -1052,22 +1052,22 @@ class EarthEngineService:
                 else:
                     raise e
         
-        # Calculate statistics
-        available_count = len(cloud_percentages)
-        suitable_count = suitable_images.size().getInfo()
+            # Calculate statistics
+            available_count = len(cloud_percentages)
+            suitable_count = suitable_images.size().getInfo()
         
-        if available_count > 0:
-            min_cloud = min(cloud_percentages)
-            max_cloud = max(cloud_percentages)
-            avg_cloud = sum(cloud_percentages) / available_count
-        else:
-            min_cloud = max_cloud = avg_cloud = None
+            if available_count > 0:
+                min_cloud = min(cloud_percentages)
+                max_cloud = max(cloud_percentages)
+                avg_cloud = sum(cloud_percentages) / available_count
+            else:
+                min_cloud = max_cloud = avg_cloud = None
         
-        # Get best date (lowest cloud coverage)
-        best_date = None
-        if suitable_count > 0:
-            best_image = suitable_images.sort('cloud_percentage').first()
-            best_date = best_image.get('date').getInfo()
+            # Get best date (lowest cloud coverage)
+            best_date = None
+            if suitable_count > 0:
+                best_image = suitable_images.sort('cloud_percentage').first()
+                best_date = best_image.get('date').getInfo()
             elif available_count > 0:
                 # If no suitable images, use the image with lowest cloud coverage
                 best_image = collection.sort('CLOUDY_PIXEL_PERCENTAGE').first()
