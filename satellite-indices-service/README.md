@@ -5,9 +5,11 @@ Production-ready microservice for calculating agricultural vegetation indices fr
 ## Features
 
 - **Vegetation Indices**: Calculate 12+ indices (NDVI, NDRE, NDMI, MNDWI, GCI, SAVI, etc.)
+- **Interactive Visualizations**: ECharts-powered heatmaps with hover data and statistics
 - **Time Series Analysis**: Track index changes over time
 - **Statistical Analysis**: Compare periods and calculate statistics
 - **GeoTIFF Export**: Download processed imagery
+- **Real-time Data**: Pixel-level values with coordinates and interactive exploration
 - **RESTful API**: FastAPI-based service with automatic documentation
 - **Scalable**: Docker containerized with Dokploy deployment support
 
@@ -20,7 +22,9 @@ Production-ready microservice for calculating agricultural vegetation indices fr
 ### Indices Calculation
 - `POST /api/indices/calculate` - Calculate indices for AOI
 - `POST /api/indices/timeseries` - Get time series data
-- `POST /api/indices/export` - Export index map as GeoTIFF
+- `POST /api/indices/export` - Export index map as GeoTIFF or interactive data
+- `POST /api/indices/interactive` - Get interactive scatter plot data
+- `POST /api/indices/heatmap` - Get heatmap data for ECharts visualization
 - `GET /api/indices/available` - List available indices
 
 ### Analysis
