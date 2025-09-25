@@ -78,7 +78,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   };
 
   const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
-    const { heatmap_data, statistics, coordinate_system, visualization, index, bounds } = data;
+    const { heatmap_data, statistics, coordinate_system, visualization, index, bounds, geotiff_url } = data;
 
         // Convert heatmap data to scatter plot format for better AOI visualization
         // This creates a more realistic overlay on the actual parcel boundaries
@@ -181,9 +181,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         name: index,
         type: 'scatter',
         data: scatterData,
-        symbolSize: 8,
+        symbolSize: 6,
         itemStyle: {
-          opacity: 0.8
+          opacity: 0.9
         },
         emphasis: {
           itemStyle: {
@@ -195,6 +195,24 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         }
       }],
       graphic: [
+        ...(geotiff_url ? [{
+          type: 'image',
+          left: bounds.min_lon,
+          top: bounds.min_lat,
+          right: bounds.max_lon,
+          bottom: bounds.max_lat,
+          shape: {
+            image: geotiff_url,
+            x: 0,
+            y: 0,
+            width: bounds.max_lon - bounds.min_lon,
+            height: bounds.max_lat - bounds.min_lat
+          },
+          style: {
+            opacity: 0.6
+          },
+          z: -1
+        }] : []),
         {
           type: 'group',
           left: 20,
