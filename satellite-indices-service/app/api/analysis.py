@@ -213,6 +213,35 @@ async def generate_index_image(request: dict):
                     continue
 
         if not cloud_result or not cloud_result['has_suitable_images']:
+            # Check if we have any images at all, even with high cloud coverage
+            if cloud_result and cloud_result.get('available_images_count', 0) > 0:
+                # We have images but they don't meet cloud coverage requirements
+                logger.info(f"Found {cloud_result['available_images_count']} images but none meet cloud coverage threshold")
+                best_date = cloud_result.get('recommended_date')
+                if best_date:
+                    # Try to generate image with the best available date despite cloud coverage
+                    try:
+                        image_url = earth_engine_service.export_index_map(
+                            aoi.get('geometry', {}),
+                            best_date,
+                            index
+                        )
+                        return {
+                            "image_url": image_url,
+                            "index": index,
+                            "date": best_date,
+                            "cloud_coverage": cloud_result.get('min_cloud_coverage', 0),
+                            "metadata": {
+                                "available_images": cloud_result.get('available_images_count', 0),
+                                "suitable_images": cloud_result.get('suitable_images_count', 0),
+                                "threshold_used": used_threshold,
+                                "requested_threshold": cloud_coverage,
+                                "warning": f"Using image with {cloud_result.get('min_cloud_coverage', 0):.1f}% cloud coverage (exceeds requested {cloud_coverage}%)"
+                            }
+                        }
+                    except Exception as e:
+                        logger.warning(f"Failed to generate image with available data: {e}")
+            
             # As a last resort, return a demo/placeholder response
             logger.info("No satellite data available, returning demo response")
             return {
@@ -221,12 +250,13 @@ async def generate_index_image(request: dict):
                 "date": date_range.get('start_date', '2025-01-01'),
                 "cloud_coverage": 0,
                 "metadata": {
-                    "available_images": 0,
-                    "suitable_images": 0,
+                    "available_images": cloud_result.get('available_images_count', 0) if cloud_result else 0,
+                    "suitable_images": cloud_result.get('suitable_images_count', 0) if cloud_result else 0,
                     "threshold_used": used_threshold,
                     "requested_threshold": cloud_coverage,
                     "demo_mode": True,
-                    "message": f"No satellite data available for {aoi.get('name', 'this location')}. Showing demo visualization."
+                    "message": f"No satellite data available for {aoi.get('name', 'this location')}. Showing demo visualization.",
+                    "error_details": cloud_result.get('metadata', {}).get('error') if cloud_result else None
                 }
             }
 
