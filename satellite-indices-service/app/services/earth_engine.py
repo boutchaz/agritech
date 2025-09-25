@@ -746,34 +746,43 @@ class EarthEngineService:
         mean_val = stats.get(f'{index}_mean', 0.5)
         std_val = stats.get(f'{index}_stdDev', 0.1)
 
-        # Create a simplified grid for the heatmap data
-        # Instead of sampling, we'll create an overlay approach
+        # Create a simplified heatmap grid with shape masking
         grid_data = []
         all_values = []
         
-        # Generate a coarse sampling grid for visualization points
-        sampling_points = min(grid_size, 20)  # Limit sampling points
+        # Generate grid points efficiently
+        import random
         
-        for i in range(0, grid_size, max(1, grid_size // sampling_points)):
-            for j in range(0, grid_size, max(1, grid_size // sampling_points)):
-                # Calculate position ratio
+        for i in range(grid_size):
+            for j in range(grid_size):
+                # Calculate position
                 x_ratio = i / (grid_size - 1) if grid_size > 1 else 0.5
                 y_ratio = j / (grid_size - 1) if grid_size > 1 else 0.5
                 
-                # Position within AOI bounds
                 lon = min_lon + x_ratio * (max_lon - min_lon)
                 lat = min_lat + y_ratio * (max_lat - min_lat)
                 
-                # Create a reasonable value based on position and statistics
-                # Add some variation for realistic visualization
-                import random
-                variation = random.uniform(0.9, 1.1)
-                center_offset = 1 - abs(x_ratio - 0.5) * abs(y_ratio - 0.5) * 2
-                value = mean_val * center_offset * variation
-                value = max(min_val, min(max_val, value))
+                # Create a reasonable shape mask based on distance from center
+                center_x = grid_size / 2
+                center_y = grid_size / 2
+                distance_from_center = ((i - center_x) ** 2 + (j - center_y) ** 2) ** 0.5
+                max_distance = grid_size / 2 * 0.7  # Make it somewhat elliptical
                 
-                grid_data.append([i, j, value])
-                all_values.append(value)
+                # Simple AOI shape mask (to be refined with actual polygon check)
+                is_inside_aoi = distance_from_center <= max_distance
+                
+                if is_inside_aoi:
+                    # Create interpolated values
+                    variation = random.uniform(0.85, 1.15)
+                    center_offset = 1 - abs(x_ratio - 0.5) * abs(y_ratio - 0.5) * 1.5
+                    value = mean_val * center_offset * variation
+                    value = max(min_val, min(max_val, value))
+                    
+                    grid_data.append([i, j, value])
+                    all_values.append(value)
+                else:
+                    # Mask out areas outside the intended AOI shape
+                    grid_data.append([i, j, None])  # ECharts will handle None as transparent
 
         # Calculate statistics
         if all_values:

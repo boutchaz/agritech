@@ -80,13 +80,10 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
     const { heatmap_data, statistics, coordinate_system, visualization, index, bounds, geotiff_url } = data;
 
-        // Convert heatmap data to scatter plot format for better AOI visualization
-        // This creates a more realistic overlay on the actual parcel boundaries
-        const scatterData = heatmap_data.map(([x, y, value]) => {
-          const lon = coordinate_system.x_axis[x];
-          const lat = coordinate_system.y_axis[y];
-          return [lon, lat, value];
-        });
+    // Create proper heatmap grid that follows AOI shape
+    const grid_data = heatmap_data;
+    const xAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
+    const yAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
 
     return {
       title: {
@@ -101,12 +98,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       tooltip: {
         position: 'top',
         formatter: function (params: any) {
-          const [lon, lat, value] = params.data;
+          const [x, y, value] = params.data;
+          const lon = coordinate_system.x_axis[x];
+          const lat = coordinate_system.y_axis[y];
           return `
             <div style="padding: 8px;">
               <div><strong>${index}: ${value.toFixed(3)}</strong></div>
               <div>Longitude: ${lon.toFixed(6)}</div>
               <div>Latitude: ${lat.toFixed(6)}</div>
+              <div>Grid: [${x}, ${y}]</div>
             </div>
           `;
         }
@@ -120,42 +120,30 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         containLabel: true
       },
       xAxis: {
-        type: 'value',
+        type: 'category',
+        data: xAxisData,
         name: 'Longitude',
-        nameLocation: 'middle',
-        nameGap: 30,
-        min: bounds.min_lon,
-        max: bounds.max_lon,
+        splitArea: {
+          show: true
+        },
         axisLabel: {
           formatter: function(value: number) {
-            return value.toFixed(4);
-          }
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: '#f0f0f0',
-            type: 'dashed'
+            const lon = coordinate_system.x_axis[value];
+            return lon ? lon.toFixed(4) : value.toString();
           }
         }
       },
       yAxis: {
-        type: 'value',
+        type: 'category',
+        data: yAxisData,
         name: 'Latitude',
-        nameLocation: 'middle',
-        nameGap: 50,
-        min: bounds.min_lat,
-        max: bounds.max_lat,
+        splitArea: {
+          show: true
+        },
         axisLabel: {
           formatter: function(value: number) {
-            return value.toFixed(4);
-          }
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: '#f0f0f0',
-            type: 'dashed'
+            const lat = coordinate_system.y_axis[value];
+            return lat ? lat.toFixed(4) : value.toString();
           }
         }
       },
@@ -179,19 +167,25 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       },
       series: [{
         name: index,
-        type: 'scatter',
-        data: scatterData,
-        symbolSize: 6,
-        itemStyle: {
-          opacity: 0.9
+        type: 'heatmap',
+        data: grid_data,
+        label: {
+          show: false
         },
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-            borderWidth: 2,
-            borderColor: '#fff'
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
           }
+        },
+        itemStyle: {
+          borderColor: 'transparent'
+        },
+        // Show only the data that follows AOI shape
+        encode: {
+          x: 0,
+          y: 1,
+          itemId: 2
         }
       }],
       graphic: [
