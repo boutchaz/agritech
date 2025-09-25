@@ -722,21 +722,30 @@ class EarthEngineService:
         lon_step = (max_lon - min_lon) / grid_size
         lat_step = (max_lat - min_lat) / grid_size
 
-        # Real satellite data approach: Sample actual pixel values
+        # Real satellite data approach: Sample actual pixel values with timeout protection
         try:
             # Use a reasonable scale for sampling (balance between accuracy and performance)
-            scale = max(30, int((max_lon - min_lon) * 111000 / grid_size))  # Convert to meters
+            scale = max(50, int((max_lon - min_lon) * 111000 / grid_size))  # Larger scale for speed
             
             # Sample the image at grid points
             grid_data = []
             all_values = []
             
-            # Sample at a reduced resolution to avoid timeout but get real data
-            sample_size = min(grid_size, 30)  # Limit to 30x30 for performance
+            # Sample at a much reduced resolution to avoid timeout but get real data
+            sample_size = min(grid_size, 10)  # Limit to 10x10 for performance
             step = max(1, grid_size // sample_size)
+            
+            import time
+            start_time = time.time()
+            max_sampling_time = 10  # Maximum 10 seconds for sampling
             
             for i in range(0, grid_size, step):
                 for j in range(0, grid_size, step):
+                    # Check timeout
+                    if time.time() - start_time > max_sampling_time:
+                        logger.warning(f"Sampling timeout after {max_sampling_time}s, using partial data")
+                        break
+                        
                     lon = min_lon + (i + 0.5) * lon_step
                     lat = min_lat + (j + 0.5) * lat_step
                     
@@ -758,6 +767,10 @@ class EarthEngineService:
                     except Exception as point_error:
                         logger.debug(f"Point sampling failed for [{i}, {j}]: {point_error}")
                         continue
+                
+                # Break outer loop if timeout
+                if time.time() - start_time > max_sampling_time:
+                    break
             
             # If we didn't get enough real data, fill gaps with interpolated values
             if len(all_values) < 10:  # Not enough real data

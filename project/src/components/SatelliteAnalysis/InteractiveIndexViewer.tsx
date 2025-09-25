@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Activity, Download, Calendar, Layers, ZoomIn, MousePointer, Grid3X3, Loader } from 'lucide-react';
+import { Activity, Download, Layers, ZoomIn, MousePointer, Loader } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import {
@@ -9,8 +9,7 @@ import {
   VEGETATION_INDEX_DESCRIPTIONS,
   HeatmapDataResponse,
   InteractiveDataResponse,
-  convertBoundaryToGeoJSON,
-  getDateRangeLastNDays
+  convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
 
 interface InteractiveIndexViewerProps {
