@@ -244,17 +244,27 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                         style={{ color: getIndexColor(imageData.index) }}
                       >
                         {imageData.index}
+                        {imageData.metadata?.demo_mode && (
+                          <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                            DEMO
+                          </span>
+                        )}
                       </h4>
-                      <button
-                        onClick={() => downloadImage(imageData.image_url, imageData.index, imageData.date)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                      >
-                        <Download className="w-3 h-3" />
-                        Download
-                      </button>
+                      {!imageData.metadata?.demo_mode && (
+                        <button
+                          onClick={() => downloadImage(imageData.image_url, imageData.index, imageData.date)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        >
+                          <Download className="w-3 h-3" />
+                          Download
+                        </button>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 mb-2">
-                      {VEGETATION_INDEX_DESCRIPTIONS[imageData.index]}
+                      {imageData.metadata?.demo_mode
+                        ? imageData.metadata.message
+                        : VEGETATION_INDEX_DESCRIPTIONS[imageData.index]
+                      }
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
