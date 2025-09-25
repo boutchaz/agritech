@@ -240,7 +240,7 @@ class EarthEngineService:
             for item in time_series if item[1] is not None
         ]
     
-    def export_index_map(
+    async def export_index_map(
         self,
         geometry: Dict,
         date: str,
