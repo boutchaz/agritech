@@ -719,55 +719,63 @@ class EarthEngineService:
         min_lat = min([coord[1] for coord in bounds])
         max_lat = max([coord[1] for coord in bounds])
 
-        # Get FULL raster grid like research notebook approach
-        # Use scale of 10m like in the research notebook for detailed visualization
+        # Get FULL raster grid approach - like research notebook
+        # Use 10m scale for detailed visualization
         sample_scale = 10
 
-        # Create a grid of pixel coordinates covering the AOI
-        # This is similar to what the research notebook does with GeoTIFF export
+        # Calculate grid dimensions based on AOI size
+        area_deg_lat = max_lat - min_lat
+        area_deg_lon = max_lon - min_lon
 
-        # Get image projection and pixel grid
-        projection = clipped.projection().getInfo()
+        # Estimate number of pixels at 10m resolution
+        # 1 degree ≈ 111km, so 10m = 0.00009 degrees approximately
+        pixel_size_deg = sample_scale / 111000.0
+        estimated_pixels = int((area_deg_lat / pixel_size_deg) * (area_deg_lon / pixel_size_deg))
 
-        # Create a pixel coordinates grid using pixelCoordinates
-        pixel_grid = ee.Image.pixelCoordinates(projection)
+        # For visualization, we want dense coverage like the reference image
+        # Limit to reasonable size but ensure good coverage
+        max_pixels = min(estimated_pixels, 50000)  # Up to 50k pixels for very detailed grid
+        max_pixels = max(max_pixels, sample_points)  # But at least what user requested
 
-        # Add the index values to each pixel coordinate
-        pixel_coords_with_values = pixel_grid.addBands(clipped).select(['longitude', 'latitude', index])
+        logger.info(f"Estimated {estimated_pixels} pixels for AOI, using {max_pixels} for sampling")
 
-        # Sample the entire grid within AOI bounds (not random sampling)
-        # Using a much higher pixel count to get the full grid
-        max_pixels = min(10000, sample_points * 10)  # Allow up to 10k pixels for detailed grid
-
-        sampled_pixels = pixel_coords_with_values.sample(
+        # Sample with systematic approach to get good grid coverage
+        sampled_pixels = clipped.sample(
             region=aoi,
             scale=sample_scale,
             numPixels=max_pixels,
             seed=42,
-            geometries=False  # Don't need geometries since we have coordinates as bands
+            geometries=True,
+            tileScale=4  # Higher tile scale for better memory handling
         )
 
         # Get the grid data
         try:
+            logger.info(f"Starting to sample {max_pixels} pixels at {sample_scale}m resolution")
             sampled_data = sampled_pixels.getInfo()
-            logger.info(f"Successfully sampled {len(sampled_data.get('features', []))} pixels from grid")
+            num_features = len(sampled_data.get('features', [])) if sampled_data else 0
+            logger.info(f"Successfully retrieved {num_features} pixels from Earth Engine")
         except Exception as e:
             logger.error(f"Error sampling Earth Engine grid data: {e}")
-            raise ValueError(f"Failed to sample satellite grid data: {e}")
+            logger.error(f"AOI bounds: lat={min_lat}-{max_lat}, lon={min_lon}-{max_lon}")
+            logger.error(f"Requested pixels: {max_pixels}, scale: {sample_scale}m")
+            raise ValueError(f"Failed to sample satellite grid data: {str(e)}")
 
-        # Process full grid data
+        # Process grid data from Earth Engine sampling
         pixel_data = []
         all_values = []
 
         if sampled_data and 'features' in sampled_data:
             for feature in sampled_data['features']:
-                props = feature['properties']
-                if (props.get(index) is not None and
-                    props.get('longitude') is not None and
-                    props.get('latitude') is not None):
+                # Get coordinates from geometry
+                geometry = feature.get('geometry')
+                props = feature.get('properties', {})
 
-                    lon = props['longitude']
-                    lat = props['latitude']
+                if (geometry and geometry.get('coordinates') and
+                    props.get(index) is not None):
+
+                    coords = geometry['coordinates']
+                    lon, lat = coords[0], coords[1]
                     value = props[index]
 
                     pixel_data.append({
@@ -819,8 +827,10 @@ class EarthEngineService:
                 'sample_scale': sample_scale,
                 'total_pixels': len(pixel_data),
                 'data_source': 'Sentinel-2 Earth Engine',
-                'sampling_method': 'Full pixel grid',
-                'max_requested_pixels': max_pixels
+                'sampling_method': 'High-density grid sampling',
+                'max_requested_pixels': max_pixels,
+                'estimated_total_pixels': estimated_pixels,
+                'aoi_area_deg2': area_deg_lat * area_deg_lon
             }
         }
 
