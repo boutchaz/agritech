@@ -739,22 +739,65 @@ class EarthEngineService:
 
         logger.info(f"Estimated {estimated_pixels} pixels for AOI, using {max_pixels} for sampling")
 
-        # Sample with systematic approach to get good grid coverage
-        sampled_pixels = clipped.sample(
-            region=aoi,
-            scale=sample_scale,
-            numPixels=max_pixels,
-            seed=42,
-            geometries=True,
-            tileScale=4  # Higher tile scale for better memory handling
-        )
+        # Improved sampling to ensure high-density pixel count like research notebook
+        logger.info(f"Attempting high-density sampling with {max_pixels} target pixels")
+        
+        try:
+            # Strategy 1: Use systematic gridding approach similar to research notebook
+            # Request significantly more pixels to ensure we capture target density
+            num_sample_pixels = min(max_pixels * 4, 100000)
+            effective_scale = sample_scale
+            
+            logger.info(f"Requesting {num_sample_pixels} pixels at {effective_scale}m scale")
+            
+            sampled_pixels = clipped.sample(
+                region=aoi,
+                scale=effective_scale,
+                numPixels=num_sample_pixels,
+                seed=42,
+                geometries=True,
+                tileScale=8  # Higher tile scale for processing power
+            )
+            
+            logger.info(f"Successfully initialized sampling with {num_sample_pixels} pixel request")
+        except Exception as sample_error:
+            logger.warning(f"High-density sampling failed: {sample_error}, trying alternative approach")
+            # Strategy 2: Try grid-based systematic sampling  
+            try:
+                logger.info("Trying alternate grid-based sampling approach...")
+                sample_region = aoi.bounds()
+                sampled_pixels = clipped.sample(
+                    region=sample_region,
+                    scale=effective_scale - 2 if effective_scale > 5 else 5,
+                    numPixels=max_pixels * 2,
+                    seed=42,
+                    geometries=True,
+                    tileScale=4
+                )
+            except Exception as fallback_error:
+                logger.warning(f"Grid-based fallback also failed: {fallback_error}, using basic sampling")
+                # Strategy 3: Basic fallback
+                sampled_pixels = clipped.sample(
+                    region=aoi,
+                    scale=sample_scale,
+                    numPixels=max_pixels,
+                    seed=42,
+                    geometries=True,
+                    tileScale=2
+                )
 
         # Get the grid data
         try:
-            logger.info(f"Starting to sample {max_pixels} pixels at {sample_scale}m resolution")
+            logger.info(f"Starting to sample up to {max_pixels} pixels at {sample_scale}m resolution")
             sampled_data = sampled_pixels.getInfo()
             num_features = len(sampled_data.get('features', [])) if sampled_data else 0
-            logger.info(f"Successfully retrieved {num_features} pixels from Earth Engine")
+            logger.info(f"Successfully retrieved {num_features} pixels from Earth Engine (target was {max_pixels})")
+            
+            # Log success or warning if pixel count is too low
+            if num_features < max_pixels // 2:  # If less than half our target
+                logger.warning(f"Retrieved {num_features} pixels - may be less than target due to AOI size or data availability")
+            else:
+                logger.info(f"Excellent: Retrieved {num_features} of {max_pixels} requested pixels")
         except Exception as e:
             logger.error(f"Error sampling Earth Engine grid data: {e}")
             logger.error(f"AOI bounds: lat={min_lat}-{max_lat}, lon={min_lon}-{max_lon}")
