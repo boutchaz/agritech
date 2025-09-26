@@ -1093,6 +1093,9 @@ class EarthEngineService:
             try:
                 cloud_percentages = cloud_info.aggregate_array('cloud_percentage').getInfo()
                 suitable_images = cloud_info.filter(ee.Filter.eq('suitable', True))
+                # Debug logging for better understanding
+                logger.info(f"Cloud percentages retrieved: {len(cloud_percentages) if cloud_percentages else 0}")
+                logger.info(f"Cloud threshold used: {max_cloud_coverage}%")
             except Exception as e:
                 if "Empty date ranges not supported" in str(e):
                     logger.info("No images found in collection, returning empty result")
@@ -1137,8 +1140,13 @@ class EarthEngineService:
 
             logger.info(f"Cloud coverage check: {available_count} available, {suitable_count} suitable, best date: {best_date}")
 
+            # Determine if we have usable images: either suitable ones OR a recommended best date
+            has_usable_images = suitable_count > 0 or (best_date is not None and available_count > 0)
+            
+            logger.info(f"Images usable: {has_usable_images} (suitable: {suitable_count}, recommended: {best_date})")
+
             return {
-                'has_suitable_images': suitable_count > 0,
+                'has_suitable_images': has_usable_images,
                 'available_images_count': available_count,
                 'suitable_images_count': suitable_count,
                 'min_cloud_coverage': min_cloud,

@@ -114,12 +114,27 @@ async def compare_periods(
 async def check_cloud_coverage(request: CloudCoverageCheckRequest):
     """Check cloud coverage availability for given parameters"""
     try:
+        # Enhanced cloud coverage handling for better image availability
+        max_cloud_threshold = request.max_cloud_coverage or 10.0
+        
+        # First try with the requested threshold
         result = earth_engine_service.check_cloud_coverage(
             request.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
-            request.max_cloud_coverage or 10.0
+            max_cloud_threshold
         )
+        
+        # If still no suitable images found but images are available, 
+        # try with more lenient threshold (50% max cloud)
+        if not result['has_suitable_images'] and result['available_images_count'] > 0 and max_cloud_threshold < 50:
+            logger.info(f"No images found with {max_cloud_threshold}% cloud threshold, trying 50%")
+            result = earth_engine_service.check_cloud_coverage(
+                request.geometry.model_dump(),
+                request.date_range.start_date,
+                request.date_range.end_date,
+                50.0  # More lenient 50% threshold
+            )
 
         return CloudCoverageCheckResponse(
             has_suitable_images=result['has_suitable_images'],
