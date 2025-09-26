@@ -188,7 +188,7 @@ class HeatmapRequest(BaseModel):
     aoi: AOIRequest
     date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$')
     index: VegetationIndex
-    grid_size: Optional[int] = Field(50, ge=10, le=200)
+    grid_size: Optional[int] = Field(1000, ge=100, le=50000)  # Allow high-density grids for detailed visualization
 
 class HealthResponse(BaseModel):
     status: str

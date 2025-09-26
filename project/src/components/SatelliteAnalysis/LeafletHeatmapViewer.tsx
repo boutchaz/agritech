@@ -368,10 +368,11 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               onChange={(e) => setSamplePoints(Number(e.target.value))}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
-              <option value={500}>500 (Fast)</option>
-              <option value={1000}>1000 (Balanced)</option>
-              <option value={2000}>2000 (Detailed)</option>
-              <option value={5000}>5000 (High Detail)</option>
+              <option value={1000}>1000 (Fast)</option>
+              <option value={2000}>2000 (Balanced)</option>
+              <option value={5000}>5000 (Detailed)</option>
+              <option value={10000}>10000 (High Detail)</option>
+              <option value={25000}>25000 (Maximum Detail)</option>
             </select>
           </div>
 
