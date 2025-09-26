@@ -166,15 +166,20 @@ class InteractiveDataResponse(BaseModel):
     visualization: VisualizationParams
     metadata: Dict[str, Any]
 
+class PixelData(BaseModel):
+    lon: float
+    lat: float
+    value: float
+
 class HeatmapDataResponse(BaseModel):
     date: str
     index: str
     bounds: VisualizationBounds
-    grid_size: int
-    heatmap_data: List[List[Union[int, float]]]  # [[x, y, value], ...]
+    pixel_data: List[PixelData]  # Real satellite pixel data with lat/lon
+    aoi_boundary: List[List[float]]  # AOI polygon coordinates
     statistics: Dict[str, float]
     visualization: VisualizationParams
-    coordinate_system: CoordinateSystem
+    metadata: Optional[Dict[str, Any]] = None
 
 class InteractiveRequest(BaseModel):
     aoi: AOIRequest

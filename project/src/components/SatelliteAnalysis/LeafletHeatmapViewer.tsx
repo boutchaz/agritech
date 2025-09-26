@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, Download, Layers, ZoomIn, MousePointer, Loader } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
@@ -169,6 +169,9 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | null>(initialData || null);
   const [error, setError] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [isCheckingDates, setIsCheckingDates] = useState(false);
+  const [recommendedDate, setRecommendedDate] = useState<string | null>(null);
 
   // Debug data changes
   useEffect(() => {
@@ -200,6 +203,63 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
       setData(initialData);
     }
   }, [initialData]);
+
+  // Check available dates with satellite data
+  const checkAvailableDates = useCallback(async () => {
+    if (!boundary) return;
+
+    setIsCheckingDates(true);
+    setError(null);
+
+    try {
+      // Check dates in the last 3 months
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 3);
+      const startDateStr = startDate.toISOString().split('T')[0];
+
+      const aoi = {
+        geometry: convertBoundaryToGeoJSON(boundary),
+        name: parcelName || 'Selected Parcel'
+      };
+
+      const result = await satelliteApi.checkCloudCoverage({
+        geometry: aoi.geometry,
+        date_range: {
+          start_date: startDateStr,
+          end_date: endDate
+        },
+        max_cloud_coverage: 20 // Allow up to 20% cloud coverage
+      });
+
+      if (result.recommended_date) {
+        setRecommendedDate(result.recommended_date);
+        // If no date is selected or current date has no data, use recommended date
+        if (!selectedDate || !availableDates.includes(selectedDate)) {
+          setSelectedDate(result.recommended_date);
+        }
+      }
+
+      // Extract available dates from metadata if provided
+      // Note: The backend doesn't return individual dates, but we can use the recommended date
+      // In a more advanced implementation, we'd modify the backend to return all suitable dates
+      const dates = result.recommended_date ? [result.recommended_date] : [];
+      setAvailableDates(dates);
+
+    } catch (err) {
+      console.error('Error checking available dates:', err);
+      setError('Failed to check available dates. Using current date as fallback.');
+    } finally {
+      setIsCheckingDates(false);
+    }
+  }, [boundary, parcelName, selectedDate, availableDates]);
+
+  // Check available dates when boundary changes
+  useEffect(() => {
+    if (boundary && boundary.length > 0) {
+      checkAvailableDates();
+    }
+  }, [boundary, checkAvailableDates]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -339,13 +399,41 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
+            <label className="text-sm font-medium mb-2 block">
+              Date
+              {isCheckingDates && (
+                <span className="ml-2 text-xs text-gray-500">
+                  <RefreshCw className="inline w-3 h-3 animate-spin mr-1" />
+                  Checking availability...
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className={`w-full p-2 border rounded-md ${
+                  availableDates.length > 0 && !availableDates.includes(selectedDate)
+                    ? 'border-yellow-400 bg-yellow-50'
+                    : 'border-gray-300'
+                }`}
+              />
+              {recommendedDate && recommendedDate !== selectedDate && (
+                <button
+                  onClick={() => setSelectedDate(recommendedDate)}
+                  className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                  title={`Use recommended date: ${recommendedDate}`}
+                >
+                  <Calendar className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            {availableDates.length > 0 && !availableDates.includes(selectedDate) && (
+              <p className="text-xs text-yellow-600 mt-1">
+                No data for selected date. Recommended: {recommendedDate}
+              </p>
+            )}
           </div>
 
           <div>

@@ -292,6 +292,27 @@ export interface HeatmapRequest {
   grid_size?: number;
 }
 
+export interface CloudCoverageCheckRequest {
+  geometry: GeoJSONGeometry;
+  date_range: DateRangeRequest;
+  max_cloud_coverage?: number;
+}
+
+export interface CloudCoverageCheckResponse {
+  has_suitable_images: boolean;
+  available_images_count: number;
+  suitable_images_count: number;
+  min_cloud_coverage?: number;
+  max_cloud_coverage?: number;
+  avg_cloud_coverage?: number;
+  recommended_date?: string;
+  metadata?: {
+    max_cloud_threshold: number;
+    date_range: DateRangeRequest;
+    all_cloud_percentages: number[];
+  };
+}
+
 class SatelliteAPIClient {
   private baseUrl: string;
 
@@ -529,7 +550,7 @@ class SatelliteAPIClient {
         aoi,
         date,
         index,
-        grid_size: 50 // Default grid size for heatmap visualization
+        grid_size: 1000 // Updated default for better visualization
       });
     } else {
       return this.getInteractiveData({
