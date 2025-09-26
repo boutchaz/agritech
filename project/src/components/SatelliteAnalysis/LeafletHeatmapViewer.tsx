@@ -164,7 +164,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NDVI');
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
-  const [samplePoints, setSamplePoints] = useState(1000);
+  const [samplePoints, setSamplePoints] = useState(10000); // Start with high detail
 
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | null>(initialData || null);
@@ -273,13 +273,21 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         name: parcelName || 'Selected Parcel'
       };
 
-      const result = await satelliteApi.getHeatmapData({
+      const requestParams = {
         aoi,
         date: selectedDate,
         index: selectedIndex,
-        // Pass sample_points instead of grid_size for the new backend
         grid_size: samplePoints
-      });
+      };
+
+      console.log('🚀 Making heatmap API request with params:', requestParams);
+      console.log('📊 Sample points:', samplePoints);
+      console.log('📅 Selected date:', selectedDate);
+
+      const result = await satelliteApi.getHeatmapData(requestParams);
+
+      console.log('📥 Received heatmap data:', result);
+      console.log('🔢 Pixel count:', result.pixel_data?.length || 0);
 
       setData(result as HeatmapDataResponse);
     } catch (err) {
