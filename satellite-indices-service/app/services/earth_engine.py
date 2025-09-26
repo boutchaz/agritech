@@ -719,39 +719,60 @@ class EarthEngineService:
         min_lat = min([coord[1] for coord in bounds])
         max_lat = max([coord[1] for coord in bounds])
 
-        # Use Earth Engine's native sampling within AOI
-        # This gives us REAL satellite pixel values, not fake random data
-        sample_scale = max(10, min(100, int((max_lon - min_lon) * 111000 / 20)))  # Auto-calculate appropriate scale
+        # Get FULL raster grid like research notebook approach
+        # Use scale of 10m like in the research notebook for detailed visualization
+        sample_scale = 10
 
-        # Sample the clipped image to get actual pixel values with coordinates
-        sampled_pixels = clipped.sample(
+        # Create a grid of pixel coordinates covering the AOI
+        # This is similar to what the research notebook does with GeoTIFF export
+
+        # Get image projection and pixel grid
+        projection = clipped.projection().getInfo()
+
+        # Create a pixel coordinates grid using pixelCoordinates
+        pixel_grid = ee.Image.pixelCoordinates(projection)
+
+        # Add the index values to each pixel coordinate
+        pixel_coords_with_values = pixel_grid.addBands(clipped).select(['longitude', 'latitude', index])
+
+        # Sample the entire grid within AOI bounds (not random sampling)
+        # Using a much higher pixel count to get the full grid
+        max_pixels = min(10000, sample_points * 10)  # Allow up to 10k pixels for detailed grid
+
+        sampled_pixels = pixel_coords_with_values.sample(
             region=aoi,
             scale=sample_scale,
-            numPixels=sample_points,
-            seed=42,  # Consistent sampling
-            geometries=True
+            numPixels=max_pixels,
+            seed=42,
+            geometries=False  # Don't need geometries since we have coordinates as bands
         )
 
-        # Get the sampled data
+        # Get the grid data
         try:
             sampled_data = sampled_pixels.getInfo()
+            logger.info(f"Successfully sampled {len(sampled_data.get('features', []))} pixels from grid")
         except Exception as e:
-            logger.error(f"Error sampling Earth Engine data: {e}")
-            raise ValueError(f"Failed to sample satellite data: {e}")
+            logger.error(f"Error sampling Earth Engine grid data: {e}")
+            raise ValueError(f"Failed to sample satellite grid data: {e}")
 
-        # Process real satellite data points
+        # Process full grid data
         pixel_data = []
         all_values = []
 
         if sampled_data and 'features' in sampled_data:
             for feature in sampled_data['features']:
-                if feature['properties'].get(index) is not None:
-                    coords = feature['geometry']['coordinates']
-                    value = feature['properties'][index]
+                props = feature['properties']
+                if (props.get(index) is not None and
+                    props.get('longitude') is not None and
+                    props.get('latitude') is not None):
+
+                    lon = props['longitude']
+                    lat = props['latitude']
+                    value = props[index]
 
                     pixel_data.append({
-                        'lon': coords[0],
-                        'lat': coords[1],
+                        'lon': lon,
+                        'lat': lat,
                         'value': value
                     })
                     all_values.append(value)
@@ -797,7 +818,9 @@ class EarthEngineService:
             'metadata': {
                 'sample_scale': sample_scale,
                 'total_pixels': len(pixel_data),
-                'data_source': 'Sentinel-2 Earth Engine'
+                'data_source': 'Sentinel-2 Earth Engine',
+                'sampling_method': 'Full pixel grid',
+                'max_requested_pixels': max_pixels
             }
         }
 

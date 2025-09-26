@@ -496,6 +496,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               parcelId={parcelId}
               parcelName={parcelName}
               boundary={boundary}
+              initialData={'pixel_data' in data ? data as HeatmapDataResponse : null}
+              selectedIndex={selectedIndex}
+              selectedDate={selectedDate}
             />
           ) : (
             <div className="bg-white border rounded-lg p-4">

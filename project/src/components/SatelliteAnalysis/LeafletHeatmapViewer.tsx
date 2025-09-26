@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, Download, Layers, ZoomIn, MousePointer, Loader, Satellite } from 'lucide-react';
+import { Activity, Download, Layers, ZoomIn, MousePointer, Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
@@ -25,59 +25,128 @@ interface LeafletHeatmapViewerProps {
   parcelId: string;
   parcelName?: string;
   boundary?: number[][];
+  initialData?: HeatmapDataResponse | null;
+  selectedIndex?: VegetationIndexType;
+  selectedDate?: string;
 }
 
-// Custom hook to add heatmap layer to map
-const HeatmapLayer: React.FC<{
+// Custom hook to add grid-based heatmap layer to map (like desired.png)
+const GridHeatmapLayer: React.FC<{
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
 }> = ({ data, selectedIndex }) => {
   const map = useMap();
-  const heatLayerRef = useRef<any>(null);
+  const gridLayerRef = useRef<L.LayerGroup | null>(null);
+
+  // Color interpolation function matching desired.png
+  const getColorForValue = (value: number, min: number, max: number): string => {
+    const normalized = (value - min) / (max - min);
+
+    // Color gradient from red to green (matching desired.png)
+    if (normalized <= 0.2) {
+      // Red to orange
+      const t = normalized / 0.2;
+      return `rgb(${Math.round(220 + (255 - 220) * t)}, ${Math.round(20 * t)}, ${Math.round(60 * (1 - t))})`;
+    } else if (normalized <= 0.4) {
+      // Orange to yellow
+      const t = (normalized - 0.2) / 0.2;
+      return `rgb(255, ${Math.round(165 + (255 - 165) * t)}, ${Math.round(0 + 50 * t)})`;
+    } else if (normalized <= 0.6) {
+      // Yellow to light green
+      const t = (normalized - 0.4) / 0.2;
+      return `rgb(${Math.round(255 - 100 * t)}, 255, ${Math.round(50 + 100 * t)})`;
+    } else if (normalized <= 0.8) {
+      // Light green to green
+      const t = (normalized - 0.6) / 0.2;
+      return `rgb(${Math.round(155 - 55 * t)}, ${Math.round(255 - 50 * t)}, ${Math.round(150 - 50 * t)})`;
+    } else {
+      // Green to dark green
+      const t = (normalized - 0.8) / 0.2;
+      return `rgb(${Math.round(100 - 50 * t)}, ${Math.round(205 - 55 * t)}, ${Math.round(100 - 50 * t)})`;
+    }
+  };
 
   useEffect(() => {
-    if (!data || !data.pixel_data) return;
-
-    // Remove existing heat layer
-    if (heatLayerRef.current) {
-      map.removeLayer(heatLayerRef.current);
+    console.log('GridHeatmapLayer useEffect - data:', data);
+    if (!data || !data.pixel_data) {
+      console.log('No data or pixel_data available');
+      return;
     }
 
-    // Prepare heatmap data for Leaflet
-    const heatData = data.pixel_data.map(point => [
-      point.lat,
-      point.lon,
-      Math.max(0.1, Math.min(1.0, (point.value - data.statistics.min) / (data.statistics.max - data.statistics.min)))
-    ]);
+    console.log(`Processing ${data.pixel_data.length} pixels`);
 
-    if (heatData.length > 0) {
-      // Create heatmap layer with proper options
-      heatLayerRef.current = (L as any).heatLayer(heatData, {
-        radius: 25,
-        blur: 15,
-        maxZoom: 17,
-        max: 1.0,
-        minOpacity: 0.4,
-        gradient: {
-          0.0: '#8B0000',   // Dark red
-          0.2: '#DC143C',   // Crimson
-          0.4: '#FF4500',   // Orange red
-          0.6: '#FFD700',   // Gold
-          0.8: '#ADFF2F',   // Green yellow
-          1.0: '#00FF00'    // Lime green
-        }
-      });
-
-      heatLayerRef.current.addTo(map);
-
-      // Fit map to heatmap bounds
-      const bounds = L.latLngBounds(heatData.map(point => [point[0], point[1]] as [number, number]));
-      map.fitBounds(bounds, { padding: [20, 20] });
+    // Remove existing grid layer
+    if (gridLayerRef.current) {
+      map.removeLayer(gridLayerRef.current);
     }
+
+    // Create new layer group for grid cells
+    gridLayerRef.current = L.layerGroup();
+
+    // Calculate pixel size matching research notebook approach (10m scale)
+    const pixelScale = data.metadata?.sample_scale || 10; // meters per pixel
+    const pixelSizeDegrees = pixelScale / 111320; // Convert meters to degrees (approx)
+
+    // Sort pixels to create organized grid layout like reference image
+    const sortedPixels = [...data.pixel_data].sort((a, b) => {
+      if (Math.abs(a.lat - b.lat) > 0.00001) return b.lat - a.lat; // Sort by lat first (top to bottom)
+      return a.lon - b.lon; // Then by lon (left to right)
+    });
+
+    // Create rectangular grid cells matching reference visualization
+    console.log(`Creating ${sortedPixels.length} rectangles with pixel size: ${pixelSizeDegrees} degrees (${pixelScale}m)`);
+
+    sortedPixels.forEach((point, index) => {
+      const color = getColorForValue(point.value, data.statistics.min, data.statistics.max);
+
+      const bounds: [number, number][] = [
+        [point.lat - pixelSizeDegrees/2, point.lon - pixelSizeDegrees/2],
+        [point.lat + pixelSizeDegrees/2, point.lon + pixelSizeDegrees/2]
+      ];
+
+      if (index < 5) { // Log first few rectangles for debugging
+        console.log(`Rectangle ${index}:`, {
+          point,
+          color,
+          bounds,
+          value: point.value
+        });
+      }
+
+      const rectangle = L.rectangle(bounds, {
+        fillColor: color,
+        fillOpacity: 1.0,
+        color: color,
+        weight: 0.1,
+        opacity: 0.1
+      }).bindTooltip(
+        `${selectedIndex}: ${point.value.toFixed(3)}<br/>
+         Lat: ${point.lat.toFixed(6)}<br/>
+         Lon: ${point.lon.toFixed(6)}<br/>
+         Scale: ${pixelScale}m`,
+        { sticky: true }
+      );
+
+      gridLayerRef.current!.addLayer(rectangle);
+    });
+
+    console.log(`Added ${gridLayerRef.current.getLayers().length} layers to grid`);
+
+    gridLayerRef.current.addTo(map);
+    console.log('Grid layer added to map');
+
+    // Fit map to data bounds
+    const lats = data.pixel_data.map(p => p.lat);
+    const lons = data.pixel_data.map(p => p.lon);
+    const bounds = L.latLngBounds(
+      [Math.min(...lats), Math.min(...lons)],
+      [Math.max(...lats), Math.max(...lons)]
+    );
+    map.fitBounds(bounds, { padding: [20, 20] });
 
     return () => {
-      if (heatLayerRef.current) {
-        map.removeLayer(heatLayerRef.current);
+      if (gridLayerRef.current) {
+        map.removeLayer(gridLayerRef.current);
       }
     };
   }, [data, selectedIndex, map]);
@@ -88,21 +157,49 @@ const HeatmapLayer: React.FC<{
 const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   parcelId,
   parcelName,
-  boundary
+  boundary,
+  initialData,
+  selectedIndex: propSelectedIndex,
+  selectedDate: propSelectedDate
 }) => {
-  const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NDVI');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NDVI');
+  const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
   const [samplePoints, setSamplePoints] = useState(1000);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [data, setData] = useState<HeatmapDataResponse | null>(null);
+  const [data, setData] = useState<HeatmapDataResponse | null>(initialData || null);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize with today's date
+  // Debug data changes
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setSelectedDate(today);
-  }, []);
+    console.log('LeafletHeatmapViewer - data state changed:', data);
+    console.log('Data has pixel_data:', data?.pixel_data?.length || 0, 'pixels');
+  }, [data]);
+
+  // Initialize with today's date if no props provided
+  useEffect(() => {
+    if (!propSelectedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
+    }
+  }, [propSelectedDate]);
+
+  // Update state when props change
+  useEffect(() => {
+    if (propSelectedIndex) setSelectedIndex(propSelectedIndex);
+  }, [propSelectedIndex]);
+
+  useEffect(() => {
+    if (propSelectedDate) setSelectedDate(propSelectedDate);
+  }, [propSelectedDate]);
+
+  useEffect(() => {
+    console.log('LeafletHeatmapViewer - initialData changed:', initialData);
+    if (initialData) {
+      console.log('Setting data from initialData:', initialData);
+      setData(initialData);
+    }
+  }, [initialData]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -166,21 +263,75 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
       ]
     : [46.2276, 2.2137]; // Default to center of France
 
-  // Convert boundary to Leaflet polygon format
-  const polygonPositions: [number, number][] = boundary
-    ? boundary.map(coord => [coord[1], coord[0]]) // Convert [lng, lat] to [lat, lng]
-    : [];
+  // Convert boundary to Leaflet polygon format - use backend AOI boundary if available
+  const polygonPositions: [number, number][] =
+    (data?.aoi_boundary && data.aoi_boundary.length > 0)
+      ? data.aoi_boundary.map(coord => [coord[1], coord[0]]) // Convert [lng, lat] to [lat, lng] from backend
+      : boundary
+        ? boundary.map(coord => [coord[1], coord[0]]) // Convert [lng, lat] to [lat, lng] from prop
+        : [];
+
+  // Color scale component matching desired.png
+  const ColorScale: React.FC = () => {
+    if (!data) return null;
+
+    const steps = 20;
+    const stepHeight = 20;
+    const scaleHeight = steps * stepHeight;
+
+    return (
+      <div className="absolute top-4 right-4 bg-white p-2 rounded shadow-lg border z-[1000]">
+        <div className="flex items-center">
+          <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
+            {Array.from({ length: steps }).map((_, i) => {
+              const value = data.statistics.max - (i / (steps - 1)) * (data.statistics.max - data.statistics.min);
+              const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
+              let color;
+              if (normalized <= 0.2) {
+                const t = normalized / 0.2;
+                color = `rgb(${Math.round(220 + (255 - 220) * t)}, ${Math.round(20 * t)}, ${Math.round(60 * (1 - t))})`;
+              } else if (normalized <= 0.4) {
+                const t = (normalized - 0.2) / 0.2;
+                color = `rgb(255, ${Math.round(165 + (255 - 165) * t)}, ${Math.round(0 + 50 * t)})`;
+              } else if (normalized <= 0.6) {
+                const t = (normalized - 0.4) / 0.2;
+                color = `rgb(${Math.round(255 - 100 * t)}, 255, ${Math.round(50 + 100 * t)})`;
+              } else if (normalized <= 0.8) {
+                const t = (normalized - 0.6) / 0.2;
+                color = `rgb(${Math.round(155 - 55 * t)}, ${Math.round(255 - 50 * t)}, ${Math.round(150 - 50 * t)})`;
+              } else {
+                const t = (normalized - 0.8) / 0.2;
+                color = `rgb(${Math.round(100 - 50 * t)}, ${Math.round(205 - 55 * t)}, ${Math.round(100 - 50 * t)})`;
+              }
+              return (
+                <div
+                  key={i}
+                  style={{
+                    backgroundColor: color,
+                    height: stepHeight,
+                    width: '20px',
+                    border: '0.5px solid #ccc'
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="flex flex-col justify-between text-xs" style={{ height: scaleHeight }}>
+            <span>{data.statistics.max.toFixed(1)}</span>
+            <span>{((data.statistics.max + data.statistics.min) / 2).toFixed(1)}</span>
+            <span>{data.statistics.min.toFixed(1)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Satellite className="w-5 h-5" />
-        <h2 className="text-xl font-semibold">Agricultural Heatmap Visualization</h2>
+      <div className="text-center mb-4">
+        <h1 className="text-2xl font-bold">{selectedIndex} - évolution temporelle</h1>
+        <div className="text-lg text-gray-600 mt-2">{selectedDate}</div>
       </div>
-
-      <p className="text-gray-600">
-        Real satellite data heatmap for {parcelName || `Parcel ${parcelId}`} using Leaflet mapping with proper AOI boundaries.
-      </p>
 
       {/* Configuration Panel */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
@@ -231,7 +382,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
-              {isLoading ? 'Loading...' : 'Generate'}
+              {isLoading ? 'Loading...' : data ? 'Regenerate' : 'Generate'}
             </button>
           </div>
         </div>
@@ -248,37 +399,6 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         </div>
       )}
 
-      {/* Statistics Display */}
-      {data && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Mean</div>
-            <div className="font-semibold" style={{ color: getIndexColor(selectedIndex) }}>
-              {data.statistics.mean.toFixed(3)}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Median</div>
-            <div className="font-semibold">{data.statistics.median.toFixed(3)}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600">P10</div>
-            <div className="font-semibold">{data.statistics.p10.toFixed(3)}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600">P90</div>
-            <div className="font-semibold">{data.statistics.p90.toFixed(3)}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Std Dev</div>
-            <div className="font-semibold">{data.statistics.std.toFixed(3)}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Points</div>
-            <div className="font-semibold">{data.statistics.count}</div>
-          </div>
-        </div>
-      )}
 
       {/* Leaflet Map */}
       <div className="space-y-4">
@@ -298,7 +418,18 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           )}
         </div>
 
-        <div className="h-96 border rounded-lg overflow-hidden">
+        <div className="h-96 border rounded-lg overflow-hidden relative">
+          <ColorScale />
+          {/* Statistics Box (like desired.png) */}
+          {data && (
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">
+              <div>Mean: {data.statistics.mean.toFixed(3)}</div>
+              <div>Median: {data.statistics.median.toFixed(3)}</div>
+              <div>P10: {data.statistics.p10.toFixed(3)}</div>
+              <div>P90: {data.statistics.p90.toFixed(3)}</div>
+              <div>Std: {data.statistics.std.toFixed(3)}</div>
+            </div>
+          )}
           <MapContainer
             center={mapCenter}
             zoom={15}
@@ -310,21 +441,34 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* AOI Polygon Boundary */}
+            {/* AOI Polygon Boundary - Matching research notebook style */}
             {polygonPositions.length > 0 && (
-              <Polygon
-                positions={polygonPositions}
-                pathOptions={{
-                  color: getIndexColor(selectedIndex),
-                  weight: 3,
-                  fillOpacity: 0.1,
-                  fillColor: getIndexColor(selectedIndex)
-                }}
-              />
+              <>
+                {/* Outer black border for visibility */}
+                <Polygon
+                  positions={polygonPositions}
+                  pathOptions={{
+                    color: '#000000',
+                    weight: 3,
+                    fillOpacity: 0,
+                    opacity: 0.9
+                  }}
+                />
+                {/* Inner white border for contrast */}
+                <Polygon
+                  positions={polygonPositions}
+                  pathOptions={{
+                    color: '#FFFFFF',
+                    weight: 1,
+                    fillOpacity: 0,
+                    opacity: 0.8
+                  }}
+                />
+              </>
             )}
 
-            {/* Heatmap Layer */}
-            <HeatmapLayer data={data} selectedIndex={selectedIndex} />
+            {/* Grid Heatmap Layer */}
+            <GridHeatmapLayer data={data} selectedIndex={selectedIndex} />
           </MapContainer>
         </div>
 
@@ -336,11 +480,11 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           </div>
           <div className="text-sm text-blue-700 space-y-1">
             <p>• <strong>Real Data:</strong> Actual Sentinel-2 satellite pixel values from Earth Engine</p>
-            <p>• <strong>AOI Boundary:</strong> Green polygon shows the exact field boundary</p>
-            <p>• <strong>Heatmap:</strong> Red = Low {selectedIndex}, Green = High {selectedIndex}</p>
-            <p>• <strong>Zoom & Pan:</strong> Use mouse wheel and drag to explore the data</p>
+            <p>• <strong>AOI Boundary:</strong> Black/white dashed line shows the exact field boundary</p>
+            <p>• <strong>Grid Pixels:</strong> Each rectangle represents a {data?.metadata?.sample_scale || 10}m satellite pixel</p>
+            <p>• <strong>Color Scale:</strong> Red = Low {selectedIndex}, Green = High {selectedIndex}</p>
+            <p>• <strong>Interaction:</strong> Hover over pixels to see exact values and coordinates</p>
             <p>• <strong>Data Source:</strong> {data?.metadata?.data_source || 'Sentinel-2 Earth Engine'}</p>
-            <p>• <strong>Sample Scale:</strong> {data?.metadata?.sample_scale || 'Auto'} meters per pixel</p>
           </div>
         </div>
       </div>
