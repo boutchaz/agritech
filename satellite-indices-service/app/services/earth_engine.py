@@ -778,11 +778,11 @@ class EarthEngineService:
                     value = mean_val * center_offset * variation
                     value = max(min_val, min(max_val, value))
                     
+                    # Only add points that are inside AOI
                     grid_data.append([i, j, value])
                     all_values.append(value)
-                else:
-                    # Mask out areas outside the intended AOI shape
-                    grid_data.append([i, j, None])  # ECharts will handle None as transparent
+                # Skip points outside AOI (don't add them to grid_data) 
+                # Fixed to prevent None values in Pydantic validation
 
         # Calculate statistics
         if all_values:
