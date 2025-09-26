@@ -256,8 +256,8 @@ export interface HeatmapDataResponse {
   date: string;
   index: string;
   bounds: VisualizationBounds;
-  grid_size: number;
-  heatmap_data: [number, number, number][]; // [x, y, value]
+  pixel_data: PixelData[]; // Real satellite pixel data with lat/lon
+  aoi_boundary: [number, number][]; // AOI polygon coordinates
   statistics: {
     min: number;
     max: number;
@@ -269,7 +269,11 @@ export interface HeatmapDataResponse {
     count: number;
   };
   visualization: VisualizationParams;
-  coordinate_system: CoordinateSystem;
+  metadata: {
+    sample_scale: number;
+    total_pixels: number;
+    data_source: string;
+  };
 }
 
 export interface InteractiveRequest {

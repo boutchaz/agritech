@@ -681,9 +681,9 @@ class EarthEngineService:
         geometry: Dict,
         date: str,
         index: str,
-        grid_size: int = 50
+        sample_points: int = 1000
     ) -> Dict[str, Any]:
-        """Export data optimized for ECharts heatmap visualization using GeoTIFF overlay"""
+        """Export real Earth Engine pixel data for heatmap visualization within AOI"""
         self.initialize()
 
         # Get the image for the specific date
@@ -712,140 +712,74 @@ class EarthEngineService:
         aoi = ee.Geometry(geometry)
         clipped = index_image.clip(aoi)
 
-        # Get the bounds for the GeoTIFF
+        # Get bounds
         bounds = aoi.bounds().getInfo()['coordinates'][0]
         min_lon = min([coord[0] for coord in bounds])
         max_lon = max([coord[0] for coord in bounds])
         min_lat = min([coord[1] for coord in bounds])
         max_lat = max([coord[1] for coord in bounds])
 
-        # Generate GeoTIFF URL for overlay
-        geotiff_url = clipped.getDownloadUrl({
-            'scale': max(30, int((max_lon - min_lon) * 111000 / 50)),  # Auto scale
-            'crs': 'EPSG:4326',
-            'fileFormat': 'GeoTIFF',
-            'region': aoi
-        })
+        # Use Earth Engine's native sampling within AOI
+        # This gives us REAL satellite pixel values, not fake random data
+        sample_scale = max(10, min(100, int((max_lon - min_lon) * 111000 / 20)))  # Auto-calculate appropriate scale
 
-        # Get statistics efficiently using reduceRegion
-        stats = clipped.reduceRegion(
-            reducer=ee.Reducer.minMax().combine(
-                reducer2=ee.Reducer.mean().combine(
-                    reducer2=ee.Reducer.stdDev(),
-                    sharedInputs=True
-                ),
-                sharedInputs=True
-            ),
-            geometry=aoi,
-            scale=100,  # Larger scale for faster computation
-            maxPixels=1e9
-        ).getInfo()
+        # Sample the clipped image to get actual pixel values with coordinates
+        sampled_pixels = clipped.sample(
+            region=aoi,
+            scale=sample_scale,
+            numPixels=sample_points,
+            seed=42,  # Consistent sampling
+            geometries=True
+        )
 
-        # Extract statistics
-        min_val = stats.get(f'{index}_min', 0)
-        max_val = stats.get(f'{index}_max', 1)
-        mean_val = stats.get(f'{index}_mean', 0.5)
-        std_val = stats.get(f'{index}_stdDev', 0.1)
+        # Get the sampled data
+        try:
+            sampled_data = sampled_pixels.getInfo()
+        except Exception as e:
+            logger.error(f"Error sampling Earth Engine data: {e}")
+            raise ValueError(f"Failed to sample satellite data: {e}")
 
-        # Create a heatmap grid that follows exact AOI shape
-        grid_data = []
+        # Process real satellite data points
+        pixel_data = []
         all_values = []
-        
-        # Get the actual AOI polygon coordinates for point-in-polygon test
-        polygon_coords = geometry.get('coordinates', [[]])
-        aoi_rings = polygon_coords[0] if polygon_coords and len(polygon_coords) > 0 else []
-        
-        if not aoi_rings:
-            logger.warning("No polygon coordinates found in geometry")
-            # Fallback to circular approximation if polygon unavailable  
-            logger.info("Expected polygon coordinates within geometry structure, will use center distance approximation")
-        
-        def point_in_polygon(x: float, y: float, polygon_coords: list) -> bool:
-            """Check if point (x, y) is inside the AOI polygon using ray casting algorithm"""
-            if not polygon_coords:
-                return False
-            
-            n = len(polygon_coords)
-            inside = False
-            p1x, p1y = polygon_coords[0]
-            for i in range(1, n):
-                p2x, p2y = polygon_coords[i]
-                if y > min(p1y, p2y):
-                    if y <= max(p1y, p2y):
-                        if x <= max(p1x, p2x):
-                            if p1y != p2y:
-                                xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                            if p1x == p2x or x <= xints:
-                                inside = not inside
-                p1x, p1y = p2x, p2y
-            return inside
-        
-        # Generate grid points and check polygon membership
-        import random
-        
-        for i in range(grid_size):
-            for j in range(grid_size):
-                # Calculate position  
-                x_ratio = i / (grid_size - 1) if grid_size > 1 else 0.5
-                y_ratio = j / (grid_size - 1) if grid_size > 1 else 0.5
-                
-                lon = min_lon + x_ratio * (max_lon - min_lon)
-                lat = min_lat + y_ratio * (max_lat - min_lat)
-                
-                # Check if grid point is actually inside the AOI polygon
-                is_inside_aoi = point_in_polygon(lon, lat, aoi_rings)
-                
-                if is_inside_aoi:
-                    # Create realistic satellite-derived values based on location within AOI
-                    # Base value with spatial variation that follows AOI pattern
-                    distance_from_edge = min(
-                        abs(lon - min_lon) / (max_lon - min_lon) * grid_size,
-                        abs(lon - max_lon) / (max_lon - min_lon) * grid_size,
-                        abs(lat - min_lat) / (max_lat - min_lat) * grid_size,
-                        abs(lat - max_lat) / (max_lat - min_lat) * grid_size
-                    )
-                    
-                    # Increase density towards center of the field
-                    center_proximity = 1 - (abs(x_ratio - 0.5) + abs(y_ratio - 0.5)) / 2
-                    
-                    # Random variation for realistic patches
-                    variation = random.uniform(0.88, 1.12)
-                    
-                    # Add edge effects for more real farm patterns
-                    edge_multiplier = 1.05 - distance_from_edge * 0.02
-                    edge_multiplier = max(0.85, edge_multiplier)
-                    
-                    value = mean_val * center_proximity * edge_multiplier * variation
-                    value = max(min_val, min(max_val, value))
-                    
-                    # Only add points that are inside AOI
-                    grid_data.append([i, j, value])
-                    all_values.append(value)
-                # Skip points outside AOI boundary entirely
 
-        # Calculate statistics
+        if sampled_data and 'features' in sampled_data:
+            for feature in sampled_data['features']:
+                if feature['properties'].get(index) is not None:
+                    coords = feature['geometry']['coordinates']
+                    value = feature['properties'][index]
+
+                    pixel_data.append({
+                        'lon': coords[0],
+                        'lat': coords[1],
+                        'value': value
+                    })
+                    all_values.append(value)
+
+        # Calculate real statistics from actual satellite data
         if all_values:
+            sorted_values = sorted(all_values)
+            n = len(sorted_values)
+
             stats = {
                 'min': min(all_values),
                 'max': max(all_values),
                 'mean': sum(all_values) / len(all_values),
+                'median': sorted_values[n//2] if n > 0 else 0,
+                'p10': sorted_values[int(n*0.1)] if n > 0 else 0,
+                'p90': sorted_values[int(n*0.9)] if n > 0 else 0,
+                'std': (sum([(x - sum(all_values)/len(all_values))**2 for x in all_values]) / len(all_values))**0.5,
                 'count': len(all_values)
             }
-
-            sorted_values = sorted(all_values)
-            n = len(sorted_values)
-            stats['median'] = sorted_values[n//2] if n > 0 else 0
-            stats['p10'] = sorted_values[int(n*0.1)] if n > 0 else 0
-            stats['p90'] = sorted_values[int(n*0.9)] if n > 0 else 0
-            stats['std'] = (sum([(x - stats['mean'])**2 for x in all_values]) / len(all_values))**0.5
         else:
             stats = {'min': 0, 'max': 0, 'mean': 0, 'median': 0, 'p10': 0, 'p90': 0, 'std': 0, 'count': 0}
 
         vis_params = self._get_visualization_params(index)
 
-        # Calculate coordinate step size for visualization
-        lon_step = (max_lon - min_lon) / grid_size
-        lat_step = (max_lat - min_lat) / grid_size
+        # Get AOI polygon coordinates for boundary visualization
+        aoi_coordinates = []
+        if geometry.get('type') == 'Polygon' and geometry.get('coordinates'):
+            aoi_coordinates = geometry['coordinates'][0]
 
         return {
             'date': date,
@@ -856,16 +790,14 @@ class EarthEngineService:
                 'min_lat': min_lat,
                 'max_lat': max_lat
             },
-            'grid_size': grid_size,
-            'heatmap_data': grid_data,  # Format: [[x, y, value], ...]
+            'pixel_data': pixel_data,  # Real satellite pixel data with lat/lon
+            'aoi_boundary': aoi_coordinates,  # AOI polygon coordinates for boundary
             'statistics': stats,
             'visualization': vis_params,
-            'geotiff_url': geotiff_url,  # URL for TIF file download
-            'coordinate_system': {
-                'lon_step': lon_step,
-                'lat_step': lat_step,
-                'x_axis': [min_lon + i * lon_step for i in range(grid_size + 1)],
-                'y_axis': [min_lat + j * lat_step for j in range(grid_size + 1)]
+            'metadata': {
+                'sample_scale': sample_scale,
+                'total_pixels': len(pixel_data),
+                'data_source': 'Sentinel-2 Earth Engine'
             }
         }
 

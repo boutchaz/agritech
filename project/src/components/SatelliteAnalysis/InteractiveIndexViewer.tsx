@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Activity, Download, Layers, ZoomIn, MousePointer, Loader } from 'lucide-react';
+import { Activity, Download, Layers, ZoomIn, MousePointer, Loader, Map, BarChart3 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import {
@@ -11,6 +11,7 @@ import {
   InteractiveDataResponse,
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
+import LeafletHeatmapViewer from './LeafletHeatmapViewer';
 
 interface InteractiveIndexViewerProps {
   parcelId: string;
@@ -18,7 +19,7 @@ interface InteractiveIndexViewerProps {
   boundary?: number[][];
 }
 
-type VisualizationType = 'heatmap' | 'scatter';
+type VisualizationType = 'heatmap' | 'scatter' | 'leaflet';
 
 const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   parcelId,
@@ -27,7 +28,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NDVI');
   const [selectedDate, setSelectedDate] = useState('');
-  const [visualizationType, setVisualizationType] = useState<VisualizationType>('heatmap');
+  const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [gridSize, setGridSize] = useState(50);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -80,17 +81,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
     const { heatmap_data, statistics, coordinate_system, index, bounds } = data;
 
-    // Convert to geographic coordinate scatter plot for map overlay
-    const geoData = heatmap_data.map(([x, y, value]) => [
-      coordinate_system.x_axis[x], // longitude
-      coordinate_system.y_axis[y], // latitude 
-      value
-    ]).filter(([, , value]) => value !== null && value !== undefined);
+    // Filter only valid AOI data points from backend - those inside the AOI boundary 
+    const aoIData = heatmap_data.filter(([, , value]) => value !== null && value !== undefined);
 
     return {
       title: {
-        text: `${index} - Satellite Vegetation Analysis`,
-        subtext: `Geographic Analysis for ${data.date}`,
+        text: `${index} AOI Heatmap`,
+        subtext: `Analysis for ${data.date} - Following Parcel Shape`,
         left: 'center',
         textStyle: {
           fontSize: 18,
@@ -107,13 +104,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           color: '#fff'
         },
         formatter: function (params: any) {
-          const [lon, lat, value] = params.data;
+          const [x, y, value] = params.data;
+          const lon = coordinate_system.x_axis[x];
+          const lat = coordinate_system.y_axis[y];
           return `
             <div style="padding: 8px; line-height: 1.4">
-              <strong style="color: #4CAF50; font-size: 14px">${index} Analysis</strong><br/>
+              <strong style="color: #4CAF50; font-size: 14px">${index} AOI Analysis</strong><br/>
               <span style="color: #FFC107">Value: ${value.toFixed(3)}</span><br/>
-              <span style="color: #E3F2FD">Lat: ${lat.toFixed(6)}°</span><br/>
-              <span style="color: #E3F2FD">Lon: ${lon.toFixed(6)}°</span>
+              <span style="color: #E3F2FD">Grid: [${x}, ${y}]</span><br/>
+              <span style="color: #E3F2FD">Position: ${lon.toFixed(4)}°, ${lat.toFixed(4)}°</span>
             </div>
           `;
         }
@@ -123,126 +122,127 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         right: '15%', 
         top: '15%',
         bottom: '5%',
-        containLabel: false
+        containLabel: true
       },
       xAxis: {
-        type: 'value',
-        name: 'Longitude (°)',
+        type: 'category',
+        name: 'X Position',
         nameLocation: 'middle',
-        nameGap: 30,
-        min: bounds.min_lon,
-        max: bounds.max_lon,
+        nameGap: 25,
         axisLabel: {
-          formatter: function(value: number) {
-            return value.toFixed(4);
+          formatter: function(value: string) {
+            return value.toString();
           },
-          color: '#666'
+          color: '#666',
+          interval: Math.max(1, Math.floor(data.grid_size / 8))
         },
         axisLine: {
           show: true,
-          lineStyle: { color: '#ccc' }
+          lineStyle: { color: '#333' }
         },
         splitLine: {
           show: false
-        }
+        },
+        scale: true
       },
       yAxis: {
-        type: 'value', 
-        name: 'Latitude (°)',
+        type: 'category', 
+        name: 'Y Position',
         nameLocation: 'middle',
-        nameGap: 50,
-        min: bounds.min_lat,
-        max: bounds.max_lat,
+        nameGap: 40,
         axisLabel: {
-          formatter: function(value: number) {
-            return value.toFixed(4);
+          formatter: function(value: string) {
+            return value.toString();
           },
-          color: '#666'
+          color: '#666',
+          interval: Math.max(1, Math.floor(data.grid_size / 8))
         },
         axisLine: {
           show: true,
-          lineStyle: { color: '#ccc' }
+          lineStyle: { color: '#333' }
         },
         splitLine: {
           show: false
-        }
+        },
+        scale: true
       },
       visualMap: {
         min: statistics.min,
         max: statistics.max,
         calculable: true,
-        precision: 2,
+        precision: 3,
         orient: 'vertical',
         left: 'right',
         top: 'middle',
         bottom: '20%',
-        itemWidth: 20,
-        itemHeight: 200,
+        itemWidth: 25,
+        itemHeight: 180,
         inRange: {
-          color: ['#8B0000', '#DC143C', '#FF6347', '#FFD700', '#98FB98', '#00FF00']
+          color: ['#8B0000', '#B22222', '#DC143C', '#FF6347', '#FFD700', '#98FB98', '#00FF7F', '#00FF00']
         },
         text: [`${statistics.max.toFixed(2)}`, `${statistics.min.toFixed(2)}`],
         textStyle: {
           fontSize: 11,
           color: '#333'
-        }
+        },
+        realtime: true,
+        inverse: false
       },
       series: [{
-        name: index,
-        type: 'scatter',
-        coordinateSystem: 'cartesian2d',
-        data: geoData.map(([lon, lat, value]) => [lon, lat, value]),
-        symbolSize: function (data: any) {
-          const value = data[2];
-          const base = 6;
-          const max = 16;
-          return Math.max(base, Math.min(max, (value - statistics.min) / (statistics.max - statistics.min) * (max - base) + base));
-        },
-        itemStyle: {
-          borderColor: 'rgba(255,255,255,0.8)',
-          borderWidth: 1.5,
-          opacity: 0.85
-        },
+        name: `${index} Heatmap`,
+        type: 'heatmap',
+        data: aoIData,
         emphasis: {
           itemStyle: {
             shadowBlur: 15,
             shadowColor: 'rgba(0, 0, 0, 0.6)',
-            borderWidth: 2
+            borderWidth: 2,
+            borderColor: '#fff'
           }
         },
+        itemStyle: {
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.95)'
+        },
+        label: {
+          show: false
+        },
+        // Progressive rendering for performance  
+        large: true,
+        progressive: 1000,
         animation: true,
-        animationDuration: 1000
+        animationDuration: 1500
       }],
       graphic: [
-        // GeoTIFF background layer can be added in future iterations
         {
           type: 'group',
-          left: 10,
+          left: 15,
           bottom: 15,
           children: [
             {
               type: 'rect',
               shape: { 
-                width: 200, 
-                height: 125,
-                r: 8
+                width: 210, 
+                height: 130,
+                r: 10
               },
               style: { 
-                fill: 'rgba(0,0,0,0.85)',
-                stroke: '#4CAF50'
+                fill: 'rgba(0,0,0,0.88)',
+                stroke: '#33a453',
+                strokeWidth: 2
               }
             },
             {
               type: 'text',
               style: {
-                text: `Vegetation Analysis\nValues over AOI\n\nMean: ${statistics.mean.toFixed(3)}\nMedian: ${statistics.median.toFixed(3)}\nP10: ${statistics.p10.toFixed(3)}\nP90: ${statistics.p90.toFixed(3)}\nStd: ${statistics.std.toFixed(3)}`,
-                fill: '#fff',
+                text: `Agricultural Analysis\n${index} over AOI Shape\n\nMean: ${statistics.mean.toFixed(4)}\nMedian: ${statistics.median.toFixed(4)}\nP10: ${statistics.p10.toFixed(4)}\nP90: ${statistics.p90.toFixed(4)}\nStd: ${statistics.std.toFixed(4)}`,
+                fill: '#ffffff',
                 fontSize: 11,
-                lineHeight: 15,
-                fontWeight: 'bold'
+                lineHeight: 16,
+                fontWeight: '500'
               },
-              left: 12,
-              top: 8
+              left: 15,
+              top: 12
             }
           ]
         }
@@ -389,7 +389,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               onChange={(e) => setVisualizationType(e.target.value as VisualizationType)}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
-              <option value="heatmap">Heatmap</option>
+              <option value="leaflet">Leaflet Map (Recommended)</option>
+              <option value="heatmap">ECharts Heatmap</option>
               <option value="scatter">Scatter Plot</option>
             </select>
           </div>
@@ -489,19 +490,27 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             </div>
           </div>
 
-          {/* ECharts Visualization */}
-          <div className="bg-white border rounded-lg p-4">
-            <ReactECharts
-              ref={(e) => setChartRef(e)}
-              option={
-                visualizationType === 'heatmap' && 'heatmap_data' in data
-                  ? createHeatmapOption(data as HeatmapDataResponse)
-                  : createScatterOption(data as InteractiveDataResponse)
-              }
-              style={{ height: '600px', width: '100%' }}
-              opts={{ renderer: 'canvas' }}
+          {/* Visualization Display */}
+          {visualizationType === 'leaflet' ? (
+            <LeafletHeatmapViewer
+              parcelId={parcelId}
+              parcelName={parcelName}
+              boundary={boundary}
             />
-          </div>
+          ) : (
+            <div className="bg-white border rounded-lg p-4">
+              <ReactECharts
+                ref={(e) => setChartRef(e)}
+                option={
+                  visualizationType === 'heatmap' && 'pixel_data' in data
+                    ? createHeatmapOption(data as HeatmapDataResponse)
+                    : createScatterOption(data as InteractiveDataResponse)
+                }
+                style={{ height: '600px', width: '100%' }}
+                opts={{ renderer: 'canvas' }}
+              />
+            </div>
+          )}
 
           {/* Interactive Features Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
