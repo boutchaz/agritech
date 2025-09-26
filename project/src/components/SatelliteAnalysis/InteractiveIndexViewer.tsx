@@ -78,154 +78,171 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   };
 
   const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
-    const { heatmap_data, statistics, coordinate_system, visualization, index, bounds, geotiff_url } = data;
+    const { heatmap_data, statistics, coordinate_system, index, bounds } = data;
 
-    // Create proper heatmap grid that follows AOI shape
-    const grid_data = heatmap_data;
-    const xAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
-    const yAxisData = Array.from({ length: data.grid_size }, (_, i) => i);
+    // Convert to geographic coordinate scatter plot for map overlay
+    const geoData = heatmap_data.map(([x, y, value]) => [
+      coordinate_system.x_axis[x], // longitude
+      coordinate_system.y_axis[y], // latitude 
+      value
+    ]).filter(([, , value]) => value !== null && value !== undefined);
 
     return {
       title: {
-        text: `${index} - évolution temporelle`,
-        subtext: data.date,
+        text: `${index} - Satellite Vegetation Analysis`,
+        subtext: `Geographic Analysis for ${data.date}`,
         left: 'center',
         textStyle: {
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: 'bold'
         }
       },
+      backgroundColor: '#fff',
       tooltip: {
-        position: 'top',
+        trigger: 'item',
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        textStyle: {
+          color: '#fff'
+        },
         formatter: function (params: any) {
-          const [x, y, value] = params.data;
-          const lon = coordinate_system.x_axis[x];
-          const lat = coordinate_system.y_axis[y];
+          const [lon, lat, value] = params.data;
           return `
-            <div style="padding: 8px;">
-              <div><strong>${index}: ${value.toFixed(3)}</strong></div>
-              <div>Longitude: ${lon.toFixed(6)}</div>
-              <div>Latitude: ${lat.toFixed(6)}</div>
-              <div>Grid: [${x}, ${y}]</div>
+            <div style="padding: 8px; line-height: 1.4">
+              <strong style="color: #4CAF50; font-size: 14px">${index} Analysis</strong><br/>
+              <span style="color: #FFC107">Value: ${value.toFixed(3)}</span><br/>
+              <span style="color: #E3F2FD">Lat: ${lat.toFixed(6)}°</span><br/>
+              <span style="color: #E3F2FD">Lon: ${lon.toFixed(6)}°</span>
             </div>
           `;
         }
       },
       grid: {
-        height: '70%',
-        top: '15%',
         left: '5%',
-        right: '15%',
-        bottom: '10%',
-        containLabel: true
+        right: '15%', 
+        top: '15%',
+        bottom: '5%',
+        containLabel: false
       },
       xAxis: {
-        type: 'category',
-        data: xAxisData,
-        name: 'Longitude',
-        splitArea: {
-          show: true
-        },
+        type: 'value',
+        name: 'Longitude (°)',
+        nameLocation: 'middle',
+        nameGap: 30,
+        min: bounds.min_lon,
+        max: bounds.max_lon,
         axisLabel: {
           formatter: function(value: number) {
-            const lon = coordinate_system.x_axis[value];
-            return lon ? lon.toFixed(4) : value.toString();
-          }
+            return value.toFixed(4);
+          },
+          color: '#666'
+        },
+        axisLine: {
+          show: true,
+          lineStyle: { color: '#ccc' }
+        },
+        splitLine: {
+          show: false
         }
       },
       yAxis: {
-        type: 'category',
-        data: yAxisData,
-        name: 'Latitude',
-        splitArea: {
-          show: true
-        },
+        type: 'value', 
+        name: 'Latitude (°)',
+        nameLocation: 'middle',
+        nameGap: 50,
+        min: bounds.min_lat,
+        max: bounds.max_lat,
         axisLabel: {
           formatter: function(value: number) {
-            const lat = coordinate_system.y_axis[value];
-            return lat ? lat.toFixed(4) : value.toString();
-          }
+            return value.toFixed(4);
+          },
+          color: '#666'
+        },
+        axisLine: {
+          show: true,
+          lineStyle: { color: '#ccc' }
+        },
+        splitLine: {
+          show: false
         }
       },
       visualMap: {
         min: statistics.min,
         max: statistics.max,
         calculable: true,
+        precision: 2,
         orient: 'vertical',
         left: 'right',
         top: 'middle',
+        bottom: '20%',
+        itemWidth: 20,
+        itemHeight: 200,
         inRange: {
-          color: ['#8B0000', '#FF4500', '#FFD700', '#ADFF2F', '#00FF00']
+          color: ['#8B0000', '#DC143C', '#FF6347', '#FFD700', '#98FB98', '#00FF00']
         },
-        text: [`${statistics.max.toFixed(1)}`, `${statistics.min.toFixed(1)}`],
+        text: [`${statistics.max.toFixed(2)}`, `${statistics.min.toFixed(2)}`],
         textStyle: {
-          fontSize: 12
-        },
-        formatter: function(value: number) {
-          return value.toFixed(2);
+          fontSize: 11,
+          color: '#333'
         }
       },
       series: [{
         name: index,
-        type: 'heatmap',
-        data: grid_data,
-        label: {
-          show: false
+        type: 'scatter',
+        coordinateSystem: 'cartesian2d',
+        data: geoData.map(([lon, lat, value]) => [lon, lat, value]),
+        symbolSize: function (data: any) {
+          const value = data[2];
+          const base = 6;
+          const max = 16;
+          return Math.max(base, Math.min(max, (value - statistics.min) / (statistics.max - statistics.min) * (max - base) + base));
+        },
+        itemStyle: {
+          borderColor: 'rgba(255,255,255,0.8)',
+          borderWidth: 1.5,
+          opacity: 0.85
         },
         emphasis: {
           itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            shadowBlur: 15,
+            shadowColor: 'rgba(0, 0, 0, 0.6)',
+            borderWidth: 2
           }
         },
-        itemStyle: {
-          borderColor: 'transparent'
-        },
-        // Show only the data that follows AOI shape
-        encode: {
-          x: 0,
-          y: 1,
-          itemId: 2
-        }
+        animation: true,
+        animationDuration: 1000
       }],
       graphic: [
-        ...(geotiff_url ? [{
-          type: 'image',
-          left: bounds.min_lon,
-          top: bounds.min_lat,
-          right: bounds.max_lon,
-          bottom: bounds.max_lat,
-          shape: {
-            image: geotiff_url,
-            x: 0,
-            y: 0,
-            width: bounds.max_lon - bounds.min_lon,
-            height: bounds.max_lat - bounds.min_lat
-          },
-          style: {
-            opacity: 0.6
-          },
-          z: -1
-        }] : []),
+        // GeoTIFF background layer can be added in future iterations
         {
           type: 'group',
-          left: 20,
-          bottom: 20,
+          left: 10,
+          bottom: 15,
           children: [
             {
               type: 'rect',
-              shape: { width: 140, height: 120 },
-              style: { fill: '#666', opacity: 0.8 }
+              shape: { 
+                width: 200, 
+                height: 125,
+                r: 8
+              },
+              style: { 
+                fill: 'rgba(0,0,0,0.85)',
+                stroke: '#4CAF50'
+              }
             },
             {
               type: 'text',
               style: {
-                text: `Mean: ${statistics.mean.toFixed(3)}\nMedian: ${statistics.median.toFixed(3)}\nP10: ${statistics.p10.toFixed(3)}\nP90: ${statistics.p90.toFixed(3)}\nStd: ${statistics.std.toFixed(3)}`,
+                text: `Vegetation Analysis\nValues over AOI\n\nMean: ${statistics.mean.toFixed(3)}\nMedian: ${statistics.median.toFixed(3)}\nP10: ${statistics.p10.toFixed(3)}\nP90: ${statistics.p90.toFixed(3)}\nStd: ${statistics.std.toFixed(3)}`,
                 fill: '#fff',
-                fontSize: 12
+                fontSize: 11,
+                lineHeight: 15,
+                fontWeight: 'bold'
               },
-              left: 10,
-              top: 10
+              left: 12,
+              top: 8
             }
           ]
         }
@@ -234,7 +251,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   };
 
   const createScatterOption = (data: InteractiveDataResponse): EChartsOption => {
-    const { pixel_data, statistics, visualization, index } = data;
+    const { pixel_data, visualization, index } = data;
 
     return {
       title: {
