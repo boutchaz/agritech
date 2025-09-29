@@ -70,15 +70,42 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
     try {
       const { data, error } = await supabase
         .from('farm_management_roles')
-        .select(`
-          *,
-          user_profile:user_profiles(first_name, last_name, email)
-        `)
+        .select('*')
         .eq('farm_id', farmId)
         .eq('is_active', true);
 
       if (error) throw error;
-      setRoles(data || []);
+
+      // Fetch user profiles separately
+      const userIds = data?.map(r => r.user_id).filter(id => id) || [];
+      if (userIds.length === 0) {
+        setRoles([]);
+        return;
+      }
+
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      // Fetch emails from auth
+      const emailPromises = userIds.map(async (userId) => {
+        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+        return { id: userId, email: user?.email };
+      });
+      const emailResults = await Promise.all(emailPromises);
+      const emailMap = new Map(emailResults.map(r => [r.id, r.email]));
+
+      // Merge profiles and emails
+      const rolesWithProfiles = data?.map(role => ({
+        ...role,
+        user_profile: {
+          ...profiles?.find(p => p.id === role.user_id),
+          email: emailMap.get(role.user_id)
+        }
+      })) || [];
+
+      setRoles(rolesWithProfiles);
     } catch (error: any) {
       console.error('Error fetching farm roles:', error);
       setError('Failed to load farm roles');
@@ -115,16 +142,42 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
       // Get organization users
       const { data, error } = await supabase
         .from('organization_users')
-        .select(`
-          user_id,
-          role,
-          user_profile:user_profiles(first_name, last_name, email)
-        `)
+        .select('user_id, role_id')
         .eq('organization_id', farmData.organization_id)
         .eq('is_active', true);
 
       if (error) throw error;
-      setOrganizationUsers(data || []);
+
+      // Fetch user profiles separately
+      const userIds = data?.map(u => u.user_id).filter(id => id) || [];
+      if (userIds.length === 0) {
+        setOrganizationUsers([]);
+        return;
+      }
+
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      // Fetch emails from auth
+      const emailPromises = userIds.map(async (userId) => {
+        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+        return { id: userId, email: user?.email };
+      });
+      const emailResults = await Promise.all(emailPromises);
+      const emailMap = new Map(emailResults.map(r => [r.id, r.email]));
+
+      // Merge profiles and emails
+      const usersWithProfiles = data?.map(user => ({
+        ...user,
+        user_profile: {
+          ...profiles?.find(p => p.id === user.user_id),
+          email: emailMap.get(user.user_id)
+        }
+      })) || [];
+
+      setOrganizationUsers(usersWithProfiles);
     } catch (error: any) {
       console.error('Error fetching organization users:', error);
     }

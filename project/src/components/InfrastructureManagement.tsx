@@ -5,6 +5,8 @@ import { useAuth } from './MultiTenantAuthProvider';
 
 interface Structure {
   id: string;
+  organization_id: string;
+  farm_id?: string;
   name: string;
   type: 'stable' | 'technical_room' | 'basin' | 'well';
   location: {
@@ -12,8 +14,8 @@ interface Structure {
     lng: number;
   };
   installation_date: string;
-  condition: string;
-  usage: string;
+  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'needs_repair';
+  usage?: string;
   structure_details: {
     // Stable
     width?: number;
@@ -40,6 +42,13 @@ interface Structure {
     depth?: number;
     pump_type?: string;
     pump_power?: number;
+  };
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  farm?: {
+    name: string;
   };
 }
 
@@ -81,11 +90,21 @@ const InfrastructureManagement: React.FC = () => {
 
   const fetchStructures = async () => {
     try {
-      // For now, fetch all structures without organization filter
-      // This will work once the table is created
+      if (!currentOrganization) {
+        setError('No organization selected');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch structures for the current organization
       const { data, error } = await supabase
         .from('structures')
-        .select('*')
+        .select(`
+          *,
+          farm:farms(name)
+        `)
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
@@ -513,14 +532,25 @@ const InfrastructureManagement: React.FC = () => {
   };
 
   const handleAddStructure = async () => {
+    if (!newStructure.name || !newStructure.type || !currentOrganization) {
+      setError('Name, type, and organization are required');
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('structures')
         .insert([{
           ...newStructure,
-          organization_id: currentOrganization?.id || '123e4567-e89b-12d3-a456-426614174000' // Default org ID
+          organization_id: currentOrganization.id,
+          farm_id: currentFarm?.id || null,
+          location: newStructure.location || { lat: 0, lng: 0 },
+          structure_details: newStructure.structure_details || {}
         }])
-        .select()
+        .select(`
+          *,
+          farm:farms(name)
+        `)
         .single();
 
       if (error) throw error;
@@ -569,7 +599,7 @@ const InfrastructureManagement: React.FC = () => {
     try {
       const { error } = await supabase
         .from('structures')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;

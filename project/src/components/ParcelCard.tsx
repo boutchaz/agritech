@@ -11,6 +11,7 @@ import IndicesCalculator from './SatelliteAnalysis/IndicesCalculator';
 import TimeSeriesChart from './SatelliteAnalysis/TimeSeriesChart';
 import StatisticsCalculator from './SatelliteAnalysis/StatisticsCalculator';
 import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
+import ParcelReportGenerator from './ParcelReportGenerator';
 
 interface Parcel {
   id: string;
@@ -44,13 +45,13 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
   const tabs = [
     { id: 'overview', name: 'Vue d\'ensemble', icon: ChartBar },
     { id: 'soil', name: 'Analyse Sol', icon: Flask },
-    { id: 'sensors', name: 'Capteurs', icon: Wifi },
+    // { id: 'sensors', name: 'Capteurs', icon: Wifi },
     { id: 'satellite', name: 'Imagerie', icon: Satellite },
-    { id: 'fruit-trees', name: 'Arbres Fruitiers', icon: Tree },
-    { id: 'yield', name: 'Rendement', icon: TrendingUp },
-    { id: 'applications', name: 'Applications', icon: Sprout },
-    { id: 'products', name: 'Produits', icon: Database },
-    { id: 'ai', name: 'IA', icon: Brain },
+    // { id: 'fruit-trees', name: 'Arbres Fruitiers', icon: Tree },
+    // { id: 'yield', name: 'Rendement', icon: TrendingUp },
+    // { id: 'applications', name: 'Applications', icon: Sprout },
+    // { id: 'products', name: 'Produits', icon: Database },
+    // { id: 'ai', name: 'IA', icon: Brain },
     { id: 'reports', name: 'Rapports', icon: FileSpreadsheet },
   ];
 
@@ -565,34 +566,35 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
       case 'reports':
         return (
-          <div className="space-y-4">
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
-              <h5 className="font-medium mb-3">Interventions prévues</h5>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
-                  <span>Taille d'été</span>
-                  <span className="font-medium">20/06/2025</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm">
-                  <span>Traitement foliaire</span>
-                  <span className="font-medium">25/06/2025</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-purple-50 dark:bg-purple-900/20 rounded text-sm">
-                  <span>Récolte prévue</span>
-                  <span className="font-medium">15/09/2025</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
-              <h6 className="font-medium text-purple-900 dark:text-purple-100 mb-2 text-sm">Actions recommandées</h6>
-              <ul className="text-xs text-purple-800 dark:text-purple-200 space-y-1">
-                <li>• Ajuster l'irrigation selon la météo</li>
-                <li>• Surveiller l'état sanitaire des arbres</li>
-                <li>• Programmer la fertilisation ciblée</li>
-              </ul>
-            </div>
-          </div>
+          <ParcelReportGenerator
+            parcelId={parcel.id}
+            parcelName={parcel.name}
+            parcelData={{
+              parcel,
+              metrics: {
+                ndvi: parseFloat(data.ndvi),
+                irrigation: data.irrigation,
+                yield: parseFloat(data.yield),
+                health: data.health,
+                soil_moisture: randomValues.soilMoisture,
+                soil_temp: randomValues.soilTemp
+              },
+              analysis: {
+                soil: {
+                  ph: parseFloat(randomValues.ph),
+                  organicMatter: parseFloat(randomValues.organicMatter),
+                  nitrogen: parseFloat(randomValues.nitrogen),
+                  phosphorus: parseFloat(randomValues.phosphorus),
+                  potassium: parseFloat(randomValues.potassium)
+                },
+                recommendations: [
+                  `Apport de compost: ${randomValues.compost}t/ha`,
+                  `Chaulage: ${randomValues.lime}t/ha`,
+                  `Engrais NPK: ${randomValues.npk}kg/ha`
+                ]
+              }
+            }}
+          />
         );
 
       default:

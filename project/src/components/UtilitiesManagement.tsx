@@ -3,6 +3,7 @@ import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, C
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useRoleBasedAccess, PermissionGuard, RoleGuard } from '../hooks/useRoleBasedAccess';
 
 interface Utility {
   id: string;
@@ -47,6 +48,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 
 const UtilitiesManagement: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
+  const { hasPermission, hasRole, userRole } = useRoleBasedAccess();
   const [utilities, setUtilities] = useState<Utility[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -723,13 +725,15 @@ const UtilitiesManagement: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400 mb-6">
             Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)
           </p>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter une charge
-          </button>
+          <PermissionGuard resource="utilities" action="create">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une charge
+            </button>
+          </PermissionGuard>
         </div>
       )}
 
@@ -841,18 +845,22 @@ const UtilitiesManagement: React.FC = () => {
                             <Download className="h-4 w-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => setEditingUtility(utility)}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUtility(utility.id)}
-                          className="text-gray-400 hover:text-red-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <PermissionGuard resource="utilities" action="update">
+                          <button
+                            onClick={() => setEditingUtility(utility)}
+                            className="text-gray-400 hover:text-gray-500"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard resource="utilities" action="delete">
+                          <button
+                            onClick={() => handleDeleteUtility(utility.id)}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </PermissionGuard>
                       </div>
                     </div>
                   ))}
@@ -893,18 +901,22 @@ const UtilitiesManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => setEditingUtility(utility)}
-                    className="text-gray-400 hover:text-gray-500"
-                  >
-                    <Edit2 className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteUtility(utility.id)}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  <PermissionGuard resource="utilities" action="update">
+                    <button
+                      onClick={() => setEditingUtility(utility)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <Edit2 className="h-5 w-5" />
+                    </button>
+                  </PermissionGuard>
+                  <PermissionGuard resource="utilities" action="delete">
+                    <button
+                      onClick={() => handleDeleteUtility(utility.id)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </PermissionGuard>
                 </div>
               </div>
 
@@ -1051,18 +1063,22 @@ const UtilitiesManagement: React.FC = () => {
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      <button
-                        onClick={() => setEditingUtility(utility)}
-                        className="text-gray-400 hover:text-gray-500"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUtility(utility.id)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <PermissionGuard resource="utilities" action="update">
+                        <button
+                          onClick={() => setEditingUtility(utility)}
+                          className="text-gray-400 hover:text-gray-500"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard resource="utilities" action="delete">
+                        <button
+                          onClick={() => handleDeleteUtility(utility.id)}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </td>
                 </tr>
@@ -1074,6 +1090,23 @@ const UtilitiesManagement: React.FC = () => {
 
       {/* Dashboard View */}
       {viewMode === 'dashboard' && (
+        <PermissionGuard
+          resource="utilities"
+          action="read"
+          fallback={
+            <div className="text-center py-12">
+              <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Accès limité au tableau de bord
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Votre rôle ne permet pas d'accéder aux analyses financières détaillées.
+              </p>
+            </div>
+          }
+        >
         <div className="space-y-6">
           {/* Chart Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1215,6 +1248,7 @@ const UtilitiesManagement: React.FC = () => {
             </div>
           </div>
         </div>
+        </PermissionGuard>
       )}
 
       {/* Add/Edit Modal */}

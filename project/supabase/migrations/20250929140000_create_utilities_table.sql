@@ -31,65 +31,65 @@ ALTER TABLE public.utilities ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can view utilities from their organization\'s farms'
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can view utilities from their organization''s farms'
   ) THEN
-CREATE POLICY "Users can view utilities from their organization's farms" ON public.utilities
-    FOR SELECT USING (
-        farm_id IN (
-            SELECT f.id FROM public.farms f
-            JOIN public.organizations o ON f.organization_id = o.id
-            JOIN public.organization_users uo ON o.id = uo.organization_id
-            WHERE uo.user_id = auth.uid()
-        )
-    );
+    CREATE POLICY "Users can view utilities from their organization's farms" ON public.utilities
+        FOR SELECT USING (
+            farm_id IN (
+                SELECT f.id FROM public.farms f
+                JOIN public.organizations o ON f.organization_id = o.id
+                JOIN public.organization_users uo ON o.id = uo.organization_id
+                WHERE uo.user_id = auth.uid()
+            )
+        );
   END IF;
 END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can insert utilities to their organization\'s farms'
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can insert utilities to their organization''s farms'
   ) THEN
-CREATE POLICY "Users can insert utilities to their organization's farms" ON public.utilities
-    FOR INSERT WITH CHECK (
-        farm_id IN (
-            SELECT f.id FROM public.farms f
-            JOIN public.organizations o ON f.organization_id = o.id
-            JOIN public.organization_users uo ON o.id = uo.organization_id
-            WHERE uo.user_id = auth.uid()
-        )
-    );
+    CREATE POLICY "Users can insert utilities to their organization's farms" ON public.utilities
+        FOR INSERT WITH CHECK (
+            farm_id IN (
+                SELECT f.id FROM public.farms f
+                JOIN public.organizations o ON f.organization_id = o.id
+                JOIN public.organization_users uo ON o.id = uo.organization_id
+                WHERE uo.user_id = auth.uid()
+            )
+        );
   END IF;
 END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can update utilities from their organization\'s farms'
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can update utilities from their organization''s farms'
   ) THEN
-CREATE POLICY "Users can update utilities from their organization's farms" ON public.utilities
-    FOR UPDATE USING (
-        farm_id IN (
-            SELECT f.id FROM public.farms f
-            JOIN public.organizations o ON f.organization_id = o.id
-            JOIN public.organization_users uo ON o.id = uo.organization_id
-            WHERE uo.user_id = auth.uid()
-        )
-    );
+    CREATE POLICY "Users can update utilities from their organization's farms" ON public.utilities
+        FOR UPDATE USING (
+            farm_id IN (
+                SELECT f.id FROM public.farms f
+                JOIN public.organizations o ON f.organization_id = o.id
+                JOIN public.organization_users uo ON o.id = uo.organization_id
+                WHERE uo.user_id = auth.uid()
+            )
+        );
   END IF;
 END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can delete utilities from their organization\'s farms'
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='utilities' AND policyname='Users can delete utilities from their organization''s farms'
   ) THEN
-CREATE POLICY "Users can delete utilities from their organization's farms" ON public.utilities
-    FOR DELETE USING (
-        farm_id IN (
-            SELECT f.id FROM public.farms f
-            JOIN public.organizations o ON f.organization_id = o.id
-            JOIN public.organization_users uo ON o.id = uo.organization_id
-            WHERE uo.user_id = auth.uid()
-        )
-    );
+    CREATE POLICY "Users can delete utilities from their organization's farms" ON public.utilities
+        FOR DELETE USING (
+            farm_id IN (
+                SELECT f.id FROM public.farms f
+                JOIN public.organizations o ON f.organization_id = o.id
+                JOIN public.organization_users uo ON o.id = uo.organization_id
+                WHERE uo.user_id = auth.uid()
+            )
+        );
   END IF;
 END $$;
 
@@ -103,8 +103,12 @@ DO $$ BEGIN
       WHERE p.proname='handle_updated_at' AND n.nspname='public'
     ) THEN
       CREATE OR REPLACE FUNCTION public.handle_updated_at()
-      RETURNS trigger LANGUAGE plpgsql AS $$
-      BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+      RETURNS trigger LANGUAGE plpgsql AS $func$
+      BEGIN
+        NEW.updated_at = now();
+        RETURN NEW;
+      END;
+      $func$;
     END IF;
     CREATE TRIGGER handle_updated_at_utilities
       BEFORE UPDATE ON public.utilities
