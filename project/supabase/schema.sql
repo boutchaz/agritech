@@ -1061,6 +1061,12 @@ ALTER TABLE public.parcels
   ADD COLUMN IF NOT EXISTS perimeter numeric(12,2),
   ADD COLUMN IF NOT EXISTS calculated_area numeric(10,2);
 
+-- Add new parcel fields
+ALTER TABLE public.parcels
+  ADD COLUMN IF NOT EXISTS variety text,
+  ADD COLUMN IF NOT EXISTS planting_date date,
+  ADD COLUMN IF NOT EXISTS planting_type text CHECK (planting_type IN ('traditional', 'intensive', 'super_intensive', 'organic'));
+
 -- Reload schema cache after adding additional columns
 NOTIFY pgrst, 'reload schema';
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -26,18 +26,30 @@ export function useParcels(farmId: string | null) {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    // Invalidate any pending requests
+    requestIdRef.current++;
     if (farmId) {
+      setLoading(true);
+      setError(null);
       fetchParcels();
     } else {
       setParcels([]);
       setLoading(false);
+      setError(null);
     }
+
+    return () => {
+      // Bump the request id so any in-flight resolves are ignored
+      requestIdRef.current++;
+    };
   }, [farmId]);
 
   const fetchParcels = async () => {
     if (!farmId) return;
+    const myRequestId = ++requestIdRef.current;
 
     try {
       // Validate UUID format (v1-5). If it doesn't match, skip strict validation rather than failing.
@@ -51,13 +63,18 @@ export function useParcels(farmId: string | null) {
         .select('*')
         .eq('farm_id', farmId);
 
+      if (requestIdRef.current !== myRequestId) return; // stale result
+
       if (error) throw error;
 
       setParcels(data || []);
     } catch (err) {
+      if (requestIdRef.current !== myRequestId) return; // ignore stale error
       setError(err instanceof Error ? err.message : 'Error fetching parcels');
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === myRequestId) {
+        setLoading(false);
+      }
     }
   };
 

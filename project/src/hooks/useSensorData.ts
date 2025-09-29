@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import type { SensorData } from '../types';
 
 const SOCKET_URL = 'wss://your-sensor-websocket-url';
+const DISABLE_SENSORS = true;
 
 export function useSensorData() {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
@@ -10,6 +11,12 @@ export function useSensorData() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    if (DISABLE_SENSORS) {
+      // Sensors temporarily disabled
+      setIsConnected(false);
+      return () => {};
+    }
+
     const socket = io(SOCKET_URL);
 
     socket.on('connect', () => {
@@ -31,7 +38,7 @@ export function useSensorData() {
     });
 
     // Simulate sensor data for development
-    if (process.env.NODE_ENV === 'development') {
+    if (!DISABLE_SENSORS && process.env.NODE_ENV === 'development') {
       const interval = setInterval(() => {
         const mockData: SensorData = {
           id: Date.now().toString(),

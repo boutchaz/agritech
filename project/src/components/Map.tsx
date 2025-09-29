@@ -13,12 +13,11 @@ import Polygon from 'ol/geom/Polygon';
 import Circle from 'ol/geom/Circle';
 import { fromLonLat, transform } from 'ol/proj';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
-import Overlay from 'ol/Overlay';
 import Draw from 'ol/interaction/Draw';
 import type { SensorData } from '../types';
 import { useParcels } from '../hooks/useParcels';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
-import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Trash2 } from 'lucide-react';
+import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
 
@@ -53,6 +52,10 @@ interface ParcelDetails {
   boundary?: number[][];
   calculated_area?: number;
   perimeter?: number;
+  // New parcel fields
+  variety?: string;
+  planting_date?: string;
+  planting_type?: string;
 }
 
 interface SatelliteIndicesResult {
@@ -87,7 +90,6 @@ const MapComponent: React.FC<MapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -98,9 +100,15 @@ const MapComponent: React.FC<MapProps> = ({
     soil_type: '',
     area: 0,
     planting_density: 0,
-    irrigation_type: ''
+    irrigation_type: '',
+    variety: '',
+    planting_date: '',
+    planting_type: ''
   });
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('osm');
+  const [showGeolocPrompt, setShowGeolocPrompt] = useState(false);
+  const [showPlaceNames, setShowPlaceNames] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelDetails | null>(null);
   const [drawingMode, setDrawingMode] = useState<'manual' | 'assisted'>('manual');
   const [autoSnapEnabled, setAutoSnapEnabled] = useState(true);
@@ -117,6 +125,37 @@ const MapComponent: React.FC<MapProps> = ({
   const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [userLocationFeature, setUserLocationFeature] = useState<Feature | null>(null);
   const [indicesResults, setIndicesResults] = useState<SatelliteIndicesResult[]>([]);
+  const [popupData, setPopupData] = useState<{
+    position: [number, number] | null;
+    content: string;
+    visible: boolean;
+  }>({
+    position: null,
+    content: '',
+    visible: false
+  });
+
+  // Function to convert map coordinates to pixel position
+  const getPopupPixelPosition = (mapCoords: [number, number]) => {
+    if (!mapInstanceRef.current) return { left: '50%', top: '50%' };
+
+    try {
+      const pixel = mapInstanceRef.current.getPixelFromCoordinate(
+        fromLonLat([mapCoords[0], mapCoords[1]])
+      );
+
+      if (pixel) {
+        return {
+          left: `${pixel[0]}px`,
+          top: `${pixel[1]}px`
+        };
+      }
+    } catch (error) {
+      console.warn('Error converting coordinates to pixels:', error);
+    }
+
+    return { left: '50%', top: '50%' };
+  };
   const [timeSeriesResults, setTimeSeriesResults] = useState<TimeSeriesResult | null>(null);
   const [dateRange, setDateRange] = useState({
     start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -126,7 +165,7 @@ const MapComponent: React.FC<MapProps> = ({
   const { addParcel, deleteParcel, parcels: hookParcels } = farmId ? useParcels(farmId) : { addParcel: null, deleteParcel: null, parcels: [] };
 
   // Use prop parcels if provided, otherwise fall back to hook parcels
-  const parcels = propParcels || hookParcels;
+  const parcels = Array.isArray(propParcels) ? propParcels : (Array.isArray(hookParcels) ? hookParcels : []);
   const { 
     calculateIndices, 
     getTimeSeries, 
@@ -145,9 +184,96 @@ const MapComponent: React.FC<MapProps> = ({
     if ('permissions' in navigator) {
       navigator.permissions.query({ name: 'geolocation' }).then((result) => {
         setLocationPermission(result.state as 'prompt' | 'granted' | 'denied');
+        try {
+          const asked = localStorage.getItem('agritech:map:geolocPrompted');
+          if (!asked && (result.state === 'prompt' || result.state === 'granted')) {
+            setShowGeolocPrompt(true);
+          }
+        } catch {}
       });
     }
   }, [loadAvailableIndices]);
+
+  // Handle place names visibility
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const layers = mapInstanceRef.current.getLayers();
+      const layerArray = layers.getArray();
+
+      // Find the labels layer
+      layerArray.forEach((layer) => {
+        if (layer instanceof TileLayer) {
+          const source = layer.getSource();
+          if (source instanceof XYZ) {
+            const url = source.getUrls()?.[0];
+            if (url?.includes('World_Boundaries_and_Places')) {
+              layer.setVisible(showPlaceNames);
+            }
+          }
+        }
+      });
+    }
+  }, [showPlaceNames]);
+
+  // Handle full-screen mode
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+
+    if (isFullScreen) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when in full-screen
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Resize map when entering/exiting full-screen
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.updateSize();
+        } catch (error) {
+          console.warn('Error updating map size:', error);
+        }
+      }
+    }, 200);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+      clearTimeout(timer);
+    };
+  }, [isFullScreen]);
+
+  // Handle map type changes (since we removed DOM manipulation)
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const layers = mapInstanceRef.current.getLayers();
+      const layerArray = layers.getArray();
+
+      // Find OSM, satellite, and labels layers
+      layerArray.forEach((layer) => {
+        if (layer instanceof TileLayer) {
+          const source = layer.getSource();
+          if (source instanceof OSM) {
+            layer.setVisible(mapType === 'osm');
+          } else if (source instanceof XYZ) {
+            const url = source.getUrls()?.[0];
+            if (url?.includes('World_Imagery')) {
+              layer.setVisible(mapType === 'satellite');
+            } else if (url?.includes('World_Boundaries_and_Places')) {
+              // Labels controlled by showPlaceNames, not mapType
+              layer.setVisible(showPlaceNames);
+            }
+          }
+        }
+      });
+    }
+  }, [mapType, showPlaceNames]);
 
   // Center map on selected parcel when it changes
   useEffect(() => {
@@ -172,7 +298,7 @@ const MapComponent: React.FC<MapProps> = ({
           });
 
           // Highlight the selected feature and unhighlight others
-          features.forEach(f => {
+          features.forEach((f: Feature) => {
             if (f.get('type') === 'Parcelle') {
               if (f.get('parcelId') === selectedParcelId) {
                 f.setStyle(parcelStyles.selected);
@@ -204,10 +330,10 @@ const MapComponent: React.FC<MapProps> = ({
 
           if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
             // Already in EPSG:3857
-            coords = parcel.boundary.map(coord => [coord[0], coord[1]]);
+            coords = parcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
           } else {
             // Convert from geographic
-            coords = parcel.boundary.map(coord => fromLonLat([coord[0], coord[1]]));
+            coords = parcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
           }
 
           const polygon = new Polygon([coords]);
@@ -266,10 +392,14 @@ const MapComponent: React.FC<MapProps> = ({
       }
 
       setLocationPermission('granted');
+      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}
+      setShowGeolocPrompt(false);
     } catch (error) {
       console.error('Location error:', error);
       setLocationPermission('denied');
       alert(error instanceof Error ? error.message : 'Could not get your location');
+      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}
+      setShowGeolocPrompt(false);
     }
   };
 
@@ -387,6 +517,17 @@ const MapComponent: React.FC<MapProps> = ({
     }
   };
 
+  // Get standard planting density based on planting type (trees per hectare)
+  const getStandardDensity = (plantingType: string): number => {
+    const densityMap: Record<string, number> = {
+      'traditional': 100,        // Traditionnelle: 100 arbres/ha (12m x 8m spacing)
+      'intensive': 200,          // Intensive: 200 arbres/ha (7m x 7m spacing)
+      'super_intensive': 400,    // Super-intensive: 400 arbres/ha (5m x 5m spacing)
+      'organic': 80              // Biologique: 80 arbres/ha (larger spacing for organic practices)
+    };
+    return densityMap[plantingType] || 0;
+  };
+
   // Normalize irrigation type to DB-allowed tokens
   const normalizeIrrigationType = (value: string): 'drip' | 'sprinkler' | 'flood' | 'none' | undefined => {
     const trimmed = (value || '').trim();
@@ -406,7 +547,17 @@ const MapComponent: React.FC<MapProps> = ({
   };
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    try {
+      if (!mapRef.current) {
+        console.warn('Map ref not available');
+        return;
+      }
+
+      // Clear any existing map instance
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setTarget(undefined);
+        mapInstanceRef.current = null;
+      }
 
     const vectorSource = new VectorSource();
     const vectorLayer = new VectorLayer({
@@ -429,11 +580,22 @@ const MapComponent: React.FC<MapProps> = ({
       visible: mapType === 'satellite'
     });
 
+    // Labels overlay (place names) - always available
+    const labelsLayer = new TileLayer({
+      source: new XYZ({
+        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        maxZoom: 19,
+        attributions: 'Labels © Esri'
+      }),
+      visible: showPlaceNames
+    });
+
     const map = new Map({
       target: mapRef.current,
       layers: [
         osmLayer,
         satelliteLayer,
+        labelsLayer,
         vectorLayer,
       ],
       view: new View({
@@ -442,38 +604,10 @@ const MapComponent: React.FC<MapProps> = ({
       }),
     });
 
-    // Add layer switcher control
-    const layerSwitcher = document.createElement('div');
-    layerSwitcher.className = 'layer-switcher';
-    layerSwitcher.style.position = 'absolute';
-    layerSwitcher.style.top = '10px';
-    layerSwitcher.style.right = '10px';
-    layerSwitcher.style.backgroundColor = 'white';
-    layerSwitcher.style.padding = '5px';
-    layerSwitcher.style.borderRadius = '4px';
-    layerSwitcher.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    // Note: Using React-based full-screen instead of OpenLayers FullScreen control
 
-    const switchButton = document.createElement('button');
-    switchButton.textContent = mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte';
-    switchButton.className = 'px-3 py-1 bg-white text-gray-700 rounded border border-gray-300 hover:bg-gray-50';
-    switchButton.onclick = () => {
-      const newType = mapType === 'osm' ? 'satellite' : 'osm';
-      setMapType(newType);
-      osmLayer.setVisible(newType === 'osm');
-      satelliteLayer.setVisible(newType === 'satellite');
-      switchButton.textContent = newType === 'osm' ? 'Vue Satellite' : 'Vue Carte';
-    };
 
-    layerSwitcher.appendChild(switchButton);
-    map.getViewport().appendChild(layerSwitcher);
-
-    const popup = new Overlay({
-      element: popupRef.current!,
-      positioning: 'bottom-center',
-      offset: [0, -10],
-      autoPan: true,
-    });
-    map.addOverlay(popup);
+    // Popup now handled via React state instead of OpenLayers overlay
 
     if (farmId && enableDrawing) {
       const draw = new Draw({
@@ -499,7 +633,7 @@ const MapComponent: React.FC<MapProps> = ({
         if (vectorSourceRef.current) {
           const tempFeatures = vectorSourceRef.current.getFeatures()
             .filter(f => f.get('temp') === true);
-          tempFeatures.forEach(f => vectorSourceRef.current?.removeFeature(f));
+          tempFeatures.forEach((f: Feature) => vectorSourceRef.current?.removeFeature(f));
         }
       });
 
@@ -566,10 +700,10 @@ const MapComponent: React.FC<MapProps> = ({
         // Geographic coordinates should be between -180 to 180 for longitude and -90 to 90 for latitude
         if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
           console.log(`EPSG:3857 detected - Using coordinates as-is: [${firstCoord[0]}, ${firstCoord[1]}]`);
-          coordinates = parcel.boundary.map(coord => [coord[0], coord[1]]);
+          coordinates = parcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
         } else {
           console.log(`Geographic coords detected - Converting to EPSG:3857: [${firstCoord[0]}, ${firstCoord[1]}]`);
-          coordinates = parcel.boundary.map(coord => fromLonLat([coord[0], coord[1]]));
+          coordinates = parcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
         }
 
         console.log('Final coordinates for rendering:', coordinates[0], 'to', coordinates[coordinates.length - 1]);
@@ -648,10 +782,10 @@ const MapComponent: React.FC<MapProps> = ({
       vectorSource.addFeatures([circle, marker]);
     });
 
-    sensors.forEach(sensor => {
+    (sensors || []).forEach(sensor => {
       if (!sensor.location) return;
 
-      const coordinates = sensor.location.split(',').map(Number);
+      const coordinates = typeof sensor.location === 'string' ? sensor.location.split(',').map(Number) : [];
       if (coordinates.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) return;
 
       const feature = new Feature({
@@ -679,9 +813,13 @@ const MapComponent: React.FC<MapProps> = ({
     });
 
     map.on('click', (event) => {
-      const feature = map.forEachFeatureAtPixel(event.pixel, feature => feature);
+      const featureLike = map.forEachFeatureAtPixel(event.pixel, f => f);
 
-      if (feature) {
+      if (featureLike) {
+        if (!(featureLike instanceof Feature)) {
+          return;
+        }
+        const feature = featureLike as Feature;
         const properties = feature.getProperties();
         const geometry = feature.getGeometry();
 
@@ -714,9 +852,11 @@ const MapComponent: React.FC<MapProps> = ({
               feature.setStyle(parcelStyles.selected);
 
               // Remove highlight from other parcels
-              vectorSource.getFeatures().forEach(f => {
-                if (f !== feature && f.get('type') === 'Parcelle') {
-                  f.setStyle(parcelStyles.default);
+              vectorSource.getFeatures().forEach((f) => {
+                if (f instanceof Feature) {
+                  if (f !== feature && f.get('type') === 'Parcelle') {
+                    f.setStyle(parcelStyles.default);
+                  }
                 }
               });
 
@@ -735,11 +875,12 @@ const MapComponent: React.FC<MapProps> = ({
           }
 
           if (content) {
-            popup.setPosition(center);
-            if (popupRef.current) {
-              popupRef.current.innerHTML = content;
-              popupRef.current.style.display = 'block';
-            }
+            const [lng, lat] = transform(center, 'EPSG:3857', 'EPSG:4326');
+            setPopupData({
+              position: [lng, lat],
+              content: content,
+              visible: true
+            });
           }
         }
         // Handle sensors and other point features
@@ -760,19 +901,18 @@ const MapComponent: React.FC<MapProps> = ({
               </div>
             `;
 
-            popup.setPosition(coordinates);
-            if (popupRef.current) {
-              popupRef.current.innerHTML = content;
-              popupRef.current.style.display = 'block';
-            }
+            const [lng, lat] = transform(coordinates, 'EPSG:3857', 'EPSG:4326');
+            setPopupData({
+              position: [lng, lat],
+              content: content,
+              visible: true
+            });
           }
         }
       } else {
-        if (popupRef.current) {
-          popupRef.current.style.display = 'none';
-        }
+        setPopupData(prev => ({ ...prev, visible: false }));
         // Remove highlight from all parcels
-        vectorSource.getFeatures().forEach(f => {
+        vectorSource.getFeatures().forEach((f: Feature) => {
           if (f.get('type') === 'Parcelle') {
             f.setStyle(parcelStyles.default);
           }
@@ -793,10 +933,10 @@ const MapComponent: React.FC<MapProps> = ({
 
         if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
           // Already in EPSG:3857
-          coords = selectedParcel.boundary.map(coord => [coord[0], coord[1]]);
+          coords = selectedParcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
         } else {
           // Convert from geographic
-          coords = selectedParcel.boundary.map(coord => fromLonLat([coord[0], coord[1]]));
+          coords = selectedParcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
         }
 
         const polygon = new Polygon([coords]);
@@ -818,7 +958,7 @@ const MapComponent: React.FC<MapProps> = ({
         parcelsWithBoundaries.forEach(parcel => {
           const firstCoord = parcel.boundary![0];
 
-          parcel.boundary!.forEach(coord => {
+          parcel.boundary!.forEach((coord: number[]) => {
             let x, y;
 
             if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
@@ -845,9 +985,30 @@ const MapComponent: React.FC<MapProps> = ({
       }
     }
 
-    return () => {
-      map.setTarget(undefined);
-    };
+      return () => {
+        // Proper cleanup
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setTarget(undefined);
+          mapInstanceRef.current = null;
+        }
+        if (vectorSourceRef.current) {
+          vectorSourceRef.current.clear();
+          vectorSourceRef.current = null;
+        }
+        if (drawInteractionRef.current) {
+          drawInteractionRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      // Return a cleanup function even if there was an error
+      return () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setTarget(undefined);
+          mapInstanceRef.current = null;
+        }
+      };
+    }
   }, [center, zones, sensors, parcels, farmId, enableDrawing, mapType, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect]);
 
   const handleSaveParcel = async () => {
@@ -871,7 +1032,10 @@ const MapComponent: React.FC<MapProps> = ({
         soil_type: '',
         area: 0,
         planting_density: 0,
-        irrigation_type: ''
+        irrigation_type: '',
+        variety: '',
+        planting_date: '',
+        planting_type: ''
       });
       setCalculatedArea(0);
       setCalculatedPerimeter(0);
@@ -893,18 +1057,80 @@ const MapComponent: React.FC<MapProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="relative w-full h-96">
-        <div ref={mapRef} className="w-full h-full" />
+    <>
+      {isFullScreen && <div className="fixed inset-0 z-40 bg-white" />}
+      <div className={isFullScreen ? "fixed inset-0 z-50" : "space-y-4"}>
+        <div className={`relative w-full ${isFullScreen ? "h-full" : "h-96"}`}>
         <div
-          ref={popupRef}
-          className="absolute bg-white rounded-lg shadow-lg hidden"
-          style={{ minWidth: '200px' }}
+          ref={mapRef}
+          className="w-full h-full"
+          key="openlayers-map-container"
         />
+
+        {/* Full-Screen Close Button */}
+        {isFullScreen && (
+          <div className="absolute top-4 left-4 z-50">
+            <button
+              onClick={() => setIsFullScreen(false)}
+              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              title="Quitter le plein écran (Échap)"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+        )}
+
+        {/* First-visit geolocation prompt */}
+        {/* {showGeolocPrompt && (
+          <div className="absolute top-4 left-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-4 w-72 sm:w-80 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div className="pr-2">
+                  <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">Activer la localisation ?</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Nous centrerons la carte sur votre position actuelle.</p>
+                </div>
+                <button
+                  className="text-gray-400 hover:text-gray-600"
+                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
+                  aria-label="Fermer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={requestUserLocation}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Activer
+                </button>
+                <button
+                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Plus tard
+                </button>
+              </div>
+            </div>
+          </div>
+        )} */}
+        {/* React-based popup to avoid DOM manipulation conflicts */}
+        {popupData.visible && popupData.position && (
+          <div
+            className="absolute bg-white rounded-lg shadow-lg border border-gray-200 p-4 pointer-events-none z-40"
+            style={{
+              ...getPopupPixelPosition(popupData.position),
+              transform: 'translate(-50%, -100%)',
+              minWidth: '200px',
+              maxWidth: '300px'
+            }}
+            dangerouslySetInnerHTML={{ __html: popupData.content }}
+          />
+        )}
         
         {farmId && enableDrawing && showNameDialog && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 w-96">
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
               <h3 className="text-lg font-semibold mb-4">Nommer la parcelle</h3>
               <input
                 type="text"
@@ -938,8 +1164,8 @@ const MapComponent: React.FC<MapProps> = ({
         )}
 
         {farmId && enableDrawing && showParcelForm && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 w-[500px]">
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4">Détails de la parcelle: {parcelName}</h3>
               
               <div className="space-y-4">
@@ -994,16 +1220,28 @@ const MapComponent: React.FC<MapProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Densité de plantation (arbres/ha)
                   </label>
-                  <input
-                    type="number"
-                    value={parcelDetails.planting_density}
-                    onChange={(e) => setParcelDetails(prev => ({
-                      ...prev,
-                      planting_density: Number(e.target.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    min="0"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      value={parcelDetails.planting_density}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_density: Number(e.target.value)
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      min="0"
+                    />
+                    {parcelDetails.planting_type && parcelDetails.planting_density === getStandardDensity(parcelDetails.planting_type) && (
+                      <span className="text-sm text-green-600 font-medium whitespace-nowrap">Auto-calculé</span>
+                    )}
+                  </div>
+                  {parcelDetails.planting_type && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Densité standard pour {parcelDetails.planting_type === 'traditional' ? 'traditionnelle' :
+                                            parcelDetails.planting_type === 'intensive' ? 'intensive' :
+                                            parcelDetails.planting_type === 'super_intensive' ? 'super-intensive' : 'biologique'}: {getStandardDensity(parcelDetails.planting_type)} arbres/ha
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1026,6 +1264,62 @@ const MapComponent: React.FC<MapProps> = ({
                     <option value="none">Aucune</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Variété
+                  </label>
+                  <input
+                    type="text"
+                    value={parcelDetails.variety}
+                    onChange={(e) => setParcelDetails(prev => ({
+                      ...prev,
+                      variety: e.target.value
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="ex: Picholine, Lucques, Arbequina..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date de plantation
+                  </label>
+                  <input
+                    type="date"
+                    value={parcelDetails.planting_date}
+                    onChange={(e) => setParcelDetails(prev => ({
+                      ...prev,
+                      planting_date: e.target.value
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type de plantation
+                  </label>
+                  <select
+                    value={parcelDetails.planting_type}
+                    onChange={(e) => {
+                      const plantingType = e.target.value;
+                      const standardDensity = getStandardDensity(plantingType);
+                      setParcelDetails(prev => ({
+                        ...prev,
+                        planting_type: plantingType,
+                        planting_density: standardDensity
+                      }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="traditional">Traditionnelle</option>
+                    <option value="intensive">Intensive</option>
+                    <option value="super_intensive">Super-intensive</option>
+                    <option value="organic">Biologique</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6">
@@ -1039,7 +1333,10 @@ const MapComponent: React.FC<MapProps> = ({
                       soil_type: '',
                       area: 0,
                       planting_density: 0,
-                      irrigation_type: ''
+                      irrigation_type: '',
+                      variety: '',
+                      planting_date: '',
+                      planting_type: ''
                     });
                   }}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
@@ -1058,7 +1355,7 @@ const MapComponent: React.FC<MapProps> = ({
         )}
 
         {/* Location and Search Controls */}
-        <div className="absolute top-4 right-4 space-y-2" style={{ zIndex: 1000 }}>
+        <div className="absolute top-4 right-4 space-y-2 z-20">
           <div className="flex flex-col space-y-2">
             {/* Location Button */}
             <button
@@ -1077,11 +1374,48 @@ const MapComponent: React.FC<MapProps> = ({
             >
               <Search className="h-5 w-5 text-gray-600" />
             </button>
+
+            {/* Place Names Toggle Button */}
+            <button
+              onClick={() => setShowPlaceNames(!showPlaceNames)}
+              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              title={showPlaceNames ? "Masquer les noms de lieux" : "Afficher les noms de lieux"}
+            >
+              <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
+            </button>
+
+            {/* Map Type Toggle Button */}
+            <button
+              onClick={() => setMapType(mapType === 'osm' ? 'satellite' : 'osm')}
+              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              title={mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte'}
+            >
+              {mapType === 'osm' ? (
+                <Satellite className="h-5 w-5 text-gray-600" />
+              ) : (
+                <div className="h-5 w-5 flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-gray-600 rounded-sm"></div>
+                </div>
+              )}
+            </button>
+
+            {/* Full-Screen Toggle Button */}
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              title={isFullScreen ? "Quitter le plein écran" : "Mode plein écran"}
+            >
+              {isFullScreen ? (
+                <Minimize2 className="h-5 w-5 text-gray-600" />
+              ) : (
+                <Maximize2 className="h-5 w-5 text-gray-600" />
+              )}
+            </button>
           </div>
 
           {/* Search Box */}
-          {showSearchBox && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-80">
+          {showSearchBox && !showNameDialog && !showParcelForm && (
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-80 z-30">
               <div className="flex items-center space-x-2 mb-3">
                 <input
                   type="text"
@@ -1139,8 +1473,8 @@ const MapComponent: React.FC<MapProps> = ({
           )}
         </div>
 
-        {farmId && enableDrawing && (
-          <div className="absolute top-4 left-4 space-y-3">
+        {farmId && enableDrawing && !showNameDialog && !showParcelForm && (
+          <div className="absolute top-4 left-4 space-y-3 z-10">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Cliquez sur la carte et dessinez le contour de votre parcelle
@@ -1384,12 +1718,12 @@ const MapComponent: React.FC<MapProps> = ({
                   onClick={async () => {
                     if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${selectedParcel.name}" ?`)) {
                       try {
-                        await deleteParcel(selectedParcel.id);
+                        await deleteParcel(selectedParcel.id!);
                         setSelectedParcel(null);
                         // Remove from map
                         if (vectorSourceRef.current) {
                           const features = vectorSourceRef.current.getFeatures();
-                          const parcelFeature = features.find(f => f.get('parcelId') === selectedParcel.id);
+                          const parcelFeature = features.find(f => f.get('parcelId') === selectedParcel.id!);
                           if (parcelFeature) {
                             vectorSourceRef.current.removeFeature(parcelFeature);
                           }
@@ -1532,7 +1866,8 @@ const MapComponent: React.FC<MapProps> = ({
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

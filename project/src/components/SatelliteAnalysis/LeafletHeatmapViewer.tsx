@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -28,6 +28,7 @@ interface LeafletHeatmapViewerProps {
   initialData?: HeatmapDataResponse | null;
   selectedIndex?: VegetationIndexType;
   selectedDate?: string;
+  embedded?: boolean; // When true, hides the configuration panel and is used within other components
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
@@ -160,7 +161,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   boundary,
   initialData,
   selectedIndex: propSelectedIndex,
-  selectedDate: propSelectedDate
+  selectedDate: propSelectedDate,
+  embedded = false
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NDVI');
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
@@ -204,7 +206,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     }
   }, [initialData]);
 
-  // Check available dates with satellite data
+  // Check available dates with satellite data - Fixed infinite refetch
   const checkAvailableDates = useCallback(async () => {
     if (!boundary) return;
 
@@ -234,15 +236,11 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
       if (result.recommended_date) {
         setRecommendedDate(result.recommended_date);
-        // If no date is selected or current date has no data, use recommended date
-        if (!selectedDate || !availableDates.includes(selectedDate)) {
-          setSelectedDate(result.recommended_date);
-        }
+        // Use the recommended date if we have one
+        setSelectedDate(prev => prev || result.recommended_date!);
       }
 
       // Extract available dates from metadata if provided
-      // Note: The backend doesn't return individual dates, but we can use the recommended date
-      // In a more advanced implementation, we'd modify the backend to return all suitable dates
       const dates = result.recommended_date ? [result.recommended_date] : [];
       setAvailableDates(dates);
 
@@ -252,7 +250,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     } finally {
       setIsCheckingDates(false);
     }
-  }, [boundary, parcelName, selectedDate, availableDates]);
+  }, [boundary, parcelName]); // Removed selectedDate and availableDates from deps to fix infinite loop
 
   // Check available dates when boundary changes
   useEffect(() => {
@@ -332,12 +330,15 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     : [46.2276, 2.2137]; // Default to center of France
 
   // Convert boundary to Leaflet polygon format - use backend AOI boundary if available
-  const polygonPositions: [number, number][] =
-    (data?.aoi_boundary && data.aoi_boundary.length > 0)
-      ? data.aoi_boundary.map(coord => [coord[1], coord[0]]) // Convert [lng, lat] to [lat, lng] from backend
-      : boundary
-        ? boundary.map(coord => [coord[1], coord[0]]) // Convert [lng, lat] to [lat, lng] from prop
-        : [];
+  const polygonPositions: [number, number][] = useMemo(() => {
+    if (data?.aoi_boundary && data.aoi_boundary.length > 0) {
+      return data.aoi_boundary.map(coord => [coord[1], coord[0]]);
+    }
+    if (boundary && boundary.length > 0) {
+      return boundary.map(coord => [coord[1], coord[0]]);
+    }
+    return [];
+  }, [data?.aoi_boundary, boundary]);
 
   // Color scale component matching desired.png
   const ColorScale: React.FC = () => {
@@ -395,99 +396,103 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold">{selectedIndex} - évolution temporelle</h1>
-        <div className="text-lg text-gray-600 mt-2">{selectedDate}</div>
-      </div>
+    <div className={`bg-white rounded-lg shadow p-6 space-y-6 ${embedded ? 'p-0 shadow-none' : ''}`}>
+      {!embedded && (
+        <>
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold">{selectedIndex} - évolution temporelle</h1>
+            <div className="text-lg text-gray-600 mt-2">{selectedDate}</div>
+          </div>
 
-      {/* Configuration Panel */}
-      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-        <h3 className="font-medium text-gray-900">Configuration</h3>
+          {/* Configuration Panel - Only shown when not embedded */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+            <h3 className="font-medium text-gray-900">Configuration</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Date
-              {isCheckingDates && (
-                <span className="ml-2 text-xs text-gray-500">
-                  <RefreshCw className="inline w-3 h-3 animate-spin mr-1" />
-                  Checking availability...
-                </span>
-              )}
-            </label>
-            <div className="relative">
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className={`w-full p-2 border rounded-md ${
-                  availableDates.length > 0 && !availableDates.includes(selectedDate)
-                    ? 'border-yellow-400 bg-yellow-50'
-                    : 'border-gray-300'
-                }`}
-              />
-              {recommendedDate && recommendedDate !== selectedDate && (
-                <button
-                  onClick={() => setSelectedDate(recommendedDate)}
-                  className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                  title={`Use recommended date: ${recommendedDate}`}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Date
+                  {isCheckingDates && (
+                    <span className="ml-2 text-xs text-gray-500">
+                      <RefreshCw className="inline w-3 h-3 animate-spin mr-1" />
+                      Checking availability...
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className={`w-full p-2 border rounded-md ${
+                      availableDates.length > 0 && !availableDates.includes(selectedDate)
+                        ? 'border-yellow-400 bg-yellow-50'
+                        : 'border-gray-300'
+                    }`}
+                  />
+                  {recommendedDate && recommendedDate !== selectedDate && (
+                    <button
+                      onClick={() => setSelectedDate(recommendedDate)}
+                      className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      title={`Use recommended date: ${recommendedDate}`}
+                    >
+                      <Calendar className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                {availableDates.length > 0 && !availableDates.includes(selectedDate) && (
+                  <p className="text-xs text-yellow-600 mt-1">
+                    No data for selected date. Recommended: {recommendedDate}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Vegetation Index</label>
+                <select
+                  value={selectedIndex}
+                  onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  <Calendar className="w-3 h-3" />
+                  {VEGETATION_INDICES.map(index => (
+                    <option key={index} value={index}>{index}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Sample Points</label>
+                <select
+                  value={samplePoints}
+                  onChange={(e) => setSamplePoints(Number(e.target.value))}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value={1000}>1000 (Fast)</option>
+                  <option value={2000}>2000 (Balanced)</option>
+                  <option value={5000}>5000 (Detailed)</option>
+                  <option value={10000}>10000 (High Detail)</option>
+                  <option value={25000}>25000 (Maximum Detail)</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={generateVisualization}
+                  disabled={isLoading || !boundary}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
+                  {isLoading ? 'Loading...' : data ? 'Regenerate' : 'Generate'}
                 </button>
-              )}
+              </div>
             </div>
-            {availableDates.length > 0 && !availableDates.includes(selectedDate) && (
-              <p className="text-xs text-yellow-600 mt-1">
-                No data for selected date. Recommended: {recommendedDate}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">Vegetation Index</label>
-            <select
-              value={selectedIndex}
-              onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            >
-              {VEGETATION_INDICES.map(index => (
-                <option key={index} value={index}>{index}</option>
-              ))}
-            </select>
+            <div className="text-sm text-gray-600">
+              <strong>Index Description:</strong> {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
+            </div>
           </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Sample Points</label>
-            <select
-              value={samplePoints}
-              onChange={(e) => setSamplePoints(Number(e.target.value))}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            >
-              <option value={1000}>1000 (Fast)</option>
-              <option value={2000}>2000 (Balanced)</option>
-              <option value={5000}>5000 (Detailed)</option>
-              <option value={10000}>10000 (High Detail)</option>
-              <option value={25000}>25000 (Maximum Detail)</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={generateVisualization}
-              disabled={isLoading || !boundary}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
-              {isLoading ? 'Loading...' : data ? 'Regenerate' : 'Generate'}
-            </button>
-          </div>
-        </div>
-
-        <div className="text-sm text-gray-600">
-          <strong>Index Description:</strong> {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -519,7 +524,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           <ColorScale />
           {/* Statistics Box (like desired.png) */}
           {data && (
-            <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">
+            <div key="stats-box" className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">
               <div>Mean: {data.statistics.mean.toFixed(3)}</div>
               <div>Median: {data.statistics.median.toFixed(3)}</div>
               <div>P10: {data.statistics.p10.toFixed(3)}</div>
@@ -541,8 +546,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             {/* AOI Polygon Boundary - Matching research notebook style */}
             {polygonPositions.length > 0 && (
               <>
-                {/* Outer black border for visibility */}
                 <Polygon
+                  key="parcel-border-outer"
                   positions={polygonPositions}
                   pathOptions={{
                     color: '#000000',
@@ -551,8 +556,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                     opacity: 0.9
                   }}
                 />
-                {/* Inner white border for contrast */}
                 <Polygon
+                  key="parcel-border-inner"
                   positions={polygonPositions}
                   pathOptions={{
                     color: '#FFFFFF',
@@ -565,7 +570,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             )}
 
             {/* Grid Heatmap Layer */}
-            <GridHeatmapLayer data={data} selectedIndex={selectedIndex} />
+            <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} />
           </MapContainer>
         </div>
 

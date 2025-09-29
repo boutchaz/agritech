@@ -161,7 +161,7 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="0"
                 value={formData.physical.density}
                 onChange={(e) => setFormData({

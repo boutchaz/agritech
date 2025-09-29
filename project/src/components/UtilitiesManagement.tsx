@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 
@@ -10,11 +11,14 @@ interface Utility {
   provider?: string;
   account_number?: string;
   amount: number;
+  consumption_value?: number; // New field for consumption amount
+  consumption_unit?: string; // New field for consumption unit
   billing_date: string;
   due_date?: string;
   payment_status: 'pending' | 'paid' | 'overdue';
   is_recurring?: boolean;
   recurring_frequency?: 'monthly' | 'quarterly' | 'yearly';
+  invoice_url?: string; // New field for invoice attachments
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -30,6 +34,17 @@ const UTILITY_TYPES = [
   { value: 'other', label: 'Autre', icon: Plus }
 ];
 
+// Common consumption units for different utility types
+const CONSUMPTION_UNITS: Record<string, string[]> = {
+  electricity: ['kWh', 'MWh', 'Wh'],
+  water: ['m³', 'L', 'kL'],
+  diesel: ['L', 'kL', 'gal'],
+  gas: ['m³', 'kg', 'kL'],
+  internet: ['GB', 'TB', 'MB'],
+  phone: ['min', 'SMS', 'GB'],
+  other: ['unit', 'pcs', 'kg', 'L']
+};
+
 const UtilitiesManagement: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [utilities, setUtilities] = useState<Utility[]>([]);
@@ -37,11 +52,29 @@ const UtilitiesManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUtility, setEditingUtility] = useState<Utility | null>(null);
-  const [viewMode, setViewMode] = useState<'cards' | 'grouped' | 'list'>('grouped');
+  const [viewMode, setViewMode] = useState<'cards' | 'grouped' | 'list' | 'dashboard'>('grouped');
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Advanced filtering state
+  const [filters, setFilters] = useState({
+    dateRange: {
+      start: '',
+      end: ''
+    },
+    paymentStatus: 'all' as 'all' | 'pending' | 'paid' | 'overdue',
+    utilityType: 'all' as string,
+    isRecurring: 'all' as 'all' | 'recurring' | 'non-recurring',
+    showFilters: false
+  });
+  const [sortBy, setSortBy] = useState<'billing_date' | 'amount' | 'type'>('billing_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [newUtility, setNewUtility] = useState<Partial<Utility>>({
     type: 'electricity',
     amount: 0,
+    consumption_value: undefined,
+    consumption_unit: '',
     billing_date: new Date().toISOString().split('T')[0],
     payment_status: 'pending',
     is_recurring: false,
@@ -49,29 +82,139 @@ const UtilitiesManagement: React.FC = () => {
     notes: ''
   });
 
+  // Helper function to calculate unit cost
+  const calculateUnitCost = (amount: number, consumptionValue?: number): string => {
+    if (!consumptionValue || consumptionValue === 0) return '';
+    return (amount / consumptionValue).toFixed(4);
+  };
+
+  // Helper function to get available units for utility type
+  const getAvailableUnits = (type: string): string[] => {
+    return CONSUMPTION_UNITS[type] || CONSUMPTION_UNITS.other;
+  };
+
+  // Helper function to upload invoice file
+  const uploadInvoiceFile = async (file: File): Promise<string | null> => {
+    try {
+      if (!currentFarm?.id) return null;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('invoices')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      return null;
+    }
+  };
+
+  // Helper function to download invoice file
+  const downloadInvoice = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename || 'invoice.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUtilities();
   }, [currentFarm?.id]);
 
-  // Group utilities by type
+  // Filter and sort utilities
+  const filteredAndSortedUtilities = useMemo(() => {
+    let filtered = [...utilities];
+
+    // Apply date range filter
+    if (filters.dateRange.start) {
+      filtered = filtered.filter(u => new Date(u.billing_date) >= new Date(filters.dateRange.start));
+    }
+    if (filters.dateRange.end) {
+      filtered = filtered.filter(u => new Date(u.billing_date) <= new Date(filters.dateRange.end));
+    }
+
+    // Apply payment status filter
+    if (filters.paymentStatus !== 'all') {
+      filtered = filtered.filter(u => u.payment_status === filters.paymentStatus);
+    }
+
+    // Apply utility type filter
+    if (filters.utilityType !== 'all') {
+      filtered = filtered.filter(u => u.type === filters.utilityType);
+    }
+
+    // Apply recurring filter
+    if (filters.isRecurring !== 'all') {
+      filtered = filtered.filter(u =>
+        filters.isRecurring === 'recurring' ? u.is_recurring : !u.is_recurring
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'billing_date':
+          comparison = new Date(a.billing_date).getTime() - new Date(b.billing_date).getTime();
+          break;
+        case 'amount':
+          comparison = a.amount - b.amount;
+          break;
+        case 'type':
+          comparison = a.type.localeCompare(b.type);
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [utilities, filters, sortBy, sortOrder]);
+
+  // Group filtered utilities by type
   const groupedUtilities = useMemo(() => {
     const groups: Record<string, Utility[]> = {};
-    utilities.forEach(utility => {
+    filteredAndSortedUtilities.forEach(utility => {
       if (!groups[utility.type]) {
         groups[utility.type] = [];
       }
       groups[utility.type].push(utility);
     });
     return groups;
-  }, [utilities]);
+  }, [filteredAndSortedUtilities]);
 
-  // Calculate totals
+  // Calculate totals from filtered utilities
   const totals = useMemo(() => {
-    const totalAmount = utilities.reduce((sum, utility) => sum + utility.amount, 0);
-    const recurringAmount = utilities
+    const totalAmount = filteredAndSortedUtilities.reduce((sum, utility) => sum + utility.amount, 0);
+    const recurringAmount = filteredAndSortedUtilities
       .filter(u => u.is_recurring)
       .reduce((sum, utility) => sum + utility.amount, 0);
-    const pendingAmount = utilities
+    const pendingAmount = filteredAndSortedUtilities
       .filter(u => u.payment_status === 'pending')
       .reduce((sum, utility) => sum + utility.amount, 0);
 
@@ -79,9 +222,74 @@ const UtilitiesManagement: React.FC = () => {
       total: totalAmount,
       recurring: recurringAmount,
       pending: pendingAmount,
-      count: utilities.length
+      count: filteredAndSortedUtilities.length
     };
-  }, [utilities]);
+  }, [filteredAndSortedUtilities]);
+
+  // Helper function to get utility label
+  const getUtilityLabel = (type: string) => {
+    return UTILITY_TYPES.find(ut => ut.value === type)?.label || type;
+  };
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    // Monthly trend data (last 12 months)
+    const monthlyData: Record<string, { month: string; amount: number; count: number }> = {};
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    filteredAndSortedUtilities
+      .filter(u => new Date(u.billing_date) >= sixMonthsAgo)
+      .forEach(utility => {
+        const date = new Date(utility.billing_date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short' });
+
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { month: monthLabel, amount: 0, count: 0 };
+        }
+        monthlyData[monthKey].amount += utility.amount;
+        monthlyData[monthKey].count += 1;
+      });
+
+    const monthlyTrend = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+
+    // Cost breakdown by type
+    const typeBreakdown: Record<string, { type: string; amount: number; count: number; label: string }> = {};
+    filteredAndSortedUtilities.forEach(utility => {
+      if (!typeBreakdown[utility.type]) {
+        typeBreakdown[utility.type] = {
+          type: utility.type,
+          amount: 0,
+          count: 0,
+          label: getUtilityLabel(utility.type)
+        };
+      }
+      typeBreakdown[utility.type].amount += utility.amount;
+      typeBreakdown[utility.type].count += 1;
+    });
+
+    const costByType = Object.values(typeBreakdown);
+
+    // Consumption analysis (only for utilities with consumption data)
+    const consumptionData = filteredAndSortedUtilities
+      .filter(u => u.consumption_value && u.consumption_value > 0)
+      .map(utility => ({
+        name: `${getUtilityLabel(utility.type)} - ${new Date(utility.billing_date).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}`,
+        amount: utility.amount,
+        consumption: utility.consumption_value,
+        unitCost: parseFloat(calculateUnitCost(utility.amount, utility.consumption_value)),
+        unit: utility.consumption_unit || '',
+        type: utility.type
+      }))
+      .slice(0, 10); // Show latest 10 entries
+
+    return {
+      monthlyTrend,
+      costByType,
+      consumptionData
+    };
+  }, [filteredAndSortedUtilities]);
 
   const fetchUtilities = async () => {
     try {
@@ -114,11 +322,25 @@ const UtilitiesManagement: React.FC = () => {
         return;
       }
 
+      setUploading(true);
+      let invoiceUrl: string | null = null;
+
+      // Upload file if selected
+      if (selectedFile) {
+        invoiceUrl = await uploadInvoiceFile(selectedFile);
+        if (!invoiceUrl) {
+          setError('Erreur lors du téléchargement du fichier');
+          setUploading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from('utilities')
         .insert([{
           ...newUtility,
-          farm_id: currentFarm.id
+          farm_id: currentFarm.id,
+          invoice_url: invoiceUrl
         }])
         .select()
         .single();
@@ -127,9 +349,12 @@ const UtilitiesManagement: React.FC = () => {
 
       setUtilities([data, ...utilities]);
       setShowAddModal(false);
+      setSelectedFile(null);
       setNewUtility({
         type: 'electricity',
         amount: 0,
+        consumption_value: undefined,
+        consumption_unit: '',
         billing_date: new Date().toISOString().split('T')[0],
         payment_status: 'pending',
         is_recurring: false,
@@ -139,6 +364,8 @@ const UtilitiesManagement: React.FC = () => {
     } catch (error) {
       console.error('Error adding utility:', error);
       setError('Failed to add utility');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -197,10 +424,6 @@ const UtilitiesManagement: React.FC = () => {
     return <Icon className="h-6 w-6" />;
   };
 
-  const getUtilityLabel = (type: string) => {
-    return UTILITY_TYPES.find(ut => ut.value === type)?.label || type;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -239,7 +462,29 @@ const UtilitiesManagement: React.FC = () => {
             >
               <Calendar className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setViewMode('dashboard')}
+              className={`p-2 rounded-md ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+              title="Vue tableau de bord"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </button>
           </div>
+
+          {/* Filter and Sort Controls */}
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
+            className={`flex items-center space-x-2 px-3 py-2 border rounded-md ${filters.showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-700'} hover:bg-blue-50`}
+            title="Filtres et tri"
+          >
+            <Filter className="h-4 w-4" />
+            <span className="text-sm">Filtres</span>
+            {filters.showFilters ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
 
           <button
             onClick={() => setShowAddModal(true)}
@@ -252,6 +497,154 @@ const UtilitiesManagement: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Advanced Filters Panel */}
+      {filters.showFilters && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {/* Date Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Période
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  value={filters.dateRange.start}
+                  onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    dateRange: { ...prev.dateRange, start: e.target.value }
+                  }))}
+                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Du"
+                />
+                <input
+                  type="date"
+                  value={filters.dateRange.end}
+                  onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    dateRange: { ...prev.dateRange, end: e.target.value }
+                  }))}
+                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Au"
+                />
+              </div>
+            </div>
+
+            {/* Payment Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut de paiement
+              </label>
+              <select
+                value={filters.paymentStatus}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  paymentStatus: e.target.value as typeof filters.paymentStatus
+                }))}
+                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="all">Tous</option>
+                <option value="pending">En attente</option>
+                <option value="paid">Payé</option>
+                <option value="overdue">En retard</option>
+              </select>
+            </div>
+
+            {/* Utility Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Type de charge
+              </label>
+              <select
+                value={filters.utilityType}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  utilityType: e.target.value
+                }))}
+                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="all">Tous les types</option>
+                {UTILITY_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Recurring Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Récurrence
+              </label>
+              <select
+                value={filters.isRecurring}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  isRecurring: e.target.value as typeof filters.isRecurring
+                }))}
+                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="all">Toutes</option>
+                <option value="recurring">Récurrentes</option>
+                <option value="non-recurring">Non récurrentes</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+            <div className="flex items-center space-x-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Trier par
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="billing_date">Date</option>
+                  <option value="amount">Montant</option>
+                  <option value="type">Type</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Ordre
+                </label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="desc">Décroissant</option>
+                  <option value="asc">Croissant</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            <button
+              onClick={() => {
+                setFilters({
+                  dateRange: { start: '', end: '' },
+                  paymentStatus: 'all',
+                  utilityType: 'all',
+                  isRecurring: 'all',
+                  showFilters: filters.showFilters
+                });
+                setSortBy('billing_date');
+                setSortOrder('desc');
+              }}
+              className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md"
+            >
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {utilities.length > 0 && (
@@ -318,6 +711,7 @@ const UtilitiesManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Empty State - No utilities at all */}
       {utilities.length === 0 && !loading && currentFarm?.id && (
         <div className="text-center py-12">
           <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
@@ -335,6 +729,37 @@ const UtilitiesManagement: React.FC = () => {
           >
             <Plus className="h-4 w-4 mr-2" />
             Ajouter une charge
+          </button>
+        </div>
+      )}
+
+      {/* Empty State - No results after filtering */}
+      {utilities.length > 0 && filteredAndSortedUtilities.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+            <Filter className="h-12 w-12 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Aucun résultat trouvé
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.
+          </p>
+          <button
+            onClick={() => {
+              setFilters({
+                dateRange: { start: '', end: '' },
+                paymentStatus: 'all',
+                utilityType: 'all',
+                isRecurring: 'all',
+                showFilters: filters.showFilters
+              });
+              setSortBy('billing_date');
+              setSortOrder('desc');
+            }}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            Réinitialiser les filtres
           </button>
         </div>
       )}
@@ -399,10 +824,23 @@ const UtilitiesManagement: React.FC = () => {
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {new Date(utility.billing_date).toLocaleDateString()}
+                          {utility.consumption_value && utility.consumption_value > 0 &&
+                            ` • ${utility.consumption_value} ${utility.consumption_unit}`}
+                          {utility.consumption_value && utility.consumption_value > 0 &&
+                            ` • ${calculateUnitCost(utility.amount, utility.consumption_value)} DH/${utility.consumption_unit}`}
                           {utility.notes && ` • ${utility.notes}`}
                         </p>
                       </div>
                       <div className="flex space-x-2">
+                        {utility.invoice_url && (
+                          <button
+                            onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
+                            className="text-blue-400 hover:text-blue-500"
+                            title="Télécharger la facture"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditingUtility(utility)}
                           className="text-gray-400 hover:text-gray-500"
@@ -427,7 +865,7 @@ const UtilitiesManagement: React.FC = () => {
 
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {utilities.map(utility => (
+          {filteredAndSortedUtilities.map(utility => (
             <div
               key={utility.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
@@ -475,6 +913,22 @@ const UtilitiesManagement: React.FC = () => {
                   <span className="text-gray-600 dark:text-gray-400">Montant</span>
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">{utility.amount.toFixed(2)} DH</span>
                 </div>
+                {utility.consumption_value && utility.consumption_value > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 dark:text-gray-500 text-sm">Consommation</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {utility.consumption_value} {utility.consumption_unit}
+                    </span>
+                  </div>
+                )}
+                {utility.consumption_value && utility.consumption_value > 0 && (
+                  <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                    <span className="text-blue-700 dark:text-blue-400 text-sm font-medium">Coût unitaire</span>
+                    <span className="text-blue-800 dark:text-blue-300 font-semibold">
+                      {calculateUnitCost(utility.amount, utility.consumption_value)} DH/{utility.consumption_unit}
+                    </span>
+                  </div>
+                )}
                 {utility.is_recurring && (
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -487,6 +941,17 @@ const UtilitiesManagement: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                     {utility.notes}
                   </p>
+                )}
+                {utility.invoice_url && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <button
+                      onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Télécharger la facture
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -506,6 +971,9 @@ const UtilitiesManagement: React.FC = () => {
                   Montant
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Consommation
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -517,7 +985,7 @@ const UtilitiesManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {utilities.map(utility => (
+              {filteredAndSortedUtilities.map(utility => (
                 <tr key={utility.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -548,6 +1016,18 @@ const UtilitiesManagement: React.FC = () => {
                     {utility.amount.toFixed(2)} DH
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {utility.consumption_value && utility.consumption_value > 0 ? (
+                      <div>
+                        <div>{utility.consumption_value} {utility.consumption_unit}</div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                          {calculateUnitCost(utility.amount, utility.consumption_value)} DH/{utility.consumption_unit}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(utility.billing_date).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -560,24 +1040,180 @@ const UtilitiesManagement: React.FC = () => {
                        utility.payment_status === 'pending' ? 'En attente' : 'En retard'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => setEditingUtility(utility)}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUtility(utility.id)}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      {utility.invoice_url && (
+                        <button
+                          onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
+                          className="text-blue-400 hover:text-blue-500"
+                          title="Télécharger la facture"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEditingUtility(utility)}
+                        className="text-gray-400 hover:text-gray-500"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUtility(utility.id)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Dashboard View */}
+      {viewMode === 'dashboard' && (
+        <div className="space-y-6">
+          {/* Chart Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Monthly Cost Trend */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Évolution mensuelle des coûts
+                </h3>
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+              {chartData.monthlyTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData.monthlyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: any, name: string) => [
+                        `${value} DH`,
+                        name === 'amount' ? 'Montant' : 'Nombre'
+                      ]}
+                    />
+                    <Legend />
+                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="amount" />
+                    <Line type="monotone" dataKey="count" stroke="#ef4444" strokeWidth={2} name="count" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-64 text-gray-500">
+                  Aucune donnée disponible pour les 6 derniers mois
+                </div>
+              )}
+            </div>
+
+            {/* Cost Breakdown by Type */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Répartition par type de charge
+                </h3>
+                <PieChart className="h-5 w-5 text-green-500" />
+              </div>
+              {chartData.costByType.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Tooltip
+                      formatter={(value: any) => [`${value} DH`, 'Montant']}
+                    />
+                    <Legend />
+                    <Pie
+                      dataKey="amount"
+                      nameKey="label"
+                      data={chartData.costByType}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ label, percent }: any) => `${label}: ${(percent * 100).toFixed(1)}%`}
+                    >
+                      {chartData.costByType.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
+                      ))}
+                    </Pie>
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-64 text-gray-500">
+                  Aucune donnée de charges disponible
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Consumption Analysis */}
+          {chartData.consumptionData.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Analyse de la consommation et coût unitaire
+                </h3>
+                <Activity className="h-5 w-5 text-purple-500" />
+              </div>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={chartData.consumptionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: any, name: string) => {
+                      if (name === 'amount') return [`${value} DH`, 'Montant'];
+                      if (name === 'consumption') return [`${value}`, 'Consommation'];
+                      if (name === 'unitCost') return [`${value} DH/unité`, 'Coût unitaire'];
+                      return [value, name];
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="amount" fill="#3b82f6" name="amount" />
+                  <Bar dataKey="consumption" fill="#10b981" name="consumption" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Summary Statistics */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Statistiques détaillées
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {chartData.costByType.length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Types de charges</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {chartData.consumptionData.length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Avec données de consommation</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {utilities.filter(u => u.is_recurring).length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Charges récurrentes</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {utilities.filter(u => u.payment_status === 'overdue').length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">En retard</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -636,7 +1272,7 @@ const UtilitiesManagement: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   value={editingUtility?.amount || newUtility.amount}
                   onChange={(e) => {
                     if (editingUtility) {
@@ -655,6 +1291,83 @@ const UtilitiesManagement: React.FC = () => {
                   required
                 />
               </div>
+
+              {/* Consumption Tracking Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Consommation
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={editingUtility?.consumption_value || newUtility.consumption_value || ''}
+                    onChange={(e) => {
+                      const value = e.target.value ? Number(e.target.value) : undefined;
+                      if (editingUtility) {
+                        setEditingUtility({
+                          ...editingUtility,
+                          consumption_value: value
+                        });
+                      } else {
+                        setNewUtility({
+                          ...newUtility,
+                          consumption_value: value
+                        });
+                      }
+                    }}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                    placeholder="ex: 500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Unité
+                  </label>
+                  <select
+                    value={editingUtility?.consumption_unit || newUtility.consumption_unit || ''}
+                    onChange={(e) => {
+                      if (editingUtility) {
+                        setEditingUtility({
+                          ...editingUtility,
+                          consumption_unit: e.target.value
+                        });
+                      } else {
+                        setNewUtility({
+                          ...newUtility,
+                          consumption_unit: e.target.value
+                        });
+                      }
+                    }}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  >
+                    <option value="">Sélectionner une unité</option>
+                    {getAvailableUnits((editingUtility?.type || newUtility.type) as string).map(unit => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Unit Cost Display */}
+              {((editingUtility?.consumption_value && editingUtility.consumption_value > 0) ||
+                (newUtility.consumption_value && newUtility.consumption_value > 0)) && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      Coût unitaire:
+                    </span>
+                    <span className="text-lg font-semibold text-blue-900 dark:text-blue-200">
+                      {calculateUnitCost(
+                        editingUtility?.amount || newUtility.amount || 0,
+                        editingUtility?.consumption_value || newUtility.consumption_value
+                      )} DH/{editingUtility?.consumption_unit || newUtility.consumption_unit}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -759,6 +1472,62 @@ const UtilitiesManagement: React.FC = () => {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
               </div>
+
+              {/* Invoice File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Facture (PDF, Image)
+                </label>
+                {!editingUtility && (
+                  <div className="mt-1 flex items-center space-x-4">
+                    <input
+                      type="file"
+                      id="invoice-upload"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSelectedFile(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="invoice-upload"
+                      className="cursor-pointer flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus-within:ring-2 focus-within:ring-green-500"
+                    >
+                      <Upload className="h-4 w-4" />
+                      <span>Choisir un fichier</span>
+                    </label>
+                    {selectedFile && (
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-gray-600">{selectedFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFile(null)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {editingUtility?.invoice_url && (
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-gray-600">Facture attachée</span>
+                    <button
+                      type="button"
+                      onClick={() => downloadInvoice(editingUtility.invoice_url!, `facture-${editingUtility.type}-${editingUtility.billing_date}.pdf`)}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
@@ -773,9 +1542,15 @@ const UtilitiesManagement: React.FC = () => {
               </button>
               <button
                 onClick={editingUtility ? handleUpdateUtility : handleAddUtility}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
+                disabled={uploading}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                  uploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                }`}
               >
-                {editingUtility ? 'Mettre à jour' : 'Ajouter'}
+                {uploading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <span>{uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}</span>
               </button>
             </div>
           </div>

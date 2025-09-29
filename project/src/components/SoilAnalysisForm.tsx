@@ -150,7 +150,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="0"
                 max="14"
                 value={formData.physical.ph}
@@ -172,7 +172,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="0"
                 max="100"
                 value={formData.physical.organicMatter}

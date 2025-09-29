@@ -186,7 +186,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   value={newFarm.size}
                   onChange={(e) => setNewFarm({ ...newFarm, size: Number(e.target.value) })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"

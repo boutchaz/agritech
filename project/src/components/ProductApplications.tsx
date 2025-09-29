@@ -263,7 +263,7 @@ const ProductApplications: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={newApplication.quantity_used}
                     onChange={(e) => setNewApplication({
                       ...newApplication,
@@ -278,7 +278,7 @@ const ProductApplications: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={newApplication.area_treated}
                     onChange={(e) => setNewApplication({
                       ...newApplication,

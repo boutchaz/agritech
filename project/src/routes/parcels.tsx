@@ -28,6 +28,9 @@ interface Parcel {
   planting_year?: number | null;
   variety?: string | null;
   rootstock?: string | null;
+  // New parcel fields
+  planting_date?: string | null;
+  planting_type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -173,17 +176,8 @@ const AppContent: React.FC = () => {
       } else {
         console.log('Fetched parcels:', parcelsData); // Debug log
         setParcels(parcelsData || []);
-
-        // Generate sensor data based on parcels
-        const sensors: SensorData[] = (parcelsData || []).map((parcel, index) => ({
-          id: parcel.id,
-          type: index % 3 === 0 ? 'moisture' : index % 3 === 1 ? 'temperature' : 'ph',
-          value: index % 3 === 0 ? 65 + Math.random() * 20 : index % 3 === 1 ? 20 + Math.random() * 10 : 6 + Math.random() * 2,
-          unit: index % 3 === 0 ? '%' : index % 3 === 1 ? '°C' : '',
-          timestamp: new Date(),
-          location: parcel.name
-        }));
-        setSensorData(sensors);
+        // Sensors disabled: ensure empty
+        setSensorData([]);
       }
     } catch (error) {
       console.error('Error in fetchParcels:', error);
@@ -367,7 +361,7 @@ const AppContent: React.FC = () => {
               <Map
                 center={[31.7917, -7.0926]}
                 zones={[]}
-                sensors={sensorData}
+                sensors={[]}
                 farmId={currentFarm?.id}
                 enableDrawing={true}
                 selectedParcelId={selectedParcelId}
@@ -585,7 +579,7 @@ const AppContent: React.FC = () => {
                     value={editingParcel.area || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, area: parseFloat(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    step="0.01"
+                    step="1"
                   />
                 </div>
 
@@ -635,6 +629,50 @@ const AppContent: React.FC = () => {
                     <option value="none">Aucune</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Variété
+                  </label>
+                  <input
+                    type="text"
+                    value={editingParcel.variety || ''}
+                    onChange={(e) => setEditingParcel({ ...editingParcel, variety: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="ex: Picholine, Lucques, Arbequina..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Date de plantation
+                  </label>
+                  <input
+                    type="date"
+                    value={editingParcel.planting_date || ''}
+                    onChange={(e) => setEditingParcel({ ...editingParcel, planting_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type de plantation
+                </label>
+                <select
+                  value={editingParcel.planting_type || ''}
+                  onChange={(e) => setEditingParcel({ ...editingParcel, planting_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="traditional">Traditionnelle</option>
+                  <option value="intensive">Intensive</option>
+                  <option value="super_intensive">Super-intensive</option>
+                  <option value="organic">Biologique</option>
+                </select>
               </div>
             </div>
 

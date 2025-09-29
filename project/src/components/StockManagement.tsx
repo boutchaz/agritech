@@ -82,7 +82,6 @@ const StockManagement: React.FC = () => {
 
   const [newProduct, setNewProduct] = useState({
     item_name: '',
-    item_type: 'seed',
     category: '',
     brand: '',
     quantity: 0,
@@ -216,21 +215,20 @@ const StockManagement: React.FC = () => {
     if (!currentOrganization) return;
 
     try {
-      // Determine status based on quantity and minimum
-      const status = newProduct.quantity === 0 ? 'out_of_stock' :
-                    newProduct.quantity < newProduct.minimum_quantity ? 'low_stock' : 'available';
-
       const { data, error } = await supabase
-        .from('inventory')
+        .from('inventory_items')
         .insert([{
-          ...newProduct,
-          status,
           organization_id: currentOrganization.id,
           farm_id: currentFarm?.id || null,
-          supplier_id: newProduct.supplier_id || null,
-          warehouse_id: newProduct.warehouse_id || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          name: newProduct.item_name,
+          category: newProduct.category || 'other',
+          quantity: newProduct.quantity,
+          unit: newProduct.unit,
+          minimum_stock: newProduct.minimum_quantity,
+          cost_per_unit: newProduct.cost_per_unit,
+          supplier: newProduct.supplier,
+          location: newProduct.storage_location,
+          notes: newProduct.batch_number ? `Batch: ${newProduct.batch_number}${newProduct.expiry_date ? `, Expires: ${newProduct.expiry_date}` : ''}` : null
         }])
         .select()
         .single();
@@ -242,7 +240,6 @@ const StockManagement: React.FC = () => {
       // Reset form
       setNewProduct({
         item_name: '',
-        item_type: 'seed',
         category: '',
         brand: '',
         quantity: 0,
@@ -621,7 +618,7 @@ const StockManagement: React.FC = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {products
               .filter(product =>
-                product.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 product.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 product.category?.toLowerCase().includes(searchTerm.toLowerCase())
               )
@@ -736,7 +733,7 @@ const StockManagement: React.FC = () => {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {suppliers
                   .filter(supplier =>
-                    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     supplier.city?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
@@ -849,7 +846,7 @@ const StockManagement: React.FC = () => {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {warehouses
                   .filter(warehouse =>
-                    warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    warehouse.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     warehouse.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     warehouse.manager_name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
@@ -961,32 +958,22 @@ const StockManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Type de produit *
+                    Catégorie *
                   </label>
                   <select
-                    value={newProduct.item_type}
-                    onChange={(e) => setNewProduct({ ...newProduct, item_type: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="seed">Semences</option>
-                    <option value="fertilizer">Engrais</option>
-                    <option value="pesticide">Pesticide</option>
-                    <option value="equipment">Équipement</option>
-                    <option value="fuel">Carburant</option>
-                    <option value="other">Autre</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Catégorie
-                  </label>
-                  <input
-                    type="text"
                     value={newProduct.category}
                     onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                    required
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="seeds">Semences</option>
+                    <option value="fertilizers">Engrais</option>
+                    <option value="pesticides">Pesticides</option>
+                    <option value="equipment">Équipement</option>
+                    <option value="tools">Outils</option>
+                    <option value="other">Autre</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1065,7 +1052,7 @@ const StockManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={newProduct.cost_per_unit}
                     onChange={(e) => setNewProduct({ ...newProduct, cost_per_unit: Number(e.target.value) })}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
@@ -1145,7 +1132,7 @@ const StockManagement: React.FC = () => {
               </button>
               <button
                 onClick={handleAddProduct}
-                disabled={!newProduct.item_name || !newProduct.quantity === undefined || !newProduct.cost_per_unit}
+                disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Ajouter
@@ -1221,7 +1208,7 @@ const StockManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={newPurchase.cost_per_unit}
                     onChange={(e) => setNewPurchase({
                       ...newPurchase,
@@ -1595,7 +1582,7 @@ const StockManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={newWarehouse.capacity}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: e.target.value })}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Activity, Download, Layers, ZoomIn, MousePointer, Loader, Map, BarChart3 } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import {
@@ -19,22 +19,21 @@ interface InteractiveIndexViewerProps {
   boundary?: number[][];
 }
 
-type VisualizationType = 'heatmap' | 'scatter' | 'leaflet';
+type VisualizationType = 'leaflet' | 'scatter';
 
 const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   parcelId,
   parcelName,
   boundary
 }) => {
+  // Always default to NDVI as requested
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NDVI');
   const [selectedDate, setSelectedDate] = useState('');
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
-  const [gridSize, setGridSize] = useState(50);
 
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | InteractiveDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [chartRef, setChartRef] = useState<any>(null);
 
   // Initialize with today's date
   useEffect(() => {
@@ -58,7 +57,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         aoi,
         selectedDate,
         selectedIndex,
-        visualizationType
+        visualizationType === 'leaflet' ? 'heatmap' : 'scatter'
       );
 
       setData(result);
@@ -76,178 +75,6 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       PRI: '#ef4444', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
-  };
-
-  const createHeatmapOption = (data: HeatmapDataResponse): EChartsOption => {
-    const { heatmap_data, statistics, coordinate_system, index, bounds } = data;
-
-    // Filter only valid AOI data points from backend - those inside the AOI boundary 
-    const aoIData = heatmap_data.filter(([, , value]) => value !== null && value !== undefined);
-
-    return {
-      title: {
-        text: `${index} AOI Heatmap`,
-        subtext: `Analysis for ${data.date} - Following Parcel Shape`,
-        left: 'center',
-        textStyle: {
-          fontSize: 18,
-          fontWeight: 'bold'
-        }
-      },
-      backgroundColor: '#fff',
-      tooltip: {
-        trigger: 'item',
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        borderColor: '#ccc',
-        borderWidth: 1,
-        textStyle: {
-          color: '#fff'
-        },
-        formatter: function (params: any) {
-          const [x, y, value] = params.data;
-          const lon = coordinate_system.x_axis[x];
-          const lat = coordinate_system.y_axis[y];
-          return `
-            <div style="padding: 8px; line-height: 1.4">
-              <strong style="color: #4CAF50; font-size: 14px">${index} AOI Analysis</strong><br/>
-              <span style="color: #FFC107">Value: ${value.toFixed(3)}</span><br/>
-              <span style="color: #E3F2FD">Grid: [${x}, ${y}]</span><br/>
-              <span style="color: #E3F2FD">Position: ${lon.toFixed(4)}°, ${lat.toFixed(4)}°</span>
-            </div>
-          `;
-        }
-      },
-      grid: {
-        left: '5%',
-        right: '15%', 
-        top: '15%',
-        bottom: '5%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        name: 'X Position',
-        nameLocation: 'middle',
-        nameGap: 25,
-        axisLabel: {
-          formatter: function(value: string) {
-            return value.toString();
-          },
-          color: '#666',
-          interval: Math.max(1, Math.floor(data.grid_size / 8))
-        },
-        axisLine: {
-          show: true,
-          lineStyle: { color: '#333' }
-        },
-        splitLine: {
-          show: false
-        },
-        scale: true
-      },
-      yAxis: {
-        type: 'category', 
-        name: 'Y Position',
-        nameLocation: 'middle',
-        nameGap: 40,
-        axisLabel: {
-          formatter: function(value: string) {
-            return value.toString();
-          },
-          color: '#666',
-          interval: Math.max(1, Math.floor(data.grid_size / 8))
-        },
-        axisLine: {
-          show: true,
-          lineStyle: { color: '#333' }
-        },
-        splitLine: {
-          show: false
-        },
-        scale: true
-      },
-      visualMap: {
-        min: statistics.min,
-        max: statistics.max,
-        calculable: true,
-        precision: 3,
-        orient: 'vertical',
-        left: 'right',
-        top: 'middle',
-        bottom: '20%',
-        itemWidth: 25,
-        itemHeight: 180,
-        inRange: {
-          color: ['#8B0000', '#B22222', '#DC143C', '#FF6347', '#FFD700', '#98FB98', '#00FF7F', '#00FF00']
-        },
-        text: [`${statistics.max.toFixed(2)}`, `${statistics.min.toFixed(2)}`],
-        textStyle: {
-          fontSize: 11,
-          color: '#333'
-        },
-        realtime: true,
-        inverse: false
-      },
-      series: [{
-        name: `${index} Heatmap`,
-        type: 'heatmap',
-        data: aoIData,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 15,
-            shadowColor: 'rgba(0, 0, 0, 0.6)',
-            borderWidth: 2,
-            borderColor: '#fff'
-          }
-        },
-        itemStyle: {
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.95)'
-        },
-        label: {
-          show: false
-        },
-        // Progressive rendering for performance  
-        large: true,
-        progressive: 1000,
-        animation: true,
-        animationDuration: 1500
-      }],
-      graphic: [
-        {
-          type: 'group',
-          left: 15,
-          bottom: 15,
-          children: [
-            {
-              type: 'rect',
-              shape: { 
-                width: 210, 
-                height: 130,
-                r: 10
-              },
-              style: { 
-                fill: 'rgba(0,0,0,0.88)',
-                stroke: '#33a453',
-                strokeWidth: 2
-              }
-            },
-            {
-              type: 'text',
-              style: {
-                text: `Agricultural Analysis\n${index} over AOI Shape\n\nMean: ${statistics.mean.toFixed(4)}\nMedian: ${statistics.median.toFixed(4)}\nP10: ${statistics.p10.toFixed(4)}\nP90: ${statistics.p90.toFixed(4)}\nStd: ${statistics.std.toFixed(4)}`,
-                fill: '#ffffff',
-                fontSize: 11,
-                lineHeight: 16,
-                fontWeight: '500'
-              },
-              left: 15,
-              top: 12
-            }
-          ]
-        }
-      ]
-    };
   };
 
   const createScatterOption = (data: InteractiveDataResponse): EChartsOption => {
@@ -325,40 +152,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  const exportChart = () => {
-    if (!chartRef) return;
-
-    const chartInstance = chartRef.getEchartsInstance();
-    const url = chartInstance.getDataURL({
-      type: 'png',
-      pixelRatio: 2,
-      backgroundColor: '#fff'
-    });
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${parcelName || parcelId}_${selectedIndex}_${selectedDate}_chart.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity className="w-5 h-5" />
-        <h2 className="text-xl font-semibold">Interactive Vegetation Index Visualization</h2>
+      {/* Header - Clean and focused */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold">{selectedIndex} Interactive Visualization</h1>
+        <div className="text-lg text-gray-600 mt-2">
+          {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
+        </div>
       </div>
 
-      <p className="text-gray-600">
-        Explore interactive satellite data for {parcelName || `Parcel ${parcelId}`} with hover details, zoom, and pan capabilities.
-      </p>
-
-      {/* Configuration Panel */}
+      {/* Configuration Panel - Simplified */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
         <h3 className="font-medium text-gray-900">Configuration</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Date</label>
             <input
@@ -390,25 +198,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               className="w-full p-2 border border-gray-300 rounded-md"
             >
               <option value="leaflet">Leaflet Map (Recommended)</option>
-              <option value="heatmap">ECharts Heatmap</option>
               <option value="scatter">Scatter Plot</option>
             </select>
           </div>
-
-          {visualizationType === 'heatmap' && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Grid Size</label>
-              <select
-                value={gridSize}
-                onChange={(e) => setGridSize(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value={25}>25x25 (Fast)</option>
-                <option value={50}>50x50 (Balanced)</option>
-                <option value={100}>100x100 (Detailed)</option>
-              </select>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -418,26 +210,17 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
-            {isLoading ? 'Generating...' : 'Generate Interactive View'}
+            {isLoading ? 'Generating...' : 'Generate Visualization'}
           </button>
 
           {data && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={downloadData}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Download className="w-4 h-4" />
-                Data
-              </button>
-              <button
-                onClick={exportChart}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-              >
-                <Download className="w-4 h-4" />
-                Chart
-              </button>
-            </div>
+            <button
+              onClick={downloadData}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              <Download className="w-4 h-4" />
+              Export Data
+            </button>
           )}
         </div>
       </div>
@@ -499,18 +282,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               initialData={'pixel_data' in data ? data as HeatmapDataResponse : null}
               selectedIndex={selectedIndex}
               selectedDate={selectedDate}
+              embedded={true}
             />
           ) : (
             <div className="bg-white border rounded-lg p-4">
               <ReactECharts
-                ref={(e) => setChartRef(e)}
-                option={
-                  visualizationType === 'heatmap' && 'pixel_data' in data
-                    ? createHeatmapOption(data as HeatmapDataResponse)
-                    : createScatterOption(data as InteractiveDataResponse)
-                }
+                option={createScatterOption(data as InteractiveDataResponse)}
                 style={{ height: '600px', width: '100%' }}
                 opts={{ renderer: 'canvas' }}
+                notMerge={true}
               />
             </div>
           )}
@@ -526,7 +306,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               <p>• <strong>Zoom:</strong> Use mouse wheel or zoom controls to examine specific areas</p>
               <p>• <strong>Pan:</strong> Click and drag to move around the visualization</p>
               <p>• <strong>Legend:</strong> Click legend items to show/hide data series</p>
-              <p>• <strong>Export:</strong> Download data as JSON or save chart as PNG</p>
+              <p>• <strong>Export:</strong> Download data as JSON</p>
             </div>
           </div>
         </div>
