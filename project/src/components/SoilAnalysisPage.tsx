@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, FileText, Trash2, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import SoilAnalysisForm from './SoilAnalysisForm';
+import CSVBulkUpload from './SoilAnalysis/CSVBulkUpload';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
@@ -190,6 +191,7 @@ const SoilAnalysisPage: React.FC = () => {
               <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
+          <CSVBulkUpload onImportComplete={() => window.location.reload()} />
           <button
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}

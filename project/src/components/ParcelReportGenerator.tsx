@@ -140,29 +140,45 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   const downloadReport = async (reportId: string) => {
     try {
       const report = reports.find(r => r.id === reportId);
-      if (!report?.file_url) {
-        // Generate PDF client-side if no file exists
-        alert('Le téléchargement PDF sera disponible prochainement');
+      if (!report) throw new Error('Report not found');
+
+      // If file_url exists, download from storage
+      if (report.file_url) {
+        const { data, error } = await supabase.storage
+          .from('reports')
+          .download(report.file_url);
+
+        if (error) throw error;
+
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${report.title}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
         return;
       }
 
-      // Download from storage
-      const { data, error } = await supabase.storage
-        .from('reports')
-        .download(report.file_url);
+      // Generate HTML from metadata and download as HTML (fallback)
+      if (report.metadata?.html_content) {
+        const blob = new Blob([report.metadata.html_content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${report.title}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
 
-      if (error) throw error;
+        // Show info that this is HTML version
+        alert('Le rapport a été téléchargé au format HTML. Pour une version PDF, veuillez contacter l\'administrateur.');
+        return;
+      }
 
-      // Create download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${report.title}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
+      // If no content available, show error
+      throw new Error('Aucun contenu de rapport disponible');
+    } catch (err: any) {
       console.error('Error downloading report:', err);
-      alert('Erreur lors du téléchargement du rapport');
+      alert(err.message || 'Erreur lors du téléchargement du rapport');
     }
   };
 

@@ -8,6 +8,15 @@ import type { Module } from '../types'
 
 const mockModules: Module[] = [
   {
+    id: 'soil-analysis',
+    name: 'Analyse du Sol',
+    icon: 'FlaskConical',
+    active: true,
+    category: 'agriculture',
+    description: 'Analysez et optimisez votre sol',
+    metrics: []
+  },
+  {
     id: 'fruit-trees',
     name: 'Arbres Fruitiers',
     icon: 'Tree',
@@ -19,14 +28,13 @@ const mockModules: Module[] = [
       { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
     ]
   },
-  // ... other modules would be here
 ];
 
 const AppContent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('soil-analysis');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, setModules] = useState(mockModules);
+  const [modules] = useState(mockModules);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -67,7 +75,9 @@ const AppContent: React.FC = () => {
           </div>
           <OrganizationSwitcher />
         </div>
-        <SoilAnalysisPage />
+        <div className="p-6">
+          <SoilAnalysisPage />
+        </div>
       </main>
     </div>
   );
