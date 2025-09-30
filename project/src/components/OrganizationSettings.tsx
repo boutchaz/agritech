@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Save, Building, Users, Mail, Phone, MapPin, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
+import CurrencySelector from './CurrencySelector';
+import type { Currency } from '../utils/currencies';
 
 interface OrganizationData {
   id: string;
@@ -18,6 +20,8 @@ interface OrganizationData {
   website?: string;
   description?: string;
   status: 'active' | 'inactive' | 'suspended';
+  currency?: string;
+  currency_symbol?: string;
 }
 
 const OrganizationSettings: React.FC = () => {
@@ -77,6 +81,8 @@ const OrganizationSettings: React.FC = () => {
           contact_person: orgData.contact_person,
           website: orgData.website,
           description: orgData.description,
+          currency: orgData.currency,
+          currency_symbol: orgData.currency_symbol,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentOrganization.id);
@@ -96,6 +102,15 @@ const OrganizationSettings: React.FC = () => {
   const handleInputChange = (field: keyof OrganizationData, value: string) => {
     if (!orgData) return;
     setOrgData({ ...orgData, [field]: value });
+  };
+
+  const handleCurrencyChange = (currency: Currency) => {
+    if (!orgData) return;
+    setOrgData({
+      ...orgData,
+      currency: currency.code,
+      currency_symbol: currency.symbol
+    });
   };
 
   if (loading) {
@@ -349,8 +364,20 @@ const OrganizationSettings: React.FC = () => {
           </div>
         </div>
 
+        {/* Regional Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Paramètres régionaux
+          </h3>
+          <CurrencySelector
+            value={orgData.currency || 'EUR'}
+            onChange={handleCurrencyChange}
+            disabled={saving}
+          />
+        </div>
+
         {/* Organization Status */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Statut de l'organisation
           </h3>

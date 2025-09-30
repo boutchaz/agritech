@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { useAuth } from './MultiTenantAuthProvider';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -14,6 +15,11 @@ interface Product {
   unit: string;
 }
 
+interface Parcel {
+  id: string;
+  name: string;
+}
+
 interface Application {
   id: string;
   product_id: string;
@@ -25,26 +31,47 @@ interface Application {
 }
 
 const ProductApplications: React.FC = () => {
+  const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [parcels, setParcels] = useState<Parcel[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [farmId, setFarmId] = useState<string | null>(null);
+
+  const currency = currentOrganization?.currency || 'EUR';
 
   const [newApplication, setNewApplication] = useState({
     product_id: '',
     application_date: new Date().toISOString().split('T')[0],
     quantity_used: 0,
     area_treated: 0,
-    notes: ''
+    notes: '',
+    parcel_id: '',
+    cost: 0
   });
 
   useEffect(() => {
     fetchApplications();
     fetchProducts();
+    fetchParcels();
     fetchUserFarm();
   }, []);
+
+  const fetchParcels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('parcels')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setParcels(data || []);
+    } catch (error) {
+      console.error('Error fetching parcels:', error);
+    }
+  };
 
   const fetchUserFarm = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -109,7 +136,8 @@ const ProductApplications: React.FC = () => {
         .from('product_applications')
         .insert([{
           ...newApplication,
-          farm_id: farmId
+          farm_id: farmId,
+          currency: currency
         }])
         .select()
         .single();
@@ -124,7 +152,9 @@ const ProductApplications: React.FC = () => {
         application_date: new Date().toISOString().split('T')[0],
         quantity_used: 0,
         area_treated: 0,
-        notes: ''
+        notes: '',
+        parcel_id: '',
+        cost: 0
       });
     } catch (error) {
       console.error('Error adding application:', error);
@@ -287,6 +317,42 @@ const ProductApplications: React.FC = () => {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Parcelle
+                </label>
+                <select
+                  value={newApplication.parcel_id}
+                  onChange={(e) => setNewApplication({
+                    ...newApplication,
+                    parcel_id: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                >
+                  <option value="">Sélectionner une parcelle</option>
+                  {parcels.map(parcel => (
+                    <option key={parcel.id} value={parcel.id}>
+                      {parcel.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Coût ({currency})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newApplication.cost}
+                  onChange={(e) => setNewApplication({
+                    ...newApplication,
+                    cost: Number(e.target.value)
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  placeholder={`Coût total de l'application en ${currency}`}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

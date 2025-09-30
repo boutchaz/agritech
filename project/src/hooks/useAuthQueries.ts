@@ -8,6 +8,9 @@ interface Organization {
   slug: string;
   role: string;
   is_active: boolean;
+  currency?: string;
+  timezone?: string;
+  language?: string;
 }
 
 interface Farm {
@@ -75,29 +78,55 @@ export const useUserProfile = (userId: string | undefined) => {
   });
 };
 
-// User organizations query
+// User organizations query - fetch from database with JOIN to get currency
 export const useUserOrganizations = (userId: string | undefined) => {
   return useQuery({
     queryKey: authKeys.organizations(userId || ''),
     queryFn: async (): Promise<Organization[]> => {
       if (!userId) return [];
 
-      const { data, error } = await supabase
-        .rpc('get_user_organizations', { user_uuid: userId });
+      // First, get organization IDs and roles from organization_users
+      const { data: orgUsers, error: orgUsersError } = await supabase
+        .from('organization_users')
+        .select('organization_id, role, is_active')
+        .eq('user_id', userId)
+        .eq('is_active', true);
 
-      if (error) {
-        console.error('Organizations fetch error:', error);
-        // Return empty array to trigger onboarding instead of throwing
+      if (orgUsersError) {
+        console.error('Organization users fetch error:', orgUsersError);
         return [];
       }
 
-      return data?.map((org: any) => ({
-        id: org.organization_id,
-        name: org.organization_name,
-        slug: org.organization_slug,
-        role: org.user_role,
-        is_active: org.is_active
-      })) || [];
+      if (!orgUsers || orgUsers.length === 0) {
+        return [];
+      }
+
+      // Then fetch organization details for each org
+      const orgIds = orgUsers.map(ou => ou.organization_id);
+      const { data: orgs, error: orgsError } = await supabase
+        .from('organizations')
+        .select('id, name, slug, currency, timezone, language')
+        .in('id', orgIds);
+
+      if (orgsError) {
+        console.error('Organizations fetch error:', orgsError);
+        return [];
+      }
+
+      // Combine the data
+      return orgUsers.map(ou => {
+        const org = orgs?.find(o => o.id === ou.organization_id);
+        return {
+          id: ou.organization_id,
+          name: org?.name || 'Unknown',
+          slug: org?.slug || org?.name || 'unknown',
+          role: ou.role,
+          is_active: ou.is_active,
+          currency: org?.currency,
+          timezone: org?.timezone,
+          language: org?.language,
+        };
+      });
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes

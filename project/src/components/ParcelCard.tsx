@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree, DollarSign } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
@@ -12,6 +12,7 @@ import TimeSeriesChart from './SatelliteAnalysis/TimeSeriesChart';
 import StatisticsCalculator from './SatelliteAnalysis/StatisticsCalculator';
 import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
 import ParcelReportGenerator from './ParcelReportGenerator';
+import ParcelProfitability from './ParcelProfitability';
 
 interface Parcel {
   id: string;
@@ -47,6 +48,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
     { id: 'soil', name: 'Analyse Sol', icon: Flask },
     // { id: 'sensors', name: 'Capteurs', icon: Wifi },
     { id: 'satellite', name: 'Imagerie', icon: Satellite },
+    { id: 'profitability', name: 'Rentabilité', icon: DollarSign },
     // { id: 'fruit-trees', name: 'Arbres Fruitiers', icon: Tree },
     // { id: 'yield', name: 'Rendement', icon: TrendingUp },
     // { id: 'applications', name: 'Applications', icon: Sprout },
@@ -562,6 +564,14 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               error={error}
             />
           </div>
+        );
+
+      case 'profitability':
+        return (
+          <ParcelProfitability
+            parcelId={parcel.id}
+            parcelName={parcel.name}
+          />
         );
 
       case 'reports':

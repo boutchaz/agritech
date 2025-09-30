@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import type { Role, UserRole } from '../types/auth';
 import Auth from './Auth';
-import OnboardingFlow from './OnboardingFlow';
 import {
   useUserProfile,
   useUserOrganizations,
@@ -19,6 +19,9 @@ interface Organization {
   role: string;
   role_id?: string;
   is_active: boolean;
+  currency?: string;
+  timezone?: string;
+  language?: string;
 }
 
 interface Farm {
@@ -78,6 +81,8 @@ export const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [currentFarm, setCurrentFarm] = useState<Farm | null>(null);
@@ -273,9 +278,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setShowAuth(false);
   };
 
-  const handleOnboardingComplete = async () => {
-    await refreshUserData();
-  };
+  // Navigate to onboarding if needed
+  useEffect(() => {
+    if (!loading && user && needsOnboarding && !location.pathname.startsWith('/onboarding')) {
+      navigate({ to: '/onboarding' });
+    }
+  }, [needsOnboarding, loading, user, location, navigate]);
 
   const value = {
     user,
@@ -312,11 +320,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // Show onboarding flow
-  if (needsOnboarding && user) {
-    return <OnboardingFlow user={user} onComplete={handleOnboardingComplete} />;
-  }
-
-  // Show main app
+  // Show main app (onboarding redirect is handled by useEffect above)
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

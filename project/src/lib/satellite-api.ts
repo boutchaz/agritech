@@ -492,8 +492,20 @@ class SatelliteAPIClient {
 
   // Generate vegetation index image
   async generateIndexImage(request: IndexImageRequest): Promise<IndexImageResponse> {
-    return this.request('/analysis/generate-index-image', {
+    // Use Supabase Edge Function instead of external service
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase configuration missing');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/generate-index-image`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
       body: JSON.stringify({
         aoi: request.aoi,
         date_range: request.date_range,
@@ -501,6 +513,13 @@ class SatelliteAPIClient {
         cloud_coverage: request.cloud_coverage || 10
       }),
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate index image');
+    }
+
+    return response.json();
   }
 
   // Generate multiple index images for comparison

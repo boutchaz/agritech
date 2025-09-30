@@ -10,7 +10,9 @@ import {
   Calendar,
   User
 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { generateParcelReport } from '../lib/edge-functions-api';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
 
 interface ParcelReportGeneratorProps {
@@ -24,10 +26,9 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   parcelName,
   parcelData
 }) => {
+  const queryClient = useQueryClient();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState<string | null>(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,53 +90,28 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
     }
   };
 
-  const generateReport = async (templateId: string) => {
-    setGenerating(templateId);
-    setError(null);
-
-    try {
+  // Mutation for generating reports
+  const generateReportMutation = useMutation({
+    mutationFn: async (templateId: string) => {
       const template = templates.find(t => t.id === templateId);
       if (!template) throw new Error('Template not found');
 
-      // Call backend to generate report
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('generate-parcel-report', {
-        body: {
-          parcel_id: parcelId,
-          template_id: templateId,
-          parcel_data: parcelData
-        }
+      return generateParcelReport({
+        parcel_id: parcelId,
+        template_id: templateId,
+        parcel_data: parcelData
       });
-
-      if (error) throw error;
-
-      // If edge function doesn't exist, create a placeholder record
-      if (!data) {
-        const { error: insertError } = await supabase
-          .from('parcel_reports')
-          .insert({
-            parcel_id: parcelId,
-            template_id: templateId,
-            title: `${template.name} - ${parcelName}`,
-            generated_by: user.id,
-            status: 'completed',
-            metadata: { template, parcel: parcelData }
-          });
-
-        if (insertError) throw insertError;
-      }
-
-      await fetchReports();
+    },
+    onSuccess: () => {
+      fetchReports();
       setShowTemplateSelector(false);
-    } catch (err: any) {
+      setError(null);
+    },
+    onError: (err: any) => {
       console.error('Error generating report:', err);
       setError(err.message || 'Failed to generate report');
-    } finally {
-      setGenerating(null);
     }
-  };
+  });
 
   const downloadReport = async (reportId: string) => {
     try {
@@ -247,15 +223,15 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
             {templates.map((template) => (
               <button
                 key={template.id}
-                onClick={() => generateReport(template.id)}
-                disabled={generating === template.id}
+                onClick={() => generateReportMutation.mutate(template.id)}
+                disabled={generateReportMutation.isPending}
                 className="text-left p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h6 className="font-medium text-gray-900 dark:text-white">
                     {template.name}
                   </h6>
-                  {generating === template.id && (
+                  {generateReportMutation.isPending && (
                     <Loader className="w-4 h-4 animate-spin text-green-600" />
                   )}
                 </div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getRecommendations } from '../lib/edge-functions-api';
 import type { Module, SensorData } from '../types';
 
 export interface Recommendation {
@@ -8,48 +9,34 @@ export interface Recommendation {
 }
 
 export function useRecommendations(module: Module | null, sensorData: SensorData[]) {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchRecommendations() {
-      if (!module) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recommendations`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              moduleData: module,
-              sensorData,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Erreur lors de la récupération des recommandations');
-        }
-
-        const data = await response.json();
-        setRecommendations(data.recommendations);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-      } finally {
-        setLoading(false);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['recommendations', module?.id, sensorData.length],
+    queryFn: async () => {
+      if (!module) {
+        return { recommendations: [] };
       }
-    }
 
-    fetchRecommendations();
-  }, [module, sensorData]);
+      return getRecommendations({
+        moduleData: {
+          id: module.id,
+          type: module.type,
+          status: module.status
+        },
+        sensorData: sensorData.map(sd => ({
+          timestamp: sd.timestamp,
+          temperature: sd.temperature,
+          humidity: sd.humidity,
+          soilMoisture: sd.soilMoisture
+        }))
+      });
+    },
+    enabled: !!module && sensorData.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  return { recommendations, loading, error };
+  return {
+    recommendations: data?.recommendations || [],
+    loading: isLoading,
+    error: error ? (error instanceof Error ? error.message : 'Une erreur est survenue') : null
+  };
 }

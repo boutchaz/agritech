@@ -16,7 +16,9 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analysis'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfitabilityRouteImport } from './routes/profitability'
 import { Route as ParcelsRouteImport } from './routes/parcels'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
 import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
@@ -27,6 +29,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsPreferencesRouteImport } from './routes/settings.preferences'
@@ -69,9 +72,19 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfitabilityRoute = ProfitabilityRouteImport.update({
+  id: '/profitability',
+  path: '/profitability',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ParcelsRoute = ParcelsRouteImport.update({
   id: '/parcels',
   path: '/parcels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -123,6 +136,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SettingsRoute,
 } as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRoute,
+} as any)
 const SettingsUsersRoute = SettingsUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -163,7 +181,9 @@ export interface FileRoutesByFullPath {
   '/farm-hierarchy': typeof FarmHierarchyRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRoute
+  '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
@@ -177,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -189,6 +210,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
+  '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
@@ -201,6 +223,7 @@ export interface FileRoutesByTo {
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -214,7 +237,9 @@ export interface FileRoutesById {
   '/farm-hierarchy': typeof FarmHierarchyRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRoute
+  '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
@@ -228,6 +253,7 @@ export interface FileRoutesById {
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -241,7 +267,9 @@ export interface FileRouteTypes {
     | '/farm-hierarchy'
     | '/infrastructure'
     | '/login'
+    | '/onboarding'
     | '/parcels'
+    | '/profitability'
     | '/register'
     | '/reports'
     | '/satellite-analysis'
@@ -255,6 +283,7 @@ export interface FileRouteTypes {
     | '/settings/preferences'
     | '/settings/profile'
     | '/settings/users'
+    | '/onboarding/'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -267,6 +296,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/login'
     | '/parcels'
+    | '/profitability'
     | '/register'
     | '/reports'
     | '/satellite-analysis'
@@ -279,6 +309,7 @@ export interface FileRouteTypes {
     | '/settings/preferences'
     | '/settings/profile'
     | '/settings/users'
+    | '/onboarding'
     | '/settings'
   id:
     | '__root__'
@@ -291,7 +322,9 @@ export interface FileRouteTypes {
     | '/farm-hierarchy'
     | '/infrastructure'
     | '/login'
+    | '/onboarding'
     | '/parcels'
+    | '/profitability'
     | '/register'
     | '/reports'
     | '/satellite-analysis'
@@ -305,6 +338,7 @@ export interface FileRouteTypes {
     | '/settings/preferences'
     | '/settings/profile'
     | '/settings/users'
+    | '/onboarding/'
     | '/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -318,7 +352,9 @@ export interface RootRouteChildren {
   FarmHierarchyRoute: typeof FarmHierarchyRoute
   InfrastructureRoute: typeof InfrastructureRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRouteWithChildren
   ParcelsRoute: typeof ParcelsRoute
+  ProfitabilityRoute: typeof ProfitabilityRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SatelliteAnalysisRoute: typeof SatelliteAnalysisRoute
@@ -379,11 +415,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profitability': {
+      id: '/profitability'
+      path: '/profitability'
+      fullPath: '/profitability'
+      preLoaderRoute: typeof ProfitabilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/parcels': {
       id: '/parcels'
       path: '/parcels'
       fullPath: '/parcels'
       preLoaderRoute: typeof ParcelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -456,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
     '/settings/users': {
       id: '/settings/users'
       path: '/users'
@@ -501,6 +558,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OnboardingRouteChildren {
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+}
+
+const OnboardingRouteChildren: OnboardingRouteChildren = {
+  OnboardingIndexRoute: OnboardingIndexRoute,
+}
+
+const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
+  OnboardingRouteChildren,
+)
+
 interface SettingsRouteChildren {
   SettingsDashboardRoute: typeof SettingsDashboardRoute
   SettingsModulesRoute: typeof SettingsModulesRoute
@@ -535,7 +604,9 @@ const rootRouteChildren: RootRouteChildren = {
   FarmHierarchyRoute: FarmHierarchyRoute,
   InfrastructureRoute: InfrastructureRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRouteWithChildren,
   ParcelsRoute: ParcelsRoute,
+  ProfitabilityRoute: ProfitabilityRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SatelliteAnalysisRoute: SatelliteAnalysisRoute,

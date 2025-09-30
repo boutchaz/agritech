@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Grid3X3, Activity, MousePointer } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -30,10 +31,6 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   const [displayMode, setDisplayMode] = useState<'static' | 'interactive'>('static');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [images, setImages] = useState<IndexImageResponse[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
   // Initialize with last 7 days for recent imagery
   useEffect(() => {
     const defaultRange = getDateRangeLastNDays(7);
@@ -49,13 +46,13 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
     );
   };
 
-  const generateImages = useCallback(async () => {
-    if (!boundary || !startDate || !endDate || selectedIndices.length === 0) return;
+  // Use React Query mutation for generating images
+  const generateImagesMutation = useMutation({
+    mutationFn: async () => {
+      if (!boundary || !startDate || !endDate || selectedIndices.length === 0) {
+        throw new Error('Missing required parameters');
+      }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
       const aoi = {
         geometry: convertBoundaryToGeoJSON(boundary),
         name: parcelName || 'Selected Parcel'
@@ -63,20 +60,18 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
 
       const dateRange = { start_date: startDate, end_date: endDate };
 
-      const results = await satelliteApi.generateMultipleIndexImages(
+      return satelliteApi.generateMultipleIndexImages(
         aoi,
         dateRange,
         selectedIndices,
         cloudCoverage
       );
+    },
+  });
 
-      setImages(results);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate index images');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [boundary, parcelName, startDate, endDate, selectedIndices, cloudCoverage]);
+  const generateImages = () => {
+    generateImagesMutation.mutate();
+  };
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -239,27 +234,31 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
         {/* Generate Button */}
         <button
           onClick={generateImages}
-          disabled={isLoading || !boundary || selectedIndices.length === 0}
+          disabled={generateImagesMutation.isPending || !boundary || selectedIndices.length === 0}
           className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-          {isLoading ? 'Generating Images...' : 'Generate Images'}
+          {generateImagesMutation.isPending ? <Loader className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
+          {generateImagesMutation.isPending ? 'Generating Images...' : 'Generate Images'}
         </button>
       </div>
 
       {/* Error Display */}
-      {error && (
+      {generateImagesMutation.isError && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-red-800">
             <AlertTriangle className="w-4 h-4" />
             <span className="font-medium">Error</span>
           </div>
-          <p className="text-red-700 text-sm mt-1">{error}</p>
+          <p className="text-red-700 text-sm mt-1">
+            {generateImagesMutation.error instanceof Error
+              ? generateImagesMutation.error.message
+              : 'Failed to generate index images'}
+          </p>
         </div>
       )}
 
       {/* Image Display */}
-      {images.length > 0 && (
+      {generateImagesMutation.data && generateImagesMutation.data.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Generated Images</h3>
@@ -277,7 +276,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           {viewMode === 'grid' ? (
             /* Grid View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {images.map((imageData, index) => (
+              {generateImagesMutation.data.map((imageData, index) => (
                 <div key={imageData.index} className="bg-white border rounded-lg overflow-hidden shadow-sm">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-2">
@@ -360,7 +359,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
             <div className="space-y-4">
               {/* Image Navigation */}
               <div className="flex items-center justify-center gap-2">
-                {images.map((_, index) => (
+                {generateImagesMutation.data.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
@@ -370,27 +369,27 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    {images[index].index}
+                    {generateImagesMutation.data[index].index}
                   </button>
                 ))}
               </div>
 
               {/* Selected Image */}
-              {images[selectedImageIndex] && (
+              {generateImagesMutation.data[selectedImageIndex] && (
                 <div className="bg-white border rounded-lg overflow-hidden">
                   <div className="p-6 border-b">
                     <div className="flex items-center justify-between mb-4">
                       <h4
                         className="text-2xl font-bold"
-                        style={{ color: getIndexColor(images[selectedImageIndex].index) }}
+                        style={{ color: getIndexColor(generateImagesMutation.data[selectedImageIndex].index) }}
                       >
-                        {images[selectedImageIndex].index}
+                        {generateImagesMutation.data[selectedImageIndex].index}
                       </h4>
                       <button
                         onClick={() => downloadImage(
-                          images[selectedImageIndex].image_url,
-                          images[selectedImageIndex].index,
-                          images[selectedImageIndex].date
+                          generateImagesMutation.data[selectedImageIndex].image_url,
+                          generateImagesMutation.data[selectedImageIndex].index,
+                          generateImagesMutation.data[selectedImageIndex].date
                         )}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                       >
@@ -399,25 +398,25 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                       </button>
                     </div>
                     <p className="text-gray-700 mb-4">
-                      {VEGETATION_INDEX_DESCRIPTIONS[images[selectedImageIndex].index]}
+                      {VEGETATION_INDEX_DESCRIPTIONS[generateImagesMutation.data[selectedImageIndex].index]}
                     </p>
                     <div className="flex items-center gap-6 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        Date: {images[selectedImageIndex].date}
+                        Date: {generateImagesMutation.data[selectedImageIndex].date}
                       </div>
                       <div className="flex items-center gap-2">
                         <Cloud className="w-4 h-4" />
-                        Cloud Coverage: {images[selectedImageIndex].cloud_coverage.toFixed(1)}%
-                        {images[selectedImageIndex].metadata?.threshold_used > images[selectedImageIndex].metadata?.requested_threshold && (
-                          <span className="text-sm text-amber-600 font-medium" title={`Requested ${images[selectedImageIndex].metadata.requested_threshold}% but used ${images[selectedImageIndex].metadata.threshold_used}%`}>
-                            (threshold relaxed to {images[selectedImageIndex].metadata.threshold_used}%)
+                        Cloud Coverage: {generateImagesMutation.data[selectedImageIndex].cloud_coverage.toFixed(1)}%
+                        {generateImagesMutation.data[selectedImageIndex].metadata?.threshold_used > generateImagesMutation.data[selectedImageIndex].metadata?.requested_threshold && (
+                          <span className="text-sm text-amber-600 font-medium" title={`Requested ${generateImagesMutation.data[selectedImageIndex].metadata.requested_threshold}% but used ${generateImagesMutation.data[selectedImageIndex].metadata.threshold_used}%`}>
+                            (threshold relaxed to {generateImagesMutation.data[selectedImageIndex].metadata.threshold_used}%)
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-600" />
-                        {images[selectedImageIndex].metadata.suitable_images} suitable images found
+                        {generateImagesMutation.data[selectedImageIndex].metadata.suitable_images} suitable images found
                       </div>
                     </div>
                   </div>
@@ -425,8 +424,8 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                   {/* Large Image Display */}
                   <div className="aspect-video bg-gray-100 flex items-center justify-center">
                     <img
-                      src={images[selectedImageIndex].image_url}
-                      alt={`${images[selectedImageIndex].index} visualization`}
+                      src={generateImagesMutation.data[selectedImageIndex].image_url}
+                      alt={`${generateImagesMutation.data[selectedImageIndex].index} visualization`}
                       className="max-w-full max-h-full object-contain rounded"
                     />
                   </div>
@@ -436,20 +435,20 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                     <h5 className="font-medium mb-3">Color Scale Interpretation</h5>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">
-                        {getColorLegend(images[selectedImageIndex].index).min}
+                        {getColorLegend(generateImagesMutation.data[selectedImageIndex].index).min}
                       </span>
                       <span className="text-sm font-medium">
-                        {getColorLegend(images[selectedImageIndex].index).max}
+                        {getColorLegend(generateImagesMutation.data[selectedImageIndex].index).max}
                       </span>
                     </div>
                     <div
                       className="h-4 rounded-full mb-3"
                       style={{
-                        background: `linear-gradient(to right, ${getColorLegend(images[selectedImageIndex].index).colors.join(', ')})`
+                        background: `linear-gradient(to right, ${getColorLegend(generateImagesMutation.data[selectedImageIndex].index).colors.join(', ')})`
                       }}
                     />
                     <div className="text-sm text-gray-600">
-                      Colors represent the range of {images[selectedImageIndex].index} values across your parcel.
+                      Colors represent the range of {generateImagesMutation.data[selectedImageIndex].index} values across your parcel.
                       Darker greens typically indicate healthier vegetation.
                     </div>
                   </div>

@@ -1,4 +1,3 @@
-```typescript
 // Existing types...
 
 export interface DashboardSettings {
@@ -16,4 +15,3 @@ export interface DashboardSettings {
     bottomRow: string[];
   };
 }
-```

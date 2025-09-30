@@ -338,13 +338,13 @@ const DayLaborerManagement: React.FC = () => {
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                 <p className="font-medium">Type de paiement: {laborer.payment_type === 'daily' ? 'Journalier' : laborer.payment_type === 'task' ? 'Par tâche' : 'Par unité'}</p>
                 {laborer.payment_type === 'daily' && (
-                  <p>Taux journalier: {laborer.daily_rate} {currency}</p>
+                  <p>Taux journalier: {laborer.daily_rate} DH</p>
                 )}
                 {laborer.payment_type === 'task' && laborer.task_rate && (
-                  <p>Taux par tâche: {laborer.task_rate} {currency}</p>
+                  <p>Taux par tâche: {laborer.task_rate} DH</p>
                 )}
                 {laborer.payment_type === 'unit' && laborer.unit_rate && (
-                  <p>Taux par {laborer.unit_type}: {laborer.unit_rate} {currency}</p>
+                  <p>Taux par {laborer.unit_type}: {laborer.unit_rate} DH</p>
                 )}
               </div>
               {renderSpecialties(laborer)}
@@ -454,13 +454,12 @@ const DayLaborerManagement: React.FC = () => {
               {newLaborer.payment_type === 'daily' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux journalier ({currency})
+                    Taux journalier (DH)
                   </label>
                   <input
                     type="number"
                     value={newLaborer.daily_rate}
                     onChange={(e) => setNewLaborer({ ...newLaborer, daily_rate: Number(e.target.value) })}
-                    placeholder={`Taux journalier en ${currency}`}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
@@ -470,13 +469,12 @@ const DayLaborerManagement: React.FC = () => {
               {newLaborer.payment_type === 'task' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux par tâche ({currency})
+                    Taux par tâche (DH)
                   </label>
                   <input
                     type="number"
                     value={newLaborer.task_rate || ''}
                     onChange={(e) => setNewLaborer({ ...newLaborer, task_rate: Number(e.target.value) })}
-                    placeholder={`Taux par tâche en ${currency}`}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
@@ -500,13 +498,12 @@ const DayLaborerManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Taux par unité ({currency})
+                      Taux par unité (DH)
                     </label>
                     <input
                       type="number"
                       value={newLaborer.unit_rate || ''}
                       onChange={(e) => setNewLaborer({ ...newLaborer, unit_rate: Number(e.target.value) })}
-                      placeholder={`Taux par unité en ${currency}`}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />
@@ -651,7 +648,7 @@ const DayLaborerManagement: React.FC = () => {
               {editingLaborer.payment_type === 'daily' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux journalier ({currency})
+                    Taux journalier (DH)
                   </label>
                   <input
                     type="number"
@@ -660,7 +657,6 @@ const DayLaborerManagement: React.FC = () => {
                       ...editingLaborer,
                       daily_rate: Number(e.target.value)
                     })}
-                    placeholder={`Taux journalier en ${currency}`}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
@@ -670,7 +666,7 @@ const DayLaborerManagement: React.FC = () => {
               {editingLaborer.payment_type === 'task' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux par tâche ({currency})
+                    Taux par tâche (DH)
                   </label>
                   <input
                     type="number"
@@ -679,7 +675,6 @@ const DayLaborerManagement: React.FC = () => {
                       ...editingLaborer,
                       task_rate: Number(e.target.value)
                     })}
-                    placeholder={`Taux par tâche en ${currency}`}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
@@ -706,7 +701,7 @@ const DayLaborerManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Taux par unité ({currency})
+                      Taux par unité (DH)
                     </label>
                     <input
                       type="number"
@@ -715,7 +710,6 @@ const DayLaborerManagement: React.FC = () => {
                         ...editingLaborer,
                         unit_rate: Number(e.target.value)
                       })}
-                      placeholder={`Taux par unité en ${currency}`}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />

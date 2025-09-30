@@ -35,12 +35,13 @@ const employeeSchema = z.object({
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 const EmployeeManagement: React.FC = () => {
-  const { currentFarm } = useAuth();
+  const { currentFarm, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const farmId = currentFarm?.id;
+  const currency = currentOrganization?.currency || 'EUR';
 
   const emptyDefaults: EmployeeFormValues = {
     first_name: '',
@@ -277,7 +278,7 @@ const EmployeeManagement: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Salaire</span>
-                <span>{employee.salary.toFixed(2)} DH</span>
+                <span>{employee.salary.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Statut</span>
@@ -386,12 +387,13 @@ const EmployeeManagement: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire (DH)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire ({currency})</label>
                     <input
                       type="number"
                       step="1"
                       {...form.register('salary', { valueAsNumber: true })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                      placeholder={`Salaire en ${currency}`}
                     />
                     <p className="mt-1 text-sm text-red-600">{form.formState.errors.salary?.message as string}</p>
                   </div>

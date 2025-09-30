@@ -640,8 +640,26 @@ const InfrastructureManagement: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {structures.map(structure => (
+      {structures.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Aucune infrastructure
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
+            Commencez par ajouter votre première infrastructure (écurie, local technique, bassin ou puits)
+          </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Ajouter une infrastructure</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {structures.map(structure => (
           <div
             key={structure.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
@@ -736,8 +754,9 @@ const InfrastructureManagement: React.FC = () => {
               )}
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Add/Edit Structure Modal */}
       {(showAddModal || editingStructure) && (

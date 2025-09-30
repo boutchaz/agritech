@@ -60,33 +60,49 @@ CREATE POLICY "Authenticated users can view permissions" ON public.permissions
 CREATE POLICY "Authenticated users can view role permissions" ON public.role_permissions
     FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- Only system admins can modify roles and permissions
-CREATE POLICY "Only system admins can manage roles" ON public.roles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.organization_users ou
-            JOIN public.roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid() AND r.name = 'system_admin'
-        )
+-- Create helper function to check if user is system admin (avoids recursion)
+CREATE OR REPLACE FUNCTION public.is_system_admin(user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.organization_users ou
+        JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = user_id AND r.name = 'system_admin'
     );
+$$;
 
-CREATE POLICY "Only system admins can manage permissions" ON public.permissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.organization_users ou
-            JOIN public.roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid() AND r.name = 'system_admin'
-        )
-    );
+-- Only system admins can INSERT, UPDATE, DELETE roles
+CREATE POLICY "Only system admins can insert roles" ON public.roles
+    FOR INSERT WITH CHECK (public.is_system_admin(auth.uid()));
 
-CREATE POLICY "Only system admins can manage role permissions" ON public.role_permissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.organization_users ou
-            JOIN public.roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid() AND r.name = 'system_admin'
-        )
-    );
+CREATE POLICY "Only system admins can update roles" ON public.roles
+    FOR UPDATE USING (public.is_system_admin(auth.uid()));
+
+CREATE POLICY "Only system admins can delete roles" ON public.roles
+    FOR DELETE USING (public.is_system_admin(auth.uid()));
+
+-- Only system admins can INSERT, UPDATE, DELETE permissions
+CREATE POLICY "Only system admins can insert permissions" ON public.permissions
+    FOR INSERT WITH CHECK (public.is_system_admin(auth.uid()));
+
+CREATE POLICY "Only system admins can update permissions" ON public.permissions
+    FOR UPDATE USING (public.is_system_admin(auth.uid()));
+
+CREATE POLICY "Only system admins can delete permissions" ON public.permissions
+    FOR DELETE USING (public.is_system_admin(auth.uid()));
+
+-- Only system admins can INSERT, UPDATE, DELETE role_permissions
+CREATE POLICY "Only system admins can insert role permissions" ON public.role_permissions
+    FOR INSERT WITH CHECK (public.is_system_admin(auth.uid()));
+
+CREATE POLICY "Only system admins can update role permissions" ON public.role_permissions
+    FOR UPDATE USING (public.is_system_admin(auth.uid()));
+
+CREATE POLICY "Only system admins can delete role permissions" ON public.role_permissions
+    FOR DELETE USING (public.is_system_admin(auth.uid()));
 
 -- Insert default roles
 INSERT INTO public.roles (name, display_name, description, level) VALUES
@@ -234,15 +250,15 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create function to get user role
-CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID, organization_id UUID DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID, org_id UUID DEFAULT NULL)
 RETURNS TABLE(role_name TEXT, role_display_name TEXT, role_level INTEGER) AS $$
 BEGIN
     RETURN QUERY
     SELECT r.name, r.display_name, r.level
     FROM public.organization_users ou
     JOIN public.roles r ON r.id = ou.role_id
-    WHERE ou.user_id = $1
-    AND (organization_id IS NULL OR ou.organization_id = $2)
+    WHERE ou.user_id = user_id
+    AND (org_id IS NULL OR ou.organization_id = org_id)
     ORDER BY r.level ASC
     LIMIT 1;
 END;

@@ -1,31 +1,109 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Save } from 'lucide-react';
+import { LayoutGrid, Save, Loader2, AlertCircle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './MultiTenantAuthProvider';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
 
-interface DashboardSettingsProps {
-  dashboardSettings?: DashboardSettingsType;
-  onDashboardSettingsChange?: (settings: DashboardSettingsType) => void;
-}
+const defaultSettings: DashboardSettingsType = {
+  showSoilData: true,
+  showClimateData: true,
+  showIrrigationData: true,
+  showMaintenanceData: true,
+  showProductionData: true,
+  showFinancialData: true,
+  showStockAlerts: true,
+  showTaskAlerts: true,
+  layout: {
+    topRow: ['soil', 'climate', 'irrigation', 'maintenance'],
+    middleRow: ['production', 'financial'],
+    bottomRow: ['alerts', 'tasks']
+  }
+};
 
-const DashboardSettings: React.FC<DashboardSettingsProps> = ({
-  dashboardSettings = {
-    showSoilData: true,
-    showClimateData: true,
-    showIrrigationData: true,
-    showMaintenanceData: true,
-    showProductionData: true,
-    showFinancialData: true,
-    showStockAlerts: true,
-    showTaskAlerts: true,
-    layout: {
-      topRow: ['soil', 'climate', 'irrigation', 'maintenance'],
-      middleRow: ['production', 'financial'],
-      bottomRow: ['alerts', 'tasks']
+const DashboardSettings: React.FC = () => {
+  const { user, currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const [settings, setSettings] = useState<DashboardSettingsType>(defaultSettings);
+  const [success, setSuccess] = useState(false);
+
+  // Fetch dashboard settings
+  const { isLoading } = useQuery({
+    queryKey: ['dashboard-settings', user?.id, currentOrganization?.id],
+    queryFn: async () => {
+      if (!user || !currentOrganization) return null;
+
+      const { data, error } = await supabase
+        .from('dashboard_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('organization_id', currentOrganization.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        const fetchedSettings = {
+          showSoilData: data.show_soil_data,
+          showClimateData: data.show_climate_data,
+          showIrrigationData: data.show_irrigation_data,
+          showMaintenanceData: data.show_maintenance_data,
+          showProductionData: data.show_production_data,
+          showFinancialData: data.show_financial_data,
+          showStockAlerts: data.show_stock_alerts,
+          showTaskAlerts: data.show_task_alerts,
+          layout: data.layout
+        };
+        setSettings(fetchedSettings);
+        return fetchedSettings;
+      }
+
+      return defaultSettings;
+    },
+    enabled: !!user && !!currentOrganization
+  });
+
+  // Save dashboard settings mutation
+  const saveMutation = useMutation({
+    mutationFn: async (settingsToSave: DashboardSettingsType) => {
+      if (!user || !currentOrganization) {
+        throw new Error('User or organization not found');
+      }
+
+      const dbSettings = {
+        user_id: user.id,
+        organization_id: currentOrganization.id,
+        show_soil_data: settingsToSave.showSoilData,
+        show_climate_data: settingsToSave.showClimateData,
+        show_irrigation_data: settingsToSave.showIrrigationData,
+        show_maintenance_data: settingsToSave.showMaintenanceData,
+        show_production_data: settingsToSave.showProductionData,
+        show_financial_data: settingsToSave.showFinancialData,
+        show_stock_alerts: settingsToSave.showStockAlerts,
+        show_task_alerts: settingsToSave.showTaskAlerts,
+        layout: settingsToSave.layout
+      };
+
+      const { error } = await supabase
+        .from('dashboard_settings')
+        .upsert(dbSettings, {
+          onConflict: 'user_id,organization_id'
+        });
+
+      if (error) throw error;
+
+      return settingsToSave;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['dashboard-settings', user?.id, currentOrganization?.id]
+      });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     }
-  },
-  onDashboardSettingsChange = () => {}
-}) => {
-  const [settings, setSettings] = useState(dashboardSettings);
+  });
 
   const handleSettingChange = (key: keyof DashboardSettingsType, value: boolean) => {
     const newSettings = {
@@ -36,9 +114,16 @@ const DashboardSettings: React.FC<DashboardSettingsProps> = ({
   };
 
   const handleSave = () => {
-    onDashboardSettingsChange(settings);
-    // Add success notification here
+    saveMutation.mutate(settings);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -51,12 +136,38 @@ const DashboardSettings: React.FC<DashboardSettingsProps> = ({
         </div>
         <button
           onClick={handleSave}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          disabled={saveMutation.isPending}
+          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save className="h-4 w-4" />
-          <span>Sauvegarder</span>
+          {saveMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          <span>{saveMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}</span>
         </button>
       </div>
+
+      {saveMutation.isError && (
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <p className="text-red-600 dark:text-red-400">
+              {saveMutation.error instanceof Error
+                ? saveMutation.error.message
+                : 'Erreur lors de la sauvegarde des paramètres'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+          <p className="text-green-600 dark:text-green-400">
+            Paramètres sauvegardés avec succès
+          </p>
+        </div>
+      )}
 
       <p className="text-gray-600 dark:text-gray-400">
         Personnalisez l'affichage de votre tableau de bord en choisissant les données à afficher et leur disposition.
