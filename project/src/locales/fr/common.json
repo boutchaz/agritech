@@ -84,5 +84,85 @@
     "thisMonth": "Ce mois-ci",
     "thisYear": "Cette année",
     "custom": "Personnalisé"
+  },
+  "landing": {
+    "hero": {
+      "title": "Transformez votre agriculture avec",
+      "titleHighlight": "la donnée",
+      "subtitle": "Plateforme complète de gestion agricole. Parcelles, équipes, stocks, analyses satellite, sol et rentabilité. Tout en un seul endroit.",
+      "ctaPrimary": "Démarrer maintenant",
+      "ctaSecondary": "Découvrir les fonctionnalités",
+      "freeTrial": "Essai gratuit",
+      "noCommitment": "Sans engagement",
+      "supportIncluded": "Support inclus"
+    },
+    "features": {
+      "title": "Fonctionnalités complètes",
+      "subtitle": "Tous les outils dont vous avez besoin pour gérer votre exploitation",
+      "parcelManagement": "Gestion Parcellaire",
+      "parcelDesc": "Gérez vos parcelles avec précision. Suivez les cultures, surfaces et données géospatiales.",
+      "teamManagement": "Gestion des Équipes",
+      "teamDesc": "Employés permanents et journaliers. Présences, salaires et planning optimisés.",
+      "satelliteAnalysis": "Analyse Satellite",
+      "satelliteDesc": "Indices NDVI, NDWI, NDMI pour surveiller la santé des cultures par satellite.",
+      "soilAnalysis": "Analyse du Sol",
+      "soilDesc": "pH, humidité, NPK, matière organique. Analyses en laboratoire et terrain.",
+      "stockManagement": "Gestion des Stocks",
+      "stockDesc": "Intrants, engrais, semences. Alertes de stock bas et gestion des expirations.",
+      "profitability": "Rentabilité Parcellaire",
+      "profitabilityDesc": "Calculez coûts et revenus par parcelle. Optimisez votre rentabilité.",
+      "analytics": "Rapports & Analytics",
+      "analyticsDesc": "Tableaux de bord personnalisables. Exportez vos données et rapports.",
+      "infrastructure": "Gestion Infrastructure",
+      "infrastructureDesc": "Équipements, bâtiments, systèmes d'irrigation. Maintenance et suivi.",
+      "weather": "Météo & Services",
+      "weatherDesc": "Prévisions météo intégrées et services utilitaires pour votre ferme.",
+      "multiOrg": "Multi-Organisation",
+      "multiOrgDesc": "Gérez plusieurs exploitations. Permissions et rôles par organisation.",
+      "secure": "Sécurisé & Conforme",
+      "secureDesc": "Authentification sécurisée, RLS Supabase. Vos données sont protégées.",
+      "realtime": "Temps Réel",
+      "realtimeDesc": "Mises à jour en temps réel avec React Query. Interface réactive."
+    },
+    "benefits": {
+      "title": "Pourquoi choisir AgriTech ?",
+      "productivity": "Productivité accrue",
+      "productivityDesc": "Automatisez vos tâches et gagnez du temps sur la gestion quotidienne.",
+      "costReduction": "Réduction des coûts",
+      "costReductionDesc": "Optimisez vos intrants et réduisez le gaspillage grâce aux données.",
+      "betterYields": "Meilleurs rendements",
+      "betterYieldsDesc": "Prenez des décisions basées sur les données pour maximiser vos récoltes.",
+      "sustainable": "Agriculture durable",
+      "sustainableDesc": "Réduisez votre impact environnemental avec une gestion précise."
+    },
+    "pricing": {
+      "title": "Tarifs simples et transparents",
+      "subtitle": "Choisissez le plan adapté à vos besoins",
+      "mostPopular": "Le plus populaire",
+      "perMonth": "/mois",
+      "getStarted": "Commencer",
+      "contactUs": "Nous contacter"
+    },
+    "cta": {
+      "title": "Prêt à moderniser votre agriculture ?",
+      "subtitle": "Rejoignez des centaines d'agriculteurs qui optimisent déjà leur exploitation.",
+      "button": "Commencer gratuitement"
+    },
+    "footer": {
+      "tagline": "La plateforme complète pour moderniser votre agriculture.",
+      "product": "Produit",
+      "features": "Fonctionnalités",
+      "pricing": "Tarifs",
+      "freeTrial": "Essai gratuit",
+      "support": "Support",
+      "documentation": "Documentation",
+      "contact": "Contact",
+      "faq": "FAQ",
+      "legal": "Légal",
+      "privacy": "Confidentialité",
+      "terms": "CGU",
+      "legalNotice": "Mentions légales",
+      "copyright": "Tous droits réservés."
+    }
   }
 }

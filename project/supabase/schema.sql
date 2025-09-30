@@ -24,6 +24,7 @@ CREATE TABLE public.organizations (
     id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     name text NOT NULL,
     slug text NOT NULL UNIQUE,
+    owner_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
     email text,
     phone text,
     address text,

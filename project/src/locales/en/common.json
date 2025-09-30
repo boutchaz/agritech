@@ -84,5 +84,85 @@
     "thisMonth": "This month",
     "thisYear": "This year",
     "custom": "Custom"
+  },
+  "landing": {
+    "hero": {
+      "title": "Transform your agriculture with",
+      "titleHighlight": "data",
+      "subtitle": "Complete agricultural management platform. Parcels, teams, inventory, satellite analysis, soil and profitability. All in one place.",
+      "ctaPrimary": "Get started now",
+      "ctaSecondary": "Discover features",
+      "freeTrial": "Free trial",
+      "noCommitment": "No commitment",
+      "supportIncluded": "Support included"
+    },
+    "features": {
+      "title": "Complete features",
+      "subtitle": "All the tools you need to manage your farm",
+      "parcelManagement": "Parcel Management",
+      "parcelDesc": "Manage your parcels with precision. Track crops, surfaces and geospatial data.",
+      "teamManagement": "Team Management",
+      "teamDesc": "Permanent employees and day laborers. Attendance, wages and optimized scheduling.",
+      "satelliteAnalysis": "Satellite Analysis",
+      "satelliteDesc": "NDVI, NDWI, NDMI indices to monitor crop health via satellite.",
+      "soilAnalysis": "Soil Analysis",
+      "soilDesc": "pH, humidity, NPK, organic matter. Laboratory and field analyses.",
+      "stockManagement": "Stock Management",
+      "stockDesc": "Inputs, fertilizers, seeds. Low stock alerts and expiration management.",
+      "profitability": "Parcel Profitability",
+      "profitabilityDesc": "Calculate costs and revenues per parcel. Optimize your profitability.",
+      "analytics": "Reports & Analytics",
+      "analyticsDesc": "Customizable dashboards. Export your data and reports.",
+      "infrastructure": "Infrastructure Management",
+      "infrastructureDesc": "Equipment, buildings, irrigation systems. Maintenance and tracking.",
+      "weather": "Weather & Services",
+      "weatherDesc": "Integrated weather forecasts and utility services for your farm.",
+      "multiOrg": "Multi-Organization",
+      "multiOrgDesc": "Manage multiple farms. Permissions and roles per organization.",
+      "secure": "Secure & Compliant",
+      "secureDesc": "Secure authentication, Supabase RLS. Your data is protected.",
+      "realtime": "Real-time",
+      "realtimeDesc": "Real-time updates with React Query. Reactive interface."
+    },
+    "benefits": {
+      "title": "Why choose AgriTech?",
+      "productivity": "Increased productivity",
+      "productivityDesc": "Automate your tasks and save time on daily management.",
+      "costReduction": "Cost reduction",
+      "costReductionDesc": "Optimize your inputs and reduce waste through data.",
+      "betterYields": "Better yields",
+      "betterYieldsDesc": "Make data-driven decisions to maximize your harvests.",
+      "sustainable": "Sustainable agriculture",
+      "sustainableDesc": "Reduce your environmental impact with precise management."
+    },
+    "pricing": {
+      "title": "Simple and transparent pricing",
+      "subtitle": "Choose the plan that fits your needs",
+      "mostPopular": "Most popular",
+      "perMonth": "/month",
+      "getStarted": "Get started",
+      "contactUs": "Contact us"
+    },
+    "cta": {
+      "title": "Ready to modernize your agriculture?",
+      "subtitle": "Join hundreds of farmers already optimizing their operations.",
+      "button": "Start for free"
+    },
+    "footer": {
+      "tagline": "The complete platform to modernize your agriculture.",
+      "product": "Product",
+      "features": "Features",
+      "pricing": "Pricing",
+      "freeTrial": "Free trial",
+      "support": "Support",
+      "documentation": "Documentation",
+      "contact": "Contact",
+      "faq": "FAQ",
+      "legal": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms of Service",
+      "legalNotice": "Legal Notice",
+      "copyright": "All rights reserved."
+    }
   }
 }
