@@ -15,7 +15,7 @@ interface PageHeaderProps {
 
 const PageHeader: React.FC<PageHeaderProps> = ({ breadcrumbs, actions }) => {
   return (
-    <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+    <div className="p-3 sm:p-4 pl-16 lg:pl-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
       <div className="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm whitespace-nowrap">

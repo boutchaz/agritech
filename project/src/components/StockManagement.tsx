@@ -933,21 +933,21 @@ const StockManagement: React.FC = () => {
       {/* Add Product Modal */}
       {showAddProduct && (
         <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+          <div className="modal-panel p-4 sm:p-6 max-w-2xl">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Produit
               </h3>
               <button
                 onClick={() => setShowAddProduct(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="sm:col-span-2">
                   <FormField label="Nom du produit *" htmlFor="item_name" required>
                     <Input
                       id="item_name"
@@ -1118,17 +1118,17 @@ const StockManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => setShowAddProduct(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 order-2 sm:order-1"
               >
                 Annuler
               </button>
               <button
                 onClick={handleAddProduct}
                 disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
               >
                 Ajouter
               </button>

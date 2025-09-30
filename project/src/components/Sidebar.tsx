@@ -70,44 +70,52 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? (
-          <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
-        ) : (
+      {/* Mobile Menu Button - Only shows when menu is closed */}
+      {!isMobileMenuOpen && (
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+          aria-label="Toggle menu"
+        >
           <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
-        )}
-      </button>
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-40
+        fixed lg:static inset-y-0 left-0 z-50
         h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
         transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center space-x-2 min-w-0 flex-1">
               <Leaf className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400 flex-shrink-0" />
               <span className="text-base sm:text-xl font-bold text-gray-800 dark:text-white truncate">
                 {currentOrganization?.name || t('app.name')}
               </span>
             </div>
-            <div className="flex-shrink-0">
-              <LanguageSwitcher />
+            <div className="flex items-center gap-2">
+              <div className="flex-shrink-0">
+                <LanguageSwitcher />
+              </div>
+              {/* Close button for mobile */}
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="lg:hidden p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+              </button>
             </div>
           </div>
         </div>
