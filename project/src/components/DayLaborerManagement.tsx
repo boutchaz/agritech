@@ -351,8 +351,8 @@ const DayLaborerManagement: React.FC = () => {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay overflow-y-auto">
+          <div className="modal-panel p-6 max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Ouvrier
@@ -511,8 +511,8 @@ const DayLaborerManagement: React.FC = () => {
       )}
 
       {editingLaborer && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay overflow-y-auto">
+          <div className="modal-panel p-6 max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Modifier l'Ouvrier

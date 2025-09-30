@@ -932,8 +932,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Product Modal */}
       {showAddProduct && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Produit
@@ -1139,8 +1139,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Purchase Modal */}
       {showAddPurchase && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-lg">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Achat
@@ -1293,8 +1293,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Fournisseur
@@ -1465,8 +1465,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Warehouse Modal */}
       {showAddWarehouse && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Entrepôt

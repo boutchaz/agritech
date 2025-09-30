@@ -90,6 +90,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
 
+  // Public routes that don't require authentication
+  const publicRoutes = ['/', '/login', '/register'];
+
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
@@ -303,8 +306,11 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     isAtLeastRole,
   };
 
-  // Show loading spinner
-  if (loading) {
+  // Check if current route is public
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+
+  // Show loading spinner (but not on public routes)
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -315,8 +321,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     );
   }
 
-  // Show authentication form
-  if (showAuth) {
+  // Show authentication form (but not on public routes)
+  if (showAuth && !isPublicRoute) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 

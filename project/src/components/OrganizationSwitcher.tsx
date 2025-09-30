@@ -12,12 +12,21 @@ const OrganizationSwitcher: React.FC = () => {
     setCurrentOrganization,
     setCurrentFarm,
     signOut,
-    profile
+    profile,
+    user
   } = useAuth();
 
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // Debug: Log profile and user data
+  React.useEffect(() => {
+    if (isOpen) {
+      console.log('OrganizationSwitcher - Profile:', profile);
+      console.log('OrganizationSwitcher - User:', user);
+    }
+  }, [isOpen, profile, user]);
   const [showFarms, setShowFarms] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<'left' | 'right'>('left');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -130,15 +139,18 @@ const OrganizationSwitcher: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
-                  {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                  {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
+                  {profile?.last_name?.[0] || ''}
                 </span>
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 dark:text-white">
-                  {profile?.first_name} {profile?.last_name}
+                  {profile?.first_name && profile?.last_name
+                    ? `${profile.first_name} ${profile.last_name}`
+                    : user?.email?.split('@')[0] || 'User'}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {profile?.id}
+                <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {user?.email || 'No email'}
                 </div>
               </div>
             </div>

@@ -542,8 +542,8 @@ const AppContent: React.FC = () => {
 
       {/* Edit Parcel Dialog */}
       {showEditDialog && editingParcel && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-md">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
               Modifier la parcelle
             </h3>

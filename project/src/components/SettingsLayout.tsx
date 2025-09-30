@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { User, Building, Boxes, Users, Sliders, LayoutGrid } from 'lucide-react';
+import { User, Building, Boxes, Users, Sliders, LayoutGrid, CreditCard } from 'lucide-react';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -24,6 +24,13 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       icon: Building,
       path: '/settings/organization',
       description: 'Paramètres de l\'organisation'
+    },
+    {
+      id: 'subscription',
+      name: 'Abonnement',
+      icon: CreditCard,
+      path: '/settings/subscription',
+      description: 'Gérer votre abonnement'
     },
     {
       id: 'modules',

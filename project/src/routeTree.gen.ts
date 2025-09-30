@@ -31,6 +31,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
+import { Route as SettingsSubscriptionRouteImport } from './routes/settings.subscription'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsPreferencesRouteImport } from './routes/settings.preferences'
 import { Route as SettingsOrganizationRouteImport } from './routes/settings.organization'
@@ -146,6 +147,11 @@ const SettingsUsersRoute = SettingsUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsSubscriptionRoute = SettingsSubscriptionRouteImport.update({
+  id: '/subscription',
+  path: '/subscription',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/profile'
+    | '/settings/subscription'
     | '/settings/users'
     | '/onboarding/'
     | '/settings/'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/profile'
+    | '/settings/subscription'
     | '/settings/users'
     | '/onboarding'
     | '/settings'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/profile'
+    | '/settings/subscription'
     | '/settings/users'
     | '/onboarding/'
     | '/settings/'
@@ -520,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsUsersRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/subscription': {
+      id: '/settings/subscription'
+      path: '/subscription'
+      fullPath: '/settings/subscription'
+      preLoaderRoute: typeof SettingsSubscriptionRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/profile': {
       id: '/settings/profile'
       path: '/profile'
@@ -576,6 +595,7 @@ interface SettingsRouteChildren {
   SettingsOrganizationRoute: typeof SettingsOrganizationRoute
   SettingsPreferencesRoute: typeof SettingsPreferencesRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsSubscriptionRoute: typeof SettingsSubscriptionRoute
   SettingsUsersRoute: typeof SettingsUsersRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -586,6 +606,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsOrganizationRoute: SettingsOrganizationRoute,
   SettingsPreferencesRoute: SettingsPreferencesRoute,
   SettingsProfileRoute: SettingsProfileRoute,
+  SettingsSubscriptionRoute: SettingsSubscriptionRoute,
   SettingsUsersRoute: SettingsUsersRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

@@ -495,8 +495,8 @@ const UsersSettings: React.FC = () => {
 
       {/* Invite User Modal */}
       {showInviteUser && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-md">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-green-600" />

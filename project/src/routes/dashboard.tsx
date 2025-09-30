@@ -3,6 +3,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Dashboard from '../components/Dashboard'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import SubscriptionBanner from '../components/SubscriptionBanner'
 import { useState } from 'react'
 import type { Module, SensorData, DashboardSettings } from '../types'
 
@@ -80,6 +81,7 @@ const AppContent: React.FC = () => {
         onThemeToggle={toggleTheme}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+        <SubscriptionBanner />
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
