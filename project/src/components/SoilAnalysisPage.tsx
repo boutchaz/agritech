@@ -6,6 +6,7 @@ import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
 import type { SoilAnalysis } from '../types';
+import { Select } from './ui/Select';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -148,10 +149,10 @@ const SoilAnalysisPage: React.FC = () => {
                 <span className="text-gray-500">Chargement des parcelles...</span>
               </div>
             ) : (
-              <select
+              <Select
                 value={selectedParcelId || ''}
-                onChange={(e) => setSelectedParcelId(e.target.value || null)}
-                className="block w-full max-w-md rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                onChange={(e) => setSelectedParcelId((e.target as HTMLSelectElement).value || null)}
+                className="max-w-md"
               >
                 <option value="">Toutes les parcelles</option>
                 {parcels.map(parcel => (
@@ -159,7 +160,7 @@ const SoilAnalysisPage: React.FC = () => {
                     {parcel.name} {parcel.area && `(${parcel.area} ${parcel.area_unit})`}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </div>
           {selectedParcelId && (

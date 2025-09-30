@@ -750,8 +750,8 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
 
       {/* Download Modal */}
       {showModal && selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Télécharger {selectedReport.name}

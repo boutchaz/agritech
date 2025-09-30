@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Building, Users, MapPin, Check } from 'lucide-react';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 
 interface OnboardingFlowProps {
   user: any;
@@ -400,58 +404,50 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
               )}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Prénom *
-                    </label>
-                    <input
+                  <FormField label="Prénom *" htmlFor="onb_first_name" required>
+                    <Input
+                      id="onb_first_name"
                       type="text"
                       value={profileData.first_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                       placeholder="Jean"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Nom *
-                    </label>
-                    <input
+                  </FormField>
+                  <FormField label="Nom *" htmlFor="onb_last_name" required>
+                    <Input
+                      id="onb_last_name"
                       type="text"
                       value={profileData.last_name}
                       onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                       placeholder="Dupont"
                     />
-                  </div>
+                  </FormField>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="+33 1 23 45 67 89"
-                  />
+                  <FormField label="Téléphone" htmlFor="onb_phone">
+                    <Input
+                      id="onb_phone"
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+33 1 23 45 67 89"
+                    />
+                  </FormField>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Fuseau horaire
-                  </label>
-                  <select
-                    value={profileData.timezone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, timezone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  >
-                    <option value="UTC">UTC</option>
-                    <option value="Europe/Paris">Europe/Paris</option>
-                    <option value="Africa/Casablanca">Africa/Casablanca</option>
-                    <option value="Africa/Tunis">Africa/Tunis</option>
-                    <option value="Africa/Algiers">Africa/Algiers</option>
-                  </select>
+                  <FormField label="Fuseau horaire" htmlFor="onb_timezone">
+                    <Select
+                      id="onb_timezone"
+                      value={profileData.timezone}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, timezone: (e.target as HTMLSelectElement).value }))}
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="Europe/Paris">Europe/Paris</option>
+                      <option value="Africa/Casablanca">Africa/Casablanca</option>
+                      <option value="Africa/Tunis">Africa/Tunis</option>
+                      <option value="Africa/Algiers">Africa/Algiers</option>
+                    </Select>
+                  </FormField>
                 </div>
               </div>
             </div>
@@ -470,43 +466,39 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
               )}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nom de l'organisation *
-                  </label>
-                  <input
-                    type="text"
-                    value={organizationData.name}
-                    onChange={(e) => handleOrganizationNameChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="Ma Ferme AgriTech"
-                  />
+                  <FormField label="Nom de l'organisation *" htmlFor="onb_org_name" required>
+                    <Input
+                      id="onb_org_name"
+                      type="text"
+                      value={organizationData.name}
+                      onChange={(e) => handleOrganizationNameChange(e.target.value)}
+                      placeholder="Ma Ferme AgriTech"
+                    />
+                  </FormField>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Identifiant URL
-                  </label>
-                  <input
-                    type="text"
-                    value={organizationData.slug}
-                    onChange={(e) => setOrganizationData(prev => ({ ...prev, slug: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="ma-ferme-agritech"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Sera utilisé dans l'URL: agritech.app/org/{organizationData.slug}
-                  </p>
+                  <FormField label="Identifiant URL" htmlFor="onb_org_slug" helper={`Sera utilisé dans l'URL: agritech.app/org/${organizationData.slug}`}>
+                    <Input
+                      id="onb_org_slug"
+                      type="text"
+                      value={organizationData.slug}
+                      onChange={(e) => setOrganizationData(prev => ({ ...prev, slug: e.target.value }))}
+                      placeholder="ma-ferme-agritech"
+                    />
+                  </FormField>
+                  {/* helper moved into FormField */}
+                  {/* <p className="text-xs text-gray-500 mt-1"> ... </p> */}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={organizationData.phone}
-                    onChange={(e) => setOrganizationData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="+33 1 23 45 67 89"
-                  />
+                  <FormField label="Téléphone" htmlFor="onb_org_phone">
+                    <Input
+                      id="onb_org_phone"
+                      type="tel"
+                      value={organizationData.phone}
+                      onChange={(e) => setOrganizationData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+33 1 23 45 67 89"
+                    />
+                  </FormField>
                 </div>
               </div>
             </div>
@@ -551,49 +543,42 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Superficie *
-                    </label>
-                    <input
+                  <FormField label="Superficie *" htmlFor="onb_farm_size" required>
+                    <Input
+                      id="onb_farm_size"
                       type="number"
-                      step="0.1"
+                      step="1"
                       value={farmData.size}
                       onChange={(e) => setFarmData(prev => ({ ...prev, size: parseFloat(e.target.value) || 0 }))}
                       disabled={hasExistingFarms}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="0"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Unité
-                    </label>
-                    <select
+                  </FormField>
+                  <FormField label="Unité" htmlFor="onb_farm_unit">
+                    <Select
+                      id="onb_farm_unit"
                       value={farmData.size_unit}
-                      onChange={(e) => setFarmData(prev => ({ ...prev, size_unit: e.target.value }))}
+                      onChange={(e) => setFarmData(prev => ({ ...prev, size_unit: (e.target as HTMLSelectElement).value }))}
                       disabled={hasExistingFarms}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="hectares">Hectares</option>
                       <option value="acres">Acres</option>
                       <option value="m2">Mètres carrés</option>
-                    </select>
-                  </div>
+                    </Select>
+                  </FormField>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type de ferme
-                  </label>
-                  <select
-                    value={farmData.farm_type}
-                    onChange={(e) => setFarmData(prev => ({ ...prev, farm_type: e.target.value as 'main' | 'sub' }))}
-                    disabled={hasExistingFarms}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="main">Ferme principale</option>
-                    <option value="sub">Sous-ferme</option>
-                  </select>
+                  <FormField label="Type de ferme" htmlFor="onb_farm_type">
+                    <Select
+                      id="onb_farm_type"
+                      value={farmData.farm_type}
+                      onChange={(e) => setFarmData(prev => ({ ...prev, farm_type: (e.target as HTMLSelectElement).value as 'main' | 'sub' }))}
+                      disabled={hasExistingFarms}
+                    >
+                      <option value="main">Ferme principale</option>
+                      <option value="sub">Sous-ferme</option>
+                    </Select>
+                  </FormField>
                   <p className="text-xs text-gray-500 mt-1">
                     {farmData.farm_type === 'main' 
                       ? 'Ferme principale - centre de gestion de votre organisation'
@@ -602,17 +587,16 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={farmData.description}
-                    onChange={(e) => setFarmData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    disabled={hasExistingFarms}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Description de votre ferme..."
-                  />
+                  <FormField label="Description" htmlFor="onb_farm_desc">
+                    <Textarea
+                      id="onb_farm_desc"
+                      value={farmData.description}
+                      onChange={(e) => setFarmData(prev => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      disabled={hasExistingFarms}
+                      placeholder="Description de votre ferme..."
+                    />
+                  </FormField>
                 </div>
               </div>
             </div>

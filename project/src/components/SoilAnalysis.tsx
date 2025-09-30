@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Save, X } from 'lucide-react';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 interface SoilAnalysisProps {
   onSave: (data: SoilAnalysisData) => void;
@@ -86,21 +89,17 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
         <div>
           <h4 className="font-medium mb-4">Propriétés Physiques</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Texture du Sol
-              </label>
-              <select
+            <FormField label="Texture du Sol" htmlFor="soil_texture" required>
+              <Select
+                id="soil_texture"
                 value={formData.physical.texture}
                 onChange={(e) => setFormData({
                   ...formData,
                   physical: {
                     ...formData.physical,
-                    texture: e.target.value
+                    texture: (e.target as HTMLSelectElement).value
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
               >
                 <option value="">Sélectionner...</option>
                 <option value="Sableuse">Sableuse</option>
@@ -108,18 +107,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                 <option value="Argileuse">Argileuse</option>
                 <option value="Limono-sableuse">Limono-sableuse</option>
                 <option value="Argilo-limoneuse">Argilo-limoneuse</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                pH
-              </label>
-              <input
+            <FormField label="pH" htmlFor="soil_ph" required>
+              <Input
+                id="soil_ph"
                 type="number"
-                step="0.1"
-                min="0"
-                max="14"
+                step="1"
+                min={0}
+                max={14}
                 value={formData.physical.ph}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -128,20 +125,17 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     ph: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Matière Organique (%)
-              </label>
-              <input
+            <FormField label="Matière Organique (%)" htmlFor="soil_om" required>
+              <Input
+                id="soil_om"
                 type="number"
-                step="0.1"
-                min="0"
-                max="100"
+                step="1"
+                min={0}
+                max={100}
                 value={formData.physical.organicMatter}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -150,19 +144,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     organicMatter: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Densité Apparente (g/cm³)
-              </label>
-              <input
+            <FormField label="Densité Apparente (g/cm³)" htmlFor="soil_density" required>
+              <Input
+                id="soil_density"
                 type="number"
-                step="1"
-                min="0"
+                step={1}
+                min={0}
                 value={formData.physical.density}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -171,20 +162,17 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     density: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Rétention d'eau (%)
-              </label>
-              <input
+            <FormField label="Rétention d'eau (%)" htmlFor="soil_wr" required>
+              <Input
+                id="soil_wr"
                 type="number"
-                step="0.1"
-                min="0"
-                max="100"
+                step="1"
+                min={0}
+                max={100}
                 value={formData.physical.waterRetention}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -193,10 +181,9 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     waterRetention: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
@@ -204,14 +191,12 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
         <div>
           <h4 className="font-medium mb-4">Propriétés Chimiques (mg/kg)</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Azote (N)
-              </label>
-              <input
+            <FormField label="Azote (N)" htmlFor="chem_n" required>
+              <Input
+                id="chem_n"
                 type="number"
-                step="0.1"
-                min="0"
+                step="1"
+                min={0}
                 value={formData.chemical.nitrogen}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -220,19 +205,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     nitrogen: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Phosphore (P)
-              </label>
-              <input
+            <FormField label="Phosphore (P)" htmlFor="chem_p" required>
+              <Input
+                id="chem_p"
                 type="number"
-                step="0.1"
-                min="0"
+                step="1"
+                min={0}
                 value={formData.chemical.phosphorus}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -241,19 +223,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     phosphorus: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Potassium (K)
-              </label>
-              <input
+            <FormField label="Potassium (K)" htmlFor="chem_k" required>
+              <Input
+                id="chem_k"
                 type="number"
-                step="0.1"
-                min="0"
+                step="1"
+                min={0}
                 value={formData.chemical.potassium}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -262,19 +241,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     potassium: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Calcium (Ca)
-              </label>
-              <input
+            <FormField label="Calcium (Ca)" htmlFor="chem_ca" required>
+              <Input
+                id="chem_ca"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.calcium}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -283,19 +259,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     calcium: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Magnésium (Mg)
-              </label>
-              <input
+            <FormField label="Magnésium (Mg)" htmlFor="chem_mg" required>
+              <Input
+                id="chem_mg"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.magnesium}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -304,19 +277,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     magnesium: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Soufre (S)
-              </label>
-              <input
+            <FormField label="Soufre (S)" htmlFor="chem_s" required>
+              <Input
+                id="chem_s"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.sulfur}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -325,19 +295,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     sulfur: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Fer (Fe)
-              </label>
-              <input
+            <FormField label="Fer (Fe)" htmlFor="chem_fe" required>
+              <Input
+                id="chem_fe"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.iron}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -346,19 +313,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     iron: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Manganèse (Mn)
-              </label>
-              <input
+            <FormField label="Manganèse (Mn)" htmlFor="chem_mn" required>
+              <Input
+                id="chem_mn"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.manganese}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -367,19 +331,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     manganese: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Zinc (Zn)
-              </label>
-              <input
+            <FormField label="Zinc (Zn)" htmlFor="chem_zn" required>
+              <Input
+                id="chem_zn"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.zinc}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -388,19 +349,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     zinc: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Cuivre (Cu)
-              </label>
-              <input
+            <FormField label="Cuivre (Cu)" htmlFor="chem_cu" required>
+              <Input
+                id="chem_cu"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.copper}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -409,19 +367,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     copper: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Bore (B)
-              </label>
-              <input
+            <FormField label="Bore (B)" htmlFor="chem_b" required>
+              <Input
+                id="chem_b"
                 type="number"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
                 value={formData.chemical.boron}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -430,10 +385,9 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     boron: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
@@ -441,14 +395,12 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
         <div>
           <h4 className="font-medium mb-4">Propriétés Biologiques</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Microorganismes (UFC/g)
-              </label>
-              <input
+            <FormField label="Microorganismes (UFC/g)" htmlFor="bio_micro" required>
+              <Input
+                id="bio_micro"
                 type="number"
-                step="1000"
-                min="0"
+                step={1000}
+                min={0}
                 value={formData.biological.microorganisms}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -457,19 +409,16 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     microorganisms: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Vers de terre (nb/m²)
-              </label>
-              <input
+            <FormField label="Vers de terre (nb/m²)" htmlFor="bio_worms" required>
+              <Input
+                id="bio_worms"
                 type="number"
-                step="1"
-                min="0"
+                step={1}
+                min={0}
                 value={formData.biological.earthworms}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -478,20 +427,17 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     earthworms: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Activité Organique (%)
-              </label>
-              <input
+            <FormField label="Activité Organique (%)" htmlFor="bio_activity" required>
+              <Input
+                id="bio_activity"
                 type="number"
-                step="0.1"
-                min="0"
-                max="100"
+                step={0.1}
+                min={0}
+                max={100}
                 value={formData.biological.organicActivity}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -500,10 +446,9 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
                     organicActivity: parseFloat(e.target.value)
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               />
-            </div>
+            </FormField>
           </div>
         </div>
 

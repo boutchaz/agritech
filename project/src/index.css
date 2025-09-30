@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global, professional form styles */
+@layer base {
+  /* Textual inputs, selects, and textareas */
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='url'],
+  input[type='search'],
+  input[type='number'],
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  select,
+  textarea {
+    @apply block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/70 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-150 ease-in-out;
+  }
+
+  /* Hover and disabled states */
+  input:not([type='checkbox']):not([type='radio']):hover,
+  select:hover,
+  textarea:hover {
+    @apply border-gray-300 dark:border-gray-500;
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    @apply bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed;
+  }
+
+  /* Invalid state */
+  input:invalid,
+  select:invalid,
+  textarea:invalid {
+    @apply border-red-400 focus:ring-red-500 focus:border-red-500;
+  }
+
+  /* Checkbox and radio */
+  input[type='checkbox'] {
+    @apply h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500;
+  }
+
+  input[type='radio'] {
+    @apply h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500;
+  }
+
+  /* Labels */
+  label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
+  }
+}
+
+/* Unified modal styles */
+@layer components {
+  .modal-overlay {
+    @apply fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4;
+  }
+  .modal-panel {
+    @apply w-full max-w-lg rounded-xl bg-white dark:bg-gray-900 shadow-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden;
+  }
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Building, Users, Mail, Phone, MapPin, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
 
@@ -26,6 +27,7 @@ interface OrganizationData {
 
 const OrganizationSettings: React.FC = () => {
   const { currentOrganization, user } = useAuth();
+  const queryClient = useQueryClient();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -88,6 +90,9 @@ const OrganizationSettings: React.FC = () => {
         .eq('id', currentOrganization.id);
 
       if (error) throw error;
+
+      // Invalidate organizations query to refresh the sidebar and other components
+      queryClient.invalidateQueries({ queryKey: ['organizations', user?.id] });
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);

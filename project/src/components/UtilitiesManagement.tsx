@@ -2,6 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard, RoleGuard } from '../hooks/useRoleBasedAccess';
 
@@ -1273,74 +1277,68 @@ const UtilitiesManagement: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Type de charge
-                </label>
-                <select
+              <FormField label="Type de charge" htmlFor="util_type">
+                <Select
+                  id="util_type"
                   value={editingUtility?.type || newUtility.type}
                   onChange={(e) => {
+                    const value = (e.target as HTMLSelectElement).value as Utility['type'];
                     if (editingUtility) {
                       setEditingUtility({
                         ...editingUtility,
-                        type: e.target.value as Utility['type']
+                        type: value
                       });
                     } else {
                       setNewUtility({
                         ...newUtility,
-                        type: e.target.value as Utility['type']
+                        type: value
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 >
                   {UTILITY_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
                       {type.label}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Montant ({currency})
-                </label>
-                <input
+              <FormField label={`Montant (${currency})`} htmlFor="util_amount">
+                <Input
+                  id="util_amount"
                   type="number"
-                  step="1"
+                  step={1}
                   value={editingUtility?.amount || newUtility.amount}
                   onChange={(e) => {
+                    const value = Number((e.target as HTMLInputElement).value);
                     if (editingUtility) {
                       setEditingUtility({
                         ...editingUtility,
-                        amount: Number(e.target.value)
+                        amount: value
                       });
                     } else {
                       setNewUtility({
                         ...newUtility,
-                        amount: Number(e.target.value)
+                        amount: value
                       });
                     }
                   }}
                   placeholder={`Montant en ${currency}`}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
 
               {/* Consumption Tracking Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Consommation
-                  </label>
-                  <input
+                <FormField label="Consommation" htmlFor="util_consumption">
+                  <Input
+                    id="util_consumption"
                     type="number"
-                    step="1"
+                    step={1}
                     value={editingUtility?.consumption_value || newUtility.consumption_value || ''}
                     onChange={(e) => {
-                      const value = e.target.value ? Number(e.target.value) : undefined;
+                      const value = (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : undefined;
                       if (editingUtility) {
                         setEditingUtility({
                           ...editingUtility,
@@ -1353,30 +1351,27 @@ const UtilitiesManagement: React.FC = () => {
                         });
                       }
                     }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     placeholder="ex: 500"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Unité
-                  </label>
-                  <select
+                </FormField>
+                <FormField label="Unité" htmlFor="util_unit">
+                  <Select
+                    id="util_unit"
                     value={editingUtility?.consumption_unit || newUtility.consumption_unit || ''}
                     onChange={(e) => {
+                      const value = (e.target as HTMLSelectElement).value
                       if (editingUtility) {
                         setEditingUtility({
                           ...editingUtility,
-                          consumption_unit: e.target.value
+                          consumption_unit: value
                         });
                       } else {
                         setNewUtility({
                           ...newUtility,
-                          consumption_unit: e.target.value
+                          consumption_unit: value
                         });
                       }
                     }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   >
                     <option value="">Sélectionner une unité</option>
                     {getAvailableUnits((editingUtility?.type || newUtility.type) as string).map(unit => (
@@ -1384,8 +1379,8 @@ const UtilitiesManagement: React.FC = () => {
                         {unit}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </FormField>
               </div>
 
               {/* Unit Cost Display */}
@@ -1406,30 +1401,28 @@ const UtilitiesManagement: React.FC = () => {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date
-                </label>
-                <input
+              <FormField label="Date" htmlFor="util_date" required>
+                <Input
+                  id="util_date"
                   type="date"
                   value={editingUtility?.billing_date || newUtility.billing_date}
                   onChange={(e) => {
+                    const value = (e.target as HTMLInputElement).value
                     if (editingUtility) {
                       setEditingUtility({
                         ...editingUtility,
-                        billing_date: e.target.value
+                        billing_date: value
                       });
                     } else {
                       setNewUtility({
                         ...newUtility,
-                        billing_date: e.target.value
+                        billing_date: value
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
 
               <div>
                 <label className="flex items-center">
@@ -1458,57 +1451,53 @@ const UtilitiesManagement: React.FC = () => {
               </div>
 
               {(editingUtility?.is_recurring || newUtility.is_recurring) && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Fréquence
-                  </label>
-                  <select
+                <FormField label="Fréquence" htmlFor="util_recurring_freq">
+                  <Select
+                    id="util_recurring_freq"
                     value={editingUtility?.recurring_frequency || newUtility.recurring_frequency}
                     onChange={(e) => {
+                      const value = (e.target as HTMLSelectElement).value as 'monthly' | 'quarterly' | 'yearly';
                       if (editingUtility) {
                         setEditingUtility({
                           ...editingUtility,
-                          recurring_frequency: e.target.value as 'monthly' | 'quarterly' | 'yearly'
+                          recurring_frequency: value
                         });
                       } else {
                         setNewUtility({
                           ...newUtility,
-                          recurring_frequency: e.target.value as 'monthly' | 'quarterly' | 'yearly'
+                          recurring_frequency: value
                         });
                       }
                     }}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   >
                     <option value="monthly">Mensuelle</option>
                     <option value="quarterly">Trimestrielle</option>
                     <option value="yearly">Annuelle</option>
-                  </select>
-                </div>
+                  </Select>
+                </FormField>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Notes
-                </label>
-                <textarea
+              <FormField label="Notes" htmlFor="util_notes">
+                <Textarea
+                  id="util_notes"
                   value={editingUtility?.notes || newUtility.notes}
                   onChange={(e) => {
+                    const value = (e.target as HTMLTextAreaElement).value
                     if (editingUtility) {
                       setEditingUtility({
                         ...editingUtility,
-                        notes: e.target.value
+                        notes: value
                       });
                     } else {
                       setNewUtility({
                         ...newUtility,
-                        notes: e.target.value
+                        notes: value
                       });
                     }
                   }}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
-              </div>
+              </FormField>
 
               {/* Invoice File Upload */}
               <div>

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 interface UserProfile {
   id: string;
@@ -246,75 +249,55 @@ const ProfileSettings: React.FC = () => {
             Informations personnelles
           </h3>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nom complet
-              </label>
-              <input
+            <FormField label="Nom complet" htmlFor="full_name">
+              <Input
+                id="full_name"
                 type="text"
                 value={profile.full_name || ''}
                 onChange={(e) => handleInputChange('full_name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Votre nom complet"
               />
-            </div>
+            </FormField>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Prénom
-                </label>
-                <input
+              <FormField label="Prénom" htmlFor="first_name">
+                <Input
+                  id="first_name"
                   type="text"
                   value={profile.first_name || ''}
                   onChange={(e) => handleInputChange('first_name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Prénom"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nom de famille
-                </label>
-                <input
+              </FormField>
+              <FormField label="Nom de famille" htmlFor="last_name">
+                <Input
+                  id="last_name"
                   type="text"
                   value={profile.last_name || ''}
                   onChange={(e) => handleInputChange('last_name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Nom de famille"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Mail className="inline h-4 w-4 mr-1" />
-                Email
-              </label>
-              <input
+            <FormField label={<><Mail className="inline h-4 w-4 mr-1" /> Email</>} htmlFor="email" helper="L'email ne peut pas être modifié ici">
+              <Input
+                id="email"
                 type="email"
                 value={user?.email || ''}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                L'email ne peut pas être modifié ici
-              </p>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Phone className="inline h-4 w-4 mr-1" />
-                Téléphone
-              </label>
-              <input
+            <FormField label={<><Phone className="inline h-4 w-4 mr-1" /> Téléphone</>} htmlFor="phone">
+              <Input
+                id="phone"
                 type="tel"
                 value={profile.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                 placeholder="+212 6XX XXX XXX"
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
@@ -324,40 +307,33 @@ const ProfileSettings: React.FC = () => {
             Préférences
           </h3>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Globe className="inline h-4 w-4 mr-1" />
-                Fuseau horaire
-              </label>
-              <select
+            <FormField label={<><Globe className="inline h-4 w-4 mr-1" /> Fuseau horaire</>} htmlFor="timezone">
+              <Select
+                id="timezone"
                 value={profile.timezone}
                 onChange={(e) => handleInputChange('timezone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
               >
                 {timezones.map(tz => (
                   <option key={tz.value} value={tz.value}>
                     {tz.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Langue
-              </label>
-              <select
+            <FormField label="Langue" htmlFor="language">
+              <Select
+                id="language"
                 value={profile.language}
                 onChange={(e) => handleInputChange('language', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
               >
                 {languages.map(lang => (
                   <option key={lang.value} value={lang.value}>
                     {lang.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
             {/* Avatar placeholder for future implementation */}
             <div>

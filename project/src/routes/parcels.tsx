@@ -1,4 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { FormField } from '../components/ui/FormField'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
+import { Textarea } from '../components/ui/Textarea'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
@@ -538,142 +542,115 @@ const AppContent: React.FC = () => {
 
       {/* Edit Parcel Dialog */}
       {showEditDialog && editingParcel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
               Modifier la parcelle
             </h3>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nom
-                </label>
-                <input
+              <FormField label="Nom" htmlFor="parcel_name">
+                <Input
+                  id="parcel_name"
                   type="text"
                   value={editingParcel.name}
                   onChange={(e) => setEditingParcel({ ...editingParcel, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
-                </label>
-                <textarea
+              <FormField label="Description" htmlFor="parcel_description">
+                <Textarea
+                  id="parcel_description"
                   value={editingParcel.description || ''}
                   onChange={(e) => setEditingParcel({ ...editingParcel, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
-              </div>
+              </FormField>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Surface
-                  </label>
-                  <input
+                <FormField label="Surface" htmlFor="parcel_area">
+                  <Input
+                    id="parcel_area"
                     type="number"
                     value={editingParcel.area || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, area: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    step="1"
+                    step={1}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Unité
-                  </label>
-                  <select
+                <FormField label="Unité" htmlFor="parcel_area_unit">
+                  <Select
+                    id="parcel_area_unit"
                     value={editingParcel.area_unit}
                     onChange={(e) => setEditingParcel({ ...editingParcel, area_unit: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="hectares">Hectares</option>
                     <option value="square_meters">m²</option>
                     <option value="acres">Acres</option>
-                  </select>
-                </div>
+                  </Select>
+                </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Type de sol
-                  </label>
-                  <input
+                <FormField label="Type de sol" htmlFor="parcel_soil_type">
+                  <Input
+                    id="parcel_soil_type"
                     type="text"
                     value={editingParcel.soil_type || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, soil_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     placeholder="ex: Argileux, Sableux..."
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Type d'irrigation
-                  </label>
-                  <select
+                <FormField label="Type d'irrigation" htmlFor="parcel_irrigation_type">
+                  <Select
+                    id="parcel_irrigation_type"
                     value={editingParcel.irrigation_type || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, irrigation_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Sélectionner...</option>
                     <option value="drip">Goutte-à-goutte</option>
                     <option value="sprinkler">Aspersion</option>
                     <option value="flood">Inondation</option>
                     <option value="none">Aucune</option>
-                  </select>
-                </div>
+                  </Select>
+                </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Variété
-                  </label>
-                  <input
+                <FormField label="Variété" htmlFor="parcel_variety">
+                  <Input
+                    id="parcel_variety"
                     type="text"
                     value={editingParcel.variety || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, variety: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     placeholder="ex: Picholine, Lucques, Arbequina..."
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date de plantation
-                  </label>
-                  <input
+                <FormField label="Date de plantation" htmlFor="parcel_planting_date">
+                  <Input
+                    id="parcel_planting_date"
                     type="date"
                     value={editingParcel.planting_date || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, planting_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type de plantation
-                </label>
-                <select
+              <FormField label="Type de plantation" htmlFor="parcel_planting_type">
+                <Select
+                  id="parcel_planting_type"
                   value={editingParcel.planting_type || ''}
                   onChange={(e) => setEditingParcel({ ...editingParcel, planting_type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Sélectionner...</option>
                   <option value="traditional">Traditionnelle</option>
                   <option value="intensive">Intensive</option>
                   <option value="super_intensive">Super-intensive</option>
                   <option value="organic">Biologique</option>
-                </select>
-              </div>
+                </Select>
+              </FormField>
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
+import { FormField } from './ui/FormField';
+import { Select } from './ui/Select';
 
 const defaultSettings: DashboardSettingsType = {
   showSoilData: true,
@@ -305,85 +307,79 @@ const DashboardSettings: React.FC = () => {
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Ligne supérieure
-            </label>
-            <select
-              multiple
-              value={settings.layout.topRow}
-              onChange={(e) => {
-                const values = Array.from(e.target.selectedOptions, option => option.value);
-                setSettings({
-                  ...settings,
-                  layout: {
-                    ...settings.layout,
-                    topRow: values
-                  }
-                });
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-              size={4}
-            >
+            <FormField label="Ligne supérieure" htmlFor="topRow" helper="Maintenez Ctrl/Cmd pour sélectionner plusieurs options">
+              <Select
+                id="topRow"
+                multiple
+                value={settings.layout.topRow}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSettings({
+                    ...settings,
+                    layout: {
+                      ...settings.layout,
+                      topRow: values
+                    }
+                  });
+                }}
+                size={4}
+              >
               <option value="soil">Données du sol</option>
               <option value="climate">Données climatiques</option>
               <option value="irrigation">Irrigation</option>
               <option value="maintenance">Maintenance</option>
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Maintenez Ctrl/Cmd pour sélectionner plusieurs options
-            </p>
+              </Select>
+            </FormField>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Ligne centrale
-            </label>
-            <select
-              multiple
-              value={settings.layout.middleRow}
-              onChange={(e) => {
-                const values = Array.from(e.target.selectedOptions, option => option.value);
-                setSettings({
-                  ...settings,
-                  layout: {
-                    ...settings.layout,
-                    middleRow: values
-                  }
-                });
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-              size={3}
-            >
+            <FormField label="Ligne centrale" htmlFor="middleRow">
+              <Select
+                id="middleRow"
+                multiple
+                value={settings.layout.middleRow}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSettings({
+                    ...settings,
+                    layout: {
+                      ...settings.layout,
+                      middleRow: values
+                    }
+                  });
+                }}
+                size={3}
+              >
               <option value="production">Production</option>
               <option value="financial">Finances</option>
               <option value="stock">Stock</option>
-            </select>
+              </Select>
+            </FormField>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Ligne inférieure
-            </label>
-            <select
-              multiple
-              value={settings.layout.bottomRow}
-              onChange={(e) => {
-                const values = Array.from(e.target.selectedOptions, option => option.value);
-                setSettings({
-                  ...settings,
-                  layout: {
-                    ...settings.layout,
-                    bottomRow: values
-                  }
-                });
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-              size={3}
-            >
+            <FormField label="Ligne inférieure" htmlFor="bottomRow">
+              <Select
+                id="bottomRow"
+                multiple
+                value={settings.layout.bottomRow}
+                onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setSettings({
+                    ...settings,
+                    layout: {
+                      ...settings.layout,
+                      bottomRow: values
+                    }
+                  });
+                }}
+                size={3}
+              >
               <option value="alerts">Alertes</option>
               <option value="tasks">Tâches</option>
               <option value="weather">Météo</option>
-            </select>
+              </Select>
+            </FormField>
           </div>
         </div>
       </div>

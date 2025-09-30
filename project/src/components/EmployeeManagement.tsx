@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, type SubmitHandler } from 'react-hook-form';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -316,99 +319,44 @@ const EmployeeManagement: React.FC = () => {
 
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Prénom</label>
-                      <input
-                        type="text"
-                        {...form.register('first_name')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                      />
-                      <p className="mt-1 text-sm text-red-600">{form.formState.errors.first_name?.message as string}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom</label>
-                      <input
-                        type="text"
-                        {...form.register('last_name')}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                      />
-                      <p className="mt-1 text-sm text-red-600">{form.formState.errors.last_name?.message as string}</p>
-                    </div>
+                    <FormField label="Prénom" htmlFor="emp_first_name" error={form.formState.errors.first_name?.message as string}>
+                      <Input id="emp_first_name" type="text" {...form.register('first_name')} />
+                    </FormField>
+                    <FormField label="Nom" htmlFor="emp_last_name" error={form.formState.errors.last_name?.message as string}>
+                      <Input id="emp_last_name" type="text" {...form.register('last_name')} />
+                    </FormField>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CIN</label>
-                    <input
-                      type="text"
-                      {...form.register('cin')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.cin?.message as string}</p>
-                  </div>
+                  <FormField label="CIN" htmlFor="emp_cin" error={form.formState.errors.cin?.message as string}>
+                    <Input id="emp_cin" type="text" {...form.register('cin')} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Téléphone</label>
-                    <input
-                      type="tel"
-                      {...form.register('phone')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.phone?.message as string}</p>
-                  </div>
+                  <FormField label="Téléphone" htmlFor="emp_phone" error={form.formState.errors.phone?.message as string}>
+                    <Input id="emp_phone" type="tel" {...form.register('phone')} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse</label>
-                    <input
-                      type="text"
-                      {...form.register('address')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.address?.message as string}</p>
-                  </div>
+                  <FormField label="Adresse" htmlFor="emp_address" error={form.formState.errors.address?.message as string}>
+                    <Input id="emp_address" type="text" {...form.register('address')} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date d'embauche</label>
-                    <input
-                      type="date"
-                      {...form.register('hire_date')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.hire_date?.message as string}</p>
-                  </div>
+                  <FormField label="Date d'embauche" htmlFor="emp_hire_date" error={form.formState.errors.hire_date?.message as string}>
+                    <Input id="emp_hire_date" type="date" {...form.register('hire_date')} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Poste</label>
-                    <input
-                      type="text"
-                      {...form.register('position')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.position?.message as string}</p>
-                  </div>
+                  <FormField label="Poste" htmlFor="emp_position" error={form.formState.errors.position?.message as string}>
+                    <Input id="emp_position" type="text" {...form.register('position')} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire ({currency})</label>
-                    <input
-                      type="number"
-                      step="1"
-                      {...form.register('salary', { valueAsNumber: true })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                      placeholder={`Salaire en ${currency}`}
-                    />
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.salary?.message as string}</p>
-                  </div>
+                  <FormField label={`Salaire (${currency})`} htmlFor="emp_salary" error={form.formState.errors.salary?.message as string}>
+                    <Input id="emp_salary" type="number" step={1} placeholder={`Salaire en ${currency}`} {...form.register('salary', { valueAsNumber: true })} />
+                  </FormField>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Statut</label>
-                    <select
-                      {...form.register('status')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                    >
+                  <FormField label="Statut" htmlFor="emp_status" error={form.formState.errors.status?.message as string}>
+                    <Select id="emp_status" {...form.register('status' as const)}>
                       <option value="active">Actif</option>
                       <option value="inactive">Inactif</option>
-                    </select>
-                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.status?.message as string}</p>
-                  </div>
+                    </Select>
+                  </FormField>
 
                   <div className="mt-6 flex justify-end space-x-3">
                     <button

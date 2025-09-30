@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 interface TaskCategory {
   id: string;
@@ -191,18 +194,15 @@ const DayLaborerManagement: React.FC = () => {
   };
 
   const renderSpecialtiesSelect = () => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Spécialités
-      </label>
-      <select
+    <FormField label="Spécialités" htmlFor="laborer_specialties" helper="Maintenez Ctrl/Cmd pour sélectionner plusieurs">
+      <Select
+        id="laborer_specialties"
         multiple
         value={selectedSpecialties}
         onChange={(e) => {
-          const values = Array.from(e.target.selectedOptions, option => option.value);
+          const values = Array.from((e.target as HTMLSelectElement).selectedOptions, option => option.value);
           setSelectedSpecialties(values);
         }}
-        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
         size={5}
       >
         {taskCategories.map(category => (
@@ -210,11 +210,8 @@ const DayLaborerManagement: React.FC = () => {
             {category.name}
           </option>
         ))}
-      </select>
-      <p className="mt-1 text-sm text-gray-500">
-        Maintenez Ctrl (Windows) ou Cmd (Mac) pour sélectionner plusieurs spécialités
-      </p>
-    </div>
+      </Select>
+    </FormField>
   );
 
   const renderSpecialties = (laborer: DayLaborer) => {
@@ -354,8 +351,8 @@ const DayLaborerManagement: React.FC = () => {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Ouvrier
@@ -369,148 +366,126 @@ const DayLaborerManagement: React.FC = () => {
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Prénom
-                  </label>
-                  <input
+                <FormField label="Prénom" htmlFor="dl_first_name" required>
+                  <Input
+                    id="dl_first_name"
                     type="text"
                     value={newLaborer.first_name}
                     onChange={(e) => setNewLaborer({ ...newLaborer, first_name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Nom" htmlFor="dl_last_name" required>
+                  <Input
+                    id="dl_last_name"
                     type="text"
                     value={newLaborer.last_name}
                     onChange={(e) => setNewLaborer({ ...newLaborer, last_name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  CIN
-                </label>
-                <input
-                  type="text"
-                  value={newLaborer.cin}
-                  onChange={(e) => setNewLaborer({ ...newLaborer, cin: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
+                <FormField label="CIN" htmlFor="dl_cin" required>
+                  <Input
+                    id="dl_cin"
+                    type="text"
+                    value={newLaborer.cin}
+                    onChange={(e) => setNewLaborer({ ...newLaborer, cin: e.target.value })}
+                    required
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={newLaborer.phone}
-                  onChange={(e) => setNewLaborer({ ...newLaborer, phone: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
+                <FormField label="Téléphone" htmlFor="dl_phone">
+                  <Input
+                    id="dl_phone"
+                    type="tel"
+                    value={newLaborer.phone}
+                    onChange={(e) => setNewLaborer({ ...newLaborer, phone: e.target.value })}
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={newLaborer.address}
-                  onChange={(e) => setNewLaborer({ ...newLaborer, address: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
+                <FormField label="Adresse" htmlFor="dl_address">
+                  <Input
+                    id="dl_address"
+                    type="text"
+                    value={newLaborer.address}
+                    onChange={(e) => setNewLaborer({ ...newLaborer, address: e.target.value })}
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Type de paiement
-                </label>
-                <select
-                  value={newLaborer.payment_type}
-                  onChange={(e) => setNewLaborer({
-                    ...newLaborer,
-                    payment_type: e.target.value as 'daily' | 'task' | 'unit'
-                  })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                >
-                  <option value="daily">Journalier</option>
-                  <option value="task">Par tâche</option>
-                  <option value="unit">Par unité</option>
-                </select>
+                <FormField label="Type de paiement" htmlFor="dl_payment_type" required>
+                  <Select
+                    id="dl_payment_type"
+                    value={newLaborer.payment_type}
+                    onChange={(e) => setNewLaborer({
+                      ...newLaborer,
+                      payment_type: (e.target as HTMLSelectElement).value as 'daily' | 'task' | 'unit'
+                    })}
+                    required
+                  >
+                    <option value="daily">Journalier</option>
+                    <option value="task">Par tâche</option>
+                    <option value="unit">Par unité</option>
+                  </Select>
+                </FormField>
               </div>
 
               {newLaborer.payment_type === 'daily' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux journalier ({currency})
-                  </label>
-                  <input
+                <FormField label={`Taux journalier (${currency})`} htmlFor="dl_daily_rate" required>
+                  <Input
+                    id="dl_daily_rate"
                     type="number"
                     value={newLaborer.daily_rate}
                     onChange={(e) => setNewLaborer({ ...newLaborer, daily_rate: Number(e.target.value) })}
                     placeholder={`Taux journalier en ${currency}`}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               )}
 
               {newLaborer.payment_type === 'task' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux par tâche ({currency})
-                  </label>
-                  <input
+                <FormField label={`Taux par tâche (${currency})`} htmlFor="dl_task_rate" required>
+                  <Input
+                    id="dl_task_rate"
                     type="number"
                     value={newLaborer.task_rate || ''}
                     onChange={(e) => setNewLaborer({ ...newLaborer, task_rate: Number(e.target.value) })}
                     placeholder={`Taux par tâche en ${currency}`}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               )}
 
               {newLaborer.payment_type === 'unit' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Type d'unité
-                    </label>
-                    <input
+                  <FormField label="Type d'unité" htmlFor="dl_unit_type" required>
+                    <Input
+                      id="dl_unit_type"
                       type="text"
                       value={newLaborer.unit_type || ''}
                       onChange={(e) => setNewLaborer({ ...newLaborer, unit_type: e.target.value })}
                       placeholder="Ex: kg, caisse, arbre..."
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Taux par unité ({currency})
-                    </label>
-                    <input
+                  </FormField>
+                  <FormField label={`Taux par unité (${currency})`} htmlFor="dl_unit_rate" required>
+                    <Input
+                      id="dl_unit_rate"
                       type="number"
                       value={newLaborer.unit_rate || ''}
                       onChange={(e) => setNewLaborer({ ...newLaborer, unit_rate: Number(e.target.value) })}
                       placeholder={`Taux par unité en ${currency}`}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />
-                  </div>
+                  </FormField>
                 </>
               )}
 
@@ -536,8 +511,8 @@ const DayLaborerManagement: React.FC = () => {
       )}
 
       {editingLaborer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Modifier l'Ouvrier
@@ -551,109 +526,97 @@ const DayLaborerManagement: React.FC = () => {
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Prénom
-                  </label>
-                  <input
+                <FormField label="Prénom" htmlFor="dl_edit_first_name" required>
+                  <Input
+                    id="dl_edit_first_name"
                     type="text"
                     value={editingLaborer.first_name}
                     onChange={(e) => setEditingLaborer({
                       ...editingLaborer,
                       first_name: e.target.value
                     })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Nom" htmlFor="dl_edit_last_name" required>
+                  <Input
+                    id="dl_edit_last_name"
                     type="text"
                     value={editingLaborer.last_name}
                     onChange={(e) => setEditingLaborer({
                       ...editingLaborer,
                       last_name: e.target.value
                     })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  CIN
-                </label>
-                <input
-                  type="text"
-                  value={editingLaborer.cin}
-                  onChange={(e) => setEditingLaborer({
-                    ...editingLaborer,
-                    cin: e.target.value
-                  })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
+                <FormField label="CIN" htmlFor="dl_edit_cin" required>
+                  <Input
+                    id="dl_edit_cin"
+                    type="text"
+                    value={editingLaborer.cin}
+                    onChange={(e) => setEditingLaborer({
+                      ...editingLaborer,
+                      cin: e.target.value
+                    })}
+                    required
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={editingLaborer.phone}
-                  onChange={(e) => setEditingLaborer({
-                    ...editingLaborer,
-                    phone: e.target.value
-                  })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
+                <FormField label="Téléphone" htmlFor="dl_edit_phone">
+                  <Input
+                    id="dl_edit_phone"
+                    type="tel"
+                    value={editingLaborer.phone}
+                    onChange={(e) => setEditingLaborer({
+                      ...editingLaborer,
+                      phone: e.target.value
+                    })}
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={editingLaborer.address}
-                  onChange={(e) => setEditingLaborer({
-                    ...editingLaborer,
-                    address: e.target.value
-                  })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                />
+                <FormField label="Adresse" htmlFor="dl_edit_address">
+                  <Input
+                    id="dl_edit_address"
+                    type="text"
+                    value={editingLaborer.address}
+                    onChange={(e) => setEditingLaborer({
+                      ...editingLaborer,
+                      address: e.target.value
+                    })}
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Type de paiement
-                </label>
-                <select
-                  value={editingLaborer.payment_type}
-                  onChange={(e) => setEditingLaborer({
-                    ...editingLaborer,
-                    payment_type: e.target.value as 'daily' | 'task' | 'unit'
-                  })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                >
-                  <option value="daily">Journalier</option>
-                  <option value="task">Par tâche</option>
-                  <option value="unit">Par unité</option>
-                </select>
+                <FormField label="Type de paiement" htmlFor="dl_edit_payment_type" required>
+                  <Select
+                    id="dl_edit_payment_type"
+                    value={editingLaborer.payment_type}
+                    onChange={(e) => setEditingLaborer({
+                      ...editingLaborer,
+                      payment_type: (e.target as HTMLSelectElement).value as 'daily' | 'task' | 'unit'
+                    })}
+                    required
+                  >
+                    <option value="daily">Journalier</option>
+                    <option value="task">Par tâche</option>
+                    <option value="unit">Par unité</option>
+                  </Select>
+                </FormField>
               </div>
 
               {editingLaborer.payment_type === 'daily' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux journalier ({currency})
-                  </label>
-                  <input
+                <FormField label={`Taux journalier (${currency})`} htmlFor="dl_edit_daily_rate" required>
+                  <Input
+                    id="dl_edit_daily_rate"
                     type="number"
                     value={editingLaborer.daily_rate}
                     onChange={(e) => setEditingLaborer({
@@ -661,18 +624,15 @@ const DayLaborerManagement: React.FC = () => {
                       daily_rate: Number(e.target.value)
                     })}
                     placeholder={`Taux journalier en ${currency}`}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               )}
 
               {editingLaborer.payment_type === 'task' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Taux par tâche ({currency})
-                  </label>
-                  <input
+                <FormField label={`Taux par tâche (${currency})`} htmlFor="dl_edit_task_rate" required>
+                  <Input
+                    id="dl_edit_task_rate"
                     type="number"
                     value={editingLaborer.task_rate || ''}
                     onChange={(e) => setEditingLaborer({
@@ -680,19 +640,16 @@ const DayLaborerManagement: React.FC = () => {
                       task_rate: Number(e.target.value)
                     })}
                     placeholder={`Taux par tâche en ${currency}`}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                     required
                   />
-                </div>
+                </FormField>
               )}
 
               {editingLaborer.payment_type === 'unit' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Type d'unité
-                    </label>
-                    <input
+                  <FormField label="Type d'unité" htmlFor="dl_edit_unit_type" required>
+                    <Input
+                      id="dl_edit_unit_type"
                       type="text"
                       value={editingLaborer.unit_type || ''}
                       onChange={(e) => setEditingLaborer({
@@ -700,15 +657,12 @@ const DayLaborerManagement: React.FC = () => {
                         unit_type: e.target.value
                       })}
                       placeholder="Ex: kg, caisse, arbre..."
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Taux par unité ({currency})
-                    </label>
-                    <input
+                  </FormField>
+                  <FormField label={`Taux par unité (${currency})`} htmlFor="dl_edit_unit_rate" required>
+                    <Input
+                      id="dl_edit_unit_rate"
                       type="number"
                       value={editingLaborer.unit_rate || ''}
                       onChange={(e) => setEditingLaborer({
@@ -716,10 +670,9 @@ const DayLaborerManagement: React.FC = () => {
                         unit_rate: Number(e.target.value)
                       })}
                       placeholder={`Taux par unité en ${currency}`}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                       required
                     />
-                  </div>
+                  </FormField>
                 </>
               )}
 

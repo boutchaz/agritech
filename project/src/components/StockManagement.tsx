@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Package, ShoppingCart, AlertTriangle, Search, Edit2, Trash2, X, Users, Warehouse, Building2, Phone, Mail, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 
 interface Product {
   id: string;
@@ -584,12 +588,12 @@ const StockManagement: React.FC = () => {
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Rechercher un produit..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="pl-10"
             />
           </div>
 
@@ -702,12 +706,12 @@ const StockManagement: React.FC = () => {
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Rechercher un fournisseur..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="pl-10"
             />
           </div>
 
@@ -812,12 +816,12 @@ const StockManagement: React.FC = () => {
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="Rechercher un entrepôt..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="pl-10"
             />
           </div>
 
@@ -928,8 +932,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Product Modal */}
       {showAddProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Produit
@@ -944,28 +948,25 @@ const StockManagement: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom du produit *
-                  </label>
-                  <input
-                    type="text"
-                    value={newProduct.item_name}
-                    onChange={(e) => setNewProduct({ ...newProduct, item_name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Nom du produit *" htmlFor="item_name" required>
+                    <Input
+                      id="item_name"
+                      type="text"
+                      value={newProduct.item_name}
+                      onChange={(e) => setNewProduct({ ...newProduct, item_name: e.target.value })}
+                      required
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Catégorie *
-                  </label>
-                  <select
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  >
+                  <FormField label="Catégorie *" htmlFor="category" required>
+                    <Select
+                      id="category"
+                      value={newProduct.category}
+                      onChange={(e) => setNewProduct({ ...newProduct, category: (e.target as HTMLSelectElement).value })}
+                      required
+                    >
                     <option value="">Sélectionner...</option>
                     <option value="seeds">Semences</option>
                     <option value="fertilizers">Engrais</option>
@@ -973,152 +974,146 @@ const StockManagement: React.FC = () => {
                     <option value="equipment">Équipement</option>
                     <option value="tools">Outils</option>
                     <option value="other">Autre</option>
-                  </select>
+                    </Select>
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Marque
-                  </label>
-                  <input
-                    type="text"
-                    value={newProduct.brand}
-                    onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Marque" htmlFor="brand">
+                    <Input
+                      id="brand"
+                      type="text"
+                      value={newProduct.brand}
+                      onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Fournisseur
-                  </label>
-                  <select
-                    value={newProduct.supplier}
-                    onChange={(e) => {
-                      const selectedSupplier = suppliers.find(s => s.name === e.target.value);
-                      setNewProduct({
-                        ...newProduct,
-                        supplier: e.target.value,
-                        supplier_id: selectedSupplier?.id
-                      });
-                    }}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
+                  <FormField label="Fournisseur" htmlFor="supplier">
+                    <Select
+                      id="supplier"
+                      value={newProduct.supplier}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLSelectElement).value;
+                        const selectedSupplier = suppliers.find(s => s.name === value);
+                        setNewProduct({
+                          ...newProduct,
+                          supplier: value,
+                          supplier_id: selectedSupplier?.id
+                        });
+                      }}
+                    >
                     <option value="">Sélectionner un fournisseur</option>
                     {suppliers.map(supplier => (
                       <option key={supplier.id} value={supplier.name}>
                         {supplier.name}
                       </option>
                     ))}
-                  </select>
+                    </Select>
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Quantité initiale *
-                  </label>
-                  <input
-                    type="number"
-                    value={newProduct.quantity}
-                    onChange={(e) => setNewProduct({ ...newProduct, quantity: Number(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Quantité initiale *" htmlFor="quantity" required>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={newProduct.quantity}
+                      onChange={(e) => setNewProduct({ ...newProduct, quantity: Number(e.target.value) })}
+                      required
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Unité *
-                  </label>
-                  <select
-                    value={newProduct.unit}
-                    onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="kg">Kilogrammes</option>
-                    <option value="g">Grammes</option>
-                    <option value="l">Litres</option>
-                    <option value="ml">Millilitres</option>
-                    <option value="units">Unités</option>
-                    <option value="pieces">Pièces</option>
-                    <option value="m">Mètres</option>
-                    <option value="m2">Mètres carrés</option>
-                  </select>
+                  <FormField label="Unité *" htmlFor="unit" required>
+                    <Select
+                      id="unit"
+                      value={newProduct.unit}
+                      onChange={(e) => setNewProduct({ ...newProduct, unit: (e.target as HTMLSelectElement).value })}
+                    >
+                      <option value="kg">Kilogrammes</option>
+                      <option value="g">Grammes</option>
+                      <option value="l">Litres</option>
+                      <option value="ml">Millilitres</option>
+                      <option value="units">Unités</option>
+                      <option value="pieces">Pièces</option>
+                      <option value="m">Mètres</option>
+                      <option value="m2">Mètres carrés</option>
+                    </Select>
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Coût unitaire (€) *
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={newProduct.cost_per_unit}
-                    onChange={(e) => setNewProduct({ ...newProduct, cost_per_unit: Number(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Coût unitaire (€) *" htmlFor="cpu" required>
+                    <Input
+                      id="cpu"
+                      type="number"
+                      step={1}
+                      value={newProduct.cost_per_unit}
+                      onChange={(e) => setNewProduct({ ...newProduct, cost_per_unit: Number(e.target.value) })}
+                      required
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Quantité minimum
-                  </label>
-                  <input
-                    type="number"
-                    value={newProduct.minimum_quantity}
-                    onChange={(e) => setNewProduct({ ...newProduct, minimum_quantity: Number(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Quantité minimum" htmlFor="min_qty">
+                    <Input
+                      id="min_qty"
+                      type="number"
+                      value={newProduct.minimum_quantity}
+                      onChange={(e) => setNewProduct({ ...newProduct, minimum_quantity: Number(e.target.value) })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Numéro de lot
-                  </label>
-                  <input
-                    type="text"
-                    value={newProduct.batch_number}
-                    onChange={(e) => setNewProduct({ ...newProduct, batch_number: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Numéro de lot" htmlFor="batch">
+                    <Input
+                      id="batch"
+                      type="text"
+                      value={newProduct.batch_number}
+                      onChange={(e) => setNewProduct({ ...newProduct, batch_number: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Date d'expiration
-                  </label>
-                  <input
-                    type="date"
-                    value={newProduct.expiry_date}
-                    onChange={(e) => setNewProduct({ ...newProduct, expiry_date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Date d'expiration" htmlFor="expiry">
+                    <Input
+                      id="expiry"
+                      type="date"
+                      value={newProduct.expiry_date}
+                      onChange={(e) => setNewProduct({ ...newProduct, expiry_date: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Entrepôt
-                  </label>
-                  <select
-                    value={newProduct.storage_location}
-                    onChange={(e) => {
-                      const selectedWarehouse = warehouses.find(w => w.name === e.target.value);
-                      setNewProduct({
-                        ...newProduct,
-                        storage_location: e.target.value,
-                        warehouse_id: selectedWarehouse?.id
-                      });
-                    }}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">Sélectionner un entrepôt</option>
-                    {warehouses.map(warehouse => (
-                      <option key={warehouse.id} value={warehouse.name}>
-                        {warehouse.name}
-                      </option>
-                    ))}
-                  </select>
+                  <FormField label="Entrepôt" htmlFor="warehouse">
+                    <Select
+                      id="warehouse"
+                      value={newProduct.storage_location}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLSelectElement).value;
+                        const selectedWarehouse = warehouses.find(w => w.name === value);
+                        setNewProduct({
+                          ...newProduct,
+                          storage_location: value,
+                          warehouse_id: selectedWarehouse?.id
+                        });
+                      }}
+                    >
+                      <option value="">Sélectionner un entrepôt</option>
+                      {warehouses.map(warehouse => (
+                        <option key={warehouse.id} value={warehouse.name}>
+                          {warehouse.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
                 </div>
               </div>
             </div>
@@ -1144,8 +1139,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Purchase Modal */}
       {showAddPurchase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Achat
@@ -1159,116 +1154,110 @@ const StockManagement: React.FC = () => {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Produit *
-                </label>
-                <select
-                  value={newPurchase.product_id}
-                  onChange={(e) => {
-                    const product = products.find(p => p.id === e.target.value);
-                    setNewPurchase({
-                      ...newPurchase,
-                      product_id: e.target.value,
-                      cost_per_unit: product?.cost_per_unit || 0,
-                      supplier: product?.supplier || ''
-                    });
-                  }}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  required
-                >
-                  <option value="">Sélectionner un produit</option>
-                  {products.map(product => (
-                    <option key={product.id} value={product.id}>
-                      {product.item_name} ({product.quantity} {product.unit} en stock)
-                    </option>
-                  ))}
-                </select>
+                <FormField label="Produit *" htmlFor="purchase_product" required>
+                  <Select
+                    id="purchase_product"
+                    value={newPurchase.product_id}
+                    onChange={(e) => {
+                      const value = (e.target as HTMLSelectElement).value;
+                      const product = products.find(p => p.id === value);
+                      setNewPurchase({
+                        ...newPurchase,
+                        product_id: value,
+                        cost_per_unit: product?.cost_per_unit || 0,
+                        supplier: product?.supplier || ''
+                      });
+                    }}
+                    required
+                  >
+                    <option value="">Sélectionner un produit</option>
+                    {products.map(product => (
+                      <option key={product.id} value={product.id}>
+                        {product.item_name} ({product.quantity} {product.unit} en stock)
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Quantité *
-                  </label>
-                  <input
-                    type="number"
-                    value={newPurchase.quantity}
-                    onChange={(e) => setNewPurchase({
-                      ...newPurchase,
-                      quantity: Number(e.target.value),
-                      total_cost: Number(e.target.value) * newPurchase.cost_per_unit
-                    })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Quantité *" htmlFor="purchase_qty" required>
+                    <Input
+                      id="purchase_qty"
+                      type="number"
+                      value={newPurchase.quantity}
+                      onChange={(e) => setNewPurchase({
+                        ...newPurchase,
+                        quantity: Number(e.target.value),
+                        total_cost: Number(e.target.value) * newPurchase.cost_per_unit
+                      })}
+                      required
+                    />
+                  </FormField>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Prix Unitaire (€) *
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={newPurchase.cost_per_unit}
-                    onChange={(e) => setNewPurchase({
-                      ...newPurchase,
-                      cost_per_unit: Number(e.target.value),
-                      total_cost: newPurchase.quantity * Number(e.target.value)
-                    })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Prix Unitaire (€) *" htmlFor="purchase_cpu" required>
+                    <Input
+                      id="purchase_cpu"
+                      type="number"
+                      step={1}
+                      value={newPurchase.cost_per_unit}
+                      onChange={(e) => setNewPurchase({
+                        ...newPurchase,
+                        cost_per_unit: Number(e.target.value),
+                        total_cost: newPurchase.quantity * Number(e.target.value)
+                      })}
+                      required
+                    />
+                  </FormField>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date d'achat *
-                </label>
-                <input
-                  type="date"
-                  value={newPurchase.purchase_date}
-                  onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
+                <FormField label="Date d'achat *" htmlFor="purchase_date" required>
+                  <Input
+                    id="purchase_date"
+                    type="date"
+                    value={newPurchase.purchase_date}
+                    onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
+                    required
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Fournisseur *
-                </label>
-                <input
-                  type="text"
-                  value={newPurchase.supplier}
-                  onChange={(e) => setNewPurchase({ ...newPurchase, supplier: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
+                <FormField label="Fournisseur *" htmlFor="purchase_supplier" required>
+                  <Input
+                    id="purchase_supplier"
+                    type="text"
+                    value={newPurchase.supplier}
+                    onChange={(e) => setNewPurchase({ ...newPurchase, supplier: e.target.value })}
+                    required
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Numéro de lot
-                </label>
-                <input
-                  type="text"
-                  value={newPurchase.batch_number}
-                  onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                />
+                <FormField label="Numéro de lot" htmlFor="purchase_batch">
+                  <Input
+                    id="purchase_batch"
+                    type="text"
+                    value={newPurchase.batch_number}
+                    onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
+                  />
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Notes
-                </label>
-                <textarea
-                  value={newPurchase.notes}
-                  onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                ></textarea>
+                <FormField label="Notes" htmlFor="purchase_notes">
+                  <Textarea
+                    id="purchase_notes"
+                    value={newPurchase.notes}
+                    onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
+                    rows={3}
+                  />
+                </FormField>
               </div>
 
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
@@ -1304,8 +1293,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Fournisseur
@@ -1320,149 +1309,137 @@ const StockManagement: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom du fournisseur *
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.name}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Nom du fournisseur *" htmlFor="supplier_name" required>
+                    <Input
+                      id="supplier_name"
+                      type="text"
+                      value={newSupplier.name}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                      required
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Personne de contact
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.contact_person}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Personne de contact" htmlFor="supplier_contact">
+                    <Input
+                      id="supplier_contact"
+                      type="text"
+                      value={newSupplier.contact_person}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={newSupplier.email}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Email" htmlFor="supplier_email">
+                    <Input
+                      id="supplier_email"
+                      type="email"
+                      value={newSupplier.email}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={newSupplier.phone}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Téléphone" htmlFor="supplier_phone">
+                    <Input
+                      id="supplier_phone"
+                      type="tel"
+                      value={newSupplier.phone}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Adresse
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.address}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Adresse" htmlFor="supplier_address">
+                    <Input
+                      id="supplier_address"
+                      type="text"
+                      value={newSupplier.address}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Ville
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.city}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, city: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Ville" htmlFor="supplier_city">
+                    <Input
+                      id="supplier_city"
+                      type="text"
+                      value={newSupplier.city}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, city: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Code postal
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.postal_code}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, postal_code: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Code postal" htmlFor="supplier_postal">
+                    <Input
+                      id="supplier_postal"
+                      type="text"
+                      value={newSupplier.postal_code}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, postal_code: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Pays
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.country}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, country: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Pays" htmlFor="supplier_country">
+                    <Input
+                      id="supplier_country"
+                      type="text"
+                      value={newSupplier.country}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, country: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Site web
-                  </label>
-                  <input
-                    type="url"
-                    value={newSupplier.website}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, website: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Site web" htmlFor="supplier_website">
+                    <Input
+                      id="supplier_website"
+                      type="url"
+                      value={newSupplier.website}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, website: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Numéro TVA
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.tax_id}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, tax_id: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Numéro TVA" htmlFor="supplier_tax">
+                    <Input
+                      id="supplier_tax"
+                      type="text"
+                      value={newSupplier.tax_id}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, tax_id: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Conditions de paiement
-                  </label>
-                  <input
-                    type="text"
-                    value={newSupplier.payment_terms}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })}
-                    placeholder="Net 30, COD, etc."
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Conditions de paiement" htmlFor="supplier_payment" helper="Ex: Net 30, COD, etc.">
+                    <Input
+                      id="supplier_payment"
+                      type="text"
+                      value={newSupplier.payment_terms}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })}
+                      placeholder="Net 30, COD, etc."
+                    />
+                  </FormField>
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Notes
-                  </label>
-                  <textarea
-                    value={newSupplier.notes}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })}
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Notes" htmlFor="supplier_notes">
+                    <Textarea
+                      id="supplier_notes"
+                      value={newSupplier.notes}
+                      onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })}
+                      rows={3}
+                    />
+                  </FormField>
                 </div>
               </div>
             </div>
@@ -1488,8 +1465,8 @@ const StockManagement: React.FC = () => {
 
       {/* Add Warehouse Modal */}
       {showAddWarehouse && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Entrepôt
@@ -1504,145 +1481,134 @@ const StockManagement: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom de l'entrepôt *
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.name}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
+                  <FormField label="Nom de l'entrepôt *" htmlFor="warehouse_name" required>
+                    <Input
+                      id="warehouse_name"
+                      type="text"
+                      value={newWarehouse.name}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
+                      required
+                    />
+                  </FormField>
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
-                  </label>
-                  <textarea
-                    value={newWarehouse.description}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, description: e.target.value })}
-                    rows={2}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Description" htmlFor="warehouse_desc">
+                    <Textarea
+                      id="warehouse_desc"
+                      value={newWarehouse.description}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, description: e.target.value })}
+                      rows={2}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Emplacement
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.location}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Emplacement" htmlFor="warehouse_location">
+                    <Input
+                      id="warehouse_location"
+                      type="text"
+                      value={newWarehouse.location}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Adresse
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.address}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, address: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Adresse" htmlFor="warehouse_address">
+                    <Input
+                      id="warehouse_address"
+                      type="text"
+                      value={newWarehouse.address}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, address: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Ville
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.city}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, city: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Ville" htmlFor="warehouse_city">
+                    <Input
+                      id="warehouse_city"
+                      type="text"
+                      value={newWarehouse.city}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, city: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Code postal
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.postal_code}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, postal_code: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Code postal" htmlFor="warehouse_postal">
+                    <Input
+                      id="warehouse_postal"
+                      type="text"
+                      value={newWarehouse.postal_code}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, postal_code: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Capacité
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={newWarehouse.capacity}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Capacité" htmlFor="warehouse_capacity">
+                    <Input
+                      id="warehouse_capacity"
+                      type="number"
+                      step={1}
+                      value={newWarehouse.capacity}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Unité de capacité
-                  </label>
-                  <select
-                    value={newWarehouse.capacity_unit}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity_unit: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="m3">Mètres cubes (m³)</option>
-                    <option value="m2">Mètres carrés (m²)</option>
-                    <option value="kg">Kilogrammes</option>
-                    <option value="t">Tonnes</option>
-                  </select>
+                  <FormField label="Unité de capacité" htmlFor="warehouse_capacity_unit">
+                    <Select
+                      id="warehouse_capacity_unit"
+                      value={newWarehouse.capacity_unit}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity_unit: (e.target as HTMLSelectElement).value })}
+                    >
+                      <option value="m3">Mètres cubes (m³)</option>
+                      <option value="m2">Mètres carrés (m²)</option>
+                      <option value="kg">Kilogrammes</option>
+                      <option value="t">Tonnes</option>
+                    </Select>
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Responsable
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.manager_name}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Responsable" htmlFor="warehouse_manager">
+                    <Input
+                      id="warehouse_manager"
+                      type="text"
+                      value={newWarehouse.manager_name}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_name: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Téléphone du responsable
-                  </label>
-                  <input
-                    type="tel"
-                    value={newWarehouse.manager_phone}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_phone: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  />
+                  <FormField label="Téléphone du responsable" htmlFor="warehouse_manager_phone">
+                    <Input
+                      id="warehouse_manager_phone"
+                      type="tel"
+                      value={newWarehouse.manager_phone}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_phone: e.target.value })}
+                    />
+                  </FormField>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Niveau de sécurité
-                  </label>
-                  <select
-                    value={newWarehouse.security_level}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, security_level: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="basic">Basique</option>
-                    <option value="standard">Standard</option>
-                    <option value="high">Élevé</option>
-                    <option value="maximum">Maximum</option>
-                  </select>
+                  <FormField label="Niveau de sécurité" htmlFor="warehouse_security">
+                    <Select
+                      id="warehouse_security"
+                      value={newWarehouse.security_level}
+                      onChange={(e) => setNewWarehouse({ ...newWarehouse, security_level: (e.target as HTMLSelectElement).value })}
+                    >
+                      <option value="basic">Basique</option>
+                      <option value="standard">Standard</option>
+                      <option value="high">Élevé</option>
+                      <option value="maximum">Maximum</option>
+                    </Select>
+                  </FormField>
                 </div>
 
                 <div className="col-span-2">

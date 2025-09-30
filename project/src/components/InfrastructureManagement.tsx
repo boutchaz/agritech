@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask } from 'lucide-react';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 
@@ -169,78 +173,61 @@ const InfrastructureManagement: React.FC = () => {
         return (
           <>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Largeur (m)
-                </label>
-                <input
+              <FormField label="Largeur (m)" htmlFor="stable_width" required>
+                <Input
+                  id="stable_width"
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={details.width || ''}
                   onChange={(e) => handleStructureDetailsChange('width', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Longueur (m)
-                </label>
-                <input
+              </FormField>
+              <FormField label="Longueur (m)" htmlFor="stable_length" required>
+                <Input
+                  id="stable_length"
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={details.length || ''}
                   onChange={(e) => handleStructureDetailsChange('length', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Hauteur (m)
-                </label>
-                <input
+              </FormField>
+              <FormField label="Hauteur (m)" htmlFor="stable_height" required>
+                <Input
+                  id="stable_height"
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={details.height || ''}
                   onChange={(e) => handleStructureDetailsChange('height', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Type de construction
-              </label>
-              <select
+            <FormField label="Type de construction" htmlFor="construction_type" required>
+              <Select
+                id="construction_type"
                 value={details.construction_type || ''}
-                onChange={(e) => handleStructureDetailsChange('construction_type', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                required
+                onChange={(e) => handleStructureDetailsChange('construction_type', (e.target as HTMLSelectElement).value)}
               >
                 <option value="">Sélectionner...</option>
                 <option value="concrete">Béton</option>
                 <option value="metal">Métallique</option>
                 <option value="wood">Bois</option>
                 <option value="mixed">Mixte</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
           </>
         );
 
       case 'basin':
         return (
           <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Forme
-              </label>
-              <select
+            <FormField label="Forme" htmlFor="basin_shape" required>
+              <Select
+                id="basin_shape"
                 value={details.shape || ''}
-                onChange={(e) => handleStructureDetailsChange('shape', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                required
+                onChange={(e) => handleStructureDetailsChange('shape', (e.target as HTMLSelectElement).value)}
               >
                 <option value="">Sélectionner...</option>
                 {BASIN_SHAPES.map(shape => (
@@ -248,143 +235,116 @@ const InfrastructureManagement: React.FC = () => {
                     {shape.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
             {details.shape && (
               <div className="space-y-4 mt-4">
                 {details.shape === 'circular' ? (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Rayon (m)
-                        </label>
-                        <input
+                      <FormField label="Rayon (m)" htmlFor="basin_radius" required>
+                        <Input
+                          id="basin_radius"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.radius || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.radius', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Hauteur (m)
-                        </label>
-                        <input
+                      </FormField>
+                      <FormField label="Hauteur (m)" htmlFor="basin_height" required>
+                        <Input
+                          id="basin_height"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.height || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
+                      </FormField>
                     </div>
                   </>
                 ) : details.shape === 'trapezoidal' ? (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Largeur supérieure (m)
-                        </label>
-                        <input
+                      <FormField label="Largeur supérieure (m)" htmlFor="basin_top_width" required>
+                        <Input
+                          id="basin_top_width"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.top_width || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.top_width', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Largeur inférieure (m)
-                        </label>
-                        <input
+                      </FormField>
+                      <FormField label="Largeur inférieure (m)" htmlFor="basin_bottom_width" required>
+                        <Input
+                          id="basin_bottom_width"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.bottom_width || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.bottom_width', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
+                      </FormField>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Longueur (m)
-                        </label>
-                        <input
+                      <FormField label="Longueur (m)" htmlFor="basin_length" required>
+                        <Input
+                          id="basin_length"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.length || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Hauteur (m)
-                        </label>
-                        <input
+                      </FormField>
+                      <FormField label="Hauteur (m)" htmlFor="basin_height2" required>
+                        <Input
+                          id="basin_height2"
                           type="number"
-                          step="0.1"
+                          step="1"
                           value={details.dimensions?.height || ''}
                           onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                           required
                         />
-                      </div>
+                      </FormField>
                     </div>
                   </>
                 ) : (
                   // Rectangular or Cubic
                   <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Largeur (m)
-                      </label>
-                      <input
+                    <FormField label="Largeur (m)" htmlFor="rect_width" required>
+                      <Input
+                        id="rect_width"
                         type="number"
-                        step="0.1"
+                        step="1"
                         value={details.dimensions?.width || ''}
                         onChange={(e) => handleStructureDetailsChange('dimensions.width', Number(e.target.value))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                         required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Longueur (m)
-                      </label>
-                      <input
+                    </FormField>
+                    <FormField label="Longueur (m)" htmlFor="rect_length" required>
+                      <Input
+                        id="rect_length"
                         type="number"
-                        step="0.1"
+                        step="1"
                         value={details.dimensions?.length || ''}
                         onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                         required
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Hauteur (m)
-                      </label>
-                      <input
+                    </FormField>
+                    <FormField label="Hauteur (m)" htmlFor="rect_height" required>
+                      <Input
+                        id="rect_height"
                         type="number"
-                        step="0.1"
+                        step="1"
                         value={details.dimensions?.height || ''}
                         onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                         required
                       />
-                    </div>
+                    </FormField>
                   </div>
                 )}
 
@@ -445,18 +405,15 @@ const InfrastructureManagement: React.FC = () => {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Équipements présents
-              </label>
-              <textarea
+            <FormField label="Équipements présents" htmlFor="tech_equipment" helper="Un équipement par ligne">
+              <Textarea
+                id="tech_equipment"
                 value={details.equipment?.join('\n') || ''}
                 onChange={(e) => handleStructureDetailsChange('equipment', e.target.value.split('\n').filter(Boolean))}
                 rows={4}
                 placeholder="Un équipement par ligne"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
               />
-            </div>
+            </FormField>
           </>
         );
 
@@ -464,67 +421,53 @@ const InfrastructureManagement: React.FC = () => {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Profondeur (m)
-                </label>
-                <input
+              <FormField label="Profondeur (m)" htmlFor="well_depth" required>
+                <Input
+                  id="well_depth"
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={details.depth || ''}
                   onChange={(e) => handleStructureDetailsChange('depth', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  État
-                </label>
-                <select
+              </FormField>
+              <FormField label="État" htmlFor="well_condition" required>
+                <Select
+                  id="well_condition"
                   value={details.condition || ''}
-                  onChange={(e) => handleStructureDetailsChange('condition', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
+                  onChange={(e) => handleStructureDetailsChange('condition', (e.target as HTMLSelectElement).value)}
                 >
                   <option value="">Sélectionner...</option>
                   <option value="excellent">Excellent</option>
                   <option value="good">Bon</option>
                   <option value="fair">Moyen</option>
                   <option value="poor">Mauvais</option>
-                </select>
-              </div>
+                </Select>
+              </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Type de pompe
-                </label>
-                <select
+              <FormField label="Type de pompe" htmlFor="well_pump_type" required>
+                <Select
+                  id="well_pump_type"
                   value={details.pump_type || ''}
-                  onChange={(e) => handleStructureDetailsChange('pump_type', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
+                  onChange={(e) => handleStructureDetailsChange('pump_type', (e.target as HTMLSelectElement).value)}
                 >
                   <option value="">Sélectionner...</option>
                   <option value="submersible">Pompe immergée</option>
                   <option value="surface">Pompe de surface</option>
                   <option value="manual">Pompe manuelle</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Puissance pompe (kW)
-                </label>
-                <input
+                </Select>
+              </FormField>
+              <FormField label="Puissance pompe (kW)" htmlFor="well_pump_power" required>
+                <Input
+                  id="well_pump_power"
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={details.pump_power || ''}
                   onChange={(e) => handleStructureDetailsChange('pump_power', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
             </div>
           </>
         );
@@ -760,8 +703,8 @@ const InfrastructureManagement: React.FC = () => {
 
       {/* Add/Edit Structure Modal */}
       {(showAddModal || editingStructure) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {editingStructure ? 'Modifier la Structure' : 'Nouvelle Structure'}
@@ -778,11 +721,9 @@ const InfrastructureManagement: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nom
-                </label>
-                <input
+              <FormField label="Nom" htmlFor="struct_name" required>
+                <Input
+                  id="struct_name"
                   type="text"
                   value={editingStructure?.name || newStructure.name}
                   onChange={(e) => {
@@ -798,19 +739,16 @@ const InfrastructureManagement: React.FC = () => {
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Type de structure
-                </label>
-                <select
+              <FormField label="Type de structure" htmlFor="struct_type" required>
+                <Select
+                  id="struct_type"
                   value={editingStructure?.type || newStructure.type}
                   onChange={(e) => {
-                    const type = e.target.value as Structure['type'];
+                    const type = (e.target as HTMLSelectElement).value as Structure['type'];
                     if (editingStructure) {
                       setEditingStructure({
                         ...editingStructure,
@@ -825,7 +763,6 @@ const InfrastructureManagement: React.FC = () => {
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 >
                   {STRUCTURE_TYPES.map(type => (
@@ -833,14 +770,12 @@ const InfrastructureManagement: React.FC = () => {
                       {type.label}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date d'installation
-                </label>
-                <input
+              <FormField label="Date d'installation" htmlFor="struct_installation" required>
+                <Input
+                  id="struct_installation"
                   type="date"
                   value={editingStructure?.installation_date || newStructure.installation_date}
                   onChange={(e) => {
@@ -856,16 +791,13 @@ const InfrastructureManagement: React.FC = () => {
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Utilisation
-                </label>
-                <input
+              <FormField label="Utilisation" htmlFor="struct_usage">
+                <Input
+                  id="struct_usage"
                   type="text"
                   value={editingStructure?.usage || newStructure.usage}
                   onChange={(e) => {
@@ -881,10 +813,9 @@ const InfrastructureManagement: React.FC = () => {
                       });
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   placeholder="Ex: Stockage matériel, Élevage, etc."
                 />
-              </div>
+              </FormField>
 
               {/* Structure-specific fields */}
               {renderStructureFields()}

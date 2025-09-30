@@ -3,6 +3,9 @@ import { Users, Plus, X, Edit, Trash2, Mail, Shield, UserCheck, UserX, Crown, Se
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
+import { FormField } from './ui/FormField';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
 
 interface OrganizationUser {
@@ -492,8 +495,8 @@ const UsersSettings: React.FC = () => {
 
       {/* Invite User Modal */}
       {showInviteUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-gray-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 overflow-hidden shadow-xl ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-green-600" />
@@ -519,59 +522,51 @@ const UsersSettings: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Adresse email *
-                </label>
-                <input
-                  type="email"
-                  value={inviteUser.email}
-                  onChange={(e) => setInviteUser({ ...inviteUser, email: e.target.value })}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="utilisateur@exemple.com"
-                />
+                <FormField label="Adresse email *" htmlFor="invite_email" required>
+                  <Input
+                    id="invite_email"
+                    type="email"
+                    value={inviteUser.email}
+                    onChange={(e) => setInviteUser({ ...inviteUser, email: e.target.value })}
+                    placeholder="utilisateur@exemple.com"
+                  />
+                </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Prénom
-                  </label>
-                  <input
+                <FormField label="Prénom" htmlFor="invite_first_name">
+                  <Input
+                    id="invite_first_name"
                     type="text"
                     value={inviteUser.first_name}
                     onChange={(e) => setInviteUser({ ...inviteUser, first_name: e.target.value })}
-                    className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nom
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Nom" htmlFor="invite_last_name">
+                  <Input
+                    id="invite_last_name"
                     type="text"
                     value={inviteUser.last_name}
                     onChange={(e) => setInviteUser({ ...inviteUser, last_name: e.target.value })}
-                    className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   />
-                </div>
+                </FormField>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Rôle *
-                </label>
-                <select
-                  value={inviteUser.role_id}
-                  onChange={(e) => setInviteUser({ ...inviteUser, role_id: e.target.value })}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">Sélectionner un rôle</option>
-                  {getAvailableRoles().map(role => (
-                    <option key={role.id} value={role.id}>
-                      {role.display_name}
-                    </option>
-                  ))}
-                </select>
+                <FormField label="Rôle *" htmlFor="invite_role" required>
+                  <Select
+                    id="invite_role"
+                    value={inviteUser.role_id}
+                    onChange={(e) => setInviteUser({ ...inviteUser, role_id: e.target.value })}
+                  >
+                    <option value="">Sélectionner un rôle</option>
+                    {getAvailableRoles().map(role => (
+                      <option key={role.id} value={role.id}>
+                        {role.display_name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
               </div>
             </div>
 

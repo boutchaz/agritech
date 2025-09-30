@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Sliders, Save } from 'lucide-react';
+import { FormField } from './ui/FormField';
+import { Select } from './ui/Select';
 
 type DifficultyLevel = 'basic' | 'intermediate' | 'expert';
 
@@ -103,30 +105,24 @@ const PreferencesSettings: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Langue
-              </label>
-              <select
+            <FormField label="Langue" htmlFor="pref_language">
+              <Select
+                id="pref_language"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="fr">Français</option>
                 <option value="en">English</option>
                 <option value="ar">العربية</option>
                 <option value="es">Español</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fuseau horaire
-              </label>
-              <select
+            <FormField label="Fuseau horaire" htmlFor="pref_timezone">
+              <Select
+                id="pref_timezone"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="UTC">UTC (Temps universel coordonné)</option>
                 <option value="Africa/Casablanca">Maroc (GMT+1)</option>
@@ -134,8 +130,8 @@ const PreferencesSettings: React.FC = () => {
                 <option value="Europe/Madrid">Espagne (GMT+1)</option>
                 <option value="Africa/Tunis">Tunisie (GMT+1)</option>
                 <option value="Africa/Algiers">Algérie (GMT+1)</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
           </div>
         </div>
 

@@ -1,7 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network, Satellite } from 'lucide-react';
 import type { Module } from '../types';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface SidebarProps {
   modules: Module[];
@@ -19,6 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('common');
+  const { currentOrganization } = useAuth();
 
   const currentPath = location.pathname;
 
@@ -64,9 +69,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <Leaf className="h-8 w-8 text-green-600 dark:text-green-400" />
-          <span className="text-xl font-bold text-gray-800 dark:text-white">AgroSmart</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Leaf className="h-8 w-8 text-green-600 dark:text-green-400" />
+            <span className="text-xl font-bold text-gray-800 dark:text-white">
+              {currentOrganization?.name || t('app.name')}
+            </span>
+          </div>
+          <LanguageSwitcher />
         </div>
       </div>
       
@@ -80,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Home className="h-5 w-5" />
-          <span>Tableau de bord</span>
+          <span>{t('nav.dashboard')}</span>
         </button>
 
 
@@ -93,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <FileText className="h-5 w-5" />
-          <span>Analyses de Sol</span>
+          <span>{t('nav.soilAnalysis')}</span>
         </button>
 
         <button
@@ -105,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Map className="h-5 w-5" />
-          <span>Parcelles</span>
+          <span>{t('nav.parcels')}</span>
         </button>
 
 
@@ -118,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Package className="h-5 w-5" />
-          <span>Stock</span>
+          <span>{t('nav.stock')}</span>
         </button>
 
         <button
@@ -130,7 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Building2 className="h-5 w-5" />
-          <span>Infrastructure</span>
+          <span>{t('nav.infrastructure')}</span>
         </button>
 
         <button
@@ -142,13 +152,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Network className="h-5 w-5" />
-          <span>Gestion des Fermes</span>
+          <span>{t('nav.farmHierarchy')}</span>
         </button>
 
         {/* Personnel Section */}
         <div className="pt-4">
           <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            Personnel
+            {t('nav.personnel')}
           </h3>
           <button
             onClick={() => handleNavigation('/employees')}
@@ -159,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <Users className="h-5 w-5" />
-            <span>Salariés</span>
+            <span>{t('nav.employees')}</span>
           </button>
           <button
             onClick={() => handleNavigation('/day-laborers')}
@@ -170,14 +180,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <UserCog className="h-5 w-5" />
-            <span>Ouvriers à la tâche</span>
+            <span>{t('nav.dayLaborers')}</span>
           </button>
         </div>
 
         {/* Charges Section */}
         <div className="pt-4">
           <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            Charges
+            {t('nav.expenses')}
           </h3>
           <button
             onClick={() => handleNavigation('/utilities')}
@@ -188,7 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <Wallet className="h-5 w-5" />
-            <span>Charges fixes</span>
+            <span>{t('nav.utilities')}</span>
           </button>
         </div>
 
@@ -249,15 +259,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <FileSpreadsheet className="h-5 w-5" />
-          <span>Rapports</span>
+          <span>{t('nav.reports')}</span>
         </button>
-        
+
         <button
           onClick={() => handleNavigation('/settings/profile')}
           className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
         >
           <Settings className="h-5 w-5" />
-          <span>Paramètres</span>
+          <span>{t('nav.settings')}</span>
         </button>
 
         <button
@@ -265,7 +275,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
         >
           {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          <span>{isDarkMode ? 'Mode clair' : 'Mode sombre'}</span>
+          <span>{isDarkMode ? t('app.lightMode') : t('app.darkMode')}</span>
         </button>
       </div>
     </div>
