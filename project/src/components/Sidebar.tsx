@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network, Satellite } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network, Satellite, Menu, X } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const { t } = useTranslation('common');
   const { currentOrganization } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const currentPath = location.pathname;
 
@@ -61,24 +62,55 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleNavigation = (path: string) => {
     onModuleChange(path.replace('/', ''));
     navigate({ to: path });
+    setIsMobileMenuOpen(false); // Close mobile menu on navigation
   };
 
   const agricultureModules = modules.filter(m => m.category === 'agriculture');
   const elevageModules = modules.filter(m => m.category === 'elevage');
 
   return (
-    <div className="h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Leaf className="h-8 w-8 text-green-600 dark:text-green-400" />
-            <span className="text-xl font-bold text-gray-800 dark:text-white">
-              {currentOrganization?.name || t('app.name')}
-            </span>
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+        aria-label="Toggle menu"
+      >
+        {isMobileMenuOpen ? (
+          <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+        ) : (
+          <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+        )}
+      </button>
+
+      {/* Overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-40
+        h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 min-w-0 flex-1">
+              <Leaf className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <span className="text-base sm:text-xl font-bold text-gray-800 dark:text-white truncate">
+                {currentOrganization?.name || t('app.name')}
+              </span>
+            </div>
+            <div className="flex-shrink-0">
+              <LanguageSwitcher />
+            </div>
           </div>
-          <LanguageSwitcher />
         </div>
-      </div>
       
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         <button
@@ -278,7 +310,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>{isDarkMode ? t('app.lightMode') : t('app.darkMode')}</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

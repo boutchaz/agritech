@@ -6,12 +6,12 @@ import { Textarea } from '../components/ui/Textarea'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
-import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import PageHeader from '../components/PageHeader'
 import ParcelCard from '../components/ParcelCard'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Module, SensorData } from '../types'
-import { Edit2, Trash2, MapPin, Ruler, Droplets, ChevronRight, Building2, TreePine, Trees as Tree } from 'lucide-react'
+import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
 interface Parcel {
   id: string;
@@ -210,34 +210,19 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            {/* Breadcrumb Navigation */}
-            <div className="flex items-center space-x-2 text-sm">
-              <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                <Building2 className="h-4 w-4" />
-                <span>{currentOrganization.name}</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                <TreePine className="h-4 w-4" />
-                <span>Fermes</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <div className="flex items-center space-x-1 text-gray-900 dark:text-white font-medium">
-                <MapPin className="h-4 w-4" />
-                <span>Parcelles</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            {/* Farm Selector */}
-            {farms.length > 1 && (
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        <PageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name },
+            { icon: TreePine, label: 'Fermes' },
+            { icon: MapPin, label: 'Parcelles', isActive: true }
+          ]}
+          actions={
+            farms.length > 1 ? (
               <select
                 value={selectedFarmId || currentFarm?.id || ''}
                 onChange={(e) => setSelectedFarmId(e.target.value || null)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
               >
                 <option value="">Toutes les fermes</option>
                 {farms.map((farm) => (
@@ -246,34 +231,37 @@ const AppContent: React.FC = () => {
                   </option>
                 ))}
               </select>
-            )}
-            <OrganizationSwitcher />
-          </div>
-        </div>
-        <div className="p-6 space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            ) : undefined
+          }
+        />
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <div className="w-full sm:w-auto">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Gestion des Parcelles
               </h2>
               {/* Show current context */}
-              <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 {selectedFarmId || currentFarm ? (
                   <>
-                    Parcelles de la ferme: <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="hidden sm:inline">Parcelles de la ferme: </span>
+                    <span className="sm:hidden">Ferme: </span>
+                    <span className="font-medium text-gray-900 dark:text-white">
                       {farms.find(f => f.id === (selectedFarmId || currentFarm?.id))?.name || currentFarm?.name}
                     </span>
                   </>
                 ) : (
                   <>
-                    Parcelles de toutes les fermes dans <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="hidden sm:inline">Parcelles de toutes les fermes dans </span>
+                    <span className="sm:hidden">Toutes - </span>
+                    <span className="font-medium text-gray-900 dark:text-white">
                       {currentOrganization.name}
                     </span>
                   </>
                 )}
               </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto text-left sm:text-right">
               {loading ? (
                 <span>Chargement...</span>
               ) : (

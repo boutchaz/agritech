@@ -481,53 +481,53 @@ const StockManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           Gestion du Stock
         </h2>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <nav className="-mb-px flex space-x-4 sm:space-x-8">
           <button
             onClick={() => setActiveTab('stock')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'stock'
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <Package className="h-5 w-5" />
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Stock</span>
             </div>
           </button>
           <button
             onClick={() => setActiveTab('suppliers')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'suppliers'
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Fournisseurs</span>
             </div>
           </button>
           <button
             onClick={() => setActiveTab('warehouses')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'warehouses'
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <Warehouse className="h-5 w-5" />
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <Warehouse className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Entrepôts</span>
             </div>
           </button>
@@ -535,22 +535,22 @@ const StockManagement: React.FC = () => {
       </div>
 
       {/* Tab Actions */}
-      <div className="flex justify-end space-x-4">
+      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {activeTab === 'stock' && (
           <>
             <button
               onClick={() => setShowAddProduct(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Nouveau Produit</span>
             </button>
             <button
               onClick={() => setShowAddPurchase(true)}
               disabled={products.length === 0}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Nouvel Achat</span>
             </button>
           </>
@@ -558,18 +558,18 @@ const StockManagement: React.FC = () => {
         {activeTab === 'suppliers' && (
           <button
             onClick={() => setShowAddSupplier(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Nouveau Fournisseur</span>
           </button>
         )}
         {activeTab === 'warehouses' && (
           <button
             onClick={() => setShowAddWarehouse(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Nouvel Entrepôt</span>
           </button>
         )}
@@ -587,34 +587,34 @@ const StockManagement: React.FC = () => {
         <>
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
             <Input
               type="text"
               placeholder="Rechercher un produit..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9 sm:pl-10 text-sm"
             />
           </div>
 
       {/* Products List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Produit
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Stock
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="hidden sm:table-cell px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Prix Unitaire
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="hidden md:table-cell px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Statut
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -628,24 +628,24 @@ const StockManagement: React.FC = () => {
               )
               .map((product) => (
                 <tr key={product.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <Package className="h-6 w-6 text-gray-400" />
+                        <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="ml-2 sm:ml-4">
+                        <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                           {product.item_name}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                           {product.category} • {product.supplier}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <div className="flex items-center">
-                      <span className={`text-sm ${
+                      <span className={`text-xs sm:text-sm ${
                         product.status === 'out_of_stock'
                           ? 'text-red-600 dark:text-red-400'
                           : product.status === 'low_stock'
@@ -655,14 +655,14 @@ const StockManagement: React.FC = () => {
                         {product.quantity} {product.unit}
                       </span>
                       {(product.status === 'low_stock' || product.status === 'out_of_stock') && (
-                        <AlertTriangle className="ml-2 h-4 w-4 text-yellow-500" />
+                        <AlertTriangle className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="hidden sm:table-cell px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     {product.cost_per_unit?.toFixed(2)} €/{product.unit}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden md:table-cell px-4 lg:px-6 py-3 sm:py-4">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       product.status === 'available'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
@@ -674,12 +674,12 @@ const StockManagement: React.FC = () => {
                        product.status === 'low_stock' ? 'Stock faible' : 'Rupture'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium">
                     <button
                       onClick={() => handleDeleteProduct(product.id)}
                       className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </td>
                 </tr>

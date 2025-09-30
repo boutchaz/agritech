@@ -123,7 +123,7 @@ const SoilAnalysisPage: React.FC = () => {
     const selectedParcel = parcels.find(p => p.id === selectedParcelId) || null;
 
     return (
-      <div className="p-6">
+      <div className="p-3 sm:p-4 lg:p-6">
         <SoilAnalysisForm
           onSave={handleSave}
           onCancel={() => setShowForm(false)}
@@ -134,25 +134,25 @@ const SoilAnalysisPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
       {/* Parcel Selector */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center space-x-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
-            <MapPin className="h-5 w-5" />
-            <span className="font-medium">Parcelle :</span>
+            <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="font-medium text-sm sm:text-base">Parcelle :</span>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 w-full sm:w-auto">
             {loadingParcels ? (
               <div className="flex items-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-gray-500">Chargement des parcelles...</span>
+                <span className="text-gray-500 text-sm">Chargement des parcelles...</span>
               </div>
             ) : (
               <Select
                 value={selectedParcelId || ''}
                 onChange={(e) => setSelectedParcelId((e.target as HTMLSelectElement).value || null)}
-                className="max-w-md"
+                className="w-full sm:max-w-md text-sm"
               >
                 <option value="">Toutes les parcelles</option>
                 {parcels.map(parcel => (
@@ -164,18 +164,18 @@ const SoilAnalysisPage: React.FC = () => {
             )}
           </div>
           {selectedParcelId && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto">
               {filteredAnalyses.length} analyse(s) pour cette parcelle
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           Analyses de Sol
         </h2>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setViewMode('card')}
@@ -196,10 +196,10 @@ const SoilAnalysisPage: React.FC = () => {
           <button
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             title={!selectedParcelId ? 'Sélectionnez une parcelle pour ajouter une analyse' : 'Ajouter une nouvelle analyse'}
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Nouvelle Analyse</span>
           </button>
         </div>
@@ -207,45 +207,45 @@ const SoilAnalysisPage: React.FC = () => {
 
       {analyses.length === 0 ? (
         <div className="text-center py-12">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
             Aucune analyse enregistrée
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
             Commencez par ajouter une nouvelle analyse de sol
           </p>
         </div>
       ) : (
         <>
           {viewMode === 'card' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {paginatedAnalyses.map(analysis => (
             <div
               key={analysis.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6"
+              className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base truncate">
                     Analyse du {new Date(analysis.analysis_date).toLocaleDateString()}
                   </h3>
-                  <div className="space-y-1">
+                  <div className="space-y-1 mt-1">
                     {!selectedParcelId && (
-                      <div className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400">
-                        <MapPin className="h-3 w-3" />
-                        <span>{parcels.find(p => p.id === analysis.parcel_id)?.name || 'Parcelle inconnue'}</span>
+                      <div className="flex items-center space-x-1 text-xs sm:text-sm text-blue-600 dark:text-blue-400">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{parcels.find(p => p.id === analysis.parcel_id)?.name || 'Parcelle inconnue'}</span>
                       </div>
                     )}
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {analysis.physical?.texture || 'N/A'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleDelete(analysis.id)}
-                  className="text-gray-400 hover:text-red-500"
+                  className="text-gray-400 hover:text-red-500 ml-2"
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
 
@@ -430,8 +430,8 @@ const SoilAnalysisPage: React.FC = () => {
           )}
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6">
+              <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
                 Affichage de {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à{' '}
                 {Math.min(currentPage * ITEMS_PER_PAGE, analyses.length)} sur{' '}
                 {analyses.length} analyses
@@ -440,16 +440,16 @@ const SoilAnalysisPage: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 rounded-md text-sm ${
+                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${
                         currentPage === page
                           ? 'bg-green-600 text-white'
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -462,9 +462,9 @@ const SoilAnalysisPage: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               </div>
             </div>

@@ -2,9 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Dashboard from '../components/Dashboard'
-import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import PageHeader from '../components/PageHeader'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import { useState } from 'react'
+import { Home, Building2 } from 'lucide-react'
 import type { Module, SensorData, DashboardSettings } from '../types'
 
 const mockModules: Module[] = [
@@ -80,21 +81,15 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         <SubscriptionBanner />
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {currentOrganization.name}
-            </h1>
-            {currentFarm && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                • {currentFarm.name}
-              </span>
-            )}
-          </div>
-          <OrganizationSwitcher />
-        </div>
+        <PageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name },
+            ...(currentFarm ? [{ icon: Home, label: currentFarm.name }] : []),
+            { icon: Home, label: 'Tableau de bord', isActive: true }
+          ]}
+        />
         <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
       </main>
     </div>
