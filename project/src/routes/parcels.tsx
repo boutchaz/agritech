@@ -234,7 +234,7 @@ const AppContent: React.FC = () => {
             ) : undefined
           }
         />
-        <div className="p-3 sm:p-4 lg:p-6 pl-16 lg:pl-6 space-y-4 sm:space-y-6">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
             <div className="w-full sm:w-auto">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
