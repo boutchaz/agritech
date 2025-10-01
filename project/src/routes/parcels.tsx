@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
+import React, { useState, useEffect, useRef } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
@@ -8,7 +9,6 @@ import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import PageHeader from '../components/PageHeader'
 import ParcelCard from '../components/ParcelCard'
-import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Module, SensorData } from '../types'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
@@ -64,6 +64,8 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const navigate = useNavigate();
+  const search = Route.useSearch();
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('parcels');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -73,15 +75,73 @@ const AppContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
-  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(search.parcelId || null);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
-  const [activeParcelTab, setActiveParcelTab] = useState<string>('overview');
+  const [activeParcelTab, setActiveParcelTab] = useState<string>(search.tab || 'overview');
+
+  // Track if we're currently syncing to prevent loops
+  const isSyncingRef = useRef(false);
+
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
   };
+
+  // Sync URL search params to state (URL is source of truth)
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+
+    isSyncingRef.current = true;
+
+    const urlParcelId = search.parcelId || null;
+    const urlTab = search.tab || 'overview';
+
+    if (urlParcelId !== selectedParcelId) {
+      setSelectedParcelId(urlParcelId);
+    }
+
+    if (urlTab !== activeParcelTab) {
+      setActiveParcelTab(urlTab);
+    }
+
+    isSyncingRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.parcelId, search.tab]);
+
+  // Update URL when state changes (state changes trigger URL update)
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+
+    const newSearch: { parcelId?: string; tab?: string } = {};
+    const currentParcelId = search.parcelId || null;
+    const currentTab = search.tab || 'overview';
+
+    if (selectedParcelId) {
+      newSearch.parcelId = selectedParcelId;
+    }
+
+    if (activeParcelTab && activeParcelTab !== 'overview') {
+      newSearch.tab = activeParcelTab;
+    }
+
+    // Only navigate if something actually changed
+    const parcelChanged = currentParcelId !== selectedParcelId;
+    const tabChanged = currentTab !== activeParcelTab;
+
+    if (parcelChanged || tabChanged) {
+      isSyncingRef.current = true;
+      navigate({
+        to: '/parcels',
+        search: newSearch,
+        replace: true,
+      }).then(() => {
+        isSyncingRef.current = false;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedParcelId, activeParcelTab]);
 
   useEffect(() => {
     if (currentOrganization) {
@@ -671,4 +731,10 @@ const AppContent: React.FC = () => {
 
 export const Route = createFileRoute('/parcels')({
   component: AppContent,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      parcelId: (search.parcelId as string) || undefined,
+      tab: (search.tab as string) || undefined,
+    };
+  },
 })

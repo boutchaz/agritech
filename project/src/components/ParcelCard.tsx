@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree, DollarSign, Cloud } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
@@ -13,6 +13,7 @@ import StatisticsCalculator from './SatelliteAnalysis/StatisticsCalculator';
 import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
 import ParcelReportGenerator from './ParcelReportGenerator';
 import ParcelProfitability from './ParcelProfitability';
+import WeatherAnalyticsView from './WeatherAnalytics/WeatherAnalyticsView';
 
 interface Parcel {
   id: string;
@@ -48,6 +49,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
     { id: 'soil', name: 'Analyse Sol', icon: Flask },
     // { id: 'sensors', name: 'Capteurs', icon: Wifi },
     { id: 'satellite', name: 'Imagerie', icon: Satellite },
+    { id: 'weather', name: 'Météo & Climat', icon: Cloud },
     { id: 'profitability', name: 'Rentabilité', icon: DollarSign },
     // { id: 'fruit-trees', name: 'Arbres Fruitiers', icon: Tree },
     // { id: 'yield', name: 'Rendement', icon: TrendingUp },
@@ -563,6 +565,24 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               loading={loading}
               error={error}
             />
+          </div>
+        );
+
+      case 'weather':
+        return parcel.boundary && parcel.boundary.length > 0 ? (
+          <WeatherAnalyticsView
+            parcelBoundary={parcel.boundary}
+            parcelName={parcel.name}
+          />
+        ) : (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
+            <Cloud className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">
+              Les données de localisation de la parcelle sont requises pour l'analyse météorologique.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques.
+            </p>
           </div>
         );
 
