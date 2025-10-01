@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './MultiTenantAuthProvider';
 import Auth from './Auth';
 
 interface ProtectedRouteProps {

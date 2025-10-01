@@ -35,8 +35,8 @@ function LoginPage() {
       if (error) throw error
 
       navigate({ to: '/dashboard' })
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred during login')
     } finally {
       setIsLoading(false)
     }

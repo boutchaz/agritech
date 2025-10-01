@@ -14,6 +14,13 @@ export interface ReportSection {
   required: boolean;
 }
 
+export interface ReportMetadata {
+  format?: 'pdf' | 'html' | 'json';
+  includeCharts?: boolean;
+  includeImages?: boolean;
+  customFields?: Record<string, string | number | boolean>;
+}
+
 export interface GeneratedReport {
   id: string;
   parcel_id: string;
@@ -23,7 +30,26 @@ export interface GeneratedReport {
   generated_by: string;
   status: 'pending' | 'completed' | 'failed';
   file_url?: string;
-  metadata?: any;
+  metadata?: ReportMetadata;
+}
+
+export interface SoilAnalysisData {
+  ph?: number;
+  texture?: string;
+  moisture?: number;
+  organic_matter?: number;
+  phosphorus?: number;
+  potassium?: number;
+  nitrogen?: number;
+}
+
+export interface SatelliteAnalysisData {
+  ndvi?: number;
+  ndwi?: number;
+  evi?: number;
+  imageUrl?: string;
+  captureDate?: string;
+  cloudCover?: number;
 }
 
 export interface ReportData {
@@ -48,8 +74,8 @@ export interface ReportData {
     soil_temp?: number;
   };
   analysis?: {
-    soil?: any;
-    satellite?: any;
+    soil?: SoilAnalysisData;
+    satellite?: SatelliteAnalysisData;
     recommendations?: string[];
   };
 }

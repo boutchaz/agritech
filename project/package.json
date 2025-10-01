@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -25,7 +27,8 @@
     "db:apply-schema-remote-psql": "node scripts/apply-schema-remote.js",
     "db:generate-types-remote": "node scripts/generate-types-remote.js",
     "db:deploy-remote": "node scripts/apply-schema-api.js --seed",
-    "db:setup-remote": "npm run db:apply-schema-remote && npm run db:generate-types-remote"
+    "db:setup-remote": "npm run db:apply-schema-remote && npm run db:generate-types-remote",
+    "prepare": "husky"
   },
   "dependencies": {
     "@polar-sh/sdk": "^0.35.4",
@@ -67,11 +70,19 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.20.5",
     "typescript": "^5.2.2",
     "vite": "^5.1.4",
     "zod": "^4.1.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "tsc --noEmit"
+    ]
   }
 }

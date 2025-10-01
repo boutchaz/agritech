@@ -258,9 +258,9 @@ const StockManagement: React.FC = () => {
         minimum_quantity: 10
       });
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding product:', error);
-      setError(error.message || 'Failed to add product');
+      setError(error instanceof Error ? error.message : 'Failed to add product');
     }
   };
 
@@ -324,9 +324,9 @@ const StockManagement: React.FC = () => {
         purchase_date: new Date().toISOString().split('T')[0]
       });
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding purchase:', error);
-      setError(error.message || 'Failed to add purchase');
+      setError(error instanceof Error ? error.message : 'Failed to add purchase');
     }
   };
 
@@ -345,9 +345,9 @@ const StockManagement: React.FC = () => {
 
       setProducts(products.filter(p => p.id !== id));
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting product:', error);
-      setError(error.message || 'Failed to delete product');
+      setError(error instanceof Error ? error.message : 'Failed to delete product');
     }
   };
 
@@ -383,9 +383,9 @@ const StockManagement: React.FC = () => {
         notes: ''
       });
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding supplier:', error);
-      setError(error.message || 'Failed to add supplier');
+      setError(error instanceof Error ? error.message : 'Failed to add supplier');
     }
   };
 
@@ -404,9 +404,9 @@ const StockManagement: React.FC = () => {
 
       setSuppliers(suppliers.filter(s => s.id !== id));
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting supplier:', error);
-      setError(error.message || 'Failed to delete supplier');
+      setError(error instanceof Error ? error.message : 'Failed to delete supplier');
     }
   };
 
@@ -445,9 +445,9 @@ const StockManagement: React.FC = () => {
         manager_phone: ''
       });
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding warehouse:', error);
-      setError(error.message || 'Failed to add warehouse');
+      setError(error instanceof Error ? error.message : 'Failed to add warehouse');
     }
   };
 
@@ -466,9 +466,9 @@ const StockManagement: React.FC = () => {
 
       setWarehouses(warehouses.filter(w => w.id !== id));
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting warehouse:', error);
-      setError(error.message || 'Failed to delete warehouse');
+      setError(error instanceof Error ? error.message : 'Failed to delete warehouse');
     }
   };
 

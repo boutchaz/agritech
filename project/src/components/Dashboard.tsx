@@ -53,7 +53,12 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
     ]
   };
 
-  const totalArea = parcels.reduce((sum, p: any) => sum + (p.calculated_area ?? p.area ?? 0), 0);
+  interface Parcel {
+    calculated_area?: number;
+    area?: number;
+  }
+
+  const totalArea = parcels.reduce((sum, p) => sum + ((p as Parcel).calculated_area ?? (p as Parcel).area ?? 0), 0);
 
   const renderWidget = (type: string) => {
     switch (type) {

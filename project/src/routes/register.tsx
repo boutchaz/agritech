@@ -58,8 +58,8 @@ function RegisterPage() {
 
         navigate({ to: '/dashboard' })
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred during registration')
     } finally {
       setIsLoading(false)
     }

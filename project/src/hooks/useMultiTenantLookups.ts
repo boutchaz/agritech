@@ -44,8 +44,16 @@ interface TaskTemplate extends BaseLookup {
   recurrence_pattern: string | null;
 }
 
+interface TestTypeParameters {
+  min_value?: number;
+  max_value?: number;
+  unit?: string;
+  method?: string;
+  [key: string]: string | number | undefined;
+}
+
 interface TestType extends BaseLookup {
-  parameters: any;
+  parameters: TestTypeParameters;
 }
 
 // ============================================================================
@@ -440,7 +448,7 @@ export function useTestTypes() {
     fetchTestTypes();
   }, [fetchTestTypes]);
 
-  const addTestType = async (name: string, description?: string, parameters?: any) => {
+  const addTestType = async (name: string, description?: string, parameters?: TestTypeParameters) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
     try {

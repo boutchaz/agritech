@@ -2,14 +2,31 @@ import { useState, useEffect } from 'react';
 import type { SoilAnalysis } from '../types';
 import { supabase } from '../lib/supabase';
 
+interface PhysicalProperties {
+  ph: number;
+  texture: string;
+  moisture: number;
+}
+
+interface ChemicalProperties {
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+}
+
+interface BiologicalProperties {
+  earthworm_count: number;
+  microbial_activity: string;
+}
+
 interface SoilAnalysisRecord {
   id: string;
   parcel_id: string;
   test_type_id: string;
   analysis_date: string;
-  physical: any;
-  chemical: any;
-  biological: any;
+  physical: PhysicalProperties;
+  chemical: ChemicalProperties;
+  biological: BiologicalProperties;
   notes: string | null;
   created_at: string;
 }

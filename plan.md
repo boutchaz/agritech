@@ -1,52 +1,108 @@
-# Development Plan
+Develop a comprehensive "Weather & Climate Analytics" dashboard for individual farm parcels within our agritech application. The core purpose of this dashboard is to provide farmers with actionable insights by comparing current weather conditions against long-term historical climate normals for their specific parcel's location.
 
-This document outlines the plan to implement the requested features, enhancements, and bug fixes for the application.
+Key Features & Components:
 
-## 🗺️ Map & User Interface (UI)
+The dashboard should be organized into three main sections, based on the provided designs:
 
-| Task ID | Description | Complexity | Dependencies | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **UI-1** | **Display Place Names:** Add labels for locations directly onto the map interface. | Medium | - | To Do |
-| **UI-2** | **Full-Screen Mode:** Implement a button or option to view the map in full-screen mode. | Small | - | To Do |
-| **UI-3** | **Geolocation on Start:** Upon the user's first visit, prompt for location access. If granted, automatically center the map on the user's current location. | Medium | - | To Do |
-| **UI-4** | **Satellite View:** Add a satellite imagery layer to the map as an alternative to the default view. | Medium | - | To Do |
-| **UI-5** | **Image Contrast Adjustment:** For the satellite view, provide a tool or slider to adjust the contrast. | Large | UI-4 | To Do |
-| **UI-6** | **Heatmap Cropping:** Modify the heatmap display so that it is strictly cropped to the user's defined Area of Interest (AOI). | Large | - | To Do |
-| **UI-7** | **Fix UI Overlap:** Resolve the bug where data fields overlap and obscure the map view when a user is adding a new parcel. | Medium | - | To Do |
+1. Temperature Analysis
+Implement three multi-series line charts to track and compare daily temperature variations.
 
-## 🌱 Farm & Parcel Data Management
+Chart 1: Minimum Temperature
 
-| Task ID | Description | Complexity | Dependencies | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **DM-1** | **Add New Parcel Fields:** Add `Variety`, `Planting Date`, `Planting Type` to the new parcel form. | Medium | - | To Do |
-| **DM-2** | **Automatic Density Calculation:** `Planting Density` should be calculated automatically based on the selected `Planting Type`. | Medium | DM-1 | To Do |
-| **DM-3** | **Hierarchical Variety Selection:** Implement a two-level selection system for `Variety` (Family and Variety). | Large | DM-1 | To Do |
-| **DM-4** | **FERTIMAP Database Integration:** Investigate and implement an integration with the "FERTIMAP" database to automatically fetch and populate soil data. | X-Large | - | To Do |
+Data Series 1 (Current): Actual daily minimum temperature for the selected period.
 
-## ⚙️ System & Bug Fixes
+Data Series 2 (Historical): Long-Term Normal (LTN) minimum temperature for each day of the year.
 
-| Task ID | Description | Complexity | Dependencies | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **BUG-1** | **Product Creation Error:** Fix the error that occurs when a user tries to add a new product to the system. | Medium | - | To Do |
-| **SYS-1** | **Enable Purchase Functionality:** The "purchase" feature is currently disabled. It needs to be investigated and re-activated. | Large | - | To Do |
-| **SYS-2** | **Improve "Structures" Logic:** Ensure every "structure" is linked to a farm and visible at the organization level if applicable. | Large | - | To Do |
+Chart 2: Mean Temperature
 
-## 📊 Development Roadmap
+Data Series 1 (Current): Actual daily mean temperature.
 
-| Task ID | Description | Complexity | Dependencies | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **ROAD-1** | **Initial Data Entry for Reports:** Allow for complete input of all farm data before generating initial farm reports. | Large | - | To Do |
-| **ROAD-2** | **AI Integration:** Proceed with the development and integration of AI-driven features once foundational data entry and reporting are solid. | X-Large | ROAD-1 | To Do |
+Data Series 2 (Historical): Long-Term Normal (LTN) mean temperature.
 
-## 👥 User Roles
+Chart 3: Maximum Temperature
 
-Based on the application's features and business logic, the following user roles are recommended:
+Data Series 1 (Current): Actual daily maximum temperature.
 
-| Role | Description | Key Permissions |
-| :--- | :--- | :--- |
-| **System Admin** | Manages the entire platform and all organizations. This role is for top-level administrators. | - Create, edit, and delete organizations.<br>- Manage system-wide settings.<br>- Access and manage all user accounts.<br>- View platform-wide analytics. |
-| **Organization Admin** | Manages a specific organization, including its farms, users, and billing. | - Manage farms within the organization.<br>- Add, edit, and remove users from the organization.<br>- Manage organization-level settings and billing.<br>- View reports for all farms in the organization. |
-| **Farm Manager** | Manages the day-to-day operations of a single farm. | - Manage parcels, including creating and updating them.<br>- Manage farm employees and day laborers.<br>- Manage infrastructure, stock, and utilities.<br>- Input data for and generate farm-specific reports.<br>- Manage product applications. |
-| **Farm Worker** | A regular employee of a farm with access to specific features relevant to their work. | - View assigned tasks and schedules.<br>- Record activities (e.g., planting, harvesting).<br>- View information for parcels they are assigned to.<br>- Limited access to reports. |
-| **Day Laborer** | A temporary worker with very limited access, likely for specific, short-term tasks. | - View daily tasks.<br>- Clock in and out for time tracking.<br>- Minimal data viewing permissions. |
-| **Viewer** | A read-only role for stakeholders, consultants, or other observers. | - View farm data, dashboards, and reports.<br>- Cannot create, edit, or delete any data. |
+Data Series 2 (Historical): Long-Term Normal (LTN) maximum temperature.
+
+Common Features:
+
+X-Axis: Date (e.g., 01-Jan-2025).
+
+Y-Axis: Temperature in Celsius (°C).
+
+Interactivity: Tooltips on hover should display the exact values for both current and historical data for a given date.
+
+2. Precipitation Analysis
+Implement a grouped bar chart to compare monthly rainfall against historical averages.
+
+Chart Type: Grouped Bar Chart.
+
+X-Axis: Month and Year (e.g., April 2024, May 2024).
+
+Y-Axis: Precipitation in millimeters (mm).
+
+Data Series (for each month):
+
+Bar 1: Current Month's Total Precipitation.
+
+Bar 2: Long-Term Normal (LTN) Precipitation for that month.
+
+Interactivity: Tooltips on hover should show the exact precipitation values.
+
+3. Dry/Wet Conditions & Derivatives
+This section requires analyzing daily data to create derived monthly metrics. These are combination charts (bar + line).
+
+Chart 1: Wet Days Analysis
+
+Primary Metric (Bar Chart): The total count of "Wet Days" in a given month. (A "Wet Day" could be defined as a day with > 1mm of rain).
+
+Comparison Metric (Line Chart): The Long-Term Normal (LTN) count of wet days for that month.
+
+Derived Metric (Bar Chart): Show the "Deficit/Excess" number of wet days (Actual - LTN).
+
+Chart 2: Dry Days Analysis
+
+Primary Metric (Bar Chart): The total count of "Dry Days" in a month.
+
+Comparison Metric (Line Chart): The Long-Term Normal (LTN) count of dry days for that month.
+
+Derived Metric (Bar Chart): Show the "Deficit/Excess" number of dry days, plotted against a zero-axis.
+
+Chart 3: Dry Spell Conditions (DSC) - e.g., "5 days with < 5mm rainfall"
+
+Primary Metric (Bar Chart): Count the number of occurrences of this specific dry spell event within the month.
+
+Comparison Metric (Line Chart): The Long-Term Normal (LTN) number of occurrences for that month.
+
+Derived Metric (Bar Chart): Show the "Deficit/Excess" number of occurrences.
+
+Chart 4: Short Dry Spells - e.g., "1-3 consecutive dry days"
+
+Primary Metric (Bar Chart): Count of these short dry spell events.
+
+Comparison Metric (Line Chart): The Long-Term Normal (LTN) count for that month.
+
+Derived Metric (Bar Chart): Show the "Deficit/Excess" count.
+
+Data Requirements & Sourcing:
+
+The system must integrate with a reliable weather data API (e.g., OpenMeteo, Meteomatics) that provides both:
+
+Recent & Forecast Data: Daily and monthly weather data for specific latitude/longitude coordinates.
+
+Historical Climate Normals: 30-year average climate data (e.g., 1991-2020 normals) for the same coordinates.
+
+Required data points include: min/max/mean temperature, total precipitation, and daily rainfall amounts to calculate the derived metrics.
+
+All data queries must be triggered based on the geographic location of the currently selected farm parcel.
+
+UI/UX Considerations:
+
+This dashboard should be a new view accessible when a user is viewing a specific parcel.
+
+The user should be able to select the time range for the "Current" data (e.g., Last 12 months, Year-to-date, Custom Range).
+
+All charts must have clear legends explaining the different data series.
+
+The design should be clean, responsive, and easy to interpret at a glance.
