@@ -173,7 +173,7 @@ export function isModuleAvailable(
   return plan.availableModules.includes(moduleId);
 }
 
-export function getCheckoutUrl(_planType: PlanType): string {
+export function getCheckoutUrl(planType: PlanType, organizationId?: string): string {
   // Use the configured checkout URL from environment
   const checkoutUrl = import.meta.env.VITE_POLAR_CHECKOUT_URL;
 
@@ -181,9 +181,34 @@ export function getCheckoutUrl(_planType: PlanType): string {
     throw new Error('VITE_POLAR_CHECKOUT_URL is not configured');
   }
 
-  // For now, return the same checkout URL for all plans
-  // You can customize this per plan if needed
-  return checkoutUrl;
+  // Get product ID mapping
+  const productIds: Record<PlanType, string> = {
+    essential: import.meta.env.VITE_POLAR_ESSENTIAL_PRODUCT_ID || '3b03769f-9a47-47bc-8f07-bd1f3a580dee',
+    professional: import.meta.env.VITE_POLAR_PROFESSIONAL_PRODUCT_ID || 'db925c1e-d64d-4d95-9907-dc90da5bcbe6',
+    enterprise: import.meta.env.VITE_POLAR_ENTERPRISE_PRODUCT_ID || 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
+  };
+
+  const productId = productIds[planType];
+
+  // Construct checkout URL with parameters
+  const url = new URL(checkoutUrl);
+
+  // Add product ID if available
+  if (productId) {
+    url.searchParams.set('product_id', productId);
+  }
+
+  // Add success redirect URL
+  const successUrl = `${window.location.origin}/checkout-success`;
+  url.searchParams.set('success_url', successUrl);
+
+  // Add organization ID to metadata if provided
+  if (organizationId) {
+    url.searchParams.set('metadata[organization_id]', organizationId);
+    url.searchParams.set('metadata[plan_type]', planType);
+  }
+
+  return url.toString();
 }
 
 export function isSubscriptionValid(

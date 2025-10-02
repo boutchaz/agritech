@@ -65,9 +65,14 @@ const SubscriptionSettings: React.FC = () => {
       return;
     }
 
+    if (!currentOrganization?.id) {
+      alert('No organization selected. Please select an organization first.');
+      return;
+    }
+
     try {
-      // Get checkout URL and redirect
-      const checkoutUrl = getCheckoutUrl(planType);
+      // Get checkout URL with organization ID and redirect
+      const checkoutUrl = getCheckoutUrl(planType, currentOrganization.id);
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Failed to get checkout URL:', error);

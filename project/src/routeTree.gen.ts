@@ -25,6 +25,7 @@ import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CheckoutSuccessRouteImport } from './routes/checkout-success'
 import { Route as AnalysesRouteImport } from './routes/analyses'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
@@ -119,6 +120,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
+  id: '/checkout-success',
+  path: '/checkout-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalysesRoute = AnalysesRouteImport.update({
   id: '/analyses',
   path: '/analyses',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
   '/analyses': typeof AnalysesRoute
+  '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
   '/analyses': typeof AnalysesRoute
+  '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/$moduleId': typeof ModuleIdRoute
   '/_authenticated': typeof AuthenticatedRoute
   '/analyses': typeof AnalysesRoute
+  '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$moduleId'
     | '/analyses'
+    | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$moduleId'
     | '/analyses'
+    | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/$moduleId'
     | '/_authenticated'
     | '/analyses'
+    | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -371,6 +383,7 @@ export interface RootRouteChildren {
   ModuleIdRoute: typeof ModuleIdRoute
   AuthenticatedRoute: typeof AuthenticatedRoute
   AnalysesRoute: typeof AnalysesRoute
+  CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
   EmployeesRoute: typeof EmployeesRoute
@@ -501,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout-success': {
+      id: '/checkout-success'
+      path: '/checkout-success'
+      fullPath: '/checkout-success'
+      preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analyses': {
@@ -640,6 +660,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModuleIdRoute: ModuleIdRoute,
   AuthenticatedRoute: AuthenticatedRoute,
   AnalysesRoute: AnalysesRoute,
+  CheckoutSuccessRoute: CheckoutSuccessRoute,
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
   EmployeesRoute: EmployeesRoute,

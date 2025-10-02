@@ -288,6 +288,10 @@ deno_version = 1
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Disable JWT verification for polar-webhook (allows public access)
+[functions.polar-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -334,7 +334,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
   const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
-  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage;
+  const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
+  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
 
   console.log('🔍 Subscription check in provider:', {
     subscription,
