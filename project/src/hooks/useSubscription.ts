@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
@@ -44,38 +45,77 @@ export interface SubscriptionUsage {
   updated_at: string;
 }
 
-export const useSubscription = () => {
-  const { currentOrganization } = useAuth();
+export const useSubscription = (organizationOverride?: { id: string; name: string } | null) => {
+  const authContext = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
-    queryKey: ['subscription', currentOrganization?.id],
+  // Use override if provided (for use in AuthProvider), otherwise use context
+  const currentOrganization = organizationOverride !== undefined ? organizationOverride : authContext.currentOrganization;
+
+  const orgId = currentOrganization?.id || 'none';
+
+  console.log('🔍 useSubscription HOOK CALLED:', {
+    currentOrganization: currentOrganization?.name,
+    orgId,
+    hasOrgId: !!currentOrganization?.id,
+    queryKey: ['subscription', orgId]
+  });
+
+  const query = useQuery({
+    queryKey: ['subscription', orgId],
     queryFn: async (): Promise<Subscription | null> => {
-      if (!currentOrganization?.id) return null;
+      console.log('🔥 queryFn EXECUTING for org:', orgId);
+
+      // Fetch the organization ID directly - don't rely on closure
+      if (orgId === 'none') {
+        console.log('📊 useSubscription: No organization yet');
+        return null;
+      }
+
+      console.log('📊 useSubscription: Fetching subscription for org:', orgId);
 
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('organization_id', currentOrganization.id)
+        .eq('organization_id', orgId)
         .maybeSingle();
 
       console.log('📊 useSubscription query result:', {
-        organizationId: currentOrganization.id,
-        organizationName: currentOrganization.name,
+        organizationId: orgId,
         data,
         error,
-        hasData: !!data
+        hasData: !!data,
+        dataStatus: data?.status,
+        dataEndDate: data?.current_period_end
       });
 
       if (error) {
-        console.error('Error fetching subscription:', error);
+        console.error('❌ Error fetching subscription:', error);
         return null;
+      }
+
+      if (!data) {
+        console.warn('⚠️ No subscription found for organization:', orgId);
       }
 
       return data as Subscription | null;
     },
-    enabled: !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Disable caching
+    gcTime: 0, // Don't keep in cache after unmount (was cacheTime in v4)
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
+
+  // Force invalidation and refetch when organization changes
+  useEffect(() => {
+    if (orgId !== 'none') {
+      console.log('🔄 Organization changed to:', orgId, '- invalidating and refetching');
+      queryClient.invalidateQueries({ queryKey: ['subscription', orgId] });
+    }
+  }, [orgId, queryClient]);
+
+  return query;
 };
 
 export const useSubscriptionUsage = () => {

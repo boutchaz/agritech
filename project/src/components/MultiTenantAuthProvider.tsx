@@ -100,12 +100,25 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
-  const { data: subscription, isLoading: subscriptionLoading } = useSubscription();
+  // Pass currentOrganization directly to avoid circular dependency
+  const { data: subscription, isLoading: subscriptionLoading, error: subscriptionError, dataUpdatedAt } = useSubscription(currentOrganization);
+
+  // Force log subscription state
+  console.log('🔍 SUBSCRIPTION STATE:', {
+    subscription,
+    subscriptionLoading,
+    subscriptionError,
+    dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
+    currentOrgId: currentOrganization?.id,
+    currentOrgName: currentOrganization?.name
+  });
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
   // Calculate loading state
-  const loading = authLoading || profileLoading || orgsLoading || farmsLoading || subscriptionLoading;
+  // IMPORTANT: Also wait for currentOrganization to be set when we have organizations
+  const waitingForOrganization = organizations.length > 0 && !currentOrganization && !orgsLoading;
+  const loading = authLoading || profileLoading || orgsLoading || farmsLoading || subscriptionLoading || waitingForOrganization;
 
   // Calculate onboarding state - check profile and organizations
   const needsOnboarding = !!(
