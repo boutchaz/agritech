@@ -339,10 +339,19 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   console.log('🔍 Subscription check in provider:', {
     subscription,
+    subscriptionStatus: subscription?.status,
+    subscriptionEnd: subscription?.current_period_end,
     hasValidSubscription,
-    currentOrganization,
+    currentOrganization: currentOrganization?.name,
+    currentOrganizationId: currentOrganization?.id,
     location: location.pathname,
-    shouldBlock: !hasValidSubscription && protectedRoutes && currentOrganization && user
+    isPublicRoute,
+    isOnSettingsPage,
+    isOnOnboardingPage,
+    isOnCheckoutSuccessPage,
+    protectedRoutes,
+    shouldBlock: !hasValidSubscription && protectedRoutes && currentOrganization && user,
+    user: user?.email
   });
 
   // Block access if no valid subscription (except on settings/onboarding pages)

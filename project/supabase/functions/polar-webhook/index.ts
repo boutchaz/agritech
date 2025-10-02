@@ -101,9 +101,9 @@ async function handleCheckoutUpdated(supabase: any, event: PolarWebhookEvent) {
     product_id: checkout.product_id,
   });
 
-  // Only process confirmed checkouts
-  if (checkout.status !== 'confirmed') {
-    console.log('⏭️ Skipping non-confirmed checkout');
+  // Only process confirmed/succeeded checkouts
+  if (checkout.status !== 'confirmed' && checkout.status !== 'succeeded') {
+    console.log('⏭️ Skipping non-confirmed checkout, status:', checkout.status);
     return;
   }
 

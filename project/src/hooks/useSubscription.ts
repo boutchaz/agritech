@@ -58,6 +58,14 @@ export const useSubscription = () => {
         .eq('organization_id', currentOrganization.id)
         .maybeSingle();
 
+      console.log('📊 useSubscription query result:', {
+        organizationId: currentOrganization.id,
+        organizationName: currentOrganization.name,
+        data,
+        error,
+        hasData: !!data
+      });
+
       if (error) {
         console.error('Error fetching subscription:', error);
         return null;
