@@ -101,17 +101,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
   // Pass currentOrganization directly to avoid circular dependency
-  const { data: subscription, isLoading: subscriptionLoading, error: subscriptionError, dataUpdatedAt } = useSubscription(currentOrganization);
-
-  // Force log subscription state
-  console.log('🔍 SUBSCRIPTION STATE:', {
-    subscription,
-    subscriptionLoading,
-    subscriptionError,
-    dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
-    currentOrgId: currentOrganization?.id,
-    currentOrgName: currentOrganization?.name
-  });
+  const { data: subscription, isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -350,23 +340,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
   const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
 
-  console.log('🔍 Subscription check in provider:', {
-    subscription,
-    subscriptionStatus: subscription?.status,
-    subscriptionEnd: subscription?.current_period_end,
-    hasValidSubscription,
-    currentOrganization: currentOrganization?.name,
-    currentOrganizationId: currentOrganization?.id,
-    location: location.pathname,
-    isPublicRoute,
-    isOnSettingsPage,
-    isOnOnboardingPage,
-    isOnCheckoutSuccessPage,
-    protectedRoutes,
-    shouldBlock: !hasValidSubscription && protectedRoutes && currentOrganization && user,
-    user: user?.email
-  });
-
   // Block access if no valid subscription (except on settings/onboarding pages)
   if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {
     const reason = !subscription
@@ -376,8 +349,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       : subscription.status === 'past_due'
       ? 'past_due'
       : 'expired';
-
-    console.log('🚫 BLOCKING ACCESS - Reason:', reason);
     return (
       <AuthContext.Provider value={value}>
         <SubscriptionRequired reason={reason} />

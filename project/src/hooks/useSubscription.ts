@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
@@ -54,25 +54,12 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
 
   const orgId = currentOrganization?.id || 'none';
 
-  console.log('🔍 useSubscription HOOK CALLED:', {
-    currentOrganization: currentOrganization?.name,
-    orgId,
-    hasOrgId: !!currentOrganization?.id,
-    queryKey: ['subscription', orgId]
-  });
-
   const query = useQuery({
     queryKey: ['subscription', orgId],
     queryFn: async (): Promise<Subscription | null> => {
-      console.log('🔥 queryFn EXECUTING for org:', orgId);
-
-      // Fetch the organization ID directly - don't rely on closure
       if (orgId === 'none') {
-        console.log('📊 useSubscription: No organization yet');
         return null;
       }
-
-      console.log('📊 useSubscription: Fetching subscription for org:', orgId);
 
       const { data, error } = await supabase
         .from('subscriptions')
@@ -80,37 +67,23 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         .eq('organization_id', orgId)
         .maybeSingle();
 
-      console.log('📊 useSubscription query result:', {
-        organizationId: orgId,
-        data,
-        error,
-        hasData: !!data,
-        dataStatus: data?.status,
-        dataEndDate: data?.current_period_end
-      });
-
       if (error) {
-        console.error('❌ Error fetching subscription:', error);
+        console.error('Error fetching subscription:', error);
         return null;
-      }
-
-      if (!data) {
-        console.warn('⚠️ No subscription found for organization:', orgId);
       }
 
       return data as Subscription | null;
     },
-    staleTime: 0, // Disable caching
-    gcTime: 0, // Don't keep in cache after unmount (was cacheTime in v4)
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
-    retry: false,
+    retry: 1,
   });
 
   // Force invalidation and refetch when organization changes
   useEffect(() => {
     if (orgId !== 'none') {
-      console.log('🔄 Organization changed to:', orgId, '- invalidating and refetching');
       queryClient.invalidateQueries({ queryKey: ['subscription', orgId] });
     }
   }, [orgId, queryClient]);

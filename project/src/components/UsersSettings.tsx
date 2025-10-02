@@ -151,41 +151,44 @@ const UsersSettings: React.FC = () => {
 
     try {
       setLoading(true);
+      setError(null);
 
-      // Check if user already exists in user_profiles
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', inviteUser.email)
-        .single();
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      if (existingProfile) {
-        // User exists, add them to organization
-        const { error: orgError } = await supabase
-          .from('organization_users')
-          .insert({
-            user_id: existingProfile.id,
-            organization_id: currentOrganization.id,
+      // Call Edge Function to handle invitation
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: inviteUser.email,
             role_id: inviteUser.role_id,
-            is_active: true
-          });
-
-        if (orgError) throw orgError;
-
-        // Update their profile if provided
-        if (inviteUser.first_name || inviteUser.last_name) {
-          await supabase
-            .from('user_profiles')
-            .upsert({
-              id: existingProfile.id,
-              first_name: inviteUser.first_name,
-              last_name: inviteUser.last_name
-            });
+            organization_id: currentOrganization.id,
+            first_name: inviteUser.first_name,
+            last_name: inviteUser.last_name
+          })
         }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to invite user');
+      }
+
+      // Show success message
+      if (result.message.includes('Invitation email sent')) {
+        alert(`Invitation email sent to ${inviteUser.email}. They will be added to the organization once they accept the invitation.`);
       } else {
-        // User doesn't exist, create invitation (you'd implement this flow)
-        // For now, we'll show an error
-        throw new Error('User not found. Please ask them to create an account first.');
+        alert(result.message);
       }
 
       setShowInviteUser(false);
