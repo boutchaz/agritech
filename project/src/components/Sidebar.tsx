@@ -135,15 +135,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
 
         <button
-          onClick={() => handleNavigation('/soil-analysis')}
+          onClick={() => handleNavigation('/analyses')}
           className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/soil-analysis'
+            currentPath === '/analyses'
               ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
         >
           <FileText className="h-5 w-5" />
-          <span>{t('nav.soilAnalysis')}</span>
+          <span>{t('nav.analyses')}</span>
         </button>
 
         <button

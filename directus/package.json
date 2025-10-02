@@ -1,0 +1,23 @@
+{
+  "name": "@agritech/directus-cms",
+  "version": "1.0.0",
+  "description": "Directus CMS configuration and scripts for Agritech",
+  "private": true,
+  "scripts": {
+    "create-collections": "tsx scripts/create-collections.ts",
+    "seed-initial-data": "tsx scripts/seed-initial-data.ts",
+    "setup": "npm run create-collections && npm run seed-initial-data",
+    "sync-from-supabase": "tsx scripts/sync-from-supabase.ts",
+    "fix-trees-field": "tsx scripts/fix-trees-field.ts"
+  },
+  "dependencies": {
+    "@directus/sdk": "^20.1.0",
+    "@supabase/supabase-js": "^2.58.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

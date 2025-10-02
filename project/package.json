@@ -20,7 +20,7 @@
     "db:complete-setup": "echo 'Please run the SQL in supabase/schemas/00_complete_setup.sql in your Supabase Dashboard'",
     "db:apply-schema": "supabase db push",
     "db:generate-types": "supabase gen types typescript --local > src/types/database.types.ts && node scripts/generate-types.js",
-    "polar:setup": "node scripts/setup-polar-products.js",
+    "polar:setup": "npx tsx scripts/setup-polar-products.ts",
     "db:diff": "supabase db diff --schema public",
     "db:deploy": "supabase db push --include-seed",
     "db:apply-schema-remote": "node scripts/apply-schema-api.js",

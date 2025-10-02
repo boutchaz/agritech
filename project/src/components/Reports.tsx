@@ -39,35 +39,64 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
   // Base reports that are always available
   const baseReports: ReportType[] = [
     {
-      id: 'soil-analysis',
-      name: 'Analyses de Sol',
-      description: 'Rapports d\'analyses de sol',
+      id: 'analyses',
+      name: 'Analyses (Sol, Plante, Eau)',
+      description: 'Rapports d\'analyses de sol, plante et eau',
       types: [
         {
           id: 'complete',
           name: 'Rapport d\'analyses complet',
-          description: 'Toutes les analyses de sol avec recommandations',
-          columns: ['Date', 'Parcelle', 'pH', 'Matière organique', 'NPK', 'Recommandations'],
+          description: 'Toutes les analyses (sol, plante, eau)',
+          columns: ['Date', 'Parcelle', 'Type', 'Laboratoire', 'Notes'],
           getData: async (startDate, endDate) => {
             const { data } = await supabase
-              .from('soil_analyses')
+              .from('analyses')
               .select(`
                 analysis_date,
-                physical,
-                chemical,
+                analysis_type,
+                laboratory,
                 notes,
                 parcels!inner(name)
               `)
               .gte('analysis_date', startDate)
-              .lte('analysis_date', endDate);
+              .lte('analysis_date', endDate)
+              .order('analysis_date', { ascending: false });
 
             return (data || []).map(analysis => ({
               'Date': new Date(analysis.analysis_date).toLocaleDateString(),
               'Parcelle': analysis.parcels.name,
-              'pH': analysis.physical.ph,
-              'Matière organique': `${analysis.physical.organicMatter}%`,
-              'NPK': `${analysis.chemical.nitrogen}-${analysis.chemical.phosphorus}-${analysis.chemical.potassium}`,
-              'Recommandations': analysis.notes
+              'Type': analysis.analysis_type === 'soil' ? 'Sol' : analysis.analysis_type === 'plant' ? 'Plante' : 'Eau',
+              'Laboratoire': analysis.laboratory || 'N/A',
+              'Notes': analysis.notes || ''
+            }));
+          }
+        },
+        {
+          id: 'soil-only',
+          name: 'Analyses de sol uniquement',
+          description: 'Analyses de sol avec données détaillées',
+          columns: ['Date', 'Parcelle', 'pH', 'Texture', 'N-P-K (ppm)', 'Notes'],
+          getData: async (startDate, endDate) => {
+            const { data } = await supabase
+              .from('analyses')
+              .select(`
+                analysis_date,
+                data,
+                notes,
+                parcels!inner(name)
+              `)
+              .eq('analysis_type', 'soil')
+              .gte('analysis_date', startDate)
+              .lte('analysis_date', endDate)
+              .order('analysis_date', { ascending: false });
+
+            return (data || []).map(analysis => ({
+              'Date': new Date(analysis.analysis_date).toLocaleDateString(),
+              'Parcelle': analysis.parcels.name,
+              'pH': analysis.data.ph_level || 'N/A',
+              'Texture': analysis.data.texture || 'N/A',
+              'N-P-K (ppm)': `${analysis.data.nitrogen_ppm || 0}-${analysis.data.phosphorus_ppm || 0}-${analysis.data.potassium_ppm || 0}`,
+              'Notes': analysis.notes || ''
             }));
           }
         }

@@ -1,0 +1,93 @@
+[
+  {
+    "id": 1,
+    "category": "Arbres fruitiers à noyau",
+    "trees": [
+      "Olivier",
+      "Pêcher",
+      "Abricotier",
+      "Prunier",
+      "Cerisier",
+      "Amandier",
+      "Nectarine",
+      "Arganier"
+    ]
+  },
+  {
+    "id": 2,
+    "category": "Arbres fruitiers à pépins",
+    "trees": [
+      "Pommier",
+      "Poirier",
+      "Cognassier",
+      "Nashi"
+    ]
+  },
+  {
+    "id": 3,
+    "category": "Agrumes",
+    "trees": [
+      "Oranger",
+      "Mandariner",
+      "Citronnier",
+      "Pamplemoussier",
+      "Pomelo",
+      "Combava",
+      "Cédratier"
+    ]
+  },
+  {
+    "id": 4,
+    "category": "Arbres tropicaux et subtropicaus",
+    "trees": [
+      "Avocatier",
+      "Manguier",
+      "Litchi",
+      "Longanier",
+      "Ramboutan",
+      "Garambolier",
+      "Goyavier",
+      "Coroddolier",
+      "Cherimolier",
+      "Sapotillier",
+      "Jacquier",
+      "Durian",
+      "Papayer",
+      "Bananiers"
+    ]
+  },
+  {
+    "id": 5,
+    "category": "Arbres à fruits secs",
+    "trees": [
+      "Noyer",
+      "Châtagnier",
+      "Noisetier",
+      "Pistachier",
+      "Macadamia",
+      "Cacaoyer",
+      "Caféier"
+    ]
+  },
+  {
+    "id": 6,
+    "category": "Vigne et assimilés",
+    "trees": [
+      "Vigne",
+      "Kiwier",
+      "Grenadier",
+      "Figuier",
+      "Murier"
+    ]
+  },
+  {
+    "id": 7,
+    "category": "Palamcées fruitières",
+    "trees": [
+      "Palmier dattier",
+      "Cocotier",
+      "Plamier à huile",
+      "Açai"
+    ]
+  }
+]

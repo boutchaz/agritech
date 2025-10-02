@@ -1,0 +1,180 @@
+{
+  "collection": "plantation_types",
+  "meta": {
+    "collection": "plantation_types",
+    "icon": "agriculture",
+    "note": "Plantation density and spacing types",
+    "display_template": "{{type}} ({{spacing}})",
+    "hidden": false,
+    "singleton": false,
+    "translations": [],
+    "archive_field": "status",
+    "archive_value": "archived",
+    "unarchive_value": "draft",
+    "sort_field": "type"
+  },
+  "schema": {
+    "name": "plantation_types"
+  },
+  "fields": [
+    {
+      "field": "id",
+      "type": "uuid",
+      "meta": {
+        "hidden": true,
+        "readonly": true,
+        "interface": "input",
+        "special": ["uuid"]
+      },
+      "schema": {
+        "is_primary_key": true,
+        "has_auto_increment": false
+      }
+    },
+    {
+      "field": "status",
+      "type": "string",
+      "meta": {
+        "width": "full",
+        "options": {
+          "choices": [
+            {
+              "text": "Published",
+              "value": "published"
+            },
+            {
+              "text": "Draft",
+              "value": "draft"
+            },
+            {
+              "text": "Archived",
+              "value": "archived"
+            }
+          ]
+        },
+        "interface": "select-dropdown",
+        "display": "labels"
+      },
+      "schema": {
+        "default_value": "draft",
+        "is_nullable": false
+      }
+    },
+    {
+      "field": "type",
+      "type": "string",
+      "meta": {
+        "width": "half",
+        "interface": "input",
+        "required": true,
+        "translations": [],
+        "note": "Plantation type name (e.g., Super intensif, Traditionnel)"
+      },
+      "schema": {
+        "is_nullable": false
+      }
+    },
+    {
+      "field": "spacing",
+      "type": "string",
+      "meta": {
+        "width": "half",
+        "interface": "input",
+        "required": true,
+        "note": "Spacing format: 4x1,5"
+      },
+      "schema": {
+        "is_nullable": false
+      }
+    },
+    {
+      "field": "trees_per_ha",
+      "type": "integer",
+      "meta": {
+        "width": "half",
+        "interface": "input",
+        "required": true,
+        "note": "Number of trees per hectare"
+      },
+      "schema": {
+        "is_nullable": false
+      }
+    },
+    {
+      "field": "description",
+      "type": "text",
+      "meta": {
+        "width": "full",
+        "interface": "input-multiline",
+        "note": "Optional description of this plantation type"
+      },
+      "schema": {
+        "is_nullable": true
+      }
+    },
+    {
+      "field": "date_created",
+      "type": "timestamp",
+      "meta": {
+        "special": ["date-created"],
+        "interface": "datetime",
+        "readonly": true,
+        "hidden": true,
+        "width": "half",
+        "display": "datetime",
+        "display_options": {
+          "relative": true
+        }
+      },
+      "schema": {}
+    },
+    {
+      "field": "date_updated",
+      "type": "timestamp",
+      "meta": {
+        "special": ["date-updated"],
+        "interface": "datetime",
+        "readonly": true,
+        "hidden": true,
+        "width": "half",
+        "display": "datetime",
+        "display_options": {
+          "relative": true
+        }
+      },
+      "schema": {}
+    },
+    {
+      "field": "user_created",
+      "type": "uuid",
+      "meta": {
+        "special": ["user-created"],
+        "interface": "select-dropdown-m2o",
+        "options": {
+          "template": "{{avatar.$thumbnail}} {{first_name}} {{last_name}}"
+        },
+        "display": "user",
+        "readonly": true,
+        "hidden": true,
+        "width": "half"
+      },
+      "schema": {}
+    },
+    {
+      "field": "user_updated",
+      "type": "uuid",
+      "meta": {
+        "special": ["user-updated"],
+        "interface": "select-dropdown-m2o",
+        "options": {
+          "template": "{{avatar.$thumbnail}} {{first_name}} {{last_name}}"
+        },
+        "display": "user",
+        "readonly": true,
+        "hidden": true,
+        "width": "half"
+      },
+      "schema": {}
+    }
+  ]
+}

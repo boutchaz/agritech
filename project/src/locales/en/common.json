@@ -29,6 +29,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "analyses": "Analyses",
     "soilAnalysis": "Soil Analysis",
     "parcels": "Parcels",
     "crops": "Crops",

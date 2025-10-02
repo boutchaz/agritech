@@ -1,0 +1,23 @@
+{
+  "name": "agritech-docs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "export:openapi": "python3 ../satellite-indices-service/scripts/export_openapi.py > openapi/openapi.json",
+    "build:all": "npm run export:openapi && docusaurus build"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^2.4.1",
+    "@docusaurus/preset-classic": "^2.4.1",
+    "@docusaurus/theme-mermaid": "^2.4.1",
+    "@easyops-cn/docusaurus-search-local": "^0.39.1",
+    "redocusaurus": "^1.8.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
+

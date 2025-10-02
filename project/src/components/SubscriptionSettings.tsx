@@ -10,14 +10,53 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react';
-import { useSubscription, useSubscriptionUsage } from '../hooks/useSubscription';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
+import { useSubscription } from '../hooks/useSubscription';
 import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
 import SubscriptionPlans from './SubscriptionPlans';
+import { useAuth } from './MultiTenantAuthProvider';
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
-  const { data: usage } = useSubscriptionUsage();
+  const { currentOrganization } = useAuth();
   const [showPlans, setShowPlans] = React.useState(false);
+
+  // Query actual usage counts
+  const { data: usage } = useQuery({
+    queryKey: ['usage-counts', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return null;
+
+      // Get farms count
+      const { count: farmsCount } = await supabase
+        .from('farms')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', currentOrganization.id);
+
+      // Get parcels count
+      const { count: parcelsCount } = await supabase
+        .from('parcels')
+        .select('parcels.id, farms!inner(organization_id)', { count: 'exact', head: true })
+        .eq('farms.organization_id', currentOrganization.id);
+
+      // Get users count
+      const { count: usersCount } = await supabase
+        .from('organization_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_active', true);
+
+      return {
+        farms_count: farmsCount || 0,
+        parcels_count: parcelsCount || 0,
+        users_count: usersCount || 0,
+        satellite_reports_count: 0, // TODO: Add if you have satellite reports table
+      };
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 30 * 1000, // 30 seconds
+  });
 
   const handleSelectPlan = (planType: PlanType) => {
     if (planType === 'enterprise') {

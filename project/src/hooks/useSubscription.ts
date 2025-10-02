@@ -56,14 +56,14 @@ export const useSubscription = () => {
         .from('subscriptions')
         .select('*')
         .eq('organization_id', currentOrganization.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching subscription:', error);
         return null;
       }
 
-      return data as Subscription;
+      return data as Subscription | null;
     },
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -84,14 +84,14 @@ export const useSubscriptionUsage = () => {
         .eq('organization_id', currentOrganization.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching subscription usage:', error);
         return null;
       }
 
-      return data as SubscriptionUsage;
+      return data as SubscriptionUsage | null;
     },
     enabled: !!currentOrganization?.id,
     staleTime: 1 * 60 * 1000, // 1 minute

@@ -84,3 +84,17 @@ export interface SoilAnalysis {
   };
   recommendations: string[];
 }
+
+// Tree Management types
+export interface TreeCategory {
+  id: number;
+  category: string;
+  trees: string[];
+}
+
+export interface PlantationType {
+  id: number;
+  type: string;
+  spacing: string;
+  treesPerHa: number;
+}

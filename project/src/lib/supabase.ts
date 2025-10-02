@@ -131,6 +131,60 @@ export type Database = {
           manager_email?: string;
         };
       };
+      tree_categories: {
+        Row: {
+          id: string;
+          organization_id: string;
+          category: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          organization_id: string;
+          category: string;
+        };
+        Update: {
+          category?: string;
+        };
+      };
+      trees: {
+        Row: {
+          id: string;
+          category_id: string;
+          name: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          category_id: string;
+          name: string;
+        };
+        Update: {
+          name?: string;
+        };
+      };
+      plantation_types: {
+        Row: {
+          id: string;
+          organization_id: string;
+          type: string;
+          spacing: string;
+          trees_per_ha: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          organization_id: string;
+          type: string;
+          spacing: string;
+          trees_per_ha: number;
+        };
+        Update: {
+          type?: string;
+          spacing?: string;
+          trees_per_ha?: number;
+        };
+      };
     };
   };
 };

@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "type": "Super intensif",
+    "spacing": "4x1,5",
+    "treesPerHa": 1666
+  },
+  {
+    "id": 2,
+    "type": "Super intensif",
+    "spacing": "3x1,5",
+    "treesPerHa": 2222
+  },
+  {
+    "id": 3,
+    "type": "Intensif",
+    "spacing": "4x2",
+    "treesPerHa": 1250
+  },
+  {
+    "id": 4,
+    "type": "Intensif",
+    "spacing": "3x2",
+    "treesPerHa": 1666
+  },
+  {
+    "id": 5,
+    "type": "Semi-intensif",
+    "spacing": "6x3",
+    "treesPerHa": 555
+  },
+  {
+    "id": 6,
+    "type": "Traditionnel amélioré",
+    "spacing": "6x6",
+    "treesPerHa": 277
+  },
+  {
+    "id": 7,
+    "type": "Traditionnel",
+    "spacing": "8x8",
+    "treesPerHa": 156
+  },
+  {
+    "id": 8,
+    "type": "Traditionnel",
+    "spacing": "8x7",
+    "treesPerHa": 179
+  },
+  {
+    "id": 9,
+    "type": "Traditionnel très espacé",
+    "spacing": "10x10",
+    "treesPerHa": 100
+  }
+]

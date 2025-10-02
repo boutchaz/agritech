@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import type { Role, UserRole } from '../types/auth';
 import Auth from './Auth';
+import SubscriptionRequired from './SubscriptionRequired';
 import {
   useUserProfile,
   useUserOrganizations,
@@ -11,6 +12,8 @@ import {
   useSignOut,
   useRefreshUserData
 } from '../hooks/useAuthQueries';
+import { useSubscription } from '../hooks/useSubscription';
+import { isSubscriptionValid } from '../lib/polar';
 
 interface Organization {
   id: string;
@@ -97,11 +100,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
+  const { data: subscription, isLoading: subscriptionLoading } = useSubscription();
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
   // Calculate loading state
-  const loading = authLoading || profileLoading || orgsLoading || farmsLoading;
+  const loading = authLoading || profileLoading || orgsLoading || farmsLoading || subscriptionLoading;
 
   // Calculate onboarding state - check profile and organizations
   const needsOnboarding = !!(
@@ -324,6 +328,38 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Show authentication form (but not on public routes)
   if (showAuth && !isPublicRoute) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
+
+  // Check subscription status (block access if no valid subscription)
+  const hasValidSubscription = isSubscriptionValid(subscription);
+  const isOnSettingsPage = location.pathname.startsWith('/settings');
+  const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
+  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage;
+
+  console.log('🔍 Subscription check in provider:', {
+    subscription,
+    hasValidSubscription,
+    currentOrganization,
+    location: location.pathname,
+    shouldBlock: !hasValidSubscription && protectedRoutes && currentOrganization && user
+  });
+
+  // Block access if no valid subscription (except on settings/onboarding pages)
+  if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {
+    const reason = !subscription
+      ? 'no_subscription'
+      : subscription.status === 'canceled'
+      ? 'canceled'
+      : subscription.status === 'past_due'
+      ? 'past_due'
+      : 'expired';
+
+    console.log('🚫 BLOCKING ACCESS - Reason:', reason);
+    return (
+      <AuthContext.Provider value={value}>
+        <SubscriptionRequired reason={reason} />
+      </AuthContext.Provider>
+    );
   }
 
   // Show main app (onboarding redirect is handled by useEffect above)

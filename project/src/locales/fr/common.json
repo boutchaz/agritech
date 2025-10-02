@@ -29,6 +29,7 @@
   },
   "nav": {
     "dashboard": "Tableau de bord",
+    "analyses": "Analyses",
     "soilAnalysis": "Analyses de Sol",
     "parcels": "Parcelles",
     "crops": "Cultures",

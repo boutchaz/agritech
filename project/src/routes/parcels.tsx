@@ -78,7 +78,7 @@ const AppContent: React.FC = () => {
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(search.parcelId || null);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(search.farmId || null);
   const [activeParcelTab, setActiveParcelTab] = useState<string>(search.tab || 'overview');
 
   // Track if we're currently syncing to prevent loops
@@ -97,6 +97,7 @@ const AppContent: React.FC = () => {
 
     const urlParcelId = search.parcelId || null;
     const urlTab = search.tab || 'overview';
+    const urlFarmId = search.farmId || null;
 
     if (urlParcelId !== selectedParcelId) {
       setSelectedParcelId(urlParcelId);
@@ -106,17 +107,22 @@ const AppContent: React.FC = () => {
       setActiveParcelTab(urlTab);
     }
 
+    if (urlFarmId !== selectedFarmId) {
+      setSelectedFarmId(urlFarmId);
+    }
+
     isSyncingRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.parcelId, search.tab]);
+  }, [search.parcelId, search.tab, search.farmId]);
 
   // Update URL when state changes (state changes trigger URL update)
   useEffect(() => {
     if (isSyncingRef.current) return;
 
-    const newSearch: { parcelId?: string; tab?: string } = {};
+    const newSearch: { parcelId?: string; tab?: string; farmId?: string } = {};
     const currentParcelId = search.parcelId || null;
     const currentTab = search.tab || 'overview';
+    const currentFarmId = search.farmId || null;
 
     if (selectedParcelId) {
       newSearch.parcelId = selectedParcelId;
@@ -126,11 +132,16 @@ const AppContent: React.FC = () => {
       newSearch.tab = activeParcelTab;
     }
 
+    if (selectedFarmId) {
+      newSearch.farmId = selectedFarmId;
+    }
+
     // Only navigate if something actually changed
     const parcelChanged = currentParcelId !== selectedParcelId;
     const tabChanged = currentTab !== activeParcelTab;
+    const farmChanged = currentFarmId !== selectedFarmId;
 
-    if (parcelChanged || tabChanged) {
+    if (parcelChanged || tabChanged || farmChanged) {
       isSyncingRef.current = true;
       navigate({
         to: '/parcels',
@@ -141,14 +152,19 @@ const AppContent: React.FC = () => {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedParcelId, activeParcelTab]);
+  }, [selectedParcelId, activeParcelTab, selectedFarmId]);
 
   useEffect(() => {
     if (currentOrganization) {
       fetchFarms();
+    }
+  }, [currentOrganization]);
+
+  useEffect(() => {
+    if (currentOrganization && farms.length > 0) {
       fetchParcels();
     }
-  }, [currentOrganization, currentFarm, selectedFarmId]);
+  }, [currentOrganization, currentFarm, selectedFarmId, farms]);
 
   const deleteParcel = async (parcelId: string) => {
     try {
@@ -278,7 +294,7 @@ const AppContent: React.FC = () => {
             { icon: MapPin, label: 'Parcelles', isActive: true }
           ]}
           actions={
-            farms.length > 1 ? (
+            farms && farms.length > 1 ? (
               <select
                 value={selectedFarmId || currentFarm?.id || ''}
                 onChange={(e) => setSelectedFarmId(e.target.value || null)}
@@ -307,7 +323,11 @@ const AppContent: React.FC = () => {
                     <span className="hidden sm:inline">Parcelles de la ferme: </span>
                     <span className="sm:hidden">Ferme: </span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {farms.find(f => f.id === (selectedFarmId || currentFarm?.id))?.name || currentFarm?.name}
+                      {(() => {
+                        const targetFarmId = selectedFarmId || currentFarm?.id;
+                        const farm = farms?.find(f => f.id === targetFarmId);
+                        return farm?.name || currentFarm?.name || 'Chargement...';
+                      })()}
                     </span>
                   </>
                 ) : (
@@ -735,6 +755,7 @@ export const Route = createFileRoute('/parcels')({
     return {
       parcelId: (search.parcelId as string) || undefined,
       tab: (search.tab as string) || undefined,
+      farmId: (search.farmId as string) || undefined,
     };
   },
 })

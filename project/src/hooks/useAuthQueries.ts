@@ -92,12 +92,15 @@ export const useUserOrganizations = (userId: string | undefined) => {
         .eq('user_id', userId)
         .eq('is_active', true);
 
+      console.log('🔍 organization_users query result:', { orgUsers, orgUsersError });
+
       if (orgUsersError) {
-        console.error('Organization users fetch error:', orgUsersError);
+        console.error('❌ Organization users fetch error:', orgUsersError);
         return [];
       }
 
       if (!orgUsers || orgUsers.length === 0) {
+        console.log('⚠️ No organization_users found for user');
         return [];
       }
 
@@ -108,8 +111,10 @@ export const useUserOrganizations = (userId: string | undefined) => {
         .select('id, name, slug, currency, timezone, language')
         .in('id', orgIds);
 
+      console.log('🔍 organizations query result:', { orgs, orgsError, orgIds });
+
       if (orgsError) {
-        console.error('Organizations fetch error:', orgsError);
+        console.error('❌ Organizations fetch error:', orgsError);
         return [];
       }
 
