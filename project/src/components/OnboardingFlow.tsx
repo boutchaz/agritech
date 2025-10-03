@@ -279,18 +279,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
       // 4. Create farm only if no farms exist yet
       if (!hasExistingFarms) {
-        const { data: farmData, error: farmError } = await supabase
+        const { data: createdFarm, error: farmError } = await supabase
           .from('farms')
           .insert({
             name: farmData.name,
             description: farmData.description,
             location: farmData.location,
             size: farmData.size,
-            area_unit: farmData.size_unit,
+            size_unit: farmData.size_unit,
             organization_id: organizationId,
-            farm_type: 'main',
-            hierarchy_level: 1,
-            manager_id: user.id
+            manager_name: profileData.first_name + ' ' + profileData.last_name,
+            manager_email: user.email
           })
           .select()
           .single();
@@ -304,7 +303,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         const { error: roleError } = await supabase
           .from('farm_management_roles')
           .insert({
-            farm_id: farmData.id,
+            farm_id: createdFarm.id,
             user_id: user.id,
             role: 'main_manager',
             assigned_by: user.id
