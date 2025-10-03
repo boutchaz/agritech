@@ -7,6 +7,8 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
+import { Can, useCan } from '../lib/casl';
+import { LimitWarning } from './authorization/LimitWarning';
 
 interface OrganizationUser {
   id: string;
@@ -320,16 +322,32 @@ const UsersSettings: React.FC = () => {
             </span>
           )}
         </div>
-        <PermissionGuard resource="users" action="create">
-          <button
-            onClick={() => setShowInviteUser(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Inviter un utilisateur</span>
-          </button>
-        </PermissionGuard>
+        <Can
+          I="invite"
+          a="User"
+          fallback={
+            <div className="text-sm text-gray-500 italic">
+              Upgrade to invite more users
+            </div>
+          }
+        >
+          <PermissionGuard resource="users" action="create">
+            <button
+              onClick={() => setShowInviteUser(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Inviter un utilisateur</span>
+            </button>
+          </PermissionGuard>
+        </Can>
       </div>
+
+      {/* Limit Warning */}
+      <LimitWarning
+        resourceType="users"
+        currentCount={users.length}
+      />
 
       <div className="flex items-center justify-between">
         <p className="text-gray-600 dark:text-gray-400">

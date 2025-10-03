@@ -1,14 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router';
 import React, { useState } from 'react';
-import { Satellite, TrendingUp, BarChart3, MapPin } from 'lucide-react';
+import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
 import IndicesCalculator from '../components/SatelliteAnalysis/IndicesCalculator';
 import TimeSeriesChart from '../components/SatelliteAnalysis/TimeSeriesChart';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { useParcels } from '../hooks/useParcels';
 import { IndexCalculationResponse } from '../lib/satellite-api';
+import { useCan } from '../lib/casl';
+import { useNavigate } from '@tanstack/react-router';
 
 function SatelliteAnalysisPage() {
   const { currentFarm } = useAuth();
+  const { can } = useCan();
+  const navigate = useNavigate();
   const farmId = currentFarm?.id ?? null;
   const { parcels, loading: parcelsLoading } = useParcels(farmId);
 
@@ -25,6 +29,47 @@ function SatelliteAnalysisPage() {
   const handleResultsUpdate = (results: IndexCalculationResponse) => {
     setCalculationResults(results);
   };
+
+  // Check if user has access to satellite features
+  if (!can('create', 'SatelliteReport')) {
+    return (
+      <div className="p-6">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+            <Lock className="w-8 h-8 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Satellite Analysis - Professional Feature
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            Unlock powerful satellite imagery analysis to monitor crop health, vegetation indices (NDVI, NDWI),
+            and get data-driven insights for precision agriculture.
+          </p>
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
+              <Satellite className="w-4 h-4 text-blue-600" />
+              <span>Real-time satellite imagery analysis</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <span>Vegetation health monitoring (NDVI, NDWI, EVI)</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              <span>Historical trends and time-series analysis</span>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate({ to: '/settings/subscription' })}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
+          >
+            Upgrade to Professional
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentFarm) {
     return (

@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, FileSpreadsheet, Calendar, X } from 'lucide-react';
+import React from 'react';
+import { FileText, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import type { Module } from '../types';
 
 interface ReportType {
@@ -25,16 +22,6 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
-  const [selectedReportType, setSelectedReportType] = useState<string>('');
-  const [format, setFormat] = useState<'pdf' | 'excel'>('pdf');
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
-  });
 
   // Base reports that are always available
   const baseReports: ReportType[] = [
@@ -661,70 +648,6 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
       .map(module => moduleReports[module.id])
   ];
 
-  const generatePDF = async (reportType: ReportType['types'][0]) => {
-    try {
-      setLoading(reportType.id);
-      const data = await reportType.getData(dateRange.startDate, dateRange.endDate);
-      
-      const doc = new jsPDF();
-      doc.setFont('helvetica');
-      
-      // Add title
-      doc.setFontSize(20);
-      doc.text(reportType.name, 14, 20);
-      
-      // Add date range
-      doc.setFontSize(10);
-      doc.text(`Période: du ${new Date(dateRange.startDate).toLocaleDateString()} au ${new Date(dateRange.endDate).toLocaleDateString()}`, 14, 30);
-      
-      // Add table
-      (doc as any).autoTable({
-        startY: 40,
-        head: [reportType.columns],
-        body: data.map(item => reportType.columns.map(col => item[col])),
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [34, 197, 94] }
-      });
-      
-      doc.save(`${reportType.id}_${dateRange.startDate}_${dateRange.endDate}.pdf`);
-    } catch (err) {
-      setError('Erreur lors de la génération du PDF');
-      console.error(err);
-    } finally {
-      setLoading(null);
-      setShowModal(false);
-    }
-  };
-
-  const generateExcel = async (reportType: ReportType['types'][0]) => {
-    try {
-      setLoading(reportType.id);
-      const data = await reportType.getData(dateRange.startDate, dateRange.endDate);
-      
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, reportType.name);
-      
-      XLSX.writeFile(wb, `${reportType.id}_${dateRange.startDate}_${dateRange.endDate}.xlsx`);
-    } catch (err) {
-      setError('Erreur lors de la génération du fichier Excel');
-      console.error(err);
-    } finally {
-      setLoading(null);
-      setShowModal(false);
-    }
-  };
-
-  const handleDownload = () => {
-    if (!selectedReport || !selectedReportType) return;
-    
-    const reportType = selectedReport.types.find(t => t.id === selectedReportType);
-    if (!reportType) return;
-
-    format === 'pdf' ? generatePDF(reportType) : generateExcel(reportType);
-  };
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -733,17 +656,17 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
         </h2>
       </div>
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg">
+        <p className="text-yellow-800 dark:text-yellow-200 text-center">
+          La génération de rapports sera implémentée dans le backend. Cette fonctionnalité est en cours de développement.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reports.map(report => (
           <div
             key={report.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 opacity-50"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
@@ -756,156 +679,15 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
             </div>
 
             <button
-              onClick={() => {
-                setSelectedReport(report);
-                setSelectedReportType(report.types[0].id);
-                setShowModal(true);
-              }}
-              disabled={loading === report.id}
-              className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+              className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-400 text-white rounded-md cursor-not-allowed"
             >
-              {loading === report.id ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <Download className="h-5 w-5" />
-                  <span>Télécharger</span>
-                </>
-              )}
+              <Download className="h-5 w-5" />
+              <span>À venir</span>
             </button>
           </div>
         ))}
       </div>
-
-      {/* Download Modal */}
-      {showModal && selectedReport && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Télécharger {selectedReport.name}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type de rapport
-                </label>
-                <select
-                  value={selectedReportType}
-                  onChange={(e) => setSelectedReportType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                >
-                  {selectedReport.types.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-sm text-gray-500">
-                  {selectedReport.types.find(t => t.id === selectedReportType)?.description}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Format
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormat('pdf')}
-                    className={`flex items-center justify-center space-x-2 p-3 rounded-lg border ${
-                      format === 'pdf'
-                        ? 'border-red-500 bg-red-50 text-red-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <FileText className="h-5 w-5" />
-                    <span>PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormat('excel')}
-                    className={`flex items-center justify-center space-x-2 p-3 rounded-lg border ${
-                      format === 'excel'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <FileSpreadsheet className="h-5 w-5" />
-                    <span>Excel</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Période
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Date début
-                    </label>
-                    <input
-                      type="date"
-                      value={dateRange.startDate}
-                      onChange={(e) => setDateRange({
-                        ...dateRange,
-                        startDate: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Date fin
-                    </label>
-                    <input
-                      type="date"
-                      value={dateRange.endDate}
-                      onChange={(e) => setDateRange({
-                        ...dateRange,
-                        endDate: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
-                  format === 'pdf'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                Télécharger
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

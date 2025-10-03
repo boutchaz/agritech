@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as UtilitiesRouteImport } from './routes/utilities'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
@@ -40,6 +41,11 @@ import { Route as SettingsOrganizationRouteImport } from './routes/settings.orga
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 
+const WorkersRoute = WorkersRouteImport.update({
+  id: '/workers',
+  path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UtilitiesRoute = UtilitiesRouteImport.update({
   id: '/utilities',
   path: '/utilities',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
+  '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
@@ -306,6 +315,7 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/workers'
     | '/settings/dashboard'
     | '/settings/modules'
     | '/settings/organization'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/workers'
     | '/settings/dashboard'
     | '/settings/modules'
     | '/settings/organization'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
+    | '/workers'
     | '/settings/dashboard'
     | '/settings/modules'
     | '/settings/organization'
@@ -400,10 +412,18 @@ export interface RootRouteChildren {
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
   UtilitiesRoute: typeof UtilitiesRoute
+  WorkersRoute: typeof WorkersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workers': {
+      id: '/workers'
+      path: '/workers'
+      fullPath: '/workers'
+      preLoaderRoute: typeof WorkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/utilities': {
       id: '/utilities'
       path: '/utilities'
@@ -677,6 +697,7 @@ const rootRouteChildren: RootRouteChildren = {
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,
   UtilitiesRoute: UtilitiesRoute,
+  WorkersRoute: WorkersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

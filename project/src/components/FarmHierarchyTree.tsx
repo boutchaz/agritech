@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  Building2, 
+import {
+  Building2,
   GripVertical,
   Plus
 } from 'lucide-react';
+import { Can } from '../lib/casl';
+import { LimitWarning } from './authorization/LimitWarning';
 
 interface FarmNode {
   farm_id: string;
@@ -187,18 +189,22 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onEditParcel?.(parcel.id)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => onDeleteParcel?.(parcel.id)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
-                    >
-                      Supprimer
-                    </button>
+                    <Can I="update" a="Parcel">
+                      <button
+                        onClick={() => onEditParcel?.(parcel.id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Modifier
+                      </button>
+                    </Can>
+                    <Can I="delete" a="Parcel">
+                      <button
+                        onClick={() => onDeleteParcel?.(parcel.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Supprimer
+                      </button>
+                    </Can>
                   </div>
                 </div>
               ))}
@@ -207,13 +213,23 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
 
           {/* Add Parcel Button */}
           <div className="mt-3">
-            <button
-              onClick={() => onAddParcel?.(farm.farm_id)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            <Can
+              I="create"
+              a="Parcel"
+              fallback={
+                <div className="text-sm text-gray-500 italic">
+                  Upgrade your plan to add more parcels
+                </div>
+              }
             >
-              <Plus className="w-4 h-4" />
-              <span>Ajouter une parcelle</span>
-            </button>
+              <button
+                onClick={() => onAddParcel?.(farm.farm_id)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Ajouter une parcelle</span>
+              </button>
+            </Can>
           </div>
         </div>
 

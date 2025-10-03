@@ -195,34 +195,30 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>{t('nav.farmHierarchy')}</span>
         </button>
 
+        {/* <button
+          onClick={() => handleNavigation('/satellite-analysis')}
+          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            currentPath === '/satellite-analysis'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <Satellite className="h-5 w-5" />
+          <span>{t('nav.satelliteAnalysis')}</span>
+        </button> */}
+
         {/* Personnel Section */}
-        <div className="pt-4">
-          <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            {t('nav.personnel')}
-          </h3>
-          <button
-            onClick={() => handleNavigation('/employees')}
-            className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              currentPath === '/employees'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Users className="h-5 w-5" />
-            <span>{t('nav.employees')}</span>
-          </button>
-          <button
-            onClick={() => handleNavigation('/day-laborers')}
-            className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              currentPath === '/day-laborers'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <UserCog className="h-5 w-5" />
-            <span>{t('nav.dayLaborers')}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => handleNavigation('/workers')}
+          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            currentPath === '/workers'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span>{t('nav.personnel')}</span>
+        </button>
 
         {/* Charges Section */}
         <div className="pt-4">
