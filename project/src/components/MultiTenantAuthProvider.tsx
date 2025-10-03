@@ -358,7 +358,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // BUT: Skip subscription check if user is still in onboarding
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
-  const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
   const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
   const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
 
