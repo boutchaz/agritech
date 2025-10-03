@@ -164,7 +164,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const { data: roleData, error } = await supabase
         .rpc('get_user_role', {
           user_id: user.id,
-          organization_id: currentOrganization.id
+          org_id: currentOrganization.id
         });
 
       if (error) throw error;
@@ -288,7 +288,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setShowAuth(false);
   };
 
-  // Navigate to onboarding if needed
+  // Navigate to onboarding if needed (takes priority over subscription check)
   useEffect(() => {
     if (!loading && user && needsOnboarding && !location.pathname.startsWith('/onboarding')) {
       navigate({ to: '/onboarding' });
@@ -334,6 +334,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }
 
   // Check subscription status (block access if no valid subscription)
+  // BUT: Skip subscription check if user is still in onboarding
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
   const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
@@ -341,7 +342,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
 
   // Block access if no valid subscription (except on settings/onboarding pages)
-  if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {
+  // Also skip if user needs onboarding (onboarding takes priority)
+  if (!hasValidSubscription && protectedRoutes && currentOrganization && user && !needsOnboarding) {
     const reason = !subscription
       ? 'no_subscription'
       : subscription.status === 'canceled'

@@ -39,10 +39,10 @@ const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
 
           {/* Content */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3" data-testid="subscription-required-title">
               Subscription Required
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">{displayMessage}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-2" data-testid="subscription-required-message">{displayMessage}</p>
             {currentOrganization && (
               <p className="text-sm text-gray-500 dark:text-gray-500">
                 Organization: {currentOrganization.name}

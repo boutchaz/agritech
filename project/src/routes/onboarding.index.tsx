@@ -19,8 +19,9 @@ function OnboardingPage() {
   }, [needsOnboarding, loading, navigate]);
 
   const handleComplete = async () => {
-    // Reload to refresh auth state
-    window.location.href = '/';
+    // After onboarding, redirect to subscription page to complete payment
+    // (In production, user needs to subscribe via Polar.sh before accessing dashboard)
+    window.location.href = '/settings/subscription';
   };
 
   if (loading) {

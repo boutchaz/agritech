@@ -316,6 +316,19 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         }
       }
 
+      // Mark organization onboarding as completed
+      if (organizationId) {
+        const { error: updateError } = await supabase
+          .from('organizations')
+          .update({ onboarding_completed: true })
+          .eq('id', organizationId);
+
+        if (updateError) {
+          console.error('Error marking onboarding complete:', updateError);
+          // Don't throw - onboarding data is saved, just flag update failed
+        }
+      }
+
       onComplete();
     } catch (error: any) {
       console.error('Onboarding error:', error);
@@ -473,6 +486,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                       value={organizationData.name}
                       onChange={(e) => handleOrganizationNameChange(e.target.value)}
                       placeholder="Ma Ferme AgriTech"
+                      data-testid="onboarding-org-name"
                     />
                   </FormField>
                 </div>
@@ -527,6 +541,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     disabled={hasExistingFarms}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Ferme principale"
+                    data-testid="onboarding-farm-name"
                   />
                 </div>
                 <div>
@@ -540,6 +555,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     disabled={hasExistingFarms}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="Ville, Région, Pays"
+                    data-testid="onboarding-farm-location"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -552,6 +568,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                       onChange={(e) => setFarmData(prev => ({ ...prev, size: parseFloat(e.target.value) || 0 }))}
                       disabled={hasExistingFarms}
                       placeholder="0"
+                      data-testid="onboarding-farm-size"
                     />
                   </FormField>
                   <FormField label="Unité" htmlFor="onb_farm_unit">
@@ -618,6 +635,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 type="button"
                 onClick={handleNext}
                 className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                data-testid="onboarding-next-button"
               >
                 {canSkipStep(currentStep) ? 'Continuer' : 'Suivant'}
               </button>
@@ -627,6 +645,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 onClick={handleComplete}
                 disabled={loading}
                 className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="onboarding-complete-button"
               >
                 {loading ? 'Création...' : 'Terminer'}
               </button>

@@ -1,400 +1,420 @@
-# Subscription System Deployment Guide
+# 🚀 Deployment Guide - AgriTech Platform
 
-## ✅ Pre-Deployment Checklist
+Complete guide for deploying the AgriTech platform to fresh Supabase instances.
 
-### 1. Prerequisites Installed
-- [x] Supabase CLI installed (`/opt/homebrew/bin/supabase`)
-- [ ] Logged in to Supabase CLI
-- [ ] Project linked to remote Supabase instance
+## 📋 Table of Contents
 
-### 2. Files Ready for Deployment
+1. [One-Click Deployment](#one-click-deployment)
+2. [Manual Deployment](#manual-deployment)
+3. [Post-Deployment Setup](#post-deployment-setup)
+4. [Troubleshooting](#troubleshooting)
 
-#### Database Migration
-- `supabase/migrations/20251002200000_subscription_enforcement.sql`
-  - ✅ 6 validation functions (has_valid_subscription, can_create_*, has_feature_access)
-  - ✅ 3 RLS policies for farms, parcels, organization_users
-  - ✅ Subscription status view
-  - ✅ Auto-expiration function
+---
 
-#### Edge Function
-- `supabase/functions/check-subscription/index.ts`
-  - ✅ Subscription validation endpoint
-  - ✅ Usage limits checking
-  - ✅ Feature access validation
+## 🎯 One-Click Deployment
 
-#### Frontend Hooks
-- `src/hooks/useSubscriptionCheck.ts`
-  - ✅ useSubscriptionCheck()
-  - ✅ useCanCreateResource()
-  - ✅ useHasFeature()
+### Quick Start
 
-## 🚀 Deployment Steps
+**Deploy to Local Supabase:**
+```bash
+./scripts/deploy-fresh.sh local
+```
 
-### Step 1: Login to Supabase
+**Deploy to Remote Supabase:**
+```bash
+./scripts/deploy-fresh.sh remote
+```
+
+### What Gets Deployed
+
+The deployment script automatically handles:
+
+- ✅ **Database Schema**: All tables, columns, indexes, constraints
+- ✅ **RLS Policies**: Row-level security policies for all tables
+- ✅ **Database Functions**: PostgreSQL functions and triggers
+- ✅ **Edge Functions**: Supabase Edge Functions (Deno)
+- ✅ **Seed Data**: Essential roles and reference data
+- ✅ **Extensions**: pg_net, pgcrypto, pgjwt
+- ✅ **Webhooks**: Database webhooks for user creation
+
+### Prerequisites
+
+1. **Install Supabase CLI:**
+   ```bash
+   npm install -g supabase
+   ```
+
+2. **For Local Deployment:**
+   - Docker Desktop installed and running
+   - No additional setup needed
+
+3. **For Remote Deployment:**
+   - Link to your Supabase project:
+     ```bash
+     supabase link --project-ref YOUR_PROJECT_REF
+     ```
+
+---
+
+## 🔧 Manual Deployment
+
+If you need more control or troubleshooting, follow these manual steps:
+
+### Step 1: Start Supabase (Local Only)
 
 ```bash
-supabase login
+cd project
+supabase start
 ```
 
-This will open your browser for authentication.
+Wait for all services to start. You should see:
+- API URL: http://127.0.0.1:54321
+- Studio URL: http://127.0.0.1:54323
+- DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-### Step 2: Link to Your Project
+### Step 2: Apply Database Schema
 
-Get your project reference from Supabase Dashboard:
-- Go to https://app.supabase.com
-- Select your project
-- Go to Settings > General
-- Copy "Reference ID"
+**Option A: From Remote Dump (Recommended for local)**
+```bash
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres < supabase/remote_schema.sql
+```
 
-Then link:
+**Option B: From Migrations**
+```bash
+supabase db reset --local  # Resets and applies all migrations
+```
+
+### Step 3: Apply RLS Policy Fixes
 
 ```bash
-supabase link --project-ref YOUR_PROJECT_REF
+# Fix organizations RLS policies
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres < supabase/migrations/20251003150000_fix_organizations_rls.sql
+
+# Fix organizations SELECT policy
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres < supabase/migrations/20251003151000_fix_organizations_select_rls.sql
+
+# Fix tree seeding function security
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres < supabase/migrations/20251003152000_fix_seed_tree_function_security.sql
 ```
 
-You'll be prompted for your database password.
+### Step 4: Seed Essential Data
 
-### Step 3: Apply Database Migrations
-
-```bash
-cd /Users/boutchaz/Documents/CodeLovers/agritech/project
-supabase db push
-```
-
-This applies the subscription enforcement migration with all functions and policies.
-
-**Expected Output:**
-```
-Applying migration 20251002200000_subscription_enforcement.sql...
-✓ Migration applied successfully
-```
-
-**Verify in Dashboard:**
-1. Go to Database > Functions
-2. You should see:
-   - has_valid_subscription
-   - can_create_farm
-   - can_create_parcel
-   - can_add_user
-   - has_feature_access
-   - update_expired_subscriptions
-
-### Step 4: Deploy Edge Function
-
-```bash
-supabase functions deploy check-subscription --no-verify-jwt
-```
-
-**Expected Output:**
-```
-Deploying check-subscription...
-✓ Function deployed successfully
-```
-
-**Verify in Dashboard:**
-1. Go to Edge Functions
-2. You should see: check-subscription (Deployed)
-
-### Step 5: Set Environment Variables
-
-If your Edge Function needs environment variables:
-
-```bash
-supabase secrets set SOME_SECRET=value
-```
-
-### Step 6: Test the Deployment
-
-#### Test Database Functions
-
+**Seed Roles:**
 ```sql
--- In SQL Editor (Supabase Dashboard)
+-- In Supabase Studio SQL Editor or psql
+ALTER TABLE roles DISABLE TRIGGER enforce_system_admin_roles_insert;
 
--- Test subscription validation
-SELECT has_valid_subscription('YOUR_ORG_ID');
+INSERT INTO roles (name, display_name, description, level) VALUES
+  ('system_admin', 'System Administrator', 'Full access to all features', 100),
+  ('organization_admin', 'Organization Administrator', 'Full access within organization', 80),
+  ('farm_manager', 'Farm Manager', 'Manage specific farm operations', 60),
+  ('farm_worker', 'Farm Worker', 'Basic farm operations access', 40),
+  ('day_laborer', 'Day Laborer', 'Temporary worker access', 20),
+  ('viewer', 'Viewer', 'Read-only access', 10)
+ON CONFLICT (name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  level = EXCLUDED.level;
 
--- Test limit checking
-SELECT can_create_farm('YOUR_ORG_ID');
-SELECT can_create_parcel('YOUR_ORG_ID');
-SELECT can_add_user('YOUR_ORG_ID');
-
--- Test feature access
-SELECT has_feature_access('YOUR_ORG_ID', 'analytics');
-
--- View subscription status
-SELECT * FROM subscription_status WHERE organization_id = 'YOUR_ORG_ID';
+ALTER TABLE roles ENABLE TRIGGER enforce_system_admin_roles_insert;
 ```
 
-#### Test Edge Function
+### Step 5: Deploy Edge Functions
 
-In your browser console or test file:
-
-```javascript
-const { data, error } = await supabase.functions.invoke('check-subscription', {
-  body: {
-    organizationId: 'YOUR_ORG_ID'
-  }
-});
-
-console.log('Subscription check:', data);
+**Local:**
+```bash
+# Functions are auto-deployed when you run supabase start
+# To redeploy a function:
+supabase functions serve on-user-created --env-file supabase/.env.local
 ```
 
-Expected response:
-```json
-{
-  "isValid": true,
-  "subscription": { ... },
-  "usage": {
-    "farms": { "current": 1, "max": 2, "canCreate": true },
-    "parcels": { "current": 5, "max": 25, "canCreate": true },
-    "users": { "current": 2, "max": 5, "canAdd": true }
-  }
-}
+**Remote:**
+```bash
+supabase functions deploy on-user-created
 ```
 
-### Step 7: Update Frontend Environment
+### Step 6: Configure Database Settings
 
-Make sure your `.env` has the correct Supabase URL and Keys:
+**Local:**
+```sql
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgjwt;
 
-```env
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+-- Configure app settings for webhooks
+ALTER DATABASE postgres SET app.settings.supabase_url TO 'http://127.0.0.1:54321';
+ALTER DATABASE postgres SET app.settings.service_role_key TO 'YOUR_LOCAL_SERVICE_ROLE_KEY';
+```
+
+**Remote:**
+```sql
+-- In Supabase Dashboard SQL Editor
+CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgjwt;
+
+-- Configure app settings
+ALTER DATABASE postgres SET app.settings.supabase_url TO 'https://YOUR_PROJECT_REF.supabase.co';
+ALTER DATABASE postgres SET app.settings.service_role_key TO 'YOUR_SERVICE_ROLE_KEY';
+```
+
+---
+
+## 🔐 Post-Deployment Setup
+
+### 1. Verify Deployment
+
+**Check Tables:**
+```sql
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+```
+
+**Check Roles:**
+```sql
+SELECT name, display_name, level FROM roles ORDER BY level DESC;
+```
+
+**Check RLS Policies:**
+```sql
+SELECT tablename, policyname, cmd
+FROM pg_policies
+WHERE tablename IN ('organizations', 'organization_users', 'user_profiles')
+ORDER BY tablename, cmd;
+```
+
+**Check Functions:**
+```sql
+SELECT proname, prosecdef
+FROM pg_proc
+WHERE pronamespace = 'public'::regnamespace
+AND proname LIKE '%seed%' OR proname LIKE '%user%';
+```
+
+### 2. Configure Environment Variables
+
+**Local (.env.local):**
+```bash
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Production (.env.production):**
+```bash
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-### Step 8: Test End-to-End
+### 3. Test User Signup Flow
 
-1. **Test Without Subscription:**
-   - Create test organization
-   - Delete subscription: `DELETE FROM subscriptions WHERE organization_id = 'test-org'`
-   - Try to access app → Should be blocked
+1. Navigate to your app
+2. Click "Sign Up"
+3. Register a new user
+4. Check logs:
+   ```bash
+   # Local
+   supabase functions logs on-user-created --local
 
-2. **Test With Trial:**
-   - Create subscription with status = 'trialing'
-   - Access app → Should work with trial banner
+   # Remote
+   supabase functions logs on-user-created
+   ```
 
-3. **Test Limits:**
-   - Create farms until limit reached
-   - Try to create one more → Should fail with error message
+5. Verify in database:
+   ```sql
+   -- Check user profile was created
+   SELECT * FROM user_profiles ORDER BY created_at DESC LIMIT 1;
 
-4. **Test Expired:**
-   - Set `current_period_end = NOW() - INTERVAL '1 day'`
-   - Try to access → Should be blocked
+   -- Check organization was created
+   SELECT * FROM organizations ORDER BY created_at DESC LIMIT 1;
 
-## 📊 Monitoring After Deployment
+   -- Check user was added to organization
+   SELECT ou.*, r.name as role_name
+   FROM organization_users ou
+   JOIN roles r ON ou.role_id = r.id
+   ORDER BY ou.created_at DESC LIMIT 1;
 
-### View Edge Function Logs
+   -- Check tree categories were seeded
+   SELECT COUNT(*) FROM tree_categories;
+   ```
 
+---
+
+## 🐛 Troubleshooting
+
+### Issue: "new row violates row-level security policy"
+
+**Cause:** RLS policies not properly configured
+
+**Solution:**
 ```bash
-supabase functions logs check-subscription --tail
+# Re-apply RLS policy fixes
+./scripts/deploy-fresh.sh local
 ```
 
-### Check Database Performance
-
+Or manually:
 ```sql
--- Monitor function calls
-SELECT * FROM pg_stat_user_functions
-WHERE funcname LIKE '%subscription%';
-
--- Check RLS policy performance
-SELECT * FROM pg_stat_all_tables
-WHERE schemaname = 'public'
-AND relname IN ('farms', 'parcels', 'organization_users');
-```
-
-### Monitor Subscription Status
-
-```sql
--- Overview of all subscriptions
-SELECT
-  plan_type,
-  status,
-  COUNT(*) as count
-FROM subscriptions
-GROUP BY plan_type, status;
-
--- Find expiring soon
-SELECT * FROM subscription_status
-WHERE expiration_status = 'expiring_soon';
-
--- Find past due
-SELECT * FROM subscriptions
-WHERE status = 'past_due';
-```
-
-## 🔧 Troubleshooting
-
-### Migration Failed
-
-**Error: "relation already exists"**
-```bash
-# Check existing functions
-supabase db diff --schema public
-
-# If needed, manually drop and reapply
-```
-
-**Error: "permission denied"**
-```bash
-# Ensure you're using the correct database password
-supabase link --project-ref YOUR_REF
-```
-
-### Edge Function Not Working
-
-**Check deployment:**
-```bash
-supabase functions list
-```
-
-**View logs:**
-```bash
-supabase functions logs check-subscription
-```
-
-**Test directly:**
-```bash
-curl -i --location --request POST \
-  'https://YOUR_PROJECT.supabase.co/functions/v1/check-subscription' \
-  --header 'Authorization: Bearer YOUR_ANON_KEY' \
-  --header 'Content-Type: application/json' \
-  --data '{"organizationId":"test-org-id"}'
-```
-
-### RLS Policies Not Working
-
-**Verify RLS is enabled:**
-```sql
-SELECT tablename, rowsecurity
-FROM pg_tables
-WHERE schemaname = 'public'
-AND tablename IN ('farms', 'parcels', 'organization_users');
-```
-
-**Check policies:**
-```sql
-SELECT * FROM pg_policies
-WHERE schemaname = 'public';
-```
-
-**Test directly:**
-```sql
--- This should fail if no valid subscription
+-- Check which policy is blocking
 SET ROLE authenticated;
-SET request.jwt.claims.sub = 'user-id';
+SET request.jwt.claims.sub TO 'test-user-id';
 
-INSERT INTO farms (organization_id, name)
-VALUES ('org-without-subscription', 'Test Farm');
--- Expected: RLS policy violation
+-- Try to insert (will show which policy blocks)
+INSERT INTO organizations (name, slug, owner_id) VALUES ('Test', 'test', 'test-user-id');
 ```
 
-## 🎯 Post-Deployment Tasks
+### Issue: "organization_admin role not found"
 
-### 1. Create Test Subscriptions
+**Cause:** Roles table not seeded
 
-For existing production organizations:
+**Solution:**
+```bash
+# Re-run seed script
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres << 'EOF'
+ALTER TABLE roles DISABLE TRIGGER enforce_system_admin_roles_insert;
+INSERT INTO roles (name, display_name, description, level) VALUES
+  ('organization_admin', 'Organization Administrator', 'Full access within organization', 80)
+ON CONFLICT (name) DO NOTHING;
+ALTER TABLE roles ENABLE TRIGGER enforce_system_admin_roles_insert;
+EOF
+```
 
+### Issue: Edge Function not triggering
+
+**Cause:** Webhook not configured or pg_net extension missing
+
+**Solution:**
 ```sql
--- Give all existing orgs a trial subscription
-INSERT INTO subscriptions (
-  organization_id,
-  plan_type,
-  status,
-  current_period_start,
-  current_period_end
-)
-SELECT
-  id,
-  'essential',
-  'trialing',
-  NOW(),
-  NOW() + INTERVAL '14 days'
-FROM organizations
-WHERE id NOT IN (SELECT organization_id FROM subscriptions);
+-- Check pg_net is installed
+SELECT * FROM pg_extension WHERE extname = 'pg_net';
+
+-- If not, install it
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- Check webhook trigger exists
+SELECT trigger_name FROM information_schema.triggers
+WHERE event_object_table = 'users'
+AND trigger_schema = 'auth';
 ```
 
-### 2. Set Up Scheduled Tasks
+### Issue: Tree categories not created
 
-Create a cron job to expire subscriptions:
+**Cause:** Seed function running as SECURITY INVOKER instead of SECURITY DEFINER
 
-In Supabase Dashboard:
-1. Go to Database > Extensions
-2. Enable `pg_cron`
-3. Create job:
-
+**Solution:**
 ```sql
-SELECT cron.schedule(
-  'expire-subscriptions',
-  '0 * * * *', -- Every hour
-  $$SELECT update_expired_subscriptions()$$
-);
+-- Check function security
+SELECT proname, prosecdef FROM pg_proc
+WHERE proname = 'seed_tree_data_for_new_organization';
+
+-- Should show prosecdef = true
+-- If not, re-apply migration:
+ALTER FUNCTION seed_tree_data_for_new_organization() SECURITY DEFINER;
 ```
 
-### 3. Set Up Monitoring
+### Issue: Cannot connect to local database
 
-Create alerts for:
-- Subscriptions expiring in 7 days
-- Past due subscriptions
-- Organizations hitting limits
+**Cause:** Supabase not running or ports blocked
 
-### 4. Document API Endpoints
+**Solution:**
+```bash
+# Check if running
+docker ps | grep supabase
 
-Update your API documentation to include the Edge Function endpoint.
+# If not running, start it
+supabase start
 
-## 📝 Quick Reference
-
-### Key Database Functions
-
-| Function | Purpose | Returns |
-|----------|---------|---------|
-| `has_valid_subscription(org_id)` | Check if subscription valid | BOOLEAN |
-| `can_create_farm(org_id)` | Check if can create farm | BOOLEAN |
-| `can_create_parcel(org_id)` | Check if can create parcel | BOOLEAN |
-| `can_add_user(org_id)` | Check if can add user | BOOLEAN |
-| `has_feature_access(org_id, feature)` | Check feature access | BOOLEAN |
-
-### Edge Function Endpoint
-
-```
-POST https://YOUR_PROJECT.supabase.co/functions/v1/check-subscription
-
-Headers:
-- Authorization: Bearer YOUR_JWT_TOKEN
-- Content-Type: application/json
-
-Body:
-{
-  "organizationId": "uuid",
-  "feature": "analytics" // optional
-}
+# Check ports
+nc -z 127.0.0.1 54322  # Should succeed
 ```
 
-### Frontend Hooks
+---
 
-```typescript
-// Check subscription
-const { data, isLoading } = useSubscriptionCheck();
+## 📚 Architecture Overview
 
-// Check resource limits
-const { canCreate } = useCanCreateResource('farm');
+### User Signup Flow
 
-// Check feature access
-const { hasAccess } = useHasFeature('analytics');
+1. **User signs up** via Auth component
+2. **Supabase Auth** creates user in auth.users table
+3. **Database Trigger** (`on_auth_user_created_webhook`) fires
+4. **Webhook calls Edge Function** (`on-user-created`)
+5. **Edge Function creates:**
+   - User profile in `user_profiles`
+   - Organization in `organizations`
+   - Organization membership in `organization_users`
+6. **Database Trigger** on organizations table fires
+7. **Seed function** creates default tree categories and plantation types
+
+### Key Files
+
+```
+project/
+├── supabase/
+│   ├── migrations/              # Database migrations
+│   │   ├── 20250925150209_remote_schema.sql
+│   │   ├── 20251003150000_fix_organizations_rls.sql
+│   │   ├── 20251003151000_fix_organizations_select_rls.sql
+│   │   └── 20251003152000_fix_seed_tree_function_security.sql
+│   ├── functions/               # Edge Functions
+│   │   └── on-user-created/
+│   │       └── index.ts
+│   ├── seed/                    # Seed data
+│   │   └── 01_roles.sql
+│   └── remote_schema.sql        # Complete schema dump
+├── scripts/
+│   └── deploy-fresh.sh          # One-click deployment
+├── src/
+│   └── utils/
+│       └── authSetup.ts         # Frontend user setup utility
+└── DEPLOYMENT_GUIDE.md          # This file
 ```
 
-## ✅ Deployment Checklist
+---
 
-- [ ] Supabase CLI logged in
-- [ ] Project linked
-- [ ] Database migration applied
-- [ ] Edge function deployed
-- [ ] Database functions verified
-- [ ] RLS policies verified
-- [ ] Edge function tested
-- [ ] Frontend hooks tested
-- [ ] End-to-end testing complete
-- [ ] Monitoring set up
-- [ ] Documentation updated
+## 🔄 Updating Existing Deployment
 
-## 🎉 Done!
+To apply new changes to an existing deployment:
 
-Your subscription system is now fully deployed and running on Supabase backend!
+```bash
+# Create new migration
+supabase migration new your_migration_name
+
+# Edit the migration file in supabase/migrations/
+
+# Apply it
+supabase db push  # Remote
+# or
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres < supabase/migrations/YOUR_FILE.sql  # Local
+```
+
+---
+
+## 📞 Support
+
+If you encounter issues:
+
+1. Check logs:
+   ```bash
+   supabase functions logs on-user-created --local
+   docker logs supabase_db_project
+   ```
+
+2. Verify RLS policies:
+   ```sql
+   SELECT * FROM pg_policies WHERE tablename = 'YOUR_TABLE';
+   ```
+
+3. Test with service role (bypasses RLS):
+   ```typescript
+   import { createClient } from '@supabase/supabase-js'
+   const supabase = createClient(url, SERVICE_ROLE_KEY)
+   ```
+
+---
+
+**Status**: ✅ Production Ready
+
+**Last Updated**: 2025-10-03
+
+**Version**: 1.0.0

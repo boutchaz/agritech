@@ -28,6 +28,13 @@
     "db:generate-types-remote": "node scripts/generate-types-remote.js",
     "db:deploy-remote": "node scripts/apply-schema-api.js --seed",
     "db:setup-remote": "npm run db:apply-schema-remote && npm run db:generate-types-remote",
+    "deploy:fresh:local": "./scripts/deploy-fresh.sh local",
+    "deploy:fresh:remote": "./scripts/deploy-fresh.sh remote",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
     "prepare": "husky"
   },
   "dependencies": {
@@ -61,6 +68,7 @@
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@playwright/test": "^1.55.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
@@ -73,6 +81,7 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.3",
+    "playwright": "^1.55.1",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.18",
     "tsx": "^4.20.5",

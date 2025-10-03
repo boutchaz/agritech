@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, User } from 'lucide-react';
+import { setupNewUser, checkUserNeedsOnboarding } from '../utils/authSetup';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -43,6 +44,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             });
 
             if (signInData?.user) {
+              // Setup new user account
+              await setupNewUser({
+                userId: signInData.user.id,
+                email: signInData.user.email!,
+              });
               onAuthSuccess();
               return;
             }
@@ -52,11 +58,25 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           throw signUpError;
         }
 
-        if (data?.user && data.user.email_confirmed_at) {
-          // If auto-confirmed, sign them in
-          onAuthSuccess();
-        } else if (data?.user) {
-          setError('Vérifiez votre email pour confirmer votre inscription');
+        if (data?.user) {
+          // Setup new user with profile and organization
+          const setupResult = await setupNewUser({
+            userId: data.user.id,
+            email: data.user.email!,
+          });
+
+          if (!setupResult.success) {
+            console.error('User setup failed:', setupResult.error);
+            setError('Compte créé mais configuration incomplète. Essayez de vous reconnecter.');
+            return;
+          }
+
+          if (data.user.email_confirmed_at) {
+            // Reload to refresh auth state after setup
+            window.location.href = '/';
+          } else {
+            setError('Vérifiez votre email pour confirmer votre inscription');
+          }
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -72,6 +92,17 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         }
 
         if (data?.user) {
+          // Check if user needs onboarding (missing profile or organization)
+          const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
+
+          if (needsOnboarding) {
+            console.log('User needs onboarding, setting up account...');
+            await setupNewUser({
+              userId: data.user.id,
+              email: data.user.email!,
+            });
+          }
+
           onAuthSuccess();
         }
       }

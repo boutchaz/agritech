@@ -1,158 +1,116 @@
-# Polar.sh Setup Scripts
+# Deployment Scripts
 
-## Create Products Automatically
+This directory contains deployment and utility scripts for the AgriTech platform.
 
-This script creates all three subscription products in your Polar.sh organization.
+## 🚀 Quick Deploy
 
-### Prerequisites
+### One-Click Deployment
 
-1. **Polar.sh Account**: Create account at https://polar.sh
-2. **Organization Created**: Set up your organization in Polar.sh
-3. **API Token**: Get from Settings → API Keys (needs product creation permission)
-4. **Environment Variables**: Add to `.env`:
-   ```
-   VITE_POLAR_ACCESS_TOKEN=polar_at_xxxxxxxxxxxxx
-   VITE_POLAR_ORGANIZATION_ID=org_xxxxxxxxxxxxx
-   ```
+Deploy the entire platform (database, functions, seed data) to a fresh Supabase instance:
 
-### Run the Script
-
+**Local:**
 ```bash
-# From project root
-cd /Users/boutchaz/Documents/CodeLovers/agritech/project
-
-# Run the setup script
-node scripts/setup-polar-products.js
+npm run deploy:fresh:local
+# or
+./scripts/deploy-fresh.sh local
 ```
 
-### What It Creates
-
-The script will create:
-
-1. **Essential Plan** - $25/month
-   - Product with metadata: `plan_type: essential`
-   - Price: $25.00 USD/month
-   - Limits: 2 farms, 25 parcels, 5 users
-
-2. **Professional Plan** - $75/month
-   - Product with metadata: `plan_type: professional`
-   - Price: $75.00 USD/month
-   - Limits: 10 farms, 200 parcels, 25 users
-   - Features: Analytics, sensors, AI
-   - Marked as "highlighted" (most popular)
-
-3. **Agri-Business Plan** - Contact Sales
-   - Product with metadata: `plan_type: enterprise`
-   - No fixed price (contact sales)
-   - Unlimited everything
-
-### Script Output
-
-```
-🚀 Creating Polar.sh products...
-
-Organization ID: org_xxxxxxxxxxxxx
-
-📦 Creating: Essential Plan
-   ✅ Product created with ID: prod_xxxxxxxxxxxxx
-   💰 Price created: $25.00 USD/month
-
-📦 Creating: Professional Plan
-   ✅ Product created with ID: prod_xxxxxxxxxxxxx
-   💰 Price created: $75.00 USD/month
-
-📦 Creating: Agri-Business Plan
-   ✅ Product created with ID: prod_xxxxxxxxxxxxx
-   💼 Contact sales - no fixed pricing
-
-✨ Setup complete!
-
-📋 Created Products Summary:
-
-   • Essential Plan (essential)
-     ID: prod_xxxxxxxxxxxxx
-
-   • Professional Plan (professional)
-     ID: prod_xxxxxxxxxxxxx
-
-   • Agri-Business Plan (enterprise)
-     ID: prod_xxxxxxxxxxxxx
-
-📝 Next Steps:
-
-1. Go to Polar.sh dashboard to verify products
-2. Configure webhook endpoint (see WEBHOOK_SETUP.md)
-3. Test subscription flow in your app
-4. Visit: http://localhost:5173/settings/subscription
+**Remote:**
+```bash
+npm run deploy:fresh:remote
+# or
+./scripts/deploy-fresh.sh remote
 ```
 
-### Verify in Polar.sh Dashboard
+## 📜 Available Scripts
 
-1. Go to https://polar.sh/dashboard
-2. Navigate to **Products** section
-3. You should see all three products listed
-4. Click each to verify:
-   - Correct pricing
-   - Metadata includes `plan_type`
-   - Description is set
+### `deploy-fresh.sh`
 
-### Troubleshooting
+One-click deployment script that handles:
+- Database schema creation
+- RLS policies
+- Database functions and triggers
+- Edge Functions deployment
+- Seed data (roles, etc.)
+- Extension installation (pg_net, pgcrypto, pgjwt)
+- Database configuration
 
-**"Missing required environment variables"**
-- Check your `.env` file has `VITE_POLAR_ACCESS_TOKEN` and `VITE_POLAR_ORGANIZATION_ID`
-- Values should start with `polar_at_` and `org_` respectively
-
-**"401 Unauthorized"**
-- API token is invalid or expired
-- Generate new token in Polar.sh Settings → API Keys
-- Make sure token has "Create Products" permission
-
-**"Failed to create product"**
-- Product with same name might already exist
-- Check Polar.sh dashboard and delete duplicates
-- Or modify product names in the script
-
-**"Failed to create price"**
-- Product was created but pricing failed
-- You can add prices manually in Polar.sh dashboard
-- Or run script again (it will skip existing products)
-
-### Customizing Products
-
-Edit `scripts/setup-polar-products.js` to customize:
-
-```javascript
-const products = [
-  {
-    name: 'Your Plan Name',
-    description: 'Your description',
-    price_amount: 2500, // Price in cents ($25.00)
-    metadata: {
-      plan_type: 'your_type',
-      // Add custom metadata
-    },
-  },
-];
+**Usage:**
+```bash
+./scripts/deploy-fresh.sh [local|remote]
 ```
 
-### Alternative: Manual Creation
+**What it does:**
+1. Checks prerequisites (Supabase CLI, Docker)
+2. Starts local Supabase (if local)
+3. Applies database schema
+4. Applies all migrations
+5. Seeds essential data (roles, etc.)
+6. Deploys Edge Functions
+7. Configures database settings
+8. Verifies deployment
 
-If you prefer to create products manually:
+**Output:**
+- Shows deployment progress
+- Displays verification results
+- Provides access URLs and next steps
 
-1. Go to Polar.sh Dashboard → Products
-2. Click "Create Product"
-3. Fill in details for each plan
-4. **Important**: Add metadata `plan_type` to each:
-   - Essential: `{"plan_type": "essential"}`
-   - Professional: `{"plan_type": "professional"}`
-   - Enterprise: `{"plan_type": "enterprise"}`
+## 🛠️ Requirements
 
-The metadata is crucial for the webhook to work correctly!
+- **Supabase CLI**: `npm install -g supabase`
+- **Docker Desktop**: For local deployment
+- **PostgreSQL client (psql)**: Usually included with Postgres
 
-### Next Steps After Running Script
+## 📝 Notes
 
-1. ✅ Products created in Polar.sh
-2. ⏭️ Configure webhook (see WEBHOOK_SETUP.md)
-3. ⏭️ Test subscription page: http://localhost:5173/settings/subscription
-4. ⏭️ Apply database migration (see TESTING_SUBSCRIPTION.md)
-5. ⏭️ Test full checkout flow
+### Local Deployment
+- Automatically starts Supabase if not running
+- Uses `supabase/remote_schema.sql` for base schema
+- Applies custom migrations on top
+- Seeds roles and reference data
+- Configures local database settings
+
+### Remote Deployment
+- Requires project to be linked: `supabase link --project-ref YOUR_REF`
+- Uses `supabase db push` for schema
+- Deploys Edge Functions to cloud
+- Requires manual database settings configuration in dashboard
+
+## 🔍 Troubleshooting
+
+If deployment fails:
+
+1. **Check logs:**
+   ```bash
+   supabase functions logs on-user-created --local
+   docker logs supabase_db_project
+   ```
+
+2. **Verify Supabase is running (local):**
+   ```bash
+   docker ps | grep supabase
+   supabase status
+   ```
+
+3. **Re-run deployment:**
+   ```bash
+   ./scripts/deploy-fresh.sh local
+   ```
+
+4. **Manual verification:**
+   ```bash
+   # Check tables
+   psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c "\dt"
+
+   # Check roles
+   psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c "SELECT * FROM roles;"
+
+   # Check functions
+   psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c "\df"
+   ```
+
+## 📚 See Also
+
+- [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) - Comprehensive deployment guide
+- [Supabase Documentation](https://supabase.com/docs)
+- [Supabase CLI Reference](https://supabase.com/docs/reference/cli)

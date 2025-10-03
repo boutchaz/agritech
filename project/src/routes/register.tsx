@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
+import { setupNewUser } from '../utils/authSetup'
 
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
@@ -41,22 +42,37 @@ function RegisterPage() {
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            email_confirm: false
+          }
+        }
       })
 
-      if (signUpError) throw signUpError
+      if (signUpError) {
+        if (signUpError.message.includes('User already registered')) {
+          throw new Error('A user with this email already exists')
+        }
+        throw signUpError
+      }
 
       if (authData.user) {
-        // Create organization for the user
-        const { error: orgError } = await supabase
-          .from('organizations')
-          .insert({
-            name: organizationName,
-            owner_id: authData.user.id,
-          })
+        // Setup new user with profile and organization using authSetup
+        const setupResult = await setupNewUser({
+          userId: authData.user.id,
+          email: authData.user.email!,
+          organizationName: organizationName,
+        })
 
-        if (orgError) throw orgError
+        if (!setupResult.success) {
+          console.error('User setup failed:', setupResult.error)
+          setError('Account created but setup incomplete. Please try logging in.')
+          return
+        }
 
-        navigate({ to: '/dashboard' })
+        // Reload to refresh auth state and redirect to onboarding
+        window.location.href = '/onboarding'
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred during registration')
@@ -98,6 +114,7 @@ function RegisterPage() {
                 placeholder="Your farm or company name"
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
+                data-testid="register-organization"
               />
             </FormField>
 
@@ -111,6 +128,7 @@ function RegisterPage() {
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                data-testid="register-email"
               />
             </FormField>
 
@@ -124,6 +142,7 @@ function RegisterPage() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                data-testid="register-password"
               />
             </FormField>
 
@@ -137,6 +156,7 @@ function RegisterPage() {
                 placeholder="Confirm Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                data-testid="register-confirm-password"
               />
             </FormField>
           </div>
@@ -152,6 +172,7 @@ function RegisterPage() {
               type="submit"
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              data-testid="register-submit"
             >
               {isLoading ? 'Creating account...' : 'Sign up'}
             </button>
