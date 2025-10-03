@@ -22,6 +22,7 @@ interface Organization {
   role: string;
   role_id?: string;
   is_active: boolean;
+  onboarding_completed?: boolean;
   currency?: string;
   timezone?: string;
   language?: string;
@@ -108,15 +109,35 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Calculate loading state
   // IMPORTANT: Also wait for currentOrganization to be set when we have organizations
   const waitingForOrganization = organizations.length > 0 && !currentOrganization && !orgsLoading;
-  const loading = authLoading || profileLoading || orgsLoading || farmsLoading || subscriptionLoading || waitingForOrganization;
 
-  // Calculate onboarding state - check profile and organizations
+  // Don't wait for subscription or farms on onboarding page
+  const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
+  const loading = authLoading || profileLoading || orgsLoading ||
+    (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
+    waitingForOrganization;
+
+  console.log('🔍 MultiTenantAuthProvider loading state:', {
+    authLoading,
+    profileLoading,
+    orgsLoading,
+    farmsLoading,
+    subscriptionLoading,
+    waitingForOrganization,
+    isOnOnboardingPage,
+    loading,
+    organizationsCount: organizations.length,
+    hasCurrentOrg: !!currentOrganization
+  });
+
+  // Calculate onboarding state - check profile, organizations, and onboarding completion
   const needsOnboarding = !!(
-    user && (
+    user && !loading && (
       // No profile yet
-      (!profile && !profileLoading) ||
+      !profile ||
       // No organizations yet
-      (organizations.length === 0 && !orgsLoading)
+      organizations.length === 0 ||
+      // Has organization but onboarding not completed
+      (currentOrganization && !currentOrganization.onboarding_completed)
     )
   );
 

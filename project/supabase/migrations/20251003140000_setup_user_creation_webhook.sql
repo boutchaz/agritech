@@ -44,9 +44,11 @@ CREATE TRIGGER on_auth_user_created_webhook
 
 -- Store configuration settings (will be set during deployment)
 -- These are placeholders - actual values set via dashboard or CLI
-ALTER DATABASE postgres SET app.settings.supabase_url TO 'http://127.0.0.1:54321';
-ALTER DATABASE postgres SET app.settings.service_role_key TO 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+-- Note: ALTER DATABASE requires superuser, so these must be set via Supabase dashboard
+-- ALTER DATABASE postgres SET app.settings.supabase_url TO 'http://127.0.0.1:54321';
+-- ALTER DATABASE postgres SET app.settings.service_role_key TO 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
 
 -- Comment
 COMMENT ON FUNCTION public.trigger_on_user_created() IS 'Triggers edge function to setup new user profile and organization';
-COMMENT ON TRIGGER on_auth_user_created_webhook ON auth.users IS 'Calls on-user-created edge function when new user signs up';
+-- Note: Cannot comment on auth.users trigger without superuser permissions
+-- COMMENT ON TRIGGER on_auth_user_created_webhook ON auth.users IS 'Calls on-user-created edge function when new user signs up';

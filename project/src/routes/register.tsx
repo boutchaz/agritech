@@ -71,7 +71,8 @@ function RegisterPage() {
           return
         }
 
-        // Reload to refresh auth state and redirect to onboarding
+        // Reload the page to ensure auth state is fresh and organization data is loaded
+        // This prevents race conditions where MultiTenantAuthProvider queries before setup completes
         window.location.href = '/onboarding'
       }
     } catch (error) {

@@ -39,5 +39,5 @@ WITH CHECK (auth.uid() = id);
 
 -- Comments
 COMMENT ON POLICY authenticated_can_create ON organizations IS 'Allows authenticated users to create organizations';
-COMMENT ON POLICY "Users can create their org membership" ON organization_users IS 'Allows users to create their own organization membership';
+COMMENT ON POLICY subscription_check_users_insert ON organization_users IS 'Allows users to create their own organization membership or add users if subscription allows';
 COMMENT ON POLICY "Users can insert their own profile" ON user_profiles IS 'Allows users to create their own profile';

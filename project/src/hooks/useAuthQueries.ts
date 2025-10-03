@@ -8,6 +8,7 @@ interface Organization {
   slug: string;
   role: string;
   is_active: boolean;
+  onboarding_completed?: boolean;
   currency?: string;
   timezone?: string;
   language?: string;
@@ -108,7 +109,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
       const orgIds = orgUsers.map(ou => ou.organization_id);
       const { data: orgs, error: orgsError } = await supabase
         .from('organizations')
-        .select('id, name, slug, currency, timezone, language')
+        .select('id, name, slug, onboarding_completed, currency, timezone, language')
         .in('id', orgIds);
 
       console.log('🔍 organizations query result:', { orgs, orgsError, orgIds });
@@ -127,6 +128,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
           slug: org?.slug || org?.name || 'unknown',
           role: ou.role,
           is_active: ou.is_active,
+          onboarding_completed: org?.onboarding_completed,
           currency: org?.currency,
           timezone: org?.timezone,
           language: org?.language,

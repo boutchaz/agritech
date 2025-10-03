@@ -11,9 +11,13 @@ function OnboardingPage() {
   const { user, needsOnboarding, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('🔍 OnboardingPage state:', { user: !!user, needsOnboarding, loading });
+
   useEffect(() => {
+    console.log('🔍 OnboardingPage useEffect:', { loading, needsOnboarding });
     // If user doesn't need onboarding, redirect to dashboard
     if (!loading && !needsOnboarding) {
+      console.log('❌ Redirecting away from onboarding (user does not need onboarding)');
       navigate({ to: '/' });
     }
   }, [needsOnboarding, loading, navigate]);
@@ -25,6 +29,7 @@ function OnboardingPage() {
   };
 
   if (loading) {
+    console.log('⏳ Showing loading spinner (loading = true)');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -36,9 +41,11 @@ function OnboardingPage() {
   }
 
   if (!user) {
+    console.log('❌ No user, redirecting to /');
     navigate({ to: '/' });
     return null;
   }
 
+  console.log('✅ Rendering OnboardingFlow component');
   return <OnboardingFlow user={user} onComplete={handleComplete} />;
 }

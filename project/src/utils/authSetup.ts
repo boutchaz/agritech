@@ -22,8 +22,11 @@ export async function setupNewUser({
   organizationName,
 }: SetupNewUserParams): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log('🚀 Starting setupNewUser:', { userId, email, organizationName });
+
     // 1. Create user profile
     const defaultFirstName = firstName || email.split('@')[0];
+    console.log('📝 Creating user profile:', { userId, defaultFirstName });
     const { error: profileError } = await supabase
       .from('user_profiles')
       .insert({
@@ -35,9 +38,10 @@ export async function setupNewUser({
       });
 
     if (profileError && profileError.code !== '23505') { // Ignore duplicate key error
-      console.error('Error creating user profile:', profileError);
+      console.error('❌ Error creating user profile:', profileError);
       throw new Error('Failed to create user profile');
     }
+    console.log('✅ User profile created');
 
     // 2. Check if user already has an organization
     const { data: existingOrgUsers, error: checkError } = await supabase
@@ -60,6 +64,7 @@ export async function setupNewUser({
     const defaultOrgName = organizationName || `${defaultFirstName}'s Organization`;
     const orgSlug = `${defaultOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${userId.substring(0, 8)}`;
 
+    console.log('🏢 Creating organization:', { defaultOrgName, orgSlug });
     const { data: newOrg, error: orgError } = await supabase
       .from('organizations')
       .insert({
@@ -74,9 +79,10 @@ export async function setupNewUser({
       .single();
 
     if (orgError) {
-      console.error('Error creating organization:', orgError);
-      throw new Error('Failed to create organization');
+      console.error('❌ Error creating organization:', orgError);
+      throw new Error(`Failed to create organization: ${orgError.message}`);
     }
+    console.log('✅ Organization created:', newOrg.id);
 
     // 4. Get organization_admin role
     const { data: roles, error: rolesError } = await supabase
