@@ -39,7 +39,7 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       const { data: roleData, error: roleError } = await supabase
         .rpc('get_user_role', {
           user_id: user.id,
-          organization_id: currentOrganization?.id || null
+          org_id: currentOrganization?.id
         });
 
       if (roleError) throw roleError;
