@@ -1,35 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase, type UserProfile, type Farm, type Organization } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
+// Extended organization type with role info from join
+interface OrganizationWithRole extends Organization {
   role: string;
   is_active: boolean;
-  onboarding_completed?: boolean;
-  currency?: string;
-  timezone?: string;
-  language?: string;
-}
-
-interface Farm {
-  id: string;
-  name: string;
-  location: string;
-  size: number;
-  manager_name: string;
-}
-
-interface UserProfile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  avatar_url?: string;
-  phone?: string;
-  timezone: string;
-  language: string;
 }
 
 // Query keys
@@ -83,7 +59,7 @@ export const useUserProfile = (userId: string | undefined) => {
 export const useUserOrganizations = (userId: string | undefined) => {
   return useQuery({
     queryKey: authKeys.organizations(userId || ''),
-    queryFn: async (): Promise<Organization[]> => {
+    queryFn: async (): Promise<OrganizationWithRole[]> => {
       if (!userId) return [];
 
       // First, get organization IDs and roles from organization_users

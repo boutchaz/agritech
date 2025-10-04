@@ -3663,6 +3663,10 @@ export type Database = {
         Args: { table_name: string }
         Returns: undefined
       }
+      algorithm_sign: {
+        Args: { algorithm: string; secret: string; signables: string }
+        Returns: string
+      }
       assign_role_with_audit: {
         Args: {
           new_role_id: string
@@ -3937,9 +3941,25 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: boolean
       }
+      sign: {
+        Args: { algorithm?: string; payload: Json; secret: string }
+        Returns: string
+      }
+      try_cast_double: {
+        Args: { inp: string }
+        Returns: number
+      }
       update_expired_subscriptions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      url_decode: {
+        Args: { data: string }
+        Returns: string
+      }
+      url_encode: {
+        Args: { data: string }
+        Returns: string
       }
       user_has_permission: {
         Args: { permission_name: string; user_id: string }
@@ -3967,6 +3987,14 @@ export type Database = {
           error_message: string
           is_valid: boolean
           warnings: string[]
+        }[]
+      }
+      verify: {
+        Args: { algorithm?: string; secret: string; token: string }
+        Returns: {
+          header: Json
+          payload: Json
+          valid: boolean
         }[]
       }
     }

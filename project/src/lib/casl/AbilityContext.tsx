@@ -31,11 +31,22 @@ export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', currentOrganization.id);
 
-      // Get parcels count
-      const { count: parcelsCount } = await supabase
-        .from('parcels')
-        .select('parcels.id, farms!inner(organization_id)', { count: 'exact', head: true })
-        .eq('farms.organization_id', currentOrganization.id);
+      // Get parcels count - first get farm IDs, then count parcels
+      const { data: farms } = await supabase
+        .from('farms')
+        .select('id')
+        .eq('organization_id', currentOrganization.id);
+      
+      const farmIds = farms?.map(f => f.id) || [];
+      let parcelsCount = 0;
+      
+      if (farmIds.length > 0) {
+        const { count } = await supabase
+          .from('parcels')
+          .select('*', { count: 'exact', head: true })
+          .in('farm_id', farmIds);
+        parcelsCount = count || 0;
+      }
 
       // Get users count
       const { count: usersCount } = await supabase
@@ -44,9 +55,9 @@ export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .eq('organization_id', currentOrganization.id)
         .eq('is_active', true);
 
-      // Get satellite reports count for current period
+      // Get satellite indices data count for current period
       const { count: reportsCount } = await supabase
-        .from('satellite_reports')
+        .from('satellite_indices_data')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', currentOrganization.id)
         .gte('created_at', subscription?.current_period_start || new Date().toISOString());

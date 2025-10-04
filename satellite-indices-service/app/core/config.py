@@ -20,12 +20,12 @@ class Settings(BaseSettings):
     # Google Earth Engine
     GEE_SERVICE_ACCOUNT: str = os.getenv("GEE_SERVICE_ACCOUNT", "")
     GEE_PRIVATE_KEY: str = os.getenv("GEE_PRIVATE_KEY", "")
-    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "sublime-seat-428722-n5")
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI")
+    GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "")
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     
     # Supabase integration
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "http://agritech-supabase-652186-5-75-154-125.traefik.me")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ")
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
     SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
     
     # Storage

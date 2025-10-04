@@ -132,14 +132,34 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
   const needsOnboarding = !!(
     user && !loading && (
-      // No profile yet
-      !profile ||
+      // No profile yet (missing first_name or last_name)
+      !profile || !profile.first_name || !profile.last_name ||
       // No organizations yet
       organizations.length === 0 ||
       // Has organization but onboarding not completed
-      (currentOrganization && !currentOrganization.onboarding_completed)
+      (organizations.length > 0 && currentOrganization && !currentOrganization.onboarding_completed)
     )
   );
+
+  // Debug onboarding state
+  console.log('🔍 Onboarding debug:', {
+    user: !!user,
+    loading,
+    profile: profile ? {
+      hasProfile: true,
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      hasRequiredFields: !!(profile.first_name && profile.last_name)
+    } : { hasProfile: false },
+    organizationsCount: organizations.length,
+    currentOrg: currentOrganization ? {
+      id: currentOrganization.id,
+      name: currentOrganization.name,
+      onboardingCompleted: currentOrganization.onboarding_completed
+    } : null,
+    needsOnboarding,
+    isOnOnboardingPage
+  });
 
   // Handle organization change
   const handleSetCurrentOrganization = (org: Organization) => {

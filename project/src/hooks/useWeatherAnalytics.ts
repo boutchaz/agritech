@@ -71,7 +71,7 @@ function calculateDateRange(
 ): { startDate: string; endDate: string } {
   const today = new Date();
   let startDate: Date;
-  let endDate: Date = today;
+  const endDate: Date = today;
 
   switch (timeRange) {
     case 'last-3-months':

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timedelta
@@ -18,13 +18,17 @@ from app.models.schemas import (
     CloudCoverageCheckResponse
 )
 from app.services import supabase_service, earth_engine_service
+from app.middleware.auth import require_organization_access
 import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.get("/organizations/{organization_id}/farms")
-async def get_organization_farms(organization_id: str):
+async def get_organization_farms(
+    organization_id: str,
+    auth_context: dict = Depends(require_organization_access)
+):
     """Get all farms for an organization"""
     try:
         farms = await supabase_service.get_organization_farms(organization_id)

@@ -27,16 +27,36 @@ function LoginPage() {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Email ou mot de passe incorrect')
+        }
+        throw error
+      }
 
-      navigate({ to: '/dashboard' })
+      if (data?.user) {
+        // Check if user needs onboarding
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+
+        if (!profile) {
+          // User needs onboarding
+          navigate({ to: '/onboarding' })
+        } else {
+          // User is ready, go to dashboard
+          navigate({ to: '/dashboard' })
+        }
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred during login')
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la connexion')
     } finally {
       setIsLoading(false)
     }
