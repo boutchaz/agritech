@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Calculator, Building2, UserCog } from 'lucide-react';
 import WorkersList from '../components/Workers/WorkersList';
 import MetayageCalculator from '../components/Workers/MetayageCalculator';
@@ -41,12 +41,17 @@ function WorkersPage() {
   }, [currentOrganization]);
 
   const fetchFarms = async () => {
+    if (!currentOrganization?.id) {
+      setFarmsLoading(false);
+      return;
+    }
+
     try {
       const { supabase } = await import('../lib/supabase');
       const { data, error } = await supabase
         .from('farms')
         .select('id, name, location, size')
-        .eq('organization_id', currentOrganization?.id)
+        .eq('organization_id', currentOrganization.id)
         .order('name');
 
       if (error) throw error;

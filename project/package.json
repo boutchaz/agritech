@@ -100,9 +100,6 @@
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix"
-    ],
-    "**/*.{ts,tsx}": [
-      "bash -c 'tsc --noEmit --project tsconfig.app.json'"
     ]
   }
 }

@@ -15,11 +15,11 @@ import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as T
 
 interface Parcel {
   id: string;
-  farm_id: string;
+  farm_id: string | null;
   name: string;
   description: string | null;
   area: number | null;
-  area_unit: string;
+  area_unit: string | null;
   boundary?: number[][];
   calculated_area?: number | null;
   perimeter?: number | null;
@@ -35,8 +35,8 @@ interface Parcel {
   // New parcel fields
   planting_date?: string | null;
   planting_type?: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 interface Farm {
@@ -213,11 +213,15 @@ const AppContent: React.FC = () => {
   };
 
   const fetchFarms = async () => {
+    if (!currentOrganization?.id) {
+      return;
+    }
+
     try {
       const { data: farmsData, error: farmsError } = await supabase
         .from('farms')
         .select('id, name, location, size, manager_name')
-        .eq('organization_id', currentOrganization?.id)
+        .eq('organization_id', currentOrganization.id)
         .order('name');
 
       if (farmsError) {
@@ -527,7 +531,7 @@ const AppContent: React.FC = () => {
                           {(parcel.calculated_area || parcel.area) ? (
                             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                               <Ruler className="h-3 w-3 mr-1" />
-                              <span>{parcel.calculated_area || parcel.area} {parcel.area_unit}</span>
+                              <span>{parcel.calculated_area || parcel.area} {parcel.area_unit || 'hectares'}</span>
                             </div>
                           ) : null}
                           {parcel.irrigation_type && (
@@ -649,7 +653,7 @@ const AppContent: React.FC = () => {
                 <FormField label="Unité" htmlFor="parcel_area_unit">
                   <Select
                     id="parcel_area_unit"
-                    value={editingParcel.area_unit}
+                    value={editingParcel.area_unit || 'hectares'}
                     onChange={(e) => setEditingParcel({ ...editingParcel, area_unit: e.target.value })}
                   >
                     <option value="hectares">Hectares</option>

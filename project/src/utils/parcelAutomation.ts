@@ -269,7 +269,7 @@ export class ParcelAutomation {
   }
 
   static suggestOptimalParcels(
-    farmBoundary: number[][],
+    _farmBoundary: number[][],
     _targetSize: number = 1,
     _orientation: 'north-south' | 'east-west' | 'optimal' = 'optimal'
   ): ParcelBoundary[] {
@@ -284,8 +284,8 @@ export class ParcelAutomation {
   }
 
   static splitParcel(
-    parcel: ParcelBoundary,
-    splitLine: number[][],
+    _parcel: ParcelBoundary,
+    _splitLine: number[][],
     _equalArea: boolean = false
   ): ParcelBoundary[] {
 
@@ -294,11 +294,11 @@ export class ParcelAutomation {
 }
 
 export class ParcelDrawingAssist {
-  private vectorSource: VectorSource;
-  private currentFeature: Feature | null = null;
+  private _vectorSource: VectorSource;
+  private _currentFeature: Feature | null = null;
 
   constructor(vectorSource: VectorSource) {
-    this.vectorSource = vectorSource;
+    this._vectorSource = vectorSource;
   }
 
   enableMagneticSnap(_threshold: number = 20): void {

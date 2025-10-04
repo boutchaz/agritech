@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
 import IndicesCalculator from '../components/SatelliteAnalysis/IndicesCalculator';
 import TimeSeriesChart from '../components/SatelliteAnalysis/TimeSeriesChart';
@@ -215,15 +215,12 @@ function SatelliteAnalysisPage() {
                   <h3 className="font-medium mb-3">Parcel Information</h3>
                   <div className="space-y-2 text-sm">
                     <p><span className="text-gray-600">Name:</span> {selectedParcel.name}</p>
-                    <p><span className="text-gray-600">Area:</span> {selectedParcel.area} {selectedParcel.area_unit}</p>
+                    <p><span className="text-gray-600">Area:</span> {selectedParcel.area} {selectedParcel.area_unit || 'hectares'}</p>
                     {selectedParcel.soil_type && (
                       <p><span className="text-gray-600">Soil Type:</span> {selectedParcel.soil_type}</p>
                     )}
                     {selectedParcel.irrigation_type && (
                       <p><span className="text-gray-600">Irrigation:</span> {selectedParcel.irrigation_type}</p>
-                    )}
-                    {selectedParcel.elevation && (
-                      <p><span className="text-gray-600">Elevation:</span> {selectedParcel.elevation}m</p>
                     )}
                   </div>
                 </div>
