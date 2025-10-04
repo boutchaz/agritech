@@ -95,6 +95,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
             phone: profileData.phone || '',
             timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
           });
+        } else if (profileData) {
+          // Profile exists but is incomplete - populate form with existing data
+          setProfileData({
+            first_name: profileData.first_name || '',
+            last_name: profileData.last_name || '',
+            phone: profileData.phone || '',
+            timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+          });
         }
 
         // Check for existing organization
@@ -132,6 +140,21 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         }
 
         setCompletedSteps(completed);
+
+        // Auto-fix: If org thinks onboarding is complete but user actually needs it
+        // (e.g., incomplete profile), reset the onboarding flag automatically
+        if (orgData?.organization_id && orgData.organizations) {
+          const org = orgData.organizations as any;
+          const needsToCompleteSteps = !profileExists || !orgExists || !farmsExist;
+          
+          if (org.onboarding_completed && needsToCompleteSteps) {
+            console.log('🔧 Auto-fixing: Resetting onboarding_completed flag due to incomplete data');
+            await supabase
+              .from('organizations')
+              .update({ onboarding_completed: false })
+              .eq('id', orgData.organization_id);
+          }
+        }
 
         // Determine which step to show
         if (profileExists && orgExists && farmsExist) {
@@ -232,20 +255,19 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     try {
       let organizationId = existingOrgId;
 
-      // 1. Create or update user profile if not exists
-      if (!hasExistingProfile) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            ...profileData
-          });
+      // 1. Create or update user profile (always update to ensure required fields are present)
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          ...profileData,
+          updated_at: new Date().toISOString()
+        });
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw new Error(`Erreur lors de la création du profil: ${profileError.message}`);
-        }
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error(`Erreur lors de la création du profil: ${profileError.message}`);
       }
 
       // 2. Create organization if not exists
