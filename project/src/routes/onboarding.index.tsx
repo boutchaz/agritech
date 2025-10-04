@@ -8,21 +8,22 @@ export const Route = createFileRoute('/onboarding/')({
 });
 
 function OnboardingPage() {
-  const { user, needsOnboarding, loading } = useAuth();
+  const { user, needsOnboarding, loading, profile } = useAuth();
   const navigate = useNavigate();
 
   console.log('🔍 OnboardingPage state:', { user: !!user, needsOnboarding, loading });
   console.log('🔍 OnboardingPage user details:', user ? { id: user.id, email: user.email } : null);
 
   useEffect(() => {
-    console.log('🔍 OnboardingPage useEffect:', { loading, needsOnboarding });
-    // If user doesn't need onboarding, redirect to dashboard
-    if (!loading && !needsOnboarding) {
-      console.log('❌ Redirecting away from onboarding (user does not need onboarding)');
-      console.log('🔍 DEBUG: Temporarily disabling redirect to debug onboarding issue');
-      // navigate({ to: '/' }); // Temporarily commented out for debugging
+    console.log('🔍 OnboardingPage useEffect:', { loading, needsOnboarding, profile: !!profile });
+    // Only redirect if user truly doesn't need onboarding AND has a complete profile
+    if (!loading && !needsOnboarding && user && profile && profile.first_name && profile.last_name) {
+      console.log('✅ User has complete profile, redirecting to dashboard');
+      navigate({ to: '/' });
+    } else if (!loading && !needsOnboarding && user) {
+      console.log('🔍 User profile incomplete or missing, staying on onboarding');
     }
-  }, [needsOnboarding, loading, navigate]);
+  }, [needsOnboarding, loading, navigate, user, profile]);
 
   const handleComplete = async () => {
     // After onboarding, redirect to subscription page to complete payment
@@ -49,34 +50,5 @@ function OnboardingPage() {
   }
 
   console.log('✅ Rendering OnboardingFlow component');
-  
-  // Debug: Show onboarding even if needsOnboarding is false
-  if (!needsOnboarding) {
-    console.log('🔍 DEBUG: needsOnboarding is false, but showing onboarding anyway for debugging');
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Debug: Onboarding Page
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              needsOnboarding: {needsOnboarding ? 'true' : 'false'}
-            </p>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              User: {user ? `${user.email} (${user.id})` : 'No user'}
-            </p>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Loading: {loading ? 'true' : 'false'}
-            </p>
-            <div className="mt-6">
-              <OnboardingFlow user={user} onComplete={handleComplete} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
   return <OnboardingFlow user={user} onComplete={handleComplete} />;
 }
