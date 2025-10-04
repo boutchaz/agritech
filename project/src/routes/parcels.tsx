@@ -158,13 +158,13 @@ const AppContent: React.FC = () => {
     if (currentOrganization) {
       fetchFarms();
     }
-  }, [currentOrganization]);
+  }, [currentOrganization, fetchFarms]);
 
   useEffect(() => {
     if (currentOrganization && farms.length > 0) {
       fetchParcels();
     }
-  }, [currentOrganization, currentFarm, selectedFarmId, farms]);
+  }, [currentOrganization, currentFarm, selectedFarmId, farms, fetchParcels]);
 
   const deleteParcel = async (parcelId: string) => {
     try {
@@ -258,7 +258,6 @@ const AppContent: React.FC = () => {
       if (parcelsError) {
         console.error('Error fetching parcels:', parcelsError);
       } else {
-        console.log('Fetched parcels:', parcelsData); // Debug log
         setParcels(parcelsData || []);
         // Sensors disabled: ensure empty
         setSensorData([]);

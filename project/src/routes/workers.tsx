@@ -25,7 +25,7 @@ function WorkersPage() {
   const [activeModule, setActiveModule] = useState('workers');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
-  const [farms, setFarms] = useState<any[]>([]);
+  const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'list' | 'calculator'>('list');
 
@@ -38,7 +38,7 @@ function WorkersPage() {
     if (currentOrganization) {
       fetchFarms();
     }
-  }, [currentOrganization]);
+  }, [currentOrganization, fetchFarms]);
 
   const fetchFarms = async () => {
     if (!currentOrganization?.id) {
