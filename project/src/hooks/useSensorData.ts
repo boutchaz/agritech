@@ -38,7 +38,7 @@ export function useSensorData() {
     });
 
     // Simulate sensor data for development
-    if (!DISABLE_SENSORS && process.env.NODE_ENV === 'development') {
+    if (!DISABLE_SENSORS && import.meta.env.DEV) {
       const interval = setInterval(() => {
         const mockData: SensorData = {
           id: Date.now().toString(),

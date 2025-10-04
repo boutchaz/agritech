@@ -37,7 +37,7 @@ const ProductApplications: React.FC = () => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [_selectedProduct, setSelectedProduct] = useState<string>('');
   const [farmId, setFarmId] = useState<string | null>(null);
 
   const currency = currentOrganization?.currency || 'EUR';
@@ -132,7 +132,7 @@ const ProductApplications: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('product_applications')
         .insert([{
           ...newApplication,

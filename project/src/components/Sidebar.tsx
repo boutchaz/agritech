@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, UserCog, Wallet, FileSpreadsheet, Network, Satellite, Menu, X } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';

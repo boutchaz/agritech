@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, ShoppingCart, AlertTriangle, Search, Edit2, Trash2, X, Users, Warehouse, Building2, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { FormField } from './ui/FormField';

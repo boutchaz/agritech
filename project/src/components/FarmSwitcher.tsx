@@ -17,7 +17,7 @@ interface FarmSwitcherProps {
 const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newFarm, setNewFarm] = useState({

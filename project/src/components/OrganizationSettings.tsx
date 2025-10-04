@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Users, Mail, Phone, MapPin, Globe, AlertCircle, Loader2 } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';

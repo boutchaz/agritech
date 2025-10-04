@@ -6,7 +6,6 @@ import {
   Plus
 } from 'lucide-react';
 import { Can } from '../lib/casl';
-import { LimitWarning } from './authorization/LimitWarning';
 
 interface FarmNode {
   farm_id: string;

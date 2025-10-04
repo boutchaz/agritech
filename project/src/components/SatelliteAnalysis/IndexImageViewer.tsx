@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Grid3X3, Activity, MousePointer } from 'lucide-react';
+import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
   VEGETATION_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
-  IndexImageResponse,
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
@@ -276,7 +275,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           {viewMode === 'grid' ? (
             /* Grid View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {generateImagesMutation.data.map((imageData, index) => (
+              {generateImagesMutation.data.map((imageData) => (
                 <div key={imageData.index} className="bg-white border rounded-lg overflow-hidden shadow-sm">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-2">

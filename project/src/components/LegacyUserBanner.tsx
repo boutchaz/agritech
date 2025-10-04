@@ -1,19 +1,9 @@
-import { Info, Sparkles, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useAuth } from './MultiTenantAuthProvider';
-import { useSubscription } from '../hooks/useSubscription';
-
 const LegacyUserBanner = () => {
-  const navigate = useNavigate();
-  const { currentOrganization } = useAuth();
-  const { data: subscription } = useSubscription();
-  const [dismissed, setDismissed] = useState(false);
-
   // This banner is disabled - all users require subscriptions
   // Keeping the component for potential future use
   return null;
 
+  /* Disabled code for future reference
   return (
     <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-b border-purple-200 dark:border-purple-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -56,6 +46,7 @@ const LegacyUserBanner = () => {
       </div>
     </div>
   );
+  */
 };
 
 export default LegacyUserBanner;

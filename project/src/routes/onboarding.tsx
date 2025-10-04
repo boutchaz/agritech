@@ -1,8 +1,7 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/onboarding')({
-  beforeLoad: ({ context }) => {
+  beforeLoad: () => {
     // Redirect to dashboard if user doesn't need onboarding
     // This will be checked by the auth provider
   },

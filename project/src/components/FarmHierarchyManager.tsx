@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  Building2, 
-  Plus, 
-  Users, 
-  MapPin, 
-  ChevronDown, 
+import {
+  Building2,
+  Plus,
+  Users,
+  MapPin,
+  ChevronDown,
   ChevronRight,
   Edit,
   Trash2,
   UserPlus,
-  Settings,
   TreePine
 } from 'lucide-react';
 
@@ -52,7 +51,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [expandedFarms, setExpandedFarms] = useState<Set<string>>(new Set());
   const [showCreateFarm, setShowCreateFarm] = useState(false);
-  const [showManageRoles, setShowManageRoles] = useState<string | null>(null);
+  const [_showManageRoles, setShowManageRoles] = useState<string | null>(null);
   const [selectedParentFarm, setSelectedParentFarm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

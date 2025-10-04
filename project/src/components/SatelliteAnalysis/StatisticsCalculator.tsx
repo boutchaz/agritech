@@ -1,11 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { BarChart3, Download, Cloud, AlertTriangle, CheckCircle, Calendar, Database, TrendingUp, Info } from 'lucide-react';
+import { BarChart3, Download, Cloud, AlertTriangle, CheckCircle, Database, TrendingUp, Info } from 'lucide-react';
 import {
   satelliteApi,
   VegetationIndexType,
   VEGETATION_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
-  ParcelStatisticsRequest,
   ParcelStatisticsResponse,
   CloudCoverageCheckResponse,
   convertBoundaryToGeoJSON,

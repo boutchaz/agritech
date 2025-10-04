@@ -5,7 +5,6 @@ import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useParcels } from '../hooks/useParcels';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
-import SensorChart from './SensorChart';
 import { useNavigate } from '@tanstack/react-router';
 
 interface DashboardProps {
@@ -13,8 +12,8 @@ interface DashboardProps {
   settings: DashboardSettings;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sensorData, settings }) => {
-  const { latestReadings, sensorData: sensorDataHook, isConnected } = useSensorData();
+const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
+  const { latestReadings, isConnected } = useSensorData();
   const { currentFarm } = useAuth();
   const farmId = currentFarm?.id ?? null;
   const { parcels, loading: parcelsLoading } = useParcels(farmId);

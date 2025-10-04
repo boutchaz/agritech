@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cloud, CloudRain, Sun, Wind } from 'lucide-react';
+import { Cloud, CloudRain, Wind } from 'lucide-react';
 import { useWeatherForecast } from '../hooks/useWeatherForecast';
 
 interface WeatherForecastProps {

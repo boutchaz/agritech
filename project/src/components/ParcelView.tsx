@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Droplets, Thermometer, Wind, FlaskRound as Flask, Calendar, LineChart, AlertTriangle, Leaf, Edit2 } from 'lucide-react';
-import type { Parcel } from '../types';
+import type { Parcel, SoilAnalysis } from '../types';
 import SoilAnalysisForm from './SoilAnalysisForm';
 
 interface ParcelViewProps {

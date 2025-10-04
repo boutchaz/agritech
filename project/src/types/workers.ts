@@ -250,9 +250,10 @@ export const getCompensationDisplay = (worker: Worker): string => {
       return worker.monthly_salary ? `${worker.monthly_salary.toFixed(2)} DH/mois` : 'N/A';
     case 'daily_worker':
       return worker.daily_rate ? `${worker.daily_rate.toFixed(2)} DH/jour` : 'N/A';
-    case 'metayage':
+    case 'metayage': {
       const typeLabel = worker.metayage_type ? getMetayageTypeLabel(worker.metayage_type) : 'Custom';
       return worker.metayage_percentage ? `${worker.metayage_percentage}% (${typeLabel})` : 'N/A';
+    }
     default:
       return 'N/A';
   }

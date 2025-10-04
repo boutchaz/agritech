@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, X, Edit, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye } from 'lucide-react';
+import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
@@ -7,7 +7,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
-import { Can, useCan } from '../lib/casl';
+import { Can } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
 
 interface OrganizationUser {
@@ -46,7 +46,7 @@ const UsersSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteUser, setShowInviteUser] = useState(false);
-  const [editingUser, setEditingUser] = useState<OrganizationUser | null>(null);
+  const [_editingUser, _setEditingUser] = useState<OrganizationUser | null>(null);
 
   const [inviteUser, setInviteUser] = useState<InviteUser>({
     email: '',

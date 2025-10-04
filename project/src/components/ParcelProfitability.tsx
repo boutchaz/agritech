@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Plus, Loader2, PieChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, Loader2, PieChart } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -11,7 +11,7 @@ interface ParcelProfitabilityProps {
   parcelName: string;
 }
 
-const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId, parcelName }) => {
+const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
   const { currentOrganization, user } = useAuth();
   const queryClient = useQueryClient();
 

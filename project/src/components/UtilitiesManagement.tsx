@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { useAuth } from './MultiTenantAuthProvider';
-import { useRoleBasedAccess, PermissionGuard, RoleGuard } from '../hooks/useRoleBasedAccess';
+import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 
 interface Utility {
   id: string;
@@ -52,7 +52,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 
 const UtilitiesManagement: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
-  const { hasPermission, hasRole, userRole } = useRoleBasedAccess();
+  const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
   const [utilities, setUtilities] = useState<Utility[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +109,7 @@ const UtilitiesManagement: React.FC = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      const { data: _data, error } = await supabase.storage
         .from('invoices')
         .upload(fileName, file, {
           cacheControl: '3600',

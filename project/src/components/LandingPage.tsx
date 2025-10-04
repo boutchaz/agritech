@@ -9,7 +9,6 @@ import {
   Droplets,
   TrendingUp,
   Boxes,
-  Calendar,
   Shield,
   Zap,
   CheckCircle,
@@ -21,7 +20,7 @@ import {
   Building2,
   Clock,
 } from 'lucide-react';
-import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar';
+import { SUBSCRIPTION_PLANS } from '../lib/polar';
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/hero-bg.avif';
 

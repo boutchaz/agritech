@@ -231,8 +231,6 @@ export const useInventory = () => useMultiTenantData({
 });
 
 export const useFarms = () => {
-  const { currentOrganization } = useAuth();
-
   return useMultiTenantData({
     table: 'farms',
     columns: '*',

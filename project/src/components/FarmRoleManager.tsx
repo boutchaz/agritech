@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  Users, 
-  UserPlus, 
-  Shield, 
-  X, 
-  Check,
+import {
+  Users,
+  UserPlus,
+  Shield,
+  X,
   AlertCircle,
   Crown,
   UserCheck,

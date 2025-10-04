@@ -1,3 +1,4 @@
+import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
@@ -39,8 +40,8 @@ const AppContent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, setModules] = useState(mockModules);
-  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>({
+  const [modules, _setModules] = useState(mockModules);
+  const [dashboardSettings, _setDashboardSettings] = useState<DashboardSettings>({
     showSoilData: true,
     showClimateData: true,
     showIrrigationData: true,

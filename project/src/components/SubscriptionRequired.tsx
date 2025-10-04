@@ -1,3 +1,4 @@
+import React from 'react';
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from './MultiTenantAuthProvider';

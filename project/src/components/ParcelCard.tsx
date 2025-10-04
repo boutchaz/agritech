@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Minus, FlaskConical as Flask, Wifi, Satellite, BarChart3 as ChartBar, Database, Brain, FileSpreadsheet, Sprout, MapPin, Droplets, Trees as Tree, DollarSign, Cloud } from 'lucide-react';
+import React, { useMemo, useCallback } from 'react';
+import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
 import { useRecommendations } from '../hooks/useRecommendations';
-import WeatherForecast from './WeatherForecast';
 import ProductApplications from './ProductApplications';
 import { useNavigate } from '@tanstack/react-router';
 import IndicesCalculator from './SatelliteAnalysis/IndicesCalculator';
@@ -38,7 +37,7 @@ interface ParcelCardProps {
 }
 
 const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   // Memoize the module object to prevent infinite re-renders
   const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
@@ -319,7 +318,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
           </div>
         );
 
-      case 'fruit-trees':
+      case 'fruit-trees': {
         const currentYear = new Date().getFullYear();
         const treeAge = parcel.planting_year ? currentYear - parcel.planting_year : null;
 
@@ -478,6 +477,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             )}
           </div>
         );
+      }
 
       case 'yield':
         return (

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import type { Parcel, SoilAnalysis, ClimateData } from '../types';
+import { useState } from 'react';
+import type { Parcel } from '../types';
+import type { SoilAnalysis } from '../types/analysis';
 
 export function useParcelData() {
   const [parcels, setParcels] = useState<Parcel[]>([]);

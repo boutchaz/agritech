@@ -99,21 +99,6 @@ export interface BatchProcessingRequest {
   priority?: number; // 1-10
 }
 
-export interface CloudCoverageCheckRequest {
-  geometry: GeoJSONGeometry;
-  date_range: DateRangeRequest;
-  max_cloud_coverage?: number;
-}
-
-export interface CloudCoverageCheckResponse {
-  has_suitable_images: boolean;
-  available_images_count: number;
-  min_cloud_coverage?: number;
-  max_cloud_coverage?: number;
-  recommended_date?: string;
-  metadata: Record<string, any>;
-}
-
 export interface SatelliteData {
   id: string;
   parcel_id: string;

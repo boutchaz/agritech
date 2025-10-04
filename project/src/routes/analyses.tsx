@@ -1,3 +1,4 @@
+import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
@@ -32,7 +33,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('analyses');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);

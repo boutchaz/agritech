@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Droplets, Calendar, Clock, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
+import { Droplets, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
 import { supabase } from '../lib/supabase';

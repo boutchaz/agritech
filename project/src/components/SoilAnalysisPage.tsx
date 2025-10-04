@@ -20,7 +20,7 @@ interface Parcel {
 }
 
 const SoilAnalysisPage: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentFarm } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);

@@ -1,3 +1,4 @@
+import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
@@ -26,7 +27,7 @@ const AppContent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('day-laborers');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, setModules] = useState(mockModules);
+  const [modules, _setModules] = useState(mockModules);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);

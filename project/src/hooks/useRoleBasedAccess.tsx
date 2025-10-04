@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import type { UserRole, UserPermission, ResourceType, ActionType, Role } from '../types/auth';
+import type { UserRole, UserPermission, ResourceType, ActionType } from '../types/auth';
 
 interface RoleBasedAccess {
   userRole: UserRole | null;

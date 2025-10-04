@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, Info, Save } from 'lucide-react';
 import { useWorkers, useCalculateMetayageShare, useCreateMetayageSettlement } from '../../hooks/useWorkers';
 import { calculateMetayageShare } from '../../types/workers';
-import type { Worker, CalculationBasis } from '../../types/workers';
+import type { CalculationBasis } from '../../types/workers';
 
 interface MetayageCalculatorProps {
   organizationId: string;
@@ -16,7 +16,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   onSuccess,
 }) => {
   const { data: workers = [] } = useWorkers(organizationId, farmId);
-  const calculateShare = useCalculateMetayageShare();
+  const _calculateShare = useCalculateMetayageShare();
   const createSettlement = useCreateMetayageSettlement();
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');

@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { X, Save, UserPlus } from 'lucide-react';
-import type { Worker, WorkerFormData, WorkerType, MetayageType } from '../../types/workers';
+import type { Worker, WorkerFormData } from '../../types/workers';
 import {
   WORKER_TYPE_OPTIONS,
   METAYAGE_TYPE_OPTIONS,
   CALCULATION_BASIS_OPTIONS,
-  PAYMENT_FREQUENCY_OPTIONS,
 } from '../../types/workers';
 import { useCreateWorker, useUpdateWorker } from '../../hooks/useWorkers';
 
@@ -79,7 +78,6 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const {
     register,
     handleSubmit,
-    control,
     watch,
     setValue,
     formState: { errors, isSubmitting },

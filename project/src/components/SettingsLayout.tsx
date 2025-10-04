@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { User, Building, Boxes, Users, Sliders, LayoutGrid, CreditCard } from 'lucide-react';
+import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User } from 'lucide-react';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;

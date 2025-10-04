@@ -106,7 +106,7 @@ const MapComponent: React.FC<MapProps> = ({
     planting_type: ''
   });
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('osm');
-  const [showGeolocPrompt, setShowGeolocPrompt] = useState(false);
+  const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelDetails | null>(null);
@@ -162,10 +162,11 @@ const MapComponent: React.FC<MapProps> = ({
     end_date: new Date().toISOString().split('T')[0]
   });
 
-  const { addParcel, deleteParcel, parcels: hookParcels } = farmId ? useParcels(farmId) : { addParcel: null, deleteParcel: null, parcels: [] };
+  // Always call the hook, but pass farmId which might be undefined
+  const { addParcel, deleteParcel, parcels: hookParcels } = useParcels(farmId || '');
 
-  // Use prop parcels if provided, otherwise fall back to hook parcels
-  const parcels = Array.isArray(propParcels) ? propParcels : (Array.isArray(hookParcels) ? hookParcels : []);
+  // Use prop parcels if provided, otherwise fall back to hook parcels (only if farmId exists)
+  const parcels = Array.isArray(propParcels) ? propParcels : (farmId && Array.isArray(hookParcels) ? hookParcels : []);
   const { 
     calculateIndices, 
     getTimeSeries, 
@@ -189,7 +190,9 @@ const MapComponent: React.FC<MapProps> = ({
           if (!asked && (result.state === 'prompt' || result.state === 'granted')) {
             setShowGeolocPrompt(true);
           }
-        } catch {}
+        } catch {
+          // Ignore errors from permissions query
+        }
       });
     }
   }, [loadAvailableIndices]);
@@ -392,13 +395,17 @@ const MapComponent: React.FC<MapProps> = ({
       }
 
       setLocationPermission('granted');
-      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}
+      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {
+        // Ignore localStorage errors
+      }
       setShowGeolocPrompt(false);
     } catch (error) {
       console.error('Location error:', error);
       setLocationPermission('denied');
       alert(error instanceof Error ? error.message : 'Could not get your location');
-      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}
+      try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {
+        // Ignore localStorage errors
+      }
       setShowGeolocPrompt(false);
     }
   };
@@ -1728,7 +1735,7 @@ const MapComponent: React.FC<MapProps> = ({
                             vectorSourceRef.current.removeFeature(parcelFeature);
                           }
                         }
-                      } catch (error) {
+                      } catch (_error) {
                         alert('Erreur lors de la suppression de la parcelle');
                       }
                     }

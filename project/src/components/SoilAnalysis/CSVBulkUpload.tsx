@@ -22,7 +22,6 @@ interface ParsedAnalysis {
 
 const CSVBulkUpload: React.FC<CSVBulkUploadProps> = ({ onImportComplete }) => {
   const [showModal, setShowModal] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedAnalysis[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
@@ -107,7 +106,6 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
     const uploadedFile = event.target.files?.[0];
     if (!uploadedFile) return;
 
-    setFile(uploadedFile);
     setErrors([]);
     setParsedData([]);
     setImportResults(null);
@@ -173,7 +171,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
           } else {
             successCount++;
           }
-        } catch (err) {
+        } catch {
           failedCount++;
         }
       }

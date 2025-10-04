@@ -16,20 +16,20 @@ interface BaseLookup {
   is_global?: boolean;
 }
 
-interface CropType extends BaseLookup {}
+type CropType = BaseLookup;
 
-interface CropCategory extends BaseLookup {
+interface _CropCategory extends BaseLookup {
   type_id: string;
 }
 
-interface CropVariety extends BaseLookup {
+interface _CropVariety extends BaseLookup {
   category_id: string;
   days_to_maturity: number | null;
 }
 
-interface ProductCategory extends BaseLookup {}
+type ProductCategory = BaseLookup;
 
-interface ProductSubcategory extends BaseLookup {
+interface _ProductSubcategory extends BaseLookup {
   category_id: string;
 }
 
@@ -37,7 +37,7 @@ interface TaskCategory extends BaseLookup {
   color: string;
 }
 
-interface TaskTemplate extends BaseLookup {
+interface _TaskTemplate extends BaseLookup {
   category_id: string;
   estimated_duration: number | null;
   is_recurring: boolean;
@@ -105,59 +105,47 @@ export function useCropTypes() {
   const addCropType = async (name: string, description?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    try {
-      const { data, error } = await supabase
-        .from('crop_types')
-        .insert([{
-          name,
-          description,
-          organization_id: currentOrganization.id
-        }])
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('crop_types')
+      .insert([{
+        name,
+        description,
+        organization_id: currentOrganization.id
+      }])
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCropTypes(prev => [...prev, { ...data, is_global: false }]);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCropTypes(prev => [...prev, { ...data, is_global: false }]);
+    return data;
   };
 
   const updateCropType = async (id: string, updates: Partial<Pick<CropType, 'name' | 'description'>>) => {
-    try {
-      const { data, error } = await supabase
-        .from('crop_types')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('crop_types')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCropTypes(prev => prev.map(item =>
-        item.id === id ? { ...data, is_global: data.organization_id === null } : item
-      ));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCropTypes(prev => prev.map(item =>
+      item.id === id ? { ...data, is_global: data.organization_id === null } : item
+    ));
+    return data;
   };
 
   const deleteCropType = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('crop_types')
-        .delete()
-        .eq('id', id);
+    const { error } = await supabase
+      .from('crop_types')
+      .delete()
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCropTypes(prev => prev.filter(item => item.id !== id));
-    } catch (err) {
-      throw err;
-    }
+    setCropTypes(prev => prev.filter(item => item.id !== id));
   };
 
   return {
@@ -219,59 +207,47 @@ export function useProductCategories() {
   const addCategory = async (name: string, description?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    try {
-      const { data, error } = await supabase
-        .from('product_categories')
-        .insert([{
-          name,
-          description,
-          organization_id: currentOrganization.id
-        }])
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('product_categories')
+      .insert([{
+        name,
+        description,
+        organization_id: currentOrganization.id
+      }])
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => [...prev, { ...data, is_global: false }]);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => [...prev, { ...data, is_global: false }]);
+    return data;
   };
 
   const updateCategory = async (id: string, updates: Partial<Pick<ProductCategory, 'name' | 'description'>>) => {
-    try {
-      const { data, error } = await supabase
-        .from('product_categories')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('product_categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => prev.map(item =>
-        item.id === id ? { ...data, is_global: data.organization_id === null } : item
-      ));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => prev.map(item =>
+      item.id === id ? { ...data, is_global: data.organization_id === null } : item
+    ));
+    return data;
   };
 
   const deleteCategory = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('product_categories')
-        .delete()
-        .eq('id', id);
+    const { error } = await supabase
+      .from('product_categories')
+      .delete()
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => prev.filter(item => item.id !== id));
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => prev.filter(item => item.id !== id));
   };
 
   return {
@@ -333,63 +309,51 @@ export function useTaskCategories() {
   const addCategory = async (name: string, description?: string, color?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    try {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .insert([{
-          name,
-          description,
-          color: color || '#3B82F6',
-          organization_id: currentOrganization.id
-        }])
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('task_categories')
+      .insert([{
+        name,
+        description,
+        color: color || '#3B82F6',
+        organization_id: currentOrganization.id
+      }])
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => [...prev, { ...data, is_global: false }]);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => [...prev, { ...data, is_global: false }]);
+    return data;
   };
 
   const updateCategory = async (
     id: string,
     updates: Partial<Pick<TaskCategory, 'name' | 'description' | 'color'>>
   ) => {
-    try {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('task_categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => prev.map(item =>
-        item.id === id ? { ...data, is_global: data.organization_id === null } : item
-      ));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => prev.map(item =>
+      item.id === id ? { ...data, is_global: data.organization_id === null } : item
+    ));
+    return data;
   };
 
   const deleteCategory = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('task_categories')
-        .delete()
-        .eq('id', id);
+    const { error } = await supabase
+      .from('task_categories')
+      .delete()
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setCategories(prev => prev.filter(item => item.id !== id));
-    } catch (err) {
-      throw err;
-    }
+    setCategories(prev => prev.filter(item => item.id !== id));
   };
 
   return {
@@ -451,63 +415,51 @@ export function useTestTypes() {
   const addTestType = async (name: string, description?: string, parameters?: TestTypeParameters) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    try {
-      const { data, error } = await supabase
-        .from('test_types')
-        .insert([{
-          name,
-          description,
-          parameters,
-          organization_id: currentOrganization.id
-        }])
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('test_types')
+      .insert([{
+        name,
+        description,
+        parameters,
+        organization_id: currentOrganization.id
+      }])
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setTestTypes(prev => [...prev, { ...data, is_global: false }]);
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setTestTypes(prev => [...prev, { ...data, is_global: false }]);
+    return data;
   };
 
   const updateTestType = async (
     id: string,
     updates: Partial<Pick<TestType, 'name' | 'description' | 'parameters'>>
   ) => {
-    try {
-      const { data, error } = await supabase
-        .from('test_types')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('test_types')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setTestTypes(prev => prev.map(item =>
-        item.id === id ? { ...data, is_global: data.organization_id === null } : item
-      ));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    setTestTypes(prev => prev.map(item =>
+      item.id === id ? { ...data, is_global: data.organization_id === null } : item
+    ));
+    return data;
   };
 
   const deleteTestType = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('test_types')
-        .delete()
-        .eq('id', id);
+    const { error } = await supabase
+      .from('test_types')
+      .delete()
+      .eq('id', id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setTestTypes(prev => prev.filter(item => item.id !== id));
-    } catch (err) {
-      throw err;
-    }
+    setTestTypes(prev => prev.filter(item => item.id !== id));
   };
 
   return {

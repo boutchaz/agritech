@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Plus, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -160,7 +160,6 @@ const ProfitabilityDashboard: React.FC = () => {
 
   const isLoading = costsLoading || revenuesLoading;
   const currency = currentOrganization?.currency || 'EUR';
-  const currencySymbol = currentOrganization?.currency_symbol || '€';
 
   return (
     <div className="p-6 space-y-6">

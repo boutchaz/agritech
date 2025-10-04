@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase, type Worker as DBWorker, type InsertDto, type UpdateDto } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { Worker, WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
-
-// Type-safe insert/update DTOs
-type WorkerInsert = InsertDto<'workers'>;
-type WorkerUpdate = UpdateDto<'workers'>;
 
 // Fetch workers for an organization
 export const useWorkers = (organizationId: string | null, farmId?: string | null) => {

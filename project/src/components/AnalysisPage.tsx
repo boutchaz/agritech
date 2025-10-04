@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, FileText, Trash2, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
+import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import { useAnalyses } from '../hooks/useAnalyses';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
@@ -22,7 +22,7 @@ interface Parcel {
 }
 
 const AnalysisPage: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentFarm } = useAuth();
   const [activeTab, setActiveTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');

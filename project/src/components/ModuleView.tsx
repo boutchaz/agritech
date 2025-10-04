@@ -26,7 +26,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
   const [allParcels, setAllParcels] = useState<Parcel[]>([]);
   const [showParcelManager, setShowParcelManager] = useState(false);
   const [loadingParcels, setLoadingParcels] = useState(false);
-  const [parcelError, setParcelError] = useState<string | null>(null);
+  const [_parcelError, setParcelError] = useState<string | null>(null);
   const [activeParcelTab, setActiveParcelTab] = useState<{[parcelId: string]: string}>({});
   const [currentParcelIndex, setCurrentParcelIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);

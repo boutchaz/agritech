@@ -33,7 +33,7 @@ export function formatCurrency(amount: number, currencyCode: string): string {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  } catch (error) {
+  } catch (_error) {
     // Fallback if Intl.NumberFormat fails
     return `${currency.symbol}${amount.toFixed(2)}`;
   }

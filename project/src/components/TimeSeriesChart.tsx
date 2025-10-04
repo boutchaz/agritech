@@ -50,7 +50,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   // Create points for hover
   const points = data
     .filter(point => point && point.date !== undefined && point.value !== undefined)
-    .map((point, i) => {
+    .map((point, _i) => {
       const x = (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
       const y = chartHeight - ((point.value - minValue) / valueRange * chartHeight);
       return { x, y, ...point };

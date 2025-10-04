@@ -1,7 +1,6 @@
-import { getArea, getLength } from 'ol/sphere';
+import { getArea } from 'ol/sphere';
 import Polygon from 'ol/geom/Polygon';
 import { transform } from 'ol/proj';
-import { Geometry } from 'ol/geom';
 import VectorSource from 'ol/source/Vector';
 import { Feature } from 'ol';
 import { Modify, Snap } from 'ol/interaction';
@@ -263,7 +262,7 @@ export class ParcelAutomation {
     return edges;
   }
 
-  private static findContours(edges: Uint8ClampedArray): number[][][] {
+  private static findContours(_edges: Uint8ClampedArray): number[][][] {
     const contours: number[][][] = [];
 
     return contours;
@@ -271,15 +270,15 @@ export class ParcelAutomation {
 
   static suggestOptimalParcels(
     farmBoundary: number[][],
-    targetSize: number = 1,
-    orientation: 'north-south' | 'east-west' | 'optimal' = 'optimal'
+    _targetSize: number = 1,
+    _orientation: 'north-south' | 'east-west' | 'optimal' = 'optimal'
   ): ParcelBoundary[] {
     const suggestions: ParcelBoundary[] = [];
 
     return suggestions;
   }
 
-  static mergeAdjacentParcels(parcel1: ParcelBoundary, parcel2: ParcelBoundary): ParcelBoundary | null {
+  static mergeAdjacentParcels(_parcel1: ParcelBoundary, _parcel2: ParcelBoundary): ParcelBoundary | null {
 
     return null;
   }
@@ -287,7 +286,7 @@ export class ParcelAutomation {
   static splitParcel(
     parcel: ParcelBoundary,
     splitLine: number[][],
-    equalArea: boolean = false
+    _equalArea: boolean = false
   ): ParcelBoundary[] {
 
     return [];
@@ -302,7 +301,7 @@ export class ParcelDrawingAssist {
     this.vectorSource = vectorSource;
   }
 
-  enableMagneticSnap(threshold: number = 20): void {
+  enableMagneticSnap(_threshold: number = 20): void {
 
   }
 
@@ -310,7 +309,7 @@ export class ParcelDrawingAssist {
 
   }
 
-  enableParallelMode(referenceFeature: Feature): void {
+  enableParallelMode(_referenceFeature: Feature): void {
 
   }
 

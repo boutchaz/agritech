@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Satellite, TrendingUp, Download, Calendar, BarChart3, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { TimeSeriesResponse, IndexCalculationResponse } from '../services/satelliteIndicesService';
 import TimeSeriesChart from './TimeSeriesChart';

@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, type UserProfile, type Farm, type Organization } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
 
 // Extended organization type with role info from join
 interface OrganizationWithRole extends Organization {
@@ -30,7 +29,7 @@ export const useUserProfile = (userId: string | undefined) => {
         if (!rpcError && rpcData) {
           return rpcData as UserProfile;
         }
-      } catch (e) {
+      } catch (_e) {
         console.log('RPC function not available, falling back to direct query');
       }
 

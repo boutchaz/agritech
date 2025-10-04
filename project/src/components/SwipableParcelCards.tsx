@@ -210,7 +210,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleDragEnd}
         >
-          {parcels.map((parcel, index) => {
+          {parcels.map((parcel, _index) => {
             const data = getParcelData(parcel);
             return (
               <div
