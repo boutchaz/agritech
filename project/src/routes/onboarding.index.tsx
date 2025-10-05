@@ -1,21 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export const Route = createFileRoute('/onboarding/')({
   component: OnboardingPage,
 });
 
 function OnboardingPage() {
-  const { loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Redirect all users directly to dashboard - onboarding is temporarily disabled
-    if (!loading) {
-      navigate({ to: '/' });
-    }
-  }, [loading, navigate]);
+    console.log('🔄 Redirecting from onboarding to dashboard');
+    navigate({ to: '/' });
+  }, [navigate]);
 
   // Show loading spinner while redirecting
   return (

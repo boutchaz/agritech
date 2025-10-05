@@ -1,17 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/onboarding')({
   beforeLoad: () => {
-    // Redirect to dashboard if user doesn't need onboarding
-    // This will be checked by the auth provider
+    // Redirect to dashboard - onboarding is temporarily disabled
+    throw redirect({
+      to: '/',
+    });
   },
-  component: OnboardingLayout,
 });
-
-function OnboardingLayout() {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* This will be handled by child routes */}
-    </div>
-  );
-}
