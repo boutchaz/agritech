@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import React, { useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../hooks/useAuth'
+import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
 import { setupNewUser } from '../utils/authSetup'
 
 export const Route = createFileRoute('/register')({
@@ -83,103 +84,101 @@ function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <a
-              href="/login"
-              className="font-medium text-green-600 hover:text-green-500"
-            >
-              sign in to your existing account
-            </a>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <FormField
-              label="Organization Name"
-              htmlFor="organization"
+    <AuthLayout
+      title="Create your Agritech account"
+      subtitle="Get started in minutes"
+      helperText="Set up a workspace for your organization and invite your team once you're inside. You'll receive a confirmation email after signing up."
+      switchLabel="Already have an account?"
+      switchHref="/login"
+      switchCta="Sign in"
+    >
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="space-y-4">
+          <FormField
+            label="Organization name"
+            htmlFor="organization"
+            helper="Use the name your team recognizes (e.g. farm, cooperative, or agribusiness)."
+            required
+          >
+            <Input
+              id="organization"
+              name="organization"
+              type="text"
               required
-              helper="Your farm or company name"
-            >
-              <Input
-                id="organization"
-                name="organization"
-                type="text"
-                required
-                placeholder="Your farm or company name"
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                data-testid="register-organization"
-              />
-            </FormField>
+              placeholder="Green Acres Cooperative"
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
+              data-testid="register-organization"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            />
+          </FormField>
 
-            <FormField label="Email address" htmlFor="email-address" required>
-              <Input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                data-testid="register-email"
-              />
-            </FormField>
+          <FormField label="Email address" htmlFor="email-address" required>
+            <Input
+              id="email-address"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="you@farm.co"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              data-testid="register-email"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            />
+          </FormField>
 
-            <FormField label="Password" htmlFor="password" required>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                data-testid="register-password"
-              />
-            </FormField>
+          <FormField
+            label="Password"
+            htmlFor="password"
+            helper="Use at least 8 characters with a mix of letters and numbers."
+            required
+          >
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              placeholder="Create a strong password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              data-testid="register-password"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            />
+          </FormField>
 
-            <FormField label="Confirm Password" htmlFor="confirm-password" required>
-              <Input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                data-testid="register-confirm-password"
-              />
-            </FormField>
+          <FormField label="Confirm password" htmlFor="confirm-password" required>
+            <Input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              data-testid="register-confirm-password"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            />
+          </FormField>
+        </div>
+
+        {error && (
+          <div className="rounded-2xl border border-red-200/70 bg-red-50/90 px-4 py-3 text-sm text-red-700 shadow-sm">
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-              data-testid="register-submit"
-            >
-              {isLoading ? 'Creating account...' : 'Sign up'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="register-submit"
+        >
+          {isLoading ? 'Creating account...' : 'Sign up'}
+        </button>
+      </form>
+    </AuthLayout>
   )
 }
