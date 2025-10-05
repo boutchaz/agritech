@@ -23,55 +23,67 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
-CREATE TYPE "public"."analysis_type" AS ENUM (
-    'soil',
-    'plant',
-    'water'
-);
+-- Create types only if they don't exist (to handle existing database)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'analysis_type') THEN
+        CREATE TYPE "public"."analysis_type" AS ENUM (
+            'soil',
+            'plant',
+            'water'
+        );
+        ALTER TYPE "public"."analysis_type" OWNER TO "postgres";
+    END IF;
+END $$;
 
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'calculation_basis') THEN
+        CREATE TYPE "public"."calculation_basis" AS ENUM (
+            'gross_revenue',
+            'net_revenue'
+        );
+        ALTER TYPE "public"."calculation_basis" OWNER TO "postgres";
+    END IF;
+END $$;
 
-ALTER TYPE "public"."analysis_type" OWNER TO "postgres";
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'metayage_type') THEN
+        CREATE TYPE "public"."metayage_type" AS ENUM (
+            'khammass',
+            'rebaa',
+            'tholth',
+            'custom'
+        );
+        ALTER TYPE "public"."metayage_type" OWNER TO "postgres";
+    END IF;
+END $$;
 
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_frequency') THEN
+        CREATE TYPE "public"."payment_frequency" AS ENUM (
+            'monthly',
+            'daily',
+            'per_task',
+            'harvest_share'
+        );
+        ALTER TYPE "public"."payment_frequency" OWNER TO "postgres";
+    END IF;
+END $$;
 
-CREATE TYPE "public"."calculation_basis" AS ENUM (
-    'gross_revenue',
-    'net_revenue'
-);
-
-
-ALTER TYPE "public"."calculation_basis" OWNER TO "postgres";
-
-
-CREATE TYPE "public"."metayage_type" AS ENUM (
-    'khammass',
-    'rebaa',
-    'tholth',
-    'custom'
-);
-
-
-ALTER TYPE "public"."metayage_type" OWNER TO "postgres";
-
-
-CREATE TYPE "public"."payment_frequency" AS ENUM (
-    'monthly',
-    'daily',
-    'per_task',
-    'harvest_share'
-);
-
-
-ALTER TYPE "public"."payment_frequency" OWNER TO "postgres";
-
-
-CREATE TYPE "public"."worker_type" AS ENUM (
-    'fixed_salary',
-    'daily_worker',
-    'metayage'
-);
-
-
-ALTER TYPE "public"."worker_type" OWNER TO "postgres";
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'worker_type') THEN
+        CREATE TYPE "public"."worker_type" AS ENUM (
+            'fixed_salary',
+            'daily_worker',
+            'metayage'
+        );
+        ALTER TYPE "public"."worker_type" OWNER TO "postgres";
+    END IF;
+END $$;
 
 
 CREATE OR REPLACE FUNCTION "public"."add_subscription_check_to_table"("table_name" "text") RETURNS "void"
@@ -3221,8 +3233,13 @@ COMMENT ON TABLE "public"."work_records" IS 'Daily work tracking for all worker 
 
 
 
-ALTER TABLE ONLY "public"."analyses"
-    ADD CONSTRAINT "analyses_pkey" PRIMARY KEY ("id");
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'analyses_pkey' AND table_name = 'analyses') THEN
+        ALTER TABLE ONLY "public"."analyses"
+            ADD CONSTRAINT "analyses_pkey" PRIMARY KEY ("id");
+    END IF;
+END $$;
 
 
 

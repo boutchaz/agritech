@@ -85,7 +85,7 @@ export const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
@@ -116,18 +116,19 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
     waitingForOrganization;
 
-  console.log('🔍 MultiTenantAuthProvider loading state:', {
-    authLoading,
-    profileLoading,
-    orgsLoading,
-    farmsLoading,
-    subscriptionLoading,
-    waitingForOrganization,
-    isOnOnboardingPage,
-    loading,
-    organizationsCount: organizations.length,
-    hasCurrentOrg: !!currentOrganization
-  });
+  // Debug loading state (temporarily disabled)
+  // console.log('🔍 MultiTenantAuthProvider loading state:', {
+  //   authLoading,
+  //   profileLoading,
+  //   orgsLoading,
+  //   farmsLoading,
+  //   subscriptionLoading,
+  //   waitingForOrganization,
+  //   isOnOnboardingPage,
+  //   loading,
+  //   organizationsCount: organizations.length,
+  //   hasCurrentOrg: !!currentOrganization
+  // });
 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
   const needsOnboarding = !!(
@@ -141,25 +142,25 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     )
   );
 
-  // Debug onboarding state
-  console.log('🔍 Onboarding debug:', {
-    user: !!user,
-    loading,
-    profile: profile ? {
-      hasProfile: true,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      hasRequiredFields: !!(profile.first_name && profile.last_name)
-    } : { hasProfile: false },
-    organizationsCount: organizations.length,
-    currentOrg: currentOrganization ? {
-      id: currentOrganization.id,
-      name: currentOrganization.name,
-      onboardingCompleted: currentOrganization.onboarding_completed
-    } : null,
-    needsOnboarding,
-    isOnOnboardingPage
-  });
+  // Debug onboarding state (temporarily disabled)
+  // console.log('🔍 Onboarding debug:', {
+  //   user: !!user,
+  //   loading,
+  //   profile: profile ? {
+  //     hasProfile: true,
+  //     firstName: profile.first_name,
+  //     lastName: profile.last_name,
+  //     hasRequiredFields: !!(profile.first_name && profile.last_name)
+  //   } : { hasProfile: false },
+  //   organizationsCount: organizations.length,
+  //   currentOrg: currentOrganization ? {
+  //     id: currentOrganization.id,
+  //     name: currentOrganization.name,
+  //     onboardingCompleted: currentOrganization.onboarding_completed
+  //   } : null,
+  //   needsOnboarding,
+  //   isOnOnboardingPage
+  // });
 
   // Handle organization change
   const handleSetCurrentOrganization = (org: Organization) => {
@@ -330,11 +331,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   // Navigate to onboarding if needed (takes priority over subscription check)
-  useEffect(() => {
-    if (!loading && user && needsOnboarding && !location.pathname.startsWith('/onboarding')) {
-      navigate({ to: '/onboarding' });
-    }
-  }, [needsOnboarding, loading, user, location, navigate]);
+  // TEMPORARILY DISABLED - onboarding is being redesigned
+  // useEffect(() => {
+  //   if (!loading && user && needsOnboarding && !location.pathname.startsWith('/onboarding')) {
+  //     navigate({ to: '/onboarding' });
+  //   }
+  // }, [needsOnboarding, loading, user, location, navigate]);
 
   const value = {
     user,
@@ -375,15 +377,13 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }
 
   // Check subscription status (block access if no valid subscription)
-  // BUT: Skip subscription check if user is still in onboarding
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
   const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
   const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
 
-  // Block access if no valid subscription (except on settings/onboarding pages)
-  // Also skip if user needs onboarding (onboarding takes priority)
-  if (!hasValidSubscription && protectedRoutes && currentOrganization && user && !needsOnboarding) {
+  // Block access if no valid subscription (except on settings pages)
+  if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {
     const reason = !subscription
       ? 'no_subscription'
       : subscription.status === 'canceled'
