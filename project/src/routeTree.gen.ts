@@ -14,6 +14,7 @@ import { Route as UtilitiesRouteImport } from './routes/utilities'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SelectTrialRouteImport } from './routes/select-trial'
 import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analysis'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -22,6 +23,7 @@ import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
@@ -66,6 +68,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SelectTrialRoute = SelectTrialRouteImport.update({
+  id: '/select-trial',
+  path: '/select-trial',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SatelliteAnalysisRoute = SatelliteAnalysisRouteImport.update({
   id: '/satellite-analysis',
   path: '/satellite-analysis',
@@ -104,6 +111,11 @@ const LoginRoute = LoginRouteImport.update({
 const InfrastructureRoute = InfrastructureRouteImport.update({
   id: '/infrastructure',
   path: '/infrastructure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FarmHierarchyRoute = FarmHierarchyRouteImport.update({
@@ -205,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
@@ -213,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
+  '/select-trial': typeof SelectTrialRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -237,6 +251,7 @@ export interface FileRoutesByTo {
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
@@ -244,6 +259,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
+  '/select-trial': typeof SelectTrialRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
@@ -269,6 +285,7 @@ export interface FileRoutesById {
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
@@ -277,6 +294,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
+  '/select-trial': typeof SelectTrialRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -303,6 +321,7 @@ export interface FileRouteTypes {
     | '/day-laborers'
     | '/employees'
     | '/farm-hierarchy'
+    | '/forgot-password'
     | '/infrastructure'
     | '/login'
     | '/onboarding'
@@ -311,6 +330,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/satellite-analysis'
+    | '/select-trial'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -335,6 +355,7 @@ export interface FileRouteTypes {
     | '/day-laborers'
     | '/employees'
     | '/farm-hierarchy'
+    | '/forgot-password'
     | '/infrastructure'
     | '/login'
     | '/parcels'
@@ -342,6 +363,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/satellite-analysis'
+    | '/select-trial'
     | '/soil-analysis'
     | '/stock'
     | '/utilities'
@@ -366,6 +388,7 @@ export interface FileRouteTypes {
     | '/day-laborers'
     | '/employees'
     | '/farm-hierarchy'
+    | '/forgot-password'
     | '/infrastructure'
     | '/login'
     | '/onboarding'
@@ -374,6 +397,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/satellite-analysis'
+    | '/select-trial'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -400,6 +424,7 @@ export interface RootRouteChildren {
   DayLaborersRoute: typeof DayLaborersRoute
   EmployeesRoute: typeof EmployeesRoute
   FarmHierarchyRoute: typeof FarmHierarchyRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   InfrastructureRoute: typeof InfrastructureRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
@@ -408,6 +433,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SatelliteAnalysisRoute: typeof SatelliteAnalysisRoute
+  SelectTrialRoute: typeof SelectTrialRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
@@ -450,6 +476,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/select-trial': {
+      id: '/select-trial'
+      path: '/select-trial'
+      fullPath: '/select-trial'
+      preLoaderRoute: typeof SelectTrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/satellite-analysis': {
@@ -506,6 +539,13 @@ declare module '@tanstack/react-router' {
       path: '/infrastructure'
       fullPath: '/infrastructure'
       preLoaderRoute: typeof InfrastructureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/farm-hierarchy': {
@@ -685,6 +725,7 @@ const rootRouteChildren: RootRouteChildren = {
   DayLaborersRoute: DayLaborersRoute,
   EmployeesRoute: EmployeesRoute,
   FarmHierarchyRoute: FarmHierarchyRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   InfrastructureRoute: InfrastructureRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
@@ -693,6 +734,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SatelliteAnalysisRoute: SatelliteAnalysisRoute,
+  SelectTrialRoute: SelectTrialRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,

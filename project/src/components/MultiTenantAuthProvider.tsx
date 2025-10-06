@@ -95,7 +95,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial'];
 
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
@@ -330,13 +330,13 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setShowAuth(false);
   };
 
-  // Navigate to onboarding if needed (takes priority over subscription check)
-  // TEMPORARILY DISABLED - onboarding is being redesigned
-  // useEffect(() => {
-  //   if (!loading && user && needsOnboarding && !location.pathname.startsWith('/onboarding')) {
-  //     navigate({ to: '/onboarding' });
-  //   }
-  // }, [needsOnboarding, loading, user, location, navigate]);
+  // Redirect to trial selection if user has organization but no subscription
+  useEffect(() => {
+    if (!loading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute) {
+      // User has an organization but no subscription - redirect to trial selection
+      window.location.href = '/select-trial';
+    }
+  }, [loading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute]);
 
   const value = {
     user,
@@ -380,7 +380,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
   const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
-  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage;
+  const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
+  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage && !isOnSelectTrialPage;
 
   // Block access if no valid subscription (except on settings pages)
   if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {

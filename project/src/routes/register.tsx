@@ -5,7 +5,6 @@ import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { setupNewUser } from '../utils/authSetup'
 
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
@@ -39,14 +38,16 @@ function RegisterPage() {
     }
 
     try {
-      // Sign up the user
+      // Sign up the user with organization name in metadata
+      // The backend trigger will automatically create profile and organization
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
-            email_confirm: false
+            email_confirm: false,
+            organization_name: organizationName,
           }
         }
       })
@@ -59,22 +60,9 @@ function RegisterPage() {
       }
 
       if (authData.user) {
-        // Setup new user with profile and organization using authSetup
-        const setupResult = await setupNewUser({
-          userId: authData.user.id,
-          email: authData.user.email!,
-          organizationName: organizationName,
-        })
-
-        if (!setupResult.success) {
-          console.error('User setup failed:', setupResult.error)
-          setError('Account created but setup incomplete. Please try logging in.')
-          return
-        }
-
-        // Reload the page to ensure auth state is fresh and organization data is loaded
-        // This prevents race conditions where MultiTenantAuthProvider queries before setup completes
-        window.location.href = '/onboarding'
+        // User profile and organization will be created automatically by backend trigger
+        // Redirect to trial selection page
+        window.location.href = '/select-trial'
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred during registration')

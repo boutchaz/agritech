@@ -9,43 +9,10 @@ import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import PageHeader from '../components/PageHeader'
 import ParcelCard from '../components/ParcelCard'
-import { supabase } from '../lib/supabase'
+import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
 import type { Module, SensorData } from '../types'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
-interface Parcel {
-  id: string;
-  farm_id: string | null;
-  name: string;
-  description: string | null;
-  area: number | null;
-  area_unit: string | null;
-  boundary?: number[][];
-  calculated_area?: number | null;
-  perimeter?: number | null;
-  soil_type?: string | null;
-  planting_density?: number | null;
-  irrigation_type?: string | null;
-  // Fruit trees specific fields
-  tree_type?: string | null;
-  tree_count?: number | null;
-  planting_year?: number | null;
-  variety?: string | null;
-  rootstock?: string | null;
-  // New parcel fields
-  planting_date?: string | null;
-  planting_type?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface Farm {
-  id: string;
-  name: string;
-  location: string | null;
-  size: number | null;
-  manager_name: string | null;
-}
 
 const mockModules: Module[] = [
   {
@@ -70,10 +37,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('parcels');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
-  const [parcels, setParcels] = useState<Parcel[]>([]);
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sensorData, setSensorData] = useState<SensorData[]>([]);
+  const [_sensorData, _setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(search.parcelId || null);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -83,6 +47,22 @@ const AppContent: React.FC = () => {
 
   // Track if we're currently syncing to prevent loops
   const isSyncingRef = useRef(false);
+
+  // React Query hooks
+  const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
+  const updateParcelMutation = useUpdateParcel();
+  const deleteParcelMutation = useDeleteParcel();
+
+  // Determine which parcels query to use
+  const targetFarmId = selectedFarmId || currentFarm?.id;
+  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading } = useParcelsByFarm(targetFarmId);
+  const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading } = useParcelsByFarms(
+    !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
+  );
+
+  // Get the appropriate parcels data
+  const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
+  const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -154,29 +134,12 @@ const AppContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedParcelId, activeParcelTab, selectedFarmId]);
 
-  useEffect(() => {
-    if (currentOrganization) {
-      fetchFarms();
-    }
-  }, [currentOrganization, fetchFarms]);
+  // Farms and parcels are loaded automatically via React Query hooks
+  // No manual fetching needed
 
-  useEffect(() => {
-    if (currentOrganization && farms.length > 0) {
-      fetchParcels();
-    }
-  }, [currentOrganization, currentFarm, selectedFarmId, farms, fetchParcels]);
-
-  const deleteParcel = async (parcelId: string) => {
+  const handleDeleteParcel = async (parcelId: string) => {
     try {
-      const { error } = await supabase
-        .from('parcels')
-        .delete()
-        .eq('id', parcelId);
-
-      if (error) throw error;
-
-      // Update local state
-      setParcels(prev => prev.filter(p => p.id !== parcelId));
+      await deleteParcelMutation.mutateAsync(parcelId);
       if (selectedParcelId === parcelId) {
         setSelectedParcelId(null);
       }
@@ -186,19 +149,9 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const updateParcel = async (parcelId: string, updates: Partial<Parcel>) => {
+  const handleUpdateParcel = async (parcelId: string, updates: Partial<Parcel>) => {
     try {
-      const { data, error } = await supabase
-        .from('parcels')
-        .update(updates)
-        .eq('id', parcelId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update local state
-      setParcels(prev => prev.map(p => p.id === parcelId ? data : p));
+      await updateParcelMutation.mutateAsync({ id: parcelId, updates });
       setEditingParcel(null);
       setShowEditDialog(false);
     } catch (error) {
@@ -212,62 +165,7 @@ const AppContent: React.FC = () => {
     // Map will automatically center on the selected parcel via the selectedParcelId prop
   };
 
-  const fetchFarms = async () => {
-    if (!currentOrganization?.id) {
-      return;
-    }
 
-    try {
-      const { data: farmsData, error: farmsError } = await supabase
-        .from('farms')
-        .select('id, name, location, size, manager_name')
-        .eq('organization_id', currentOrganization.id)
-        .order('name');
-
-      if (farmsError) {
-        console.error('Error fetching farms:', farmsError);
-      } else {
-        setFarms(farmsData || []);
-      }
-    } catch (error) {
-      console.error('Error in fetchFarms:', error);
-    }
-  };
-
-  const fetchParcels = async () => {
-    try {
-      setLoading(true);
-
-      // Determine which farm to fetch parcels for
-      const targetFarmId = selectedFarmId || currentFarm?.id;
-
-      // Fetch parcels for specific farm or all farms in organization
-      let query = supabase
-        .from('parcels')
-        .select('*');
-
-      if (targetFarmId) {
-        query = query.eq('farm_id', targetFarmId);
-      } else if (farms.length > 0) {
-        const farmIds = farms.map(f => f.id);
-        query = query.in('farm_id', farmIds);
-      }
-
-      const { data: parcelsData, error: parcelsError } = await query;
-
-      if (parcelsError) {
-        console.error('Error fetching parcels:', parcelsError);
-      } else {
-        setParcels(parcelsData || []);
-        // Sensors disabled: ensure empty
-        setSensorData([]);
-      }
-    } catch (error) {
-      console.error('Error in fetchParcels:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!currentOrganization) {
     return (
@@ -443,7 +341,7 @@ const AppContent: React.FC = () => {
                 onParcelSelect={handleParcelSelect}
                 parcels={parcels}
                 onParcelAdded={() => {
-                  fetchParcels();
+                  // React Query will automatically refetch the data
                   setShowAddParcelMap(false);
                 }}
               />
@@ -461,7 +359,7 @@ const AppContent: React.FC = () => {
                           parcel={selectedParcel}
                           activeTab={activeParcelTab}
                           onTabChange={setActiveParcelTab}
-                          sensorData={sensorData}
+                          sensorData={_sensorData}
                           isAssigned={true}
                         />
                       </div>
@@ -501,7 +399,7 @@ const AppContent: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${parcel.name}" ?`)) {
-                                  deleteParcel(parcel.id);
+                                  handleDeleteParcel(parcel.id);
                                 }
                               }}
                               className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -737,7 +635,7 @@ const AppContent: React.FC = () => {
               <button
                 onClick={() => {
                   if (editingParcel) {
-                    updateParcel(editingParcel.id, editingParcel);
+                    handleUpdateParcel(editingParcel.id, editingParcel);
                   }
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"

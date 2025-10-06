@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import React, { useState } from 'react'
 import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
@@ -43,20 +43,9 @@ function LoginPage() {
       }
 
       if (data?.user) {
-        // Check if user needs onboarding
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (!profile) {
-          // User needs onboarding
-          navigate({ to: '/onboarding' })
-        } else {
-          // User is ready, go to dashboard
-          navigate({ to: '/dashboard' })
-        }
+        // User profile and organization should have been created automatically by backend trigger
+        // Reload the page to ensure auth state is fresh
+        window.location.href = '/dashboard'
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la connexion')
@@ -103,6 +92,15 @@ function LoginPage() {
               className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
           </FormField>
+        </div>
+
+        <div className="flex justify-end text-sm">
+          <Link
+            to="/forgot-password"
+            className="font-medium text-emerald-600 transition hover:text-emerald-500"
+          >
+            Forgot your password?
+          </Link>
         </div>
 
         {error && (
