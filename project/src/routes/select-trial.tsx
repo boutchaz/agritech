@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useState } from 'react'
-import { useAuth } from '../components/MultiTenantAuthProvider'
+import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
 import { supabase } from '../lib/supabase'
 import { Check, Loader2 } from 'lucide-react'
