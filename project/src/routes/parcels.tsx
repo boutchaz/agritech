@@ -236,7 +236,7 @@ const AppContent: React.FC = () => {
                     <span className="hidden sm:inline">Parcelles de toutes les fermes dans </span>
                     <span className="sm:hidden">Toutes - </span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {currentOrganization.name}
+                      {currentOrganization?.name || 'votre organisation'}
                     </span>
                   </>
                 )}
@@ -261,7 +261,7 @@ const AppContent: React.FC = () => {
               {!selectedFarmId && !currentFarm && farms.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Fermes dans {currentOrganization.name}
+                    Fermes dans {currentOrganization?.name || 'votre organisation'}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {farms.map((farm) => (
