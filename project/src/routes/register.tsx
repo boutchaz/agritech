@@ -17,6 +17,7 @@ function RegisterPage() {
   const [organizationName, setOrganizationName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -44,7 +45,7 @@ function RegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/select-trial`,
           data: {
             email_confirm: false,
             organization_name: organizationName,
@@ -60,8 +61,15 @@ function RegisterPage() {
       }
 
       if (authData.user) {
-        // User profile and organization will be created automatically by backend trigger
-        // Redirect to trial selection page
+        // Check if email confirmation is required
+        if (authData.user.identities && authData.user.identities.length === 0) {
+          // Email confirmation is required - show message
+          setShowEmailConfirmation(true)
+          setIsLoading(false)
+          return
+        }
+
+        // Email confirmation disabled or already confirmed - redirect to trial selection
         window.location.href = '/select-trial'
       }
     } catch (error) {
@@ -69,6 +77,34 @@ function RegisterPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show email confirmation message
+  if (showEmailConfirmation) {
+    return (
+      <AuthLayout
+        title="Check your email"
+        subtitle="We've sent you a confirmation link"
+        helperText={`Please check ${email} and click the link to confirm your account.`}
+        switchLabel="Didn't receive the email?"
+        switchHref="/register"
+        switchCta="Try again"
+      >
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">
+            After confirming your email, you'll be redirected to select your free trial plan.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            Make sure to check your spam folder if you don't see the email within a few minutes.
+          </p>
+        </div>
+      </AuthLayout>
+    )
   }
 
   return (
