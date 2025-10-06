@@ -330,6 +330,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setShowAuth(false);
   };
 
+  // Check if current route is public or trial selection
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+  const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
+
   // Redirect to trial selection if user has organization but no subscription
   useEffect(() => {
     if (!loading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute) {
@@ -356,9 +360,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     isAtLeastRole,
   };
 
-  // Check if current route is public
-  const isPublicRoute = publicRoutes.includes(location.pathname);
-
   // Show loading spinner (but not on public routes)
   if (loading && !isPublicRoute) {
     return (
@@ -380,7 +381,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const hasValidSubscription = isSubscriptionValid(subscription);
   const isOnSettingsPage = location.pathname.startsWith('/settings');
   const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
-  const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
   const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage && !isOnSelectTrialPage;
 
   // Block access if no valid subscription (except on settings pages)
