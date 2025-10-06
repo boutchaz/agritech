@@ -32,11 +32,12 @@ echo ""
 echo -e "  ${GREEN}[1]${NC} Pull remote schema to local"
 echo -e "  ${GREEN}[2]${NC} Push local migrations to remote"
 echo -e "  ${GREEN}[3]${NC} Generate new migration from schema diff"
-echo -e "  ${GREEN}[4]${NC} Reset local database"
-echo -e "  ${GREEN}[5]${NC} Reset remote database ${RED}(DANGEROUS!)${NC}"
+echo -e "  ${GREEN}[4]${NC} Dump remote schema to file ${CYAN}(recommended after migrations)${NC}"
+echo -e "  ${GREEN}[5]${NC} Reset local database"
+echo -e "  ${GREEN}[6]${NC} Reset remote database ${RED}(DANGEROUS!)${NC}"
 echo ""
 
-read -p "Select an option (1-5): " -n 1 -r OPTION
+read -p "Select an option (1-6): " -n 1 -r OPTION
 echo
 echo ""
 
@@ -111,7 +112,32 @@ case $OPTION in
     ;;
 
   4)
-    echo -e "${BLUE}[Option 4] Resetting local database...${NC}"
+    echo -e "${BLUE}[Option 4] Dumping remote schema to file...${NC}"
+    echo ""
+    echo -e "${YELLOW}This will save the current remote schema to supabase/schema/public.sql${NC}"
+    read -p "Continue? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        mkdir -p supabase/schema
+        supabase db dump -f supabase/schema/public.sql --linked
+
+        if [ $? -eq 0 ]; then
+            echo ""
+            echo -e "${GREEN}✓ Schema dumped successfully${NC}"
+            echo -e "${CYAN}💡 Schema saved to supabase/schema/public.sql${NC}"
+            echo -e "${CYAN}💡 This file will be used when resetting databases${NC}"
+        else
+            echo -e "${RED}✗ Failed to dump schema${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}Cancelled${NC}"
+    fi
+    ;;
+
+  5)
+    echo -e "${BLUE}[Option 5] Resetting local database...${NC}"
     echo ""
     echo -e "${RED}⚠  WARNING: This will delete all data in your local database!${NC}"
     read -p "Are you absolutely sure? (type 'yes' to confirm): " CONFIRM
@@ -132,8 +158,8 @@ case $OPTION in
     fi
     ;;
 
-  5)
-    echo -e "${BLUE}[Option 5] Resetting remote database...${NC}"
+  6)
+    echo -e "${BLUE}[Option 6] Resetting remote database...${NC}"
     echo ""
     echo -e "${RED}⚠  DANGER! This will delete all data in your PRODUCTION database!${NC}"
     echo -e "${RED}    This action CANNOT be undone!${NC}"

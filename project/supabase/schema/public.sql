@@ -13,13 +13,49 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-CREATE SCHEMA IF NOT EXISTS "public";
-
-
-ALTER SCHEMA "public" OWNER TO "pg_database_owner";
-
-
 COMMENT ON SCHEMA "public" IS 'standard public schema';
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "public";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+
 
 
 
@@ -33,6 +69,10 @@ CREATE TYPE "public"."analysis_type" AS ENUM (
 ALTER TYPE "public"."analysis_type" OWNER TO "postgres";
 
 
+COMMENT ON TYPE "public"."analysis_type" IS 'Type of analysis: soil, plant, or water';
+
+
+
 CREATE TYPE "public"."calculation_basis" AS ENUM (
     'gross_revenue',
     'net_revenue'
@@ -40,6 +80,10 @@ CREATE TYPE "public"."calculation_basis" AS ENUM (
 
 
 ALTER TYPE "public"."calculation_basis" OWNER TO "postgres";
+
+
+COMMENT ON TYPE "public"."calculation_basis" IS 'Basis for metayage calculations: gross or net revenue';
+
 
 
 CREATE TYPE "public"."metayage_type" AS ENUM (
@@ -53,6 +97,10 @@ CREATE TYPE "public"."metayage_type" AS ENUM (
 ALTER TYPE "public"."metayage_type" OWNER TO "postgres";
 
 
+COMMENT ON TYPE "public"."metayage_type" IS 'Type of metayage arrangement';
+
+
+
 CREATE TYPE "public"."payment_frequency" AS ENUM (
     'monthly',
     'daily',
@@ -64,6 +112,10 @@ CREATE TYPE "public"."payment_frequency" AS ENUM (
 ALTER TYPE "public"."payment_frequency" OWNER TO "postgres";
 
 
+COMMENT ON TYPE "public"."payment_frequency" IS 'How often workers are paid';
+
+
+
 CREATE TYPE "public"."worker_type" AS ENUM (
     'fixed_salary',
     'daily_worker',
@@ -72,6 +124,10 @@ CREATE TYPE "public"."worker_type" AS ENUM (
 
 
 ALTER TYPE "public"."worker_type" OWNER TO "postgres";
+
+
+COMMENT ON TYPE "public"."worker_type" IS 'Type of worker employment';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."add_subscription_check_to_table"("table_name" "text") RETURNS "void"
@@ -1167,18 +1223,22 @@ ALTER FUNCTION "public"."get_user_permissions"("user_id" "uuid") OWNER TO "postg
 
 CREATE OR REPLACE FUNCTION "public"."get_user_role"("user_id" "uuid", "org_id" "uuid" DEFAULT NULL::"uuid") RETURNS TABLE("role_name" "text", "role_display_name" "text", "role_level" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $_$
+    AS $$
 BEGIN
     RETURN QUERY
-    SELECT r.name, r.display_name, r.level
+    SELECT 
+        r.name,
+        r.display_name,
+        r.level
     FROM public.organization_users ou
-    JOIN public.roles r ON r.id = ou.role_id
-    WHERE ou.user_id = $1
-    AND (org_id IS NULL OR ou.organization_id = $2)
+    INNER JOIN public.roles r ON r.id = ou.role_id
+    WHERE ou.user_id = get_user_role.user_id
+        AND (get_user_role.org_id IS NULL OR ou.organization_id = get_user_role.org_id)
+        AND ou.is_active = true
     ORDER BY r.level ASC
     LIMIT 1;
 END;
-$_$;
+$$;
 
 
 ALTER FUNCTION "public"."get_user_role"("user_id" "uuid", "org_id" "uuid") OWNER TO "postgres";
@@ -1186,18 +1246,20 @@ ALTER FUNCTION "public"."get_user_role"("user_id" "uuid", "org_id" "uuid") OWNER
 
 CREATE OR REPLACE FUNCTION "public"."get_user_role_level"("user_id" "uuid", "org_id" "uuid") RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $_$
+    AS $$
 BEGIN
     RETURN (
-        SELECT MIN(r.level)
+        SELECT r.level
         FROM public.organization_users ou
-        JOIN public.roles r ON r.id = ou.role_id
-        WHERE ou.user_id = $1 
-        AND ou.organization_id = $2
-        AND ou.is_active = true
+        INNER JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = get_user_role_level.user_id
+            AND ou.organization_id = get_user_role_level.org_id
+            AND ou.is_active = true
+        ORDER BY r.level ASC
+        LIMIT 1
     );
 END;
-$_$;
+$$;
 
 
 ALTER FUNCTION "public"."get_user_role_level"("user_id" "uuid", "org_id" "uuid") OWNER TO "postgres";
@@ -1260,6 +1322,71 @@ $$;
 
 
 ALTER FUNCTION "public"."handle_invited_user_signup"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  new_org_id uuid;
+  org_name text;
+  user_email text;
+BEGIN
+  -- Get organization name from user metadata
+  org_name := NEW.raw_user_meta_data->>'organization_name';
+  user_email := NEW.email;
+
+  -- Default organization name if not provided
+  IF org_name IS NULL OR org_name = '' THEN
+    org_name := split_part(user_email, '@', 1) || '''s Organization';
+  END IF;
+
+  -- Create user profile first
+  INSERT INTO public.user_profiles (id, email, full_name, first_name, last_name)
+  VALUES (
+    NEW.id,
+    user_email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', user_email),
+    COALESCE(NEW.raw_user_meta_data->>'first_name', split_part(user_email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'last_name', '')
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Create organization
+  INSERT INTO public.organizations (name, slug, owner_id)
+  VALUES (
+    org_name,
+    lower(regexp_replace(org_name, '[^a-zA-Z0-9]+', '-', 'g')),
+    NEW.id
+  )
+  RETURNING id INTO new_org_id;
+
+  -- Get the organization_admin role
+  -- Create organization_user link with admin role
+  INSERT INTO public.organization_users (organization_id, user_id, role, is_active)
+  SELECT
+    new_org_id,
+    NEW.id,
+    'admin',
+    true
+  WHERE EXISTS (SELECT 1 FROM public.organizations WHERE id = new_org_id);
+
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the user creation
+    RAISE WARNING 'Error in handle_new_user trigger: %', SQLERRM;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."handle_new_user"() IS 'Automatically creates user profile and organization when a new user signs up';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_updated_at"() RETURNS "trigger"
@@ -4905,10 +5032,6 @@ CREATE POLICY "Farm members can view recommendations" ON "public"."analysis_reco
 
 
 
-CREATE POLICY "Only service role can create subscriptions" ON "public"."subscriptions" FOR INSERT TO "service_role" WITH CHECK (true);
-
-
-
 CREATE POLICY "Org members can delete farm roles" ON "public"."farm_management_roles" FOR DELETE USING (("farm_id" IN ( SELECT "f"."id"
    FROM ("public"."farms" "f"
      JOIN "public"."organization_users" "ou" ON (("ou"."organization_id" = "f"."organization_id")))
@@ -4989,6 +5112,14 @@ CREATE POLICY "Service can update satellite data" ON "public"."satellite_indices
 
 
 
+CREATE POLICY "Service role can create any subscription" ON "public"."subscriptions" FOR INSERT TO "service_role" WITH CHECK (true);
+
+
+
+COMMENT ON POLICY "Service role can create any subscription" ON "public"."subscriptions" IS 'Service role can create any subscription (used by webhooks and admin operations)';
+
+
+
 CREATE POLICY "Service role can manage all satellite files" ON "public"."satellite_files" USING (("auth"."role"() = 'service_role'::"text"));
 
 
@@ -5012,6 +5143,18 @@ CREATE POLICY "Users can create reports for their organization parcels" ON "publ
      JOIN "public"."farms" "f" ON (("f"."id" = "p"."farm_id")))
      JOIN "public"."organization_users" "ou" ON (("ou"."organization_id" = "f"."organization_id")))
   WHERE (("p"."id" = "parcel_reports"."parcel_id") AND ("ou"."user_id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Users can create trial subscriptions for their organization" ON "public"."subscriptions" FOR INSERT TO "authenticated" WITH CHECK ((("organization_id" IN ( SELECT "organization_users"."organization_id"
+   FROM "public"."organization_users"
+  WHERE (("organization_users"."user_id" = "auth"."uid"()) AND ("organization_users"."is_active" = true)))) AND ("status" = 'trialing'::"text") AND (NOT (EXISTS ( SELECT 1
+   FROM "public"."subscriptions" "subscriptions_1"
+  WHERE ("subscriptions_1"."organization_id" = "subscriptions_1"."organization_id"))))));
+
+
+
+COMMENT ON POLICY "Users can create trial subscriptions for their organization" ON "public"."subscriptions" IS 'Allows authenticated users to create trial subscriptions for organizations they belong to. Prevents duplicate subscriptions.';
 
 
 
@@ -5092,6 +5235,18 @@ CREATE POLICY "Users can update structures from their organization's farms" ON "
 CREATE POLICY "Users can update suppliers in their organization" ON "public"."suppliers" FOR UPDATE USING (("organization_id" IN ( SELECT "organization_users"."organization_id"
    FROM "public"."organization_users"
   WHERE (("organization_users"."user_id" = "auth"."uid"()) AND ("organization_users"."is_active" = true)))));
+
+
+
+CREATE POLICY "Users can update their organization subscription" ON "public"."subscriptions" FOR UPDATE TO "authenticated" USING (("organization_id" IN ( SELECT "organization_users"."organization_id"
+   FROM "public"."organization_users"
+  WHERE (("organization_users"."user_id" = "auth"."uid"()) AND ("organization_users"."is_active" = true))))) WITH CHECK (("organization_id" IN ( SELECT "organization_users"."organization_id"
+   FROM "public"."organization_users"
+  WHERE (("organization_users"."user_id" = "auth"."uid"()) AND ("organization_users"."is_active" = true)))));
+
+
+
+COMMENT ON POLICY "Users can update their organization subscription" ON "public"."subscriptions" IS 'Allows users to update subscriptions for organizations they belong to (e.g., upgrading from trial to paid)';
 
 
 
@@ -5817,10 +5972,168 @@ ALTER TABLE "public"."work_records" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."workers" ENABLE ROW LEVEL SECURITY;
 
 
+
+
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6034,6 +6347,12 @@ GRANT ALL ON FUNCTION "public"."handle_invited_user_signup"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
@@ -6127,6 +6446,21 @@ GRANT ALL ON FUNCTION "public"."user_has_role"("p_user_id" "uuid", "p_organizati
 GRANT ALL ON FUNCTION "public"."validate_role_assignment"("target_user_id" "uuid", "target_org_id" "uuid", "new_role_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."validate_role_assignment"("target_user_id" "uuid", "target_org_id" "uuid", "new_role_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."validate_role_assignment"("target_user_id" "uuid", "target_org_id" "uuid", "new_role_id" "uuid") TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6484,6 +6818,12 @@ GRANT ALL ON TABLE "public"."work_records" TO "service_role";
 
 
 
+
+
+
+
+
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
@@ -6508,6 +6848,30 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
