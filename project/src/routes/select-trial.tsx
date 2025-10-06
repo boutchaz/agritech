@@ -10,14 +10,53 @@ export const Route = createFileRoute('/select-trial')({
 })
 
 function SelectTrialPage() {
-  const { currentOrganization, user } = useAuth()
+  const { currentOrganization, user, loading } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('professional')
   const [error, setError] = useState<string | null>(null)
 
+  // Show loading state while auth data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your account...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if no user or organization after loading
+  if (!loading && (!user || !currentOrganization)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Account Setup Issue
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Your account or organization wasn't created properly. Please try registering again.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.href = '/register'}
+            className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
+          >
+            Back to Registration
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const handleStartTrial = async () => {
     if (!currentOrganization?.id || !user?.id) {
-      setError('Organization or user not found')
+      setError('Organization or user not found. Please try again.')
       return
     }
 
