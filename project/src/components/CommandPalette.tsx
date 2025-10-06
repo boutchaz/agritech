@@ -29,7 +29,7 @@ const CommandPaletteUI: React.FC = () => {
 
   return (
     <KBarPortal>
-      <KBarPositioner className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-24">
+      <KBarPositioner className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/50 px-4 pt-24">
         <KBarAnimator className="w-full max-w-xl overflow-hidden rounded-2xl bg-white text-gray-900 shadow-2xl ring-1 ring-black/5 dark:bg-gray-900 dark:text-white dark:ring-white/10">
           <KBarSearch
             autoFocus

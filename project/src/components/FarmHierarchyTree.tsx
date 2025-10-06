@@ -202,7 +202,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
 
       // Assign the current user as admin of the new farm
       const { error: roleError } = await supabase
-        .from('farm_users')
+        .from('farm_management_roles')
         .insert({
           farm_id: newFarm.id,
           user_id: user.id,

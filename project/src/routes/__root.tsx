@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { MultiTenantAuthProvider } from '../components/MultiTenantAuthProvider'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
+import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -20,11 +21,13 @@ export const Route = createRootRoute({
     <QueryClientProvider client={queryClient}>
       <MultiTenantAuthProvider>
         <AbilityProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Outlet />
-            <TanStackRouterDevtools />
-            <ReactQueryDevtools initialIsOpen={false} />
-          </div>
+          <GlobalCommandPalette>
+            <div className="min-h-screen bg-gray-50">
+              <Outlet />
+              <TanStackRouterDevtools />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </div>
+          </GlobalCommandPalette>
         </AbilityProvider>
       </MultiTenantAuthProvider>
     </QueryClientProvider>
