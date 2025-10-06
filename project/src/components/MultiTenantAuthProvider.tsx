@@ -306,7 +306,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
 
@@ -318,6 +318,11 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         setCurrentFarm(null);
         setShowAuth(true);
         // localStorage is cleared by the signOut mutation
+
+        // Redirect to login on sign out (but not on initial load)
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/login';
+        }
       }
 
       setAuthLoading(false);
