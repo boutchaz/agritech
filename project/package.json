@@ -23,6 +23,7 @@
     "db:diff": "supabase db diff --linked",
     "db:dump": "supabase db dump -f supabase/schema/public.sql --linked",
     "db:generate-types": "supabase gen types typescript --local > src/types/database.types.ts",
+    "db:generate-types-remote": "supabase gen types typescript --linked > src/types/database.types.ts",
     "setup": "./scripts/setup-project.sh",
     "polar:setup": "npx tsx scripts/setup-polar-products.ts",
     "deploy:fresh:local": "./scripts/deploy-fresh.sh local",

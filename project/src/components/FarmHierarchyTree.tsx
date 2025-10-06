@@ -1,11 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { supabase } from '../lib/supabase';
+import type { Database } from '../types/database.types';
 import {
   Building2,
   GripVertical,
   Plus
 } from 'lucide-react';
 import { Can } from '../lib/casl';
+
+// Type aliases from generated database types
+type Farm = Database['public']['Tables']['farms']['Row'];
+type FarmInsert = Database['public']['Tables']['farms']['Insert'];
+// type ParcelRow = Database['public']['Tables']['parcels']['Row'];
+// type Organization = Database['public']['Tables']['organizations']['Row'];
 
 interface FarmNode {
   farm_id: string;
@@ -18,10 +29,10 @@ interface FarmNode {
   farm_size: number;
   is_active: boolean;
   children?: FarmNode[];
-  parcels?: Parcel[];
+  parcels?: ParcelInfo[];
 }
 
-interface Parcel {
+interface ParcelInfo {
   id: string;
   name: string;
   crop_type?: string;
@@ -39,6 +50,13 @@ interface FarmHierarchyTreeProps {
   onManageRoles?: (farmId: string) => void;
 }
 
+// Zod schema for farm creation
+const createFarmSchema = z.object({
+  name: z.string().min(2, 'Farm name must be at least 2 characters'),
+});
+
+type CreateFarmFormValues = z.infer<typeof createFarmSchema>;
+
 const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
   organizationId,
   onAddParcel,
@@ -46,29 +64,43 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
   onDeleteParcel,
   onManageRoles
 }) => {
-  const [farms, setFarms] = useState<FarmNode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [organizationName, setOrganizationName] = useState<string>('');
-  const [newFarmName, setNewFarmName] = useState<string>('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchFarmHierarchy();
-  }, [organizationId]);
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm<CreateFarmFormValues>({
+    resolver: zodResolver(createFarmSchema),
+    mode: 'onSubmit'
+  });
 
-  const fetchFarmHierarchy = async () => {
-    try {
-      // First fetch organization name
-      const { data: orgData, error: orgError } = await supabase
+  // Fetch organization name
+  const { data: organizationName } = useQuery({
+    queryKey: ['organization', organizationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('organizations')
         .select('name')
         .eq('id', organizationId)
         .single();
 
-      if (!orgError && orgData) {
-        setOrganizationName(orgData.name);
-      }
+      if (error) throw error;
+      return data.name;
+    },
+    enabled: !!organizationId
+  });
 
+  // Fetch farm hierarchy
+  const {
+    data: farms = [],
+    isLoading: loading,
+    error: queryError
+  } = useQuery({
+    queryKey: ['farm-hierarchy', organizationId],
+    queryFn: async () => {
       const { data, error } = await supabase.rpc('get_farm_hierarchy_tree', {
         org_uuid: organizationId
       });
@@ -99,7 +131,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
       // Second pass: build tree structure
       (data || []).forEach((farm: any) => {
         const node = farmMap.get(farm.farm_id)!;
-        
+
         if (farm.parent_farm_id) {
           const parent = farmMap.get(farm.parent_farm_id);
           if (parent) {
@@ -125,12 +157,12 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
             acc[parcel.farm_id].push({
               id: parcel.id,
               name: parcel.name,
-              crop_type: parcel.description || 'No description', // Using description as crop_type for now
+              crop_type: parcel.description || 'No description',
               area: parcel.area || 0,
               farm_id: parcel.farm_id
             });
             return acc;
-          }, {} as Record<string, Parcel[]>);
+          }, {} as Record<string, ParcelInfo[]>);
 
           // Assign parcels to farms
           farmMap.forEach((farm) => {
@@ -139,14 +171,61 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
         }
       }
 
-      setFarms(rootFarms);
-      
-    } catch (error: any) {
-      console.error('Error fetching farm hierarchy:', error);
-      setError('Failed to load farm hierarchy');
-    } finally {
-      setLoading(false);
+      return rootFarms;
+    },
+    enabled: !!organizationId
+  });
+
+  // Create farm mutation with typed insert
+  const createFarmMutation = useMutation({
+    mutationFn: async (formData: CreateFarmFormValues): Promise<Farm> => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Typed farm insert
+      const farmInsert: FarmInsert = {
+        name: formData.name,
+        organization_id: organizationId,
+        status: 'active',
+      };
+
+      const { data: newFarm, error: farmError } = await supabase
+        .from('farms')
+        .insert(farmInsert)
+        .select()
+        .single();
+
+      if (farmError) throw farmError;
+
+      // Assign the current user as admin of the new farm
+      const { error: roleError } = await supabase
+        .from('farm_users')
+        .insert({
+          farm_id: newFarm.id,
+          user_id: user.id,
+          role: 'admin',
+          is_active: true
+        });
+
+      if (roleError) throw roleError;
+
+      return newFarm;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch farm hierarchy
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      reset();
+    },
+    onError: (error: any) => {
+      console.error('Error creating farm:', error);
     }
+  });
+
+  const onSubmit = (data: CreateFarmFormValues) => {
+    createFarmMutation.mutate(data);
   };
 
   const renderFarmNode = (farm: FarmNode, level: number = 0) => {
@@ -251,12 +330,12 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
     );
   }
 
-  if (error) {
+  if (queryError) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-red-600 mb-2">⚠️</div>
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{queryError instanceof Error ? queryError.message : 'Failed to load farm hierarchy'}</p>
         </div>
       </div>
     );
@@ -285,35 +364,49 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
       )}
 
       {/* Add New Farm Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center space-x-3">
-          <input
-            type="text"
-            placeholder="Nom de la nouvelle ferme"
-            value={newFarmName}
-            onChange={(e) => setNewFarmName(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-          <button 
-            onClick={() => {
-              if (newFarmName.trim()) {
-                // TODO: Implement farm creation
-                console.log('Creating farm:', newFarmName);
-                setNewFarmName('');
-              }
-            }}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Ajouter
-          </button>
-          <button 
-            onClick={() => setNewFarmName('')}
-            className="px-6 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Annuler
-          </button>
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Nom de la nouvelle ferme"
+                {...register('name')}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-invalid={errors.name ? 'true' : 'false'}
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600" role="alert">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={createFarmMutation.isPending}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
+            </button>
+            <button
+              type="button"
+              onClick={() => reset()}
+              className="px-6 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+          {createFarmMutation.isError && (
+            <p className="text-sm text-red-600" role="alert">
+              {createFarmMutation.error instanceof Error
+                ? createFarmMutation.error.message
+                : 'Failed to create farm'}
+            </p>
+          )}
         </div>
-      </div>
+      </form>
     </div>
   );
 };

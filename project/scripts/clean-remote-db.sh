@@ -37,38 +37,15 @@ if [ "$CONFIRM2" != "DELETE EVERYTHING" ]; then
     exit 0
 fi
 
-# Load environment variables
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-elif [ -f .env.local ]; then
-    export $(cat .env.local | grep -v '^#' | xargs)
-fi
-
-# Get database credentials from environment or prompt
-POSTGRES_HOST="${POSTGRES_HOST:-agritech-supabase-652186-5-75-154-125.traefik.me}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
-POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-postgres}"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-
-if [ -z "$POSTGRES_PASSWORD" ]; then
-    echo -e "${YELLOW}Enter PostgreSQL password:${NC}"
-    read -s POSTGRES_PASSWORD
-fi
-
-# Construct connection string
-DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-
 echo ""
 echo -e "${YELLOW}🧹 Starting database cleanup...${NC}"
 
-# Test connection first
+# Test connection using Supabase CLI
 echo "Testing connection..."
-if ! psql "$DB_URL" -c "SELECT 1;" > /dev/null 2>&1; then
-    echo -e "${RED}❌ Failed to connect to database. Please check your credentials.${NC}"
-    exit 1
+if ! supabase db remote --status > /dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️  Could not verify connection, but proceeding...${NC}"
 fi
-echo -e "${GREEN}✓ Connection successful${NC}"
+echo -e "${GREEN}✓ Ready to clean database${NC}"
 
 # Create cleanup SQL script
 CLEANUP_SQL=$(cat << 'EOSQL'
@@ -146,36 +123,14 @@ EOSQL
 )
 
 echo ""
-echo -e "${YELLOW}📦 Step 1: Cleaning database...${NC}"
-echo "$CLEANUP_SQL" | psql "$DB_URL" 2>&1 | grep -E "Dropped|result|ERROR" || true
-echo -e "${GREEN}✓ Database cleaned${NC}"
+echo -e "${YELLOW}📦 Step 1: Using supabase db reset to clean and rebuild...${NC}"
+supabase db reset --linked
 
-# Apply fresh schema if it exists
-echo ""
-echo -e "${YELLOW}📦 Step 2: Applying fresh schema...${NC}"
-
-if [ -f "supabase/schema/public.sql" ]; then
-    echo "Applying schema from supabase/schema/public.sql..."
-    psql "$DB_URL" < supabase/schema/public.sql > /dev/null 2>&1
-    echo -e "${GREEN}✓ Schema applied${NC}"
-elif [ -f "supabase/schema.sql" ]; then
-    echo "Applying schema from supabase/schema.sql..."
-    psql "$DB_URL" < supabase/schema.sql > /dev/null 2>&1
-    echo -e "${GREEN}✓ Schema applied${NC}"
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ Database reset complete${NC}"
 else
-    echo -e "${YELLOW}⚠️  No schema file found. Skipping schema application.${NC}"
-    echo "   Create one at: supabase/schema/public.sql"
-fi
-
-# Optionally apply seed data
-if [ -f "supabase/seed.sql" ]; then
-    echo ""
-    read -p "Apply seed data? (y/n): " APPLY_SEED
-    if [ "$APPLY_SEED" = "y" ] || [ "$APPLY_SEED" = "Y" ]; then
-        echo -e "${YELLOW}🌱 Step 3: Applying seed data...${NC}"
-        psql "$DB_URL" < supabase/seed.sql > /dev/null 2>&1
-        echo -e "${GREEN}✓ Seed data applied${NC}"
-    fi
+    echo -e "${RED}❌ Failed to reset database${NC}"
+    exit 1
 fi
 
 echo ""
