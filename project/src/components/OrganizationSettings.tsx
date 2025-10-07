@@ -94,8 +94,11 @@ const OrganizationSettings: React.FC = () => {
       // Invalidate organizations query to refresh the sidebar and other components
       queryClient.invalidateQueries({ queryKey: ['organizations', user?.id] });
 
+      // Force reload to refresh auth context with new organization data
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err) {
       console.error('Error updating organization:', err);
       setError('Erreur lors de la sauvegarde des modifications');

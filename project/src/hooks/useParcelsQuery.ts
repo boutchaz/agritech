@@ -164,9 +164,11 @@ export const useAddParcel = () => {
       return data;
     },
     onSuccess: (data) => {
-      // Invalidate relevant queries
+      // Invalidate relevant queries - invalidate ALL parcel queries
+      queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
       queryClient.invalidateQueries({ queryKey: parcelsKeys.byFarm(data.farm_id) });
-      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      // Also invalidate farms query in case it affects parcel counts
+      queryClient.invalidateQueries({ queryKey: farmsKeys.all });
     },
   });
 };
@@ -189,10 +191,11 @@ export const useUpdateParcel = () => {
     },
     onSuccess: (data) => {
       // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
       if (data.farm_id) {
         queryClient.invalidateQueries({ queryKey: parcelsKeys.byFarm(data.farm_id) });
       }
-      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      queryClient.invalidateQueries({ queryKey: farmsKeys.all });
     },
   });
 };
@@ -213,7 +216,8 @@ export const useDeleteParcel = () => {
     },
     onSuccess: (_parcelId) => {
       // Invalidate all parcel queries since we don't know which farm it belonged to
-      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
+      queryClient.invalidateQueries({ queryKey: farmsKeys.all });
     },
   });
 };

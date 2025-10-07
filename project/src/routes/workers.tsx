@@ -34,12 +34,6 @@ function WorkersPage() {
     document.documentElement.classList.toggle('dark');
   };
 
-  useEffect(() => {
-    if (currentOrganization) {
-      fetchFarms();
-    }
-  }, [currentOrganization, fetchFarms]);
-
   const fetchFarms = async () => {
     if (!currentOrganization?.id) {
       setFarmsLoading(false);
@@ -62,6 +56,12 @@ function WorkersPage() {
       setFarmsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (currentOrganization) {
+      fetchFarms();
+    }
+  }, [currentOrganization]);
 
   if (!currentOrganization) {
     return (

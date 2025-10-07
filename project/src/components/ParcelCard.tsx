@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud } from 'lucide-react';
+import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2 } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
@@ -13,6 +13,8 @@ import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
 import ParcelReportGenerator from './ParcelReportGenerator';
 import ParcelProfitability from './ParcelProfitability';
 import WeatherAnalyticsView from './WeatherAnalytics/WeatherAnalyticsView';
+import { useAnalyses } from '../hooks/useAnalyses';
+import AnalysisCard from './Analysis/AnalysisCard';
 
 interface Parcel {
   id: string;
@@ -37,11 +39,17 @@ interface ParcelCardProps {
 }
 
 const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
-  const _navigate = useNavigate();
+  const navigate = useNavigate();
 
   // Memoize the module object to prevent infinite re-renders
   const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
   const { recommendations, loading, error } = useRecommendations(fruitTreesModule as any, sensorData);
+
+  // Fetch soil analyses for this parcel
+  const { analyses: soilAnalyses, loading: analysesLoading, deleteAnalysis } = useAnalyses(
+    parcel.id,
+    'soil'
+  );
 
   const tabs = [
     { id: 'overview', name: 'Vue d\'ensemble', icon: ChartBar },
@@ -187,52 +195,60 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
       case 'soil':
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">Analyse Physique</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Texture du sol:</span>
-                    <span className="font-medium">{parcel.soil_type || 'Limono-sableuse'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>pH:</span>
-                    <span className="font-medium text-green-600">{randomValues.ph}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Matière organique:</span>
-                    <span className="font-medium">{randomValues.organicMatter}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">Analyse Chimique</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Azote (N):</span>
-                    <span className="font-medium">{randomValues.nitrogen} g/kg</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Phosphore (P):</span>
-                    <span className="font-medium">{randomValues.phosphorus} g/kg</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Potassium (K):</span>
-                    <span className="font-medium">{randomValues.potassium} g/kg</span>
-                  </div>
-                </div>
-              </div>
+            {/* Header with Add Analysis button */}
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Analyses de Sol
+              </h3>
+              <button
+                onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: 'soil' } })}
+                className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Nouvelle analyse</span>
+              </button>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-              <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Recommandations</h5>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Apport de compost: {randomValues.compost}t/ha</li>
-                <li>• Chaulage: {randomValues.lime}t/ha</li>
-                <li>• Engrais NPK: {randomValues.npk}kg/ha</li>
-              </ul>
-            </div>
+            {/* Analyses List */}
+            {analysesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              </div>
+            ) : soilAnalyses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {soilAnalyses.map((analysis) => (
+                  <AnalysisCard
+                    key={analysis.id}
+                    analysis={analysis}
+                    onDelete={() => deleteAnalysis(analysis.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
+                <Flask className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Aucune analyse de sol enregistrée pour cette parcelle
+                </p>
+                <button
+                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: 'soil' } })}
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Ajouter une première analyse</span>
+                </button>
+              </div>
+            )}
+
+            {/* Quick Summary if parcel has soil type */}
+            {parcel.soil_type && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Informations du sol</h5>
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                  <p><span className="font-medium">Type:</span> {parcel.soil_type}</p>
+                </div>
+              </div>
+            )}
           </div>
         );
 

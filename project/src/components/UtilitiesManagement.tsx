@@ -62,7 +62,10 @@ const UtilitiesManagement: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const currency = currentOrganization?.currency || 'EUR';
+  // Use useMemo to ensure currency updates when organization changes
+  const currency = useMemo(() => {
+    return currentOrganization?.currency || 'EUR';
+  }, [currentOrganization?.currency]);
 
   // Advanced filtering state
   const [filters, setFilters] = useState({
