@@ -9,7 +9,7 @@ import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import PageHeader from '../components/PageHeader'
 import ParcelCard from '../components/ParcelCard'
-import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
+import { useFarms, useParcelsByFarm, useParcelsByFarms, useParcelById, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
 import type { Module, SensorData } from '../types'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
@@ -59,6 +59,9 @@ const AppContent: React.FC = () => {
   const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading } = useParcelsByFarms(
     !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
   );
+
+  // Fetch specific parcel by ID if provided in URL
+  const { data: directParcel, isLoading: directParcelLoading } = useParcelById(selectedParcelId);
 
   // Get the appropriate parcels data
   const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
@@ -339,7 +342,9 @@ const AppContent: React.FC = () => {
                 enableDrawing={true}
                 selectedParcelId={selectedParcelId}
                 onParcelSelect={handleParcelSelect}
-                parcels={parcels}
+                parcels={directParcel && !parcels.find(p => p.id === directParcel.id) 
+                  ? [...parcels, directParcel]  // Include directParcel if not already in list
+                  : parcels}
                 onParcelAdded={() => {
                   // React Query will automatically refetch the data
                   setShowAddParcelMap(false);
@@ -350,7 +355,18 @@ const AppContent: React.FC = () => {
               {selectedParcelId && (
                 <div className="mt-6">
                   {(() => {
-                    const selectedParcel = parcels.find(p => p.id === selectedParcelId);
+                    // Try to find in current parcels list first, fallback to direct fetch
+                    const selectedParcel = parcels.find(p => p.id === selectedParcelId) || directParcel;
+                    
+                    // Show loading state while fetching
+                    if (directParcelLoading && !selectedParcel) {
+                      return (
+                        <div className="text-center py-8">
+                          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+                        </div>
+                      );
+                    }
+                    
                     if (!selectedParcel) return null;
 
                     return (

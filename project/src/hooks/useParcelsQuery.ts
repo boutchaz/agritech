@@ -132,6 +132,37 @@ export const useParcelsByFarms = (farmIds: string[]) => {
   });
 };
 
+// Fetch a single parcel by ID (useful when directly accessing via URL)
+export const useParcelById = (parcelId: string | null | undefined) => {
+  return useQuery({
+    queryKey: ['parcel', parcelId],
+    queryFn: async (): Promise<Parcel | null> => {
+      if (!parcelId) return null;
+
+      const { data, error } = await supabase
+        .from('parcels')
+        .select('*')
+        .eq('id', parcelId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching parcel:', error);
+        throw error;
+      }
+
+      if (!data) return null;
+
+      return {
+        ...data,
+        boundary: data.boundary as number[][] | undefined,
+      };
+    },
+    enabled: !!parcelId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
+  });
+};
+
 // Add parcel mutation
 export const useAddParcel = () => {
   const queryClient = useQueryClient();
