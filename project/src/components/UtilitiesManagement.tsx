@@ -1329,58 +1329,68 @@ const UtilitiesManagement: React.FC = () => {
                 />
               </FormField>
 
-              {/* Consumption Tracking Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Consommation" htmlFor="util_consumption">
-                  <Input
-                    id="util_consumption"
-                    type="number"
-                    step={1}
-                    value={editingUtility?.consumption_value || newUtility.consumption_value || ''}
-                    onChange={(e) => {
-                      const value = (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : undefined;
-                      if (editingUtility) {
-                        setEditingUtility({
-                          ...editingUtility,
-                          consumption_value: value
-                        });
-                      } else {
-                        setNewUtility({
-                          ...newUtility,
-                          consumption_value: value
-                        });
-                      }
-                    }}
-                    placeholder="ex: 500"
-                  />
-                </FormField>
-                <FormField label="Unité" htmlFor="util_unit">
-                  <Select
-                    id="util_unit"
-                    value={editingUtility?.consumption_unit || newUtility.consumption_unit || ''}
-                    onChange={(e) => {
-                      const value = (e.target as HTMLSelectElement).value
-                      if (editingUtility) {
-                        setEditingUtility({
-                          ...editingUtility,
-                          consumption_unit: value
-                        });
-                      } else {
-                        setNewUtility({
-                          ...newUtility,
-                          consumption_unit: value
-                        });
-                      }
-                    }}
-                  >
-                    <option value="">Sélectionner une unité</option>
-                    {getAvailableUnits((editingUtility?.type || newUtility.type) as string).map(unit => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
+              {/* Consumption Tracking Fields - OPTIONAL */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Détails de consommation (optionnel)
+                  </label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Laissez vide si non disponible
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Consommation" htmlFor="util_consumption">
+                    <Input
+                      id="util_consumption"
+                      type="number"
+                      step={1}
+                      value={editingUtility?.consumption_value || newUtility.consumption_value || ''}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : undefined;
+                        if (editingUtility) {
+                          setEditingUtility({
+                            ...editingUtility,
+                            consumption_value: value
+                          });
+                        } else {
+                          setNewUtility({
+                            ...newUtility,
+                            consumption_value: value
+                          });
+                        }
+                      }}
+                      placeholder="ex: 500"
+                    />
+                  </FormField>
+                  <FormField label="Unité" htmlFor="util_unit">
+                    <Select
+                      id="util_unit"
+                      value={editingUtility?.consumption_unit || newUtility.consumption_unit || ''}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLSelectElement).value
+                        if (editingUtility) {
+                          setEditingUtility({
+                            ...editingUtility,
+                            consumption_unit: value
+                          });
+                        } else {
+                          setNewUtility({
+                            ...newUtility,
+                            consumption_unit: value
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">Sélectionner une unité</option>
+                      {getAvailableUnits((editingUtility?.type || newUtility.type) as string).map(unit => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
               </div>
 
               {/* Unit Cost Display */}

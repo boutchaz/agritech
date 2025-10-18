@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback } from 'react';
-import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2 } from 'lucide-react';
+import React, { useMemo, useCallback, useState } from 'react';
+import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
@@ -45,11 +45,25 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
   const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
   const { recommendations, loading, error } = useRecommendations(fruitTreesModule as any, sensorData);
 
-  // Fetch soil analyses for this parcel
-  const { analyses: soilAnalyses, loading: analysesLoading, deleteAnalysis } = useAnalyses(
+  // State for analysis tab selection
+  const [analysisTab, setAnalysisTab] = useState<'soil' | 'plant' | 'water'>('soil');
+
+  // Fetch all types of analyses for this parcel
+  const { analyses: soilAnalyses, loading: soilLoading, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(
     parcel.id,
     'soil'
   );
+  const { analyses: plantAnalyses, loading: plantLoading } = useAnalyses(
+    parcel.id,
+    'plant'
+  );
+  const { analyses: waterAnalyses, loading: waterLoading } = useAnalyses(
+    parcel.id,
+    'water'
+  );
+
+  const analysesLoading = soilLoading || plantLoading || waterLoading;
+  const deleteAnalysis = deleteSoilAnalysis; // Use the same delete function for all types
 
   const tabs = [
     { id: 'overview', name: 'Vue d\'ensemble', icon: ChartBar },
@@ -192,21 +206,74 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
           </div>
         );
 
-      case 'soil':
+      case 'soil': {
+        const currentAnalyses = analysisTab === 'soil' ? soilAnalyses :
+                                 analysisTab === 'plant' ? plantAnalyses :
+                                 waterAnalyses;
+
         return (
           <div className="space-y-4">
-            {/* Header with Add Analysis button */}
+            {/* Header */}
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Analyses de Sol
+                Analyses de la Parcelle
               </h3>
-              <button
-                onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: 'soil' } })}
-                className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nouvelle analyse</span>
-              </button>
+            </div>
+
+            {/* Analysis Type Tabs */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setAnalysisTab('soil')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    analysisTab === 'soil'
+                      ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Flask className="h-4 w-4" />
+                    Sol ({soilAnalyses.length})
+                  </div>
+                </button>
+                <button
+                  onClick={() => setAnalysisTab('plant')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    analysisTab === 'plant'
+                      ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Leaf className="h-4 w-4" />
+                    Plante ({plantAnalyses.length})
+                  </div>
+                </button>
+                <button
+                  onClick={() => setAnalysisTab('water')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    analysisTab === 'water'
+                      ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Droplet className="h-4 w-4" />
+                    Eau ({waterAnalyses.length})
+                  </div>
+                </button>
+              </div>
+
+              {/* Add Analysis Button */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900">
+                <button
+                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Nouvelle analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Analyses List */}
@@ -214,9 +281,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-green-600" />
               </div>
-            ) : soilAnalyses.length > 0 ? (
+            ) : currentAnalyses.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {soilAnalyses.map((analysis) => (
+                {currentAnalyses.map((analysis) => (
                   <AnalysisCard
                     key={analysis.id}
                     analysis={analysis}
@@ -228,10 +295,10 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
                 <Flask className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Aucune analyse de sol enregistrée pour cette parcelle
+                  Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
                 <button
-                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: 'soil' } })}
+                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >
                   <Plus className="h-4 w-4" />
@@ -240,8 +307,8 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               </div>
             )}
 
-            {/* Quick Summary if parcel has soil type */}
-            {parcel.soil_type && (
+            {/* Quick Summary if parcel has soil type and viewing soil tab */}
+            {analysisTab === 'soil' && parcel.soil_type && (
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                 <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Informations du sol</h5>
                 <div className="text-sm text-blue-800 dark:text-blue-200">
@@ -251,6 +318,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             )}
           </div>
         );
+      }
 
       case 'sensors':
         return (
