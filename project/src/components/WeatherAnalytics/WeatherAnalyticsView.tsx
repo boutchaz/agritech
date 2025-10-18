@@ -33,18 +33,47 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   };
 
   // Calculate the center of the parcel for weather forecast
+  // Convert from Web Mercator (EPSG:3857) to WGS84 (lat/lon) if needed
   const parcelCenter = useMemo(() => {
     if (!parcelBoundary || parcelBoundary.length === 0) {
       return { latitude: 0, longitude: 0 };
     }
 
-    const sumLat = parcelBoundary.reduce((sum, point) => sum + point[1], 0);
-    const sumLng = parcelBoundary.reduce((sum, point) => sum + point[0], 0);
+    // Check if coordinates are in Web Mercator (large values) or already in WGS84
+    const firstPoint = parcelBoundary[0];
+    const isWebMercator = Math.abs(firstPoint[0]) > 180 || Math.abs(firstPoint[1]) > 90;
 
-    return {
+    let sumLat = 0;
+    let sumLng = 0;
+
+    if (isWebMercator) {
+      // Convert from Web Mercator to WGS84
+      parcelBoundary.forEach(point => {
+        const x = point[0];
+        const y = point[1];
+
+        // Web Mercator to WGS84 conversion
+        const lng = (x / 20037508.34) * 180;
+        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+
+        sumLng += lng;
+        sumLat += lat;
+      });
+    } else {
+      // Coordinates are already in WGS84 (longitude, latitude format)
+      sumLng = parcelBoundary.reduce((sum, point) => sum + point[0], 0);
+      sumLat = parcelBoundary.reduce((sum, point) => sum + point[1], 0);
+    }
+
+    const center = {
       latitude: sumLat / parcelBoundary.length,
       longitude: sumLng / parcelBoundary.length,
     };
+
+    // Debug log to verify coordinates
+    console.log('Parcel center coordinates:', center, 'Is Web Mercator:', isWebMercator);
+
+    return center;
   }, [parcelBoundary]);
 
   if (loading) {
