@@ -7,6 +7,7 @@ import math
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
+from app.services.cloud_masking import CloudMaskingService
 import logging
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
@@ -46,9 +47,21 @@ class EarthEngineService:
         geometry: Dict,
         start_date: str,
         end_date: str,
-        max_cloud_coverage: float = None
+        max_cloud_coverage: float = None,
+        use_aoi_cloud_filter: bool = True,
+        cloud_buffer_meters: float = 300
     ) -> ee.ImageCollection:
-        """Get Sentinel-2 image collection for given parameters"""
+        """
+        Get Sentinel-2 image collection for given parameters
+
+        Args:
+            geometry: AOI geometry
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            max_cloud_coverage: Maximum cloud coverage percentage
+            use_aoi_cloud_filter: If True, calculate cloud coverage within AOI only
+            cloud_buffer_meters: Buffer around AOI for cloud calculation (default 300m)
+        """
         self.initialize()
 
         # Validate date range
@@ -78,13 +91,21 @@ class EarthEngineService:
 
         aoi = ee.Geometry(geometry)
         max_cloud = max_cloud_coverage or settings.MAX_CLOUD_COVERAGE
-        
+
+        # First, get initial collection with loose tile-based filtering
         collection = (
             ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
             .filterBounds(aoi)
             .filterDate(start_date, end_date)
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud))
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud * 2 if use_aoi_cloud_filter else max_cloud))
         )
+
+        # If AOI-based cloud filtering is requested, apply it
+        if use_aoi_cloud_filter:
+            logger.info(f"Applying AOI-based cloud filtering with {cloud_buffer_meters}m buffer")
+            collection = CloudMaskingService.filter_collection_by_aoi_clouds(
+                collection, aoi, max_cloud, cloud_buffer_meters
+            )
 
         # Check if collection has any images
         try:

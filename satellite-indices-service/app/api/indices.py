@@ -26,12 +26,14 @@ logger = logging.getLogger(__name__)
 async def calculate_indices(request: IndexCalculationRequest):
     """Calculate vegetation indices for a given AOI and date range"""
     try:
-        # Get Sentinel-2 collection
+        # Get Sentinel-2 collection with AOI-based cloud filtering if requested
         collection = earth_engine_service.get_sentinel2_collection(
             request.aoi.geometry.model_dump(),
             request.date_range.start_date,
             request.date_range.end_date,
-            request.cloud_coverage
+            request.cloud_coverage,
+            use_aoi_cloud_filter=request.use_aoi_cloud_filter,
+            cloud_buffer_meters=request.cloud_buffer_meters
         )
         
         # Get the median composite

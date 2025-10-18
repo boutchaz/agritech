@@ -41,6 +41,8 @@ export interface IndexCalculationRequest {
   indices: string[];
   cloud_coverage?: number;
   scale?: number;
+  use_aoi_cloud_filter?: boolean; // Calculate cloud coverage within AOI only (default: true)
+  cloud_buffer_meters?: number;   // Buffer around AOI for cloud calculation (default: 300m)
 }
 
 export interface IndexCalculationResponse {
@@ -82,12 +84,19 @@ export class SatelliteIndicesService {
 
   async calculateIndices(request: IndexCalculationRequest): Promise<IndexCalculationResponse> {
     try {
+      // Apply defaults for AOI-based cloud filtering
+      const requestWithDefaults: IndexCalculationRequest = {
+        use_aoi_cloud_filter: true,  // Default to AOI-based filtering
+        cloud_buffer_meters: 300,    // Default 300m buffer
+        ...request
+      };
+
       const response = await fetch(`${this.baseUrl}/api/indices/calculate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify(requestWithDefaults),
       });
 
       if (!response.ok) {

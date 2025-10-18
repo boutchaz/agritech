@@ -41,6 +41,8 @@ export interface IndexCalculationRequest {
   indices: VegetationIndexType[];
   cloud_coverage?: number; // 0-100, default 10
   scale?: number;          // 10-1000, default 10
+  use_aoi_cloud_filter?: boolean; // Calculate cloud coverage within AOI only (default true)
+  cloud_buffer_meters?: number;   // Buffer around AOI for cloud calculation (default 300m)
 }
 
 export interface TimeSeriesRequest {
@@ -128,6 +130,8 @@ export interface ParcelStatisticsRequest {
   cloud_coverage?: number;
   save_tiff?: boolean;
   scale?: number;
+  use_aoi_cloud_filter?: boolean; // Calculate cloud coverage within AOI only
+  cloud_buffer_meters?: number;   // Buffer around AOI for cloud calculation
 }
 
 export interface ParcelStatisticsResponse {
@@ -330,9 +334,16 @@ class SatelliteAPIClient {
 
   // Calculate vegetation indices for a specific area
   async calculateIndices(request: IndexCalculationRequest): Promise<IndexCalculationResponse> {
+    // Set default values for AOI-based cloud filtering
+    const requestWithDefaults = {
+      use_aoi_cloud_filter: true,  // Default to AOI-based filtering
+      cloud_buffer_meters: 300,    // Default 300m buffer
+      ...request
+    };
+
     return this.request('/indices/calculate', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(requestWithDefaults),
     });
   }
 
@@ -423,9 +434,16 @@ class SatelliteAPIClient {
 
   // Calculate comprehensive statistics for a parcel with optional TIFF export
   async calculateParcelStatistics(request: ParcelStatisticsRequest): Promise<ParcelStatisticsResponse> {
+    // Set default values for AOI-based cloud filtering
+    const requestWithDefaults = {
+      use_aoi_cloud_filter: true,  // Default to AOI-based filtering
+      cloud_buffer_meters: 300,    // Default 300m buffer
+      ...request
+    };
+
     return this.request('/analysis/parcel-statistics', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(requestWithDefaults),
     });
   }
 

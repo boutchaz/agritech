@@ -67,6 +67,8 @@ class IndexCalculationRequest(BaseModel):
     indices: List[VegetationIndex] = Field(..., min_items=1, description="List of indices to calculate")
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100, description="Maximum cloud coverage percentage")
     scale: Optional[int] = Field(10, ge=10, le=1000, description="Pixel scale in meters")
+    use_aoi_cloud_filter: Optional[bool] = Field(True, description="Calculate cloud coverage within AOI only")
+    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
 
 class TimeSeriesRequest(BaseModel):
     aoi: AOIRequest

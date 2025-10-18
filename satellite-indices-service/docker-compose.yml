@@ -12,13 +12,54 @@ services:
       - GEE_PRIVATE_KEY=${GEE_PRIVATE_KEY}
       - GEE_PROJECT_ID=${GEE_PROJECT_ID:-sublime-seat-428722-n5}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI}
-      - SUPABASE_URL=${SUPABASE_URL:-http://agritech-supabase-652186-5-75-154-125.traefik.me}
+      - SUPABASE_URL=${SUPABASE_URL:-https://agritech-supabase-652186-5-75-154-125.traefik.me}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ}
     volumes:
       - ./temp-data:/tmp/satellite-data
     restart: unless-stopped
     networks:
       - agritech-network
+      - dokploy-network
+    labels:
+      # Traefik configuration for HTTPS
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+
+      # HTTP Router (redirect to HTTPS)
+      - "traefik.http.routers.satellite-http.rule=Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)"
+      - "traefik.http.routers.satellite-http.entrypoints=web"
+      - "traefik.http.routers.satellite-http.middlewares=redirect-to-https"
+
+      # HTTPS Router
+      - "traefik.http.routers.satellite-https.rule=Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)"
+      - "traefik.http.routers.satellite-https.entrypoints=websecure"
+      - "traefik.http.routers.satellite-https.tls=true"
+      - "traefik.http.routers.satellite-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.satellite-https.service=satellite-service"
+
+      # Service configuration
+      - "traefik.http.services.satellite-service.loadbalancer.server.port=8000"
+      - "traefik.http.services.satellite-service.loadbalancer.server.scheme=http"
+
+      # Middleware for HTTPS redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+
+      # CORS middleware (optional, if needed)
+      - "traefik.http.middlewares.satellite-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.satellite-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.satellite-cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.satellite-cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.satellite-cors.headers.addvaryheader=true"
+
+      # Apply CORS middleware to HTTPS router
+      - "traefik.http.routers.satellite-https.middlewares=satellite-cors"
+
+      # Dokploy specific labels
+      - "dokploy.enabled=true"
+      - "dokploy.name=satellite-indices-service"
+      - "dokploy.type=app"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -29,6 +70,8 @@ services:
 networks:
   agritech-network:
     driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
   temp-data:
