@@ -587,6 +587,34 @@ class SatelliteAPIClient {
       });
     }
   }
+
+  // Get available dates with satellite imagery for an AOI
+  async getAvailableDates(
+    aoi: AOIRequest,
+    startDate: string,
+    endDate: string,
+    cloudCoverage: number = 30
+  ): Promise<{
+    available_dates: Array<{
+      date: string;
+      cloud_coverage: number;
+      timestamp: number;
+      available: boolean;
+    }>;
+    total_images: number;
+    date_range: { start: string; end: string };
+    filters: { max_cloud_coverage: number };
+  }> {
+    return this.request('/indices/available-dates', {
+      method: 'POST',
+      body: JSON.stringify({
+        aoi,
+        start_date: startDate,
+        end_date: endDate,
+        cloud_coverage: cloudCoverage
+      }),
+    });
+  }
 }
 
 // Export singleton instance

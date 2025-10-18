@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer, CalendarDays } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -25,17 +25,37 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
   const [cloudCoverage, setCloudCoverage] = useState(10);
   const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
   const [displayMode, setDisplayMode] = useState<'static' | 'interactive'>('static');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // Initialize with last 7 days for recent imagery
+  // Initialize with last 30 days for better date availability
   useEffect(() => {
-    const defaultRange = getDateRangeLastNDays(7);
+    const defaultRange = getDateRangeLastNDays(30);
     setStartDate(defaultRange.start_date);
     setEndDate(defaultRange.end_date);
   }, []);
+
+  // Fetch available dates when boundary and date range are set
+  const availableDatesQuery = useQuery({
+    queryKey: ['availableDates', boundary, startDate, endDate, cloudCoverage],
+    queryFn: async () => {
+      if (!boundary || !startDate || !endDate) {
+        return null;
+      }
+
+      const aoi = {
+        geometry: convertBoundaryToGeoJSON(boundary),
+        name: parcelName || 'Selected Parcel'
+      };
+
+      return satelliteApi.getAvailableDates(aoi, startDate, endDate, cloudCoverage);
+    },
+    enabled: !!boundary && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   const handleIndexToggle = (index: VegetationIndexType) => {
     setSelectedIndices(prev =>
@@ -48,7 +68,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   // Use React Query mutation for generating images
   const generateImagesMutation = useMutation({
     mutationFn: async () => {
-      if (!boundary || !startDate || !endDate || selectedIndices.length === 0) {
+      if (!boundary || selectedIndices.length === 0) {
         throw new Error('Missing required parameters');
       }
 
@@ -57,7 +77,19 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
         name: parcelName || 'Selected Parcel'
       };
 
-      const dateRange = { start_date: startDate, end_date: endDate };
+      // Use selected date if available, otherwise use date range
+      let dateRange;
+      if (selectedDate) {
+        // For a specific date, use a narrow range around it
+        dateRange = {
+          start_date: selectedDate,
+          end_date: selectedDate
+        };
+      } else if (startDate && endDate) {
+        dateRange = { start_date: startDate, end_date: endDate };
+      } else {
+        throw new Error('Please select a specific date or set a date range');
+      }
 
       return satelliteApi.generateMultipleIndexImages(
         aoi,
@@ -163,6 +195,31 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
         <h3 className="font-medium text-gray-900">Configuration</h3>
 
+        {/* Available Dates Info */}
+        {availableDatesQuery.isLoading ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Loader className="w-4 h-4 animate-spin text-gray-600" />
+              <span className="text-sm text-gray-600">Checking available satellite images...</span>
+            </div>
+          </div>
+        ) : availableDatesQuery.data ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-blue-900">Available Images</span>
+            </div>
+            <div className="text-sm text-blue-800">
+              Found {availableDatesQuery.data.total_images} satellite images between {startDate} and {endDate}
+              {availableDatesQuery.data.total_images === 0 && (
+                <p className="mt-1 text-orange-700">
+                  No images available for this date range. Try expanding the date range or increasing cloud coverage tolerance.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         {/* Date Range & Settings */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -207,6 +264,42 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           </div>
         </div>
 
+        {/* Available Dates List */}
+        {availableDatesQuery.data && availableDatesQuery.data.available_dates.length > 0 && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Select Image Date ({availableDatesQuery.data.available_dates.length} available)
+            </label>
+            <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2 bg-white">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {availableDatesQuery.data.available_dates.map((dateInfo) => (
+                  <button
+                    key={dateInfo.date}
+                    onClick={() => setSelectedDate(dateInfo.date)}
+                    className={`p-2 text-xs rounded-md border transition-colors ${
+                      selectedDate === dateInfo.date
+                        ? 'bg-green-100 border-green-500 text-green-900'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="font-medium">{dateInfo.date}</div>
+                    <div className="text-gray-500 flex items-center gap-1 mt-1">
+                      <Cloud className="w-3 h-3" />
+                      {dateInfo.cloud_coverage.toFixed(0)}%
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {selectedDate && (
+              <p className="text-sm text-gray-600 mt-2">
+                Selected: {selectedDate} •
+                Cloud coverage: {availableDatesQuery.data.available_dates.find(d => d.date === selectedDate)?.cloud_coverage.toFixed(1)}%
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Index Selection */}
         <div>
           <label className="text-sm font-medium mb-3 block">Select Indices to Visualize</label>
@@ -233,12 +326,18 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
         {/* Generate Button */}
         <button
           onClick={generateImages}
-          disabled={generateImagesMutation.isPending || !boundary || selectedIndices.length === 0}
+          disabled={generateImagesMutation.isPending || !boundary || selectedIndices.length === 0 || (!selectedDate && (!startDate || !endDate))}
           className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {generateImagesMutation.isPending ? <Loader className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-          {generateImagesMutation.isPending ? 'Generating Images...' : 'Generate Images'}
+          {generateImagesMutation.isPending ? 'Generating Images...' :
+           selectedDate ? `Generate Images for ${selectedDate}` : 'Generate Images'}
         </button>
+        {!selectedDate && availableDatesQuery.data?.available_dates.length > 0 && (
+          <p className="text-sm text-amber-600 mt-2">
+            Tip: Select a specific date from the available dates above for better results.
+          </p>
+        )}
       </div>
 
       {/* Error Display */}
@@ -329,7 +428,6 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                       src={imageData.image_url}
                       alt={`${imageData.index} visualization`}
                       className="max-w-full max-h-full object-contain"
-                      onLoad={() => console.log(`Image loaded: ${imageData.index}`)}
                       onError={() => console.error(`Failed to load image: ${imageData.index}`)}
                     />
                   </div>

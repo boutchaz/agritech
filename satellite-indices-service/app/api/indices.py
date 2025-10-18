@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from typing import List
+from typing import List, Dict
 import uuid
 from datetime import datetime
 from app.models.schemas import (
@@ -18,6 +18,7 @@ from app.models.schemas import (
 )
 from app.services import earth_engine_service
 import logging
+import ee
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -201,3 +202,80 @@ async def get_available_indices():
     """Get list of available vegetation indices"""
     from app.models.schemas import VegetationIndex
     return [idx.value for idx in VegetationIndex]
+
+@router.post("/available-dates")
+async def get_available_dates(request: Dict):
+    """Get dates with available satellite imagery for a given AOI and date range"""
+    try:
+        # Parse request parameters
+        aoi_geometry = request.get("aoi", {}).get("geometry")
+        start_date = request.get("start_date")
+        end_date = request.get("end_date")
+        max_cloud_coverage = request.get("cloud_coverage", 30)
+
+        if not all([aoi_geometry, start_date, end_date]):
+            raise HTTPException(status_code=400, detail="Missing required parameters")
+
+        # Initialize Earth Engine
+        earth_engine_service.initialize()
+
+        # Get Sentinel-2 collection
+        aoi = ee.Geometry(aoi_geometry)
+
+        # Get collection with cloud filter
+        collection = (
+            ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+            .filterBounds(aoi)
+            .filterDate(start_date, end_date)
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud_coverage))
+        )
+
+        # Get image dates and cloud coverage
+        def extract_date_info(image):
+            date = ee.Date(image.get('system:time_start'))
+            return ee.Feature(None, {
+                'date': date.format('YYYY-MM-dd'),
+                'cloud_coverage': image.get('CLOUDY_PIXEL_PERCENTAGE'),
+                'timestamp': date.millis()
+            })
+
+        features = collection.map(extract_date_info)
+        date_info = features.reduceColumns(
+            ee.Reducer.toList(3), ['date', 'cloud_coverage', 'timestamp']
+        ).get('list').getInfo()
+
+        # Process and deduplicate dates
+        dates_dict = {}
+        for item in date_info:
+            if item and len(item) >= 3:
+                date_str = item[0]
+                cloud_coverage = item[1]
+                timestamp = item[2]
+
+                # Keep the image with lowest cloud coverage for each date
+                if date_str not in dates_dict or dates_dict[date_str]['cloud_coverage'] > cloud_coverage:
+                    dates_dict[date_str] = {
+                        'date': date_str,
+                        'cloud_coverage': round(cloud_coverage, 2),
+                        'timestamp': timestamp,
+                        'available': True
+                    }
+
+        # Sort by date and return
+        available_dates = sorted(dates_dict.values(), key=lambda x: x['date'])
+
+        return {
+            "available_dates": available_dates,
+            "total_images": len(available_dates),
+            "date_range": {
+                "start": start_date,
+                "end": end_date
+            },
+            "filters": {
+                "max_cloud_coverage": max_cloud_coverage
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting available dates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
