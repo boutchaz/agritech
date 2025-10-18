@@ -1,75 +1,198 @@
-You are a senior React/TypeScript engineer. Always use React Hook Form v7+ with Zod validation via @hookform/resolvers/zod. Prefer controlled inputs when necessary; otherwise register native inputs. Use FormProvider + useFormContext for nested components. Support dynamic lists with useFieldArray. Return production-ready code with comments.
+# CLAUDE.md
 
-User
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Build a form component using React Hook Form with these requirements:
+## Project Overview
 
-Stack
+AgriTech Platform - A comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights.
 
-React 18 + TypeScript
+## Tech Stack
 
-react-hook-form, zod, @hookform/resolvers/zod
+### Frontend (React + TypeScript)
+- **Framework**: React 18 with TypeScript, Vite bundler
+- **Routing**: TanStack Router v1 (file-based routing)
+- **State Management**: TanStack Query (React Query) for server state
+- **Forms**: React Hook Form v7+ with Zod validation via @hookform/resolvers/zod
+- **UI Components**: Custom components in `src/components/ui/`
+- **Authentication**: Supabase Auth with multi-tenant support
+- **Styling**: Tailwind CSS
+- **Internationalization**: react-i18next
 
-UI: (choose one) plain HTML / shadcn-ui / MUI (state which you use)
+### Backend Services
+- **Database**: Supabase (PostgreSQL) with Row Level Security
+- **Satellite Service**: FastAPI (Python) with Google Earth Engine
+- **Storage**: Supabase Storage for documents/invoices
+- **Payments**: Polar.sh integration for subscriptions
 
-Validation
+## Common Commands
 
-Use a Zod schema. Refine for cross-field rules.
+### Development
+```bash
+# Frontend development
+npm run dev              # Start Vite dev server on port 5173
 
-Patterns
+# Backend satellite service
+cd satellite-indices-service
+python -m uvicorn app.main:app --reload --port 8001
 
-Initialize with useForm<SchemaType>({ resolver: zodResolver(schema), mode: "onSubmit" })
+# Run tests
+npm test                 # Run vitest tests
+npm run test:watch      # Run tests in watch mode
+npm run test:e2e        # Run Playwright E2E tests
 
-Use FormProvider and split fields into small components that call useFormContext().
+# Linting & Type checking
+npm run lint            # Run ESLint
+npm run lint:fix        # Auto-fix ESLint issues
+npm run type-check      # TypeScript type checking
+```
 
-For arrays, use useFieldArray.
+### Database Management
+```bash
+# Supabase DB commands
+npm run db:push         # Push local migrations to remote
+npm run db:pull         # Pull remote schema changes
+npm run db:reset        # Reset local database
+npm run db:migrate      # Run migrations
+npm run db:generate-types  # Generate TypeScript types from DB schema
 
-Show field-level errors under inputs; disable submit while submitting.
+# Schema management
+npm run schema:pull     # Pull schema from remote
+npm run schema:push     # Push schema to remote
+npm run schema:diff     # Show schema differences
+npm run schema:types    # Generate TypeScript types
+```
 
-On submit: call onSubmit(values) prop (simulate with await), reset on success.
+### Build & Deploy
+```bash
+npm run build           # Build for production
+npm run preview         # Preview production build
+npm run deploy:fresh:remote  # Fresh deploy to remote
+```
 
-Types
+## Architecture & Patterns
 
-Export FormValues inferred from Zod.
+### Multi-Tenant Architecture
+- **Context**: `MultiTenantAuthProvider` manages organization/farm context
+- **Hierarchy**: Organizations → Farms → Parcels
+- **Roles**: owner, admin, member, viewer (defined per organization)
+- **Access Control**: CASL-based permissions in `lib/casl/`
 
-Accessibility
+### Route Structure (TanStack Router)
+- File-based routing in `src/routes/`
+- Protected routes use `_authenticated` layout
+- Settings routes nested under `settings.*`
+- Dynamic routes use `$param` syntax
 
-Associate labels/ids, aria-invalid on error, aria-describedby for messages.
+### Component Organization
+```
+src/components/
+├── ui/              # Reusable UI components (Input, Select, FormField)
+├── SatelliteAnalysis/  # Satellite imagery components
+├── SoilAnalysis/    # Soil analysis features
+├── Workers/         # Worker management
+└── authorization/   # Permission components (Can, LimitWarning)
+```
 
-Fields
+### Form Patterns
+Always use React Hook Form with Zod:
+```typescript
+// 1. Define Zod schema
+const schema = z.object({
+  field: z.string().min(1)
+});
 
-name (string, min 2)
+// 2. Use with useForm
+const form = useForm<z.infer<typeof schema>>({
+  resolver: zodResolver(schema),
+  mode: "onSubmit"
+});
 
-email (email)
+// 3. For nested components, use FormProvider + useFormContext
+// 4. For dynamic lists, use useFieldArray
+```
 
-age (number, 18–120)
+### Data Fetching
+Use TanStack Query for all API calls:
+```typescript
+// Custom hooks in src/hooks/
+useQuery({ queryKey: ['key'], queryFn: fetchData })
+useMutation({ mutationFn: updateData })
+```
 
-hobbies (array of strings, at least 1; add/remove rows)
+### Supabase Integration
+- Client initialized in `lib/supabase.ts`
+- Auth handled via `useAuth()` hook
+- RLS policies enforce data access
+- Storage buckets for file uploads
 
-acceptTos (boolean, must be true)
+### Satellite Service API
+- Base URL from `VITE_SATELLITE_SERVICE_URL` env
+- Client in `lib/satellite-api.ts`
+- Handles vegetation indices, time series, heatmaps
+- Google Earth Engine backend processing
 
-Deliverables
+## Key Features & Implementation
 
-schema.ts (Zod schema + types)
+### Stock Management (`StockManagement.tsx`)
+- Auto-creates products during purchase
+- Packaging types (bidon 5L, sac 25kg, etc.)
+- Invoice/receipt upload to Supabase Storage
+- Supplier and warehouse management
 
-Form.tsx (form with nested TextField, CheckboxField, HobbyList using useFieldArray)
+### Satellite Analysis
+- Available dates fetched via `/indices/available-dates`
+- Index image generation for NDVI, NDRE, etc.
+- Interactive viewers with ECharts/Leaflet
+- Time series analysis
 
-A usage example in App.tsx demonstrating submit handling and error toasts (console ok).
+### Subscription System
+- Polar.sh integration for payment processing
+- Feature gating with `FeatureGate` component
+- Usage limits tracked in database
+- Subscription tiers: free, basic, pro, enterprise
 
-Constraints
+## Database Schema Highlights
 
-No any/implicit any.
+### Core Tables
+- `organizations` - Multi-tenant orgs
+- `organization_users` - User-org relationships with roles
+- `farms` - Farm management
+- `parcels` - Crop parcels with GeoJSON boundaries
+- `inventory` - Stock management with packaging info
+- `suppliers`, `warehouses` - Supply chain
 
-No uncontrolled/controlled mismatch warnings.
+### Key Functions
+- `get_user_organizations()` - User's org list
+- `create_organization_with_owner()` - Org creation with owner role
+- `check_feature_access()` - Feature availability check
 
-Keep components self-contained and reusable.
+## Environment Variables
 
-Example output structure
+### Frontend (.env)
+```
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+VITE_SATELLITE_SERVICE_URL
+VITE_POLAR_ACCESS_TOKEN
+```
 
-Brief note of chosen UI lib.
+### Satellite Service (.env)
+```
+GEE_SERVICE_ACCOUNT
+GEE_PRIVATE_KEY
+GEE_PROJECT_ID
+SUPABASE_URL
+SUPABASE_KEY
+```
 
-Code blocks for schema.ts, Form.tsx, App.tsx.
+## Testing Strategy
+- Unit tests with Vitest for utilities/hooks
+- Component tests for critical UI components
+- E2E tests with Playwright for user flows
+- Test database migrations before deploying
 
-Mini “nudge” you can add if Claude drifts
-
-Reminder: use React Hook Form + Zod with FormProvider, useFormContext, and useFieldArray. No custom validators; all rules live in the Zod schema.
+## Performance Considerations
+- React Query caching with staleTime configuration
+- Lazy loading for routes with TanStack Router
+- Image optimization for satellite imagery
+- Pagination for large datasets (parcels, inventory)

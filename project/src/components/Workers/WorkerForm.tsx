@@ -114,6 +114,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       worker_type: 'daily_worker',
       hire_date: new Date().toISOString().split('T')[0],
       is_cnss_declared: false,
+      daily_rate: 0, // Default for daily_worker type (required by DB constraint)
       specialties: [],
       certifications: [],
     },
@@ -121,9 +122,40 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
   const workerType = watch('worker_type');
   const metayageType = watch('metayage_type');
+  const dailyRate = watch('daily_rate');
+  const monthlySalary = watch('monthly_salary');
+  const metayagePercentage = watch('metayage_percentage');
   const isCnssDecl = watch('is_cnss_declared');
   const specialties = watch('specialties') || [];
   const certifications = watch('certifications') || [];
+
+  // Ensure required compensation fields are set based on worker type
+  useEffect(() => {
+    if (!isEditing && workerType === 'daily_worker') {
+      if (!dailyRate) {
+        setValue('daily_rate', 0); // Required for daily_worker
+      }
+    }
+  }, [workerType, dailyRate, isEditing, setValue]);
+
+  useEffect(() => {
+    if (!isEditing && workerType === 'fixed_salary') {
+      if (!monthlySalary) {
+        setValue('monthly_salary', 0); // Required for fixed_salary
+      }
+    }
+  }, [workerType, monthlySalary, isEditing, setValue]);
+
+  useEffect(() => {
+    if (!isEditing && workerType === 'metayage') {
+      if (!metayageType) {
+        setValue('metayage_type', 'khammass'); // Default to khammass
+      }
+      if (!metayagePercentage) {
+        setValue('metayage_percentage', 20); // Default 20% for khammass
+      }
+    }
+  }, [workerType, metayageType, metayagePercentage, isEditing, setValue]);
 
   // Auto-fill percentage when métayage type changes
   useEffect(() => {

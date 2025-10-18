@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail } from 'lucide-react';
+import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { FormField } from './ui/FormField';
@@ -9,64 +9,66 @@ import { Textarea } from './ui/Textarea';
 
 interface Product {
   id: string;
-  item_name: string;
-  item_type: string;
-  category: string;
-  brand: string;
+  item_name: string | null;
+  item_type: string | null;
+  category: string | null;
+  brand: string | null;
   quantity: number;
   unit: string;
-  cost_per_unit: number;
-  supplier: string;
-  supplier_id?: string;
-  warehouse_id?: string;
-  batch_number?: string;
-  expiry_date?: string;
-  storage_location?: string;
-  status: string;
-  minimum_quantity?: number;
-  last_purchase_date?: string;
+  packaging_type?: string | null; // Type de conditionnement (bidon 5L, bouteille 1L, sac 25Kg, etc.)
+  packaging_size?: number | null; // Taille du conditionnement
+  cost_per_unit: number | null;
+  supplier: string | null;
+  supplier_id?: string | null;
+  warehouse_id?: string | null;
+  batch_number?: string | null;
+  expiry_date?: string | null;
+  storage_location?: string | null;
+  status: string | null;
+  minimum_quantity?: number | null;
+  last_purchase_date?: string | null;
 }
 
 interface Supplier {
   id: string;
   organization_id: string;
   name: string;
-  contact_person?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  postal_code?: string;
-  country?: string;
-  website?: string;
-  tax_id?: string;
-  payment_terms?: string;
-  notes?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  website: string | null;
+  tax_id: string | null;
+  payment_terms: string | null;
+  notes: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 interface WarehouseData {
   id: string;
   organization_id: string;
-  farm_id?: string;
+  farm_id: string | null;
   name: string;
-  description?: string;
-  location?: string;
-  address?: string;
-  city?: string;
-  postal_code?: string;
-  capacity?: number;
-  capacity_unit?: string;
-  temperature_controlled: boolean;
-  humidity_controlled: boolean;
-  security_level?: string;
-  manager_name?: string;
-  manager_phone?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  description: string | null;
+  location: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  capacity: number | null;
+  capacity_unit: string | null;
+  temperature_controlled: boolean | null;
+  humidity_controlled: boolean | null;
+  security_level: string | null;
+  manager_name: string | null;
+  manager_phone: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 
@@ -78,37 +80,30 @@ const StockManagement: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [newProduct, setNewProduct] = useState({
-    item_name: '',
-    category: '',
-    brand: '',
-    quantity: 0,
-    unit: 'kg',
-    cost_per_unit: 0,
-    supplier: '',
-    supplier_id: '',
-    warehouse_id: '',
-    batch_number: '',
-    expiry_date: '',
-    storage_location: '',
-    minimum_quantity: 10
-  });
-
   const [newPurchase, setNewPurchase] = useState({
     product_id: '',
+    product_name: '',  // Nouveau: nom du produit pour création automatique
+    category: '',
+    brand: '',
+    packaging_type: '', // Nouveau: type de conditionnement
+    packaging_size: 0,  // Nouveau: taille du conditionnement
     quantity: 0,
+    unit: 'units',
     cost_per_unit: 0,
     total_cost: 0,
     supplier: '',
+    supplier_id: '',
+    warehouse_id: '',
     notes: '',
     batch_number: '',
-    purchase_date: new Date().toISOString().split('T')[0]
+    purchase_date: new Date().toISOString().split('T')[0],
+    invoice_file: null as File | null, // Nouveau: fichier de facture/bon
+    invoice_number: '' // Nouveau: numéro de facture
   });
 
   const [newSupplier, setNewSupplier] = useState({
@@ -148,6 +143,7 @@ const StockManagement: React.FC = () => {
       fetchSuppliers();
       fetchWarehouses();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization]);
 
   const fetchProducts = async () => {
@@ -158,17 +154,38 @@ const StockManagement: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('inventory')
-        .select(`
-          *,
-          supplier:suppliers(name),
-          warehouse:warehouses(name)
-        `)
+        .from('inventory_items')
+        .select('*')
         .eq('organization_id', currentOrganization.id)
-        .order('item_name');
+        .order('name');
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Map to Product interface (inventory_items uses 'name', interface uses 'item_name')
+      const mappedData = (data || []).map(item => {
+        // Calculate status based on quantity and minimum_stock
+        const quantity = item.quantity || 0;
+        const minStock = item.minimum_stock || 10;
+        const status = quantity === 0 ? 'out_of_stock' :
+                      quantity < minStock ? 'low_stock' : 'available';
+        
+        return {
+          ...item,
+          item_name: item.name,
+          item_type: item.category,
+          brand: item.brand || null,
+          status,
+          minimum_quantity: item.minimum_stock,
+          batch_number: item.batch_number || null,
+          expiry_date: item.expiry_date || null,
+          storage_location: item.location,
+          packaging_type: item.packaging_type || null,
+          packaging_size: item.packaging_size || null,
+          last_purchase_date: item.last_purchase_date || null
+        };
+      });
+      
+      setProducts(mappedData as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to fetch products');
@@ -215,113 +232,142 @@ const StockManagement: React.FC = () => {
     }
   };
 
-  const handleAddProduct = async () => {
-    if (!currentOrganization) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .insert([{
-          organization_id: currentOrganization.id,
-          farm_id: currentFarm?.id || null,
-          name: newProduct.item_name,
-          category: newProduct.category || 'other',
-          quantity: newProduct.quantity,
-          unit: newProduct.unit,
-          minimum_stock: newProduct.minimum_quantity,
-          cost_per_unit: newProduct.cost_per_unit,
-          supplier: newProduct.supplier,
-          location: newProduct.storage_location,
-          notes: newProduct.batch_number ? `Batch: ${newProduct.batch_number}${newProduct.expiry_date ? `, Expires: ${newProduct.expiry_date}` : ''}` : null
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setProducts([...products, data]);
-      setShowAddProduct(false);
-      // Reset form
-      setNewProduct({
-        item_name: '',
-        category: '',
-        brand: '',
-        quantity: 0,
-        unit: 'kg',
-        cost_per_unit: 0,
-        supplier: '',
-        supplier_id: '',
-        warehouse_id: '',
-        batch_number: '',
-        expiry_date: '',
-        storage_location: '',
-        minimum_quantity: 10
-      });
-      setError(null);
-    } catch (error) {
-      console.error('Error adding product:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add product');
-    }
-  };
+  // Removed handleAddProduct - products are now created automatically during purchase
 
   const handleAddPurchase = async () => {
     if (!currentOrganization) return;
 
     try {
-      // Find the product
-      const product = products.find(p => p.id === newPurchase.product_id);
-      if (!product) {
-        setError('Product not found');
+      let productId = newPurchase.product_id;
+      let product = products.find(p => p.id === productId);
+
+      // Si le produit n'existe pas, le créer automatiquement
+      if (!productId && newPurchase.product_name) {
+        const { data: newProductData, error: createError } = await supabase
+          .from('inventory_items')
+          .insert([{
+            organization_id: currentOrganization.id,
+            farm_id: currentFarm?.id,
+            name: newPurchase.product_name,
+            category: newPurchase.category || 'other',
+            brand: newPurchase.brand,
+            packaging_type: newPurchase.packaging_type,
+            packaging_size: newPurchase.packaging_size,
+            quantity: newPurchase.quantity,
+            unit: newPurchase.unit,
+            cost_per_unit: newPurchase.cost_per_unit,
+            supplier: newPurchase.supplier,
+            warehouse_id: newPurchase.warehouse_id,
+            batch_number: newPurchase.batch_number,
+            minimum_stock: 10
+          }])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        // Map to Product interface
+        const newProduct: Product = {
+          ...newProductData,
+          item_name: newProductData.name,
+          item_type: newProductData.category,
+          brand: newProductData.brand || null,
+          status: 'available',
+          minimum_quantity: newProductData.minimum_stock,
+          storage_location: newProductData.location,
+          last_purchase_date: newPurchase.purchase_date
+        };
+
+        // Ajouter le nouveau produit à la liste locale
+        setProducts([...products, newProduct]);
+        product = newProduct;
+        productId = newProduct.id;
+
+        // Si un fichier de facture est fourni, l'uploader
+        if (newPurchase.invoice_file) {
+          const fileName = `invoices/${currentOrganization.id}/${productId}/${newPurchase.invoice_number || Date.now()}.pdf`;
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(fileName, newPurchase.invoice_file);
+
+          if (uploadError) {
+            console.error('Error uploading invoice:', uploadError);
+          }
+        }
+      } else if (product) {
+        // Si le produit existe, mettre à jour sa quantité
+        const newQuantity = product.quantity + newPurchase.quantity;
+
+        const { error: updateError } = await supabase
+          .from('inventory_items')
+          .update({
+            quantity: newQuantity,
+            cost_per_unit: newPurchase.cost_per_unit,
+            supplier: newPurchase.supplier,
+            batch_number: newPurchase.batch_number || product.batch_number,
+            packaging_type: newPurchase.packaging_type || product.packaging_type,
+            packaging_size: newPurchase.packaging_size || product.packaging_size
+          })
+          .eq('id', product.id)
+          .eq('organization_id', currentOrganization.id);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        if (product) {
+          const updatedProductId = product.id;
+          setProducts(products.map(p =>
+            p.id === updatedProductId
+              ? {
+                  ...p,
+                  quantity: newQuantity,
+                  cost_per_unit: newPurchase.cost_per_unit,
+                  supplier: newPurchase.supplier,
+                  batch_number: newPurchase.batch_number || p.batch_number,
+                  packaging_type: newPurchase.packaging_type || p.packaging_type,
+                  packaging_size: newPurchase.packaging_size || p.packaging_size
+                }
+              : p
+          ));
+        }
+
+        // Upload invoice if provided
+        if (newPurchase.invoice_file) {
+          const fileName = `invoices/${currentOrganization.id}/${product.id}/${newPurchase.invoice_number || Date.now()}.pdf`;
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(fileName, newPurchase.invoice_file);
+
+          if (uploadError) {
+            console.error('Error uploading invoice:', uploadError);
+          }
+        }
+      } else {
+        setError('Veuillez sélectionner un produit existant ou entrer le nom d\'un nouveau produit');
         return;
       }
-
-      // Update the product quantity
-      const newQuantity = product.quantity + newPurchase.quantity;
-      const newStatus = newQuantity === 0 ? 'out_of_stock' :
-                       newQuantity < (product.minimum_quantity || 10) ? 'low_stock' : 'available';
-
-      const { error: updateError } = await supabase
-        .from('inventory')
-        .update({
-          quantity: newQuantity,
-          status: newStatus,
-          cost_per_unit: newPurchase.cost_per_unit,
-          supplier: newPurchase.supplier,
-          batch_number: newPurchase.batch_number || product.batch_number,
-          last_purchase_date: newPurchase.purchase_date,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', product.id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (updateError) throw updateError;
-
-      // Update local state
-      setProducts(products.map(p =>
-        p.id === product.id
-          ? {
-              ...p,
-              quantity: newQuantity,
-              status: newStatus,
-              cost_per_unit: newPurchase.cost_per_unit,
-              supplier: newPurchase.supplier,
-              batch_number: newPurchase.batch_number || p.batch_number,
-              last_purchase_date: newPurchase.purchase_date
-            }
-          : p
-      ));
 
       setShowAddPurchase(false);
       // Reset form
       setNewPurchase({
         product_id: '',
+        product_name: '',
+        category: '',
+        brand: '',
+        packaging_type: '',
+        packaging_size: 0,
         quantity: 0,
+        unit: 'units',
         cost_per_unit: 0,
         total_cost: 0,
         supplier: '',
+        supplier_id: '',
+        warehouse_id: '',
         notes: '',
         batch_number: '',
-        purchase_date: new Date().toISOString().split('T')[0]
+        purchase_date: new Date().toISOString().split('T')[0],
+        invoice_file: null,
+        invoice_number: ''
       });
       setError(null);
     } catch (error) {
@@ -336,7 +382,7 @@ const StockManagement: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('inventory')
+        .from('inventory_items')
         .delete()
         .eq('id', id)
         .eq('organization_id', currentOrganization.id);
@@ -537,23 +583,13 @@ const StockManagement: React.FC = () => {
       {/* Tab Actions */}
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {activeTab === 'stock' && (
-          <>
-            <button
-              onClick={() => setShowAddProduct(true)}
-              className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-            >
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Nouveau Produit</span>
-            </button>
-            <button
-              onClick={() => setShowAddPurchase(true)}
-              disabled={products.length === 0}
-              className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Nouvel Achat</span>
-            </button>
-          </>
+          <button
+            onClick={() => setShowAddPurchase(true)}
+            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+          >
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span>Nouvel Achat</span>
+          </button>
         )}
         {activeTab === 'suppliers' && (
           <button
@@ -636,6 +672,11 @@ const StockManagement: React.FC = () => {
                       <div className="ml-2 sm:ml-4">
                         <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                           {product.item_name}
+                          {product.packaging_type && (
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
+                              {product.packaging_type} {product.packaging_size && `${product.packaging_size}${product.unit}`}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                           {product.category} • {product.supplier}
@@ -930,8 +971,8 @@ const StockManagement: React.FC = () => {
         </>
       )}
 
-      {/* Add Product Modal */}
-      {showAddProduct && (
+      {/* Removed Add Product Modal - Products are now created automatically during purchase */}
+      {/* {showAddProduct && (
         <div className="modal-overlay">
           <div className="modal-panel p-4 sm:p-6 max-w-2xl">
             <div className="flex justify-between items-center mb-4 sm:mb-6">
@@ -1135,15 +1176,15 @@ const StockManagement: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Add Purchase Modal */}
       {showAddPurchase && (
         <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-lg">
+          <div className="modal-panel p-4 sm:p-6 max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvel Achat
+                Nouvel Achat de Produit
               </h3>
               <button
                 onClick={() => setShowAddPurchase(false)}
@@ -1152,37 +1193,183 @@ const StockManagement: React.FC = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
+
+            {/* Toggle between existing product or new product */}
+            <div className="mb-6">
+              <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setNewPurchase({ ...newPurchase, product_id: '', product_name: '' })}
+                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
+                    !newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Nouveau Produit
+                </button>
+                <button
+                  onClick={() => setNewPurchase({ ...newPurchase, product_name: '', product_id: products.length > 0 ? products[0].id : '' })}
+                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
+                    newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                  disabled={products.length === 0}
+                >
+                  Produit Existant
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-4">
-              <div>
-                <FormField label="Produit *" htmlFor="purchase_product" required>
-                  <Select
-                    id="purchase_product"
-                    value={newPurchase.product_id}
-                    onChange={(e) => {
-                      const value = (e.target as HTMLSelectElement).value;
-                      const product = products.find(p => p.id === value);
-                      setNewPurchase({
-                        ...newPurchase,
-                        product_id: value,
-                        cost_per_unit: product?.cost_per_unit || 0,
-                        supplier: product?.supplier || ''
-                      });
-                    }}
-                    required
-                  >
-                    <option value="">Sélectionner un produit</option>
-                    {products.map(product => (
-                      <option key={product.id} value={product.id}>
-                        {product.item_name} ({product.quantity} {product.unit} en stock)
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
+              {/* Product Selection or Creation */}
+              {newPurchase.product_id ? (
+                <div>
+                  <FormField label="Sélectionner un produit existant *" htmlFor="purchase_product" required>
+                    <Select
+                      id="purchase_product"
+                      value={newPurchase.product_id}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLSelectElement).value;
+                        const product = products.find(p => p.id === value);
+                        setNewPurchase({
+                          ...newPurchase,
+                          product_id: value,
+                          cost_per_unit: product?.cost_per_unit || 0,
+                          supplier: product?.supplier || '',
+                          unit: product?.unit || 'units',
+                          packaging_type: product?.packaging_type || '',
+                          packaging_size: product?.packaging_size || 0
+                        });
+                      }}
+                      required
+                    >
+                      <option value="">Sélectionner un produit</option>
+                      {products.map(product => (
+                        <option key={product.id} value={product.id}>
+                          {product.item_name}
+                          {product.packaging_type && ` - ${product.packaging_type} ${product.packaging_size}${product.unit}`}
+                          ({product.quantity} {product.unit} en stock)
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+              ) : (
+                <>
+                  {/* New Product Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <FormField label="Nom du produit *" htmlFor="product_name" required>
+                        <Input
+                          id="product_name"
+                          type="text"
+                          value={newPurchase.product_name}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, product_name: e.target.value })}
+                          placeholder="Ex: Engrais NPK 15-15-15"
+                          required
+                        />
+                      </FormField>
+                    </div>
+
+                    <div>
+                      <FormField label="Catégorie *" htmlFor="purchase_category" required>
+                        <Select
+                          id="purchase_category"
+                          value={newPurchase.category}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, category: (e.target as HTMLSelectElement).value })}
+                          required
+                        >
+                          <option value="">Sélectionner...</option>
+                          <option value="seeds">Semences</option>
+                          <option value="fertilizers">Engrais</option>
+                          <option value="pesticides">Pesticides</option>
+                          <option value="herbicides">Herbicides</option>
+                          <option value="fungicides">Fongicides</option>
+                          <option value="equipment">Équipement</option>
+                          <option value="tools">Outils</option>
+                          <option value="irrigation">Irrigation</option>
+                          <option value="other">Autre</option>
+                        </Select>
+                      </FormField>
+                    </div>
+
+                    <div>
+                      <FormField label="Marque" htmlFor="purchase_brand">
+                        <Input
+                          id="purchase_brand"
+                          type="text"
+                          value={newPurchase.brand}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, brand: e.target.value })}
+                          placeholder="Ex: Bayer, Syngenta, etc."
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Packaging Information */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Conditionnement</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <FormField label="Type de conditionnement *" htmlFor="packaging_type" required>
+                      <Select
+                        id="packaging_type"
+                        value={newPurchase.packaging_type}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_type: (e.target as HTMLSelectElement).value })}
+                        required
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="bidon">Bidon</option>
+                        <option value="bouteille">Bouteille</option>
+                        <option value="sac">Sac</option>
+                        <option value="boite">Boîte</option>
+                        <option value="carton">Carton</option>
+                        <option value="palette">Palette</option>
+                        <option value="vrac">Vrac</option>
+                        <option value="unite">Unité</option>
+                      </Select>
+                    </FormField>
+                  </div>
+
+                  <div>
+                    <FormField label="Taille *" htmlFor="packaging_size" required>
+                      <Input
+                        id="packaging_size"
+                        type="number"
+                        step="0.01"
+                        value={newPurchase.packaging_size}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_size: Number(e.target.value) })}
+                        placeholder="Ex: 5, 25, 1000"
+                        required
+                      />
+                    </FormField>
+                  </div>
+
+                  <div>
+                    <FormField label="Unité *" htmlFor="purchase_unit" required>
+                      <Select
+                        id="purchase_unit"
+                        value={newPurchase.unit}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, unit: (e.target as HTMLSelectElement).value })}
+                        required
+                      >
+                        <option value="L">Litres (L)</option>
+                        <option value="mL">Millilitres (mL)</option>
+                        <option value="kg">Kilogrammes (kg)</option>
+                        <option value="g">Grammes (g)</option>
+                        <option value="units">Unités</option>
+                        <option value="pieces">Pièces</option>
+                        <option value="m">Mètres (m)</option>
+                        <option value="m2">Mètres carrés (m²)</option>
+                      </Select>
+                    </FormField>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Purchase Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <FormField label="Quantité *" htmlFor="purchase_qty" required>
+                  <FormField label="Quantité achetée *" htmlFor="purchase_qty" required>
                     <Input
                       id="purchase_qty"
                       type="number"
@@ -1192,63 +1379,151 @@ const StockManagement: React.FC = () => {
                         quantity: Number(e.target.value),
                         total_cost: Number(e.target.value) * newPurchase.cost_per_unit
                       })}
+                      placeholder="Nombre de conditionnements"
                       required
                     />
                   </FormField>
                 </div>
+
                 <div>
-                  <FormField label="Prix Unitaire (€) *" htmlFor="purchase_cpu" required>
+                  <FormField label="Prix unitaire (DH) *" htmlFor="purchase_cpu" required>
                     <Input
                       id="purchase_cpu"
                       type="number"
-                      step={1}
+                      step="0.01"
                       value={newPurchase.cost_per_unit}
                       onChange={(e) => setNewPurchase({
                         ...newPurchase,
                         cost_per_unit: Number(e.target.value),
                         total_cost: newPurchase.quantity * Number(e.target.value)
                       })}
+                      placeholder="Prix par conditionnement"
                       required
+                    />
+                  </FormField>
+                </div>
+
+                <div>
+                  <FormField label="Date d'achat *" htmlFor="purchase_date" required>
+                    <Input
+                      id="purchase_date"
+                      type="date"
+                      value={newPurchase.purchase_date}
+                      onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
+                      required
+                    />
+                  </FormField>
+                </div>
+
+                <div>
+                  <FormField label="Numéro de lot" htmlFor="purchase_batch">
+                    <Input
+                      id="purchase_batch"
+                      type="text"
+                      value={newPurchase.batch_number}
+                      onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
+                      placeholder="Ex: LOT2024001"
                     />
                   </FormField>
                 </div>
               </div>
 
-              <div>
-                <FormField label="Date d'achat *" htmlFor="purchase_date" required>
-                  <Input
-                    id="purchase_date"
-                    type="date"
-                    value={newPurchase.purchase_date}
-                    onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
-                    required
-                  />
-                </FormField>
+              {/* Supplier Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <FormField label="Fournisseur *" htmlFor="purchase_supplier" required>
+                    <Select
+                      id="purchase_supplier"
+                      value={newPurchase.supplier}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLSelectElement).value;
+                        const selectedSupplier = suppliers.find(s => s.name === value);
+                        setNewPurchase({
+                          ...newPurchase,
+                          supplier: value,
+                          supplier_id: selectedSupplier?.id || ''
+                        });
+                      }}
+                      required
+                    >
+                      <option value="">Sélectionner un fournisseur</option>
+                      {suppliers.map(supplier => (
+                        <option key={supplier.id} value={supplier.name}>
+                          {supplier.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+
+                <div>
+                  <FormField label="Entrepôt de stockage" htmlFor="purchase_warehouse">
+                    <Select
+                      id="purchase_warehouse"
+                      value={newPurchase.warehouse_id}
+                      onChange={(e) => setNewPurchase({ ...newPurchase, warehouse_id: (e.target as HTMLSelectElement).value })}
+                    >
+                      <option value="">Sélectionner un entrepôt</option>
+                      {warehouses.map(warehouse => (
+                        <option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
               </div>
 
-              <div>
-                <FormField label="Fournisseur *" htmlFor="purchase_supplier" required>
-                  <Input
-                    id="purchase_supplier"
-                    type="text"
-                    value={newPurchase.supplier}
-                    onChange={(e) => setNewPurchase({ ...newPurchase, supplier: e.target.value })}
-                    required
-                  />
-                </FormField>
+              {/* Invoice Upload */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Document d'achat</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <FormField label="Numéro de facture/bon" htmlFor="invoice_number">
+                      <Input
+                        id="invoice_number"
+                        type="text"
+                        value={newPurchase.invoice_number}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, invoice_number: e.target.value })}
+                        placeholder="Ex: FAC-2024-001"
+                      />
+                    </FormField>
+                  </div>
+
+                  <div>
+                    <FormField label="Importer facture/bon (PDF, Image)" htmlFor="invoice_file">
+                      <div className="flex items-center space-x-2">
+                        <label htmlFor="invoice_upload" className="cursor-pointer flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500">
+                          <Upload className="h-4 w-4" />
+                          <span className="text-sm">{newPurchase.invoice_file ? newPurchase.invoice_file.name : 'Choisir un fichier'}</span>
+                        </label>
+                        <input
+                          id="invoice_upload"
+                          type="file"
+                          accept=".pdf,image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setNewPurchase({ ...newPurchase, invoice_file: file });
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        {newPurchase.invoice_file && (
+                          <button
+                            onClick={() => setNewPurchase({ ...newPurchase, invoice_file: null })}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </FormField>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <FormField label="Numéro de lot" htmlFor="purchase_batch">
-                  <Input
-                    id="purchase_batch"
-                    type="text"
-                    value={newPurchase.batch_number}
-                    onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
-                  />
-                </FormField>
-              </div>
-
+              {/* Notes */}
               <div>
                 <FormField label="Notes" htmlFor="purchase_notes">
                   <Textarea
@@ -1256,19 +1531,26 @@ const StockManagement: React.FC = () => {
                     value={newPurchase.notes}
                     onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
                     rows={3}
+                    placeholder="Informations supplémentaires sur cet achat..."
                   />
                 </FormField>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+              {/* Total */}
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Total
+                    Total de l'achat
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} €
+                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} DH
                   </span>
                 </div>
+                {newPurchase.packaging_type && newPurchase.packaging_size > 0 && (
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {newPurchase.quantity} × {newPurchase.packaging_type} de {newPurchase.packaging_size}{newPurchase.unit}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1281,10 +1563,11 @@ const StockManagement: React.FC = () => {
               </button>
               <button
                 onClick={handleAddPurchase}
-                disabled={!newPurchase.product_id || !newPurchase.quantity || !newPurchase.cost_per_unit}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={(!newPurchase.product_id && !newPurchase.product_name) || !newPurchase.quantity || !newPurchase.cost_per_unit || !newPurchase.packaging_type}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                Enregistrer
+                <ShoppingCart className="h-4 w-4" />
+                <span>Enregistrer l'achat</span>
               </button>
             </div>
           </div>
