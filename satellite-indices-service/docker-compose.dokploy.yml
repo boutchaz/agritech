@@ -4,8 +4,6 @@ services:
   satellite-indices-service:
     build: .
     container_name: satellite-indices-service
-    ports:
-      - "8000:8000"
     environment:
       - DEBUG=false
       - GEE_SERVICE_ACCOUNT=${GEE_SERVICE_ACCOUNT}
@@ -18,18 +16,20 @@ services:
       - ./temp-data:/tmp/satellite-data
     restart: unless-stopped
     networks:
-      - agritech-network
       - dokploy-network
     labels:
-      # Traefik configuration - minimal setup for Dokploy
+      # Basic Traefik configuration
       - "traefik.enable=true"
-      - "traefik.http.routers.satellite-indices-service.rule=Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)"
-      - "traefik.http.services.satellite-indices-service.loadbalancer.server.port=8000"
+      - "traefik.docker.network=dokploy-network"
 
-      # Enable HTTPS
-      - "traefik.http.routers.satellite-indices-service.entrypoints=websecure"
-      - "traefik.http.routers.satellite-indices-service.tls=true"
-      - "traefik.http.routers.satellite-indices-service.tls.certresolver=letsencrypt"
+      # Router configuration for domain
+      - "traefik.http.routers.satellite.rule=Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)"
+      - "traefik.http.routers.satellite.entrypoints=websecure"
+      - "traefik.http.routers.satellite.tls=true"
+      - "traefik.http.routers.satellite.tls.certresolver=letsencrypt"
+
+      # Service configuration
+      - "traefik.http.services.satellite.loadbalancer.server.port=8000"
 
       # Dokploy labels
       - "dokploy=true"
@@ -42,8 +42,6 @@ services:
       start_period: 40s
 
 networks:
-  agritech-network:
-    driver: bridge
   dokploy-network:
     external: true
 
