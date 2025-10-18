@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Calendar, Cloud, Droplets, TrendingUp } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays } from 'lucide-react';
 import { useWeatherAnalytics, TimeRange } from '../../hooks/useWeatherAnalytics';
 import TemperatureCharts from './TemperatureCharts';
 import PrecipitationChart from './PrecipitationChart';
 import DryWetConditionsCharts from './DryWetConditionsCharts';
+import WeatherForecast from '../WeatherForecast';
 
 interface WeatherAnalyticsViewProps {
   parcelBoundary: number[][];
@@ -30,6 +31,21 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
     setTimeRange(range);
     setShowCustomDates(range === 'custom');
   };
+
+  // Calculate the center of the parcel for weather forecast
+  const parcelCenter = useMemo(() => {
+    if (!parcelBoundary || parcelBoundary.length === 0) {
+      return { latitude: 0, longitude: 0 };
+    }
+
+    const sumLat = parcelBoundary.reduce((sum, point) => sum + point[1], 0);
+    const sumLng = parcelBoundary.reduce((sum, point) => sum + point[0], 0);
+
+    return {
+      latitude: sumLat / parcelBoundary.length,
+      longitude: sumLng / parcelBoundary.length,
+    };
+  }, [parcelBoundary]);
 
   if (loading) {
     return (
@@ -167,6 +183,18 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Weather Forecast Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <CalendarDays className="h-6 w-6 text-blue-500" />
+          Prévisions Météo sur 15 jours
+        </h3>
+        <WeatherForecast
+          latitude={parcelCenter.latitude}
+          longitude={parcelCenter.longitude}
+        />
       </div>
 
       {data ? (
