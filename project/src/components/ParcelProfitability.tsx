@@ -13,7 +13,7 @@ interface ParcelProfitabilityProps {
 
 const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
   const { currentOrganization, user } = useAuth();
-  const { format: formatCurrency } = useCurrency();
+  const { format: formatCurrency, currencyCode, symbol: currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
 
   const [startDate, setStartDate] = useState(() => {
@@ -92,7 +92,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
           organization_id: currentOrganization.id,
           parcel_id: parcelId,
           ...costData,
-          currency: currentOrganization.currency || 'EUR',
+          currency: currencyCode,
           created_by: user?.id
         })
         .select()
@@ -125,7 +125,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
           organization_id: currentOrganization.id,
           parcel_id: parcelId,
           ...revenueData,
-          currency: currentOrganization.currency || 'EUR',
+          currency: currencyCode,
           created_by: user?.id
         })
         .select()
@@ -164,7 +164,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   }, {} as Record<string, number>);
 
   const isLoading = costsLoading || revenuesLoading;
-  const currency = currentOrganization?.currency || 'EUR';
 
   return (
     <div className="space-y-6">
@@ -228,7 +227,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 <DollarSign className="h-4 w-4 text-red-500" />
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(totalCosts, currency)}
+                {formatCurrency(totalCosts)}
               </div>
             </div>
 
@@ -240,7 +239,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 <DollarSign className="h-4 w-4 text-green-500" />
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(totalRevenue, currency)}
+                {formatCurrency(totalRevenue)}
               </div>
             </div>
 
@@ -256,7 +255,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 )}
               </div>
               <div className={`text-xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(netProfit, currency)}
+                {formatCurrency(netProfit)}
               </div>
             </div>
 
@@ -289,7 +288,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(amount, currency)} ({percentage.toFixed(1)}%)
+                          {formatCurrency(amount)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -329,7 +328,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                         </div>
                       </div>
                       <div className="text-sm font-medium text-red-600 dark:text-red-400">
-                        {formatCurrency(cost.amount, currency)}
+                        {formatCurrency(cost.amount)}
                       </div>
                     </div>
                   ))}
@@ -360,7 +359,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                         </div>
                       </div>
                       <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                        {formatCurrency(revenue.amount, currency)}
+                        {formatCurrency(revenue.amount)}
                       </div>
                     </div>
                   ))}
@@ -409,7 +408,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     placeholder="0.00"
                   />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 dark:text-gray-400">{currency}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{currencySymbol}</span>
                   </div>
                 </div>
               </div>
@@ -492,7 +491,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     placeholder="0.00"
                   />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 dark:text-gray-400">{currency}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{currencySymbol}</span>
                   </div>
                 </div>
               </div>

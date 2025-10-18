@@ -91,11 +91,18 @@ const OrganizationSettings: React.FC = () => {
 
       if (error) throw error;
 
-      // Invalidate organizations query to refresh the sidebar and other components
-      queryClient.invalidateQueries({ queryKey: ['organizations', user?.id] });
+      // Invalidate ALL organization-related queries to ensure fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth', 'organizations'] }),
+        queryClient.invalidateQueries({ queryKey: ['organizations'] }),
+      ]);
 
-      // Force reload to refresh auth context with new organization data
+      // Wait for queries to refetch
+      await queryClient.refetchQueries({ queryKey: ['auth', 'organizations', user?.id] });
+
       setSuccess(true);
+
+      // Force reload after a delay to ensure new data is loaded
       setTimeout(() => {
         window.location.reload();
       }, 1000);

@@ -160,7 +160,7 @@ const ProfitabilityDashboard: React.FC = () => {
   }, [costs, revenues]);
 
   const isLoading = costsLoading || revenuesLoading;
-  const currency = currentOrganization?.currency || 'EUR';
+  // Currency is now managed by useCurrency hook
 
   return (
     <div className="p-6 space-y-6">
@@ -242,7 +242,7 @@ const ProfitabilityDashboard: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-red-500" />
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(profitabilityData.totalCosts, currency)}
+                {formatCurrency(profitabilityData.totalCosts)}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {costs.length} entrées
@@ -257,7 +257,7 @@ const ProfitabilityDashboard: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-green-500" />
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(profitabilityData.totalRevenue, currency)}
+                {formatCurrency(profitabilityData.totalRevenue)}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {revenues.length} entrées
@@ -278,7 +278,7 @@ const ProfitabilityDashboard: React.FC = () => {
               <div className={`text-2xl font-bold ${
                 profitabilityData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {formatCurrency(profitabilityData.netProfit, currency)}
+                {formatCurrency(profitabilityData.netProfit)}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {profitabilityData.netProfit >= 0 ? 'Profitable' : 'En perte'}
@@ -320,7 +320,7 @@ const ProfitabilityDashboard: React.FC = () => {
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(amount, currency)} ({percentage.toFixed(1)}%)
+                          {formatCurrency(amount)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -350,7 +350,7 @@ const ProfitabilityDashboard: React.FC = () => {
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(amount, currency)} ({percentage.toFixed(1)}%)
+                          {formatCurrency(amount)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -401,15 +401,15 @@ const ProfitabilityDashboard: React.FC = () => {
                         {parcel.parcel_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400">
-                        {formatCurrency(parcel.total_costs, currency)}
+                        {formatCurrency(parcel.total_costs)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400">
-                        {formatCurrency(parcel.total_revenue, currency)}
+                        {formatCurrency(parcel.total_revenue)}
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
                         parcel.net_profit >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {formatCurrency(parcel.net_profit, currency)}
+                        {formatCurrency(parcel.net_profit)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
                         {parcel.profit_margin !== undefined ? `${parcel.profit_margin.toFixed(1)}%` : '-'}

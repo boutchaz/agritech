@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useCurrency } from '../hooks/useCurrency';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -74,6 +75,7 @@ interface WarehouseData {
 
 const StockManagement: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
+  const { symbol: currencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<'stock' | 'suppliers' | 'warehouses'>('stock');
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -701,7 +703,7 @@ const StockManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="hidden sm:table-cell px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    {product.cost_per_unit?.toFixed(2)} €/{product.unit}
+                    {product.cost_per_unit?.toFixed(2)} {currencySymbol}/{product.unit}
                   </td>
                   <td className="hidden md:table-cell px-4 lg:px-6 py-3 sm:py-4">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -1087,7 +1089,7 @@ const StockManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <FormField label="Coût unitaire (€) *" htmlFor="cpu" required>
+                  <FormField label={`Coût unitaire (${currencySymbol}) *`} htmlFor="cpu" required>
                     <Input
                       id="cpu"
                       type="number"
@@ -1386,7 +1388,7 @@ const StockManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <FormField label="Prix unitaire (DH) *" htmlFor="purchase_cpu" required>
+                  <FormField label={`Prix unitaire (${currencySymbol}) *`} htmlFor="purchase_cpu" required>
                     <Input
                       id="purchase_cpu"
                       type="number"
@@ -1543,7 +1545,7 @@ const StockManagement: React.FC = () => {
                     Total de l'achat
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} DH
+                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} {currencySymbol}
                   </span>
                 </div>
                 {newPurchase.packaging_type && newPurchase.packaging_size > 0 && (
