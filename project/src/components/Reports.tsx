@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Module } from '../types';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface ReportType {
   id: string;
@@ -22,6 +23,7 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
+  const { format: formatCurrency } = useCurrency();
 
   // Base reports that are always available
   const baseReports: ReportType[] = [
@@ -115,7 +117,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
               'Produit': item.name,
               'Catégorie': item.product_categories.name,
               'Quantité': `${item.quantity} ${item.unit}`,
-              'Valeur': `${(item.quantity * item.price_per_unit).toFixed(2)} DH`,
+              'Valeur': formatCurrency(item.quantity * item.price_per_unit),
               'Dernier achat': item.last_purchase_date ? new Date(item.last_purchase_date).toLocaleDateString() : '-'
             }));
           }
@@ -154,14 +156,14 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
                 'Produit': p.inventory.name,
                 'Type': 'Entrée',
                 'Quantité': `${p.quantity} ${p.inventory.unit}`,
-                'Valeur': `${p.total_price.toFixed(2)} DH`
+                'Valeur': formatCurrency(p.total_price)
               })),
               ...(applications.data || []).map(a => ({
                 'Date': new Date(a.application_date).toLocaleDateString(),
                 'Produit': a.inventory.name,
                 'Type': 'Sortie',
                 'Quantité': `${a.quantity_used} ${a.inventory.unit}`,
-                'Valeur': `${(a.quantity_used * a.inventory.price_per_unit).toFixed(2)} DH`
+                'Valeur': formatCurrency(a.quantity_used * a.inventory.price_per_unit)
               }))
             ];
           }
@@ -226,7 +228,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
               'CIN': employee.cin,
               'Poste': employee.position,
               'Date d\'embauche': new Date(employee.hire_date).toLocaleDateString(),
-              'Salaire': `${employee.salary.toFixed(2)} DH`
+              'Salaire': formatCurrency(employee.salary)
             }));
           }
         },
@@ -245,7 +247,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
               'Nom': laborer.last_name,
               'Prénom': laborer.first_name,
               'CIN': laborer.cin,
-              'Taux journalier': `${laborer.daily_rate.toFixed(2)} DH`,
+              'Taux journalier': formatCurrency(laborer.daily_rate),
               'Spécialités': laborer.specialties?.join(', ') || '-'
             }));
           }

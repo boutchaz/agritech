@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Info, Save } from 'lucide-react';
-import { useWorkers, useCalculateMetayageShare, useCreateMetayageSettlement } from '../../hooks/useWorkers';
+import { useWorkers, useCreateMetayageSettlement } from '../../hooks/useWorkers';
 import { calculateMetayageShare } from '../../types/workers';
 import type { CalculationBasis } from '../../types/workers';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface MetayageCalculatorProps {
   organizationId: string;
@@ -16,8 +17,8 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   onSuccess,
 }) => {
   const { data: workers = [] } = useWorkers(organizationId, farmId);
-  const _calculateShare = useCalculateMetayageShare();
   const createSettlement = useCreateMetayageSettlement();
+  const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
 
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
   const [grossRevenue, setGrossRevenue] = useState<string>('');
@@ -190,7 +191,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Revenu brut (DH) *
+                    Revenu brut ({currencySymbol}) *
                   </label>
                   <input
                     type="number"
@@ -207,7 +208,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Charges totales (DH)
+                    Charges totales ({currencySymbol})
                   </label>
                   <input
                     type="number"
@@ -274,19 +275,19 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Revenu brut:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {grossRevenueNum.toFixed(2)} DH
+                        {formatCurrency(grossRevenueNum)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Charges totales:</span>
                       <span className="font-medium text-red-600 dark:text-red-400">
-                        -{totalChargesNum.toFixed(2)} DH
+                        -{formatCurrency(totalChargesNum)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-purple-200 dark:border-purple-700">
                       <span className="text-gray-600 dark:text-gray-400">Revenu net:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {netRevenue.toFixed(2)} DH
+                        {formatCurrency(netRevenue)}
                       </span>
                     </div>
                   </div>
@@ -295,7 +296,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Base de calcul:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {baseAmount.toFixed(2)} DH
+                        {formatCurrency(baseAmount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -307,7 +308,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                     <div className="flex justify-between pt-2 border-t border-purple-200 dark:border-purple-700">
                       <span className="text-lg font-semibold text-gray-900 dark:text-white">Part travailleur:</span>
                       <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {workerShare.toFixed(2)} DH
+                        {formatCurrency(workerShare)}
                       </span>
                     </div>
                   </div>

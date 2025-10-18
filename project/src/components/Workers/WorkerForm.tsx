@@ -10,6 +10,7 @@ import {
   CALCULATION_BASIS_OPTIONS,
 } from '../../types/workers';
 import { useCreateWorker, useUpdateWorker } from '../../hooks/useWorkers';
+import { useCurrency } from '../../hooks/useCurrency';
 
 // Zod schema with conditional validation
 const workerSchema = z.object({
@@ -71,6 +72,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const isEditing = !!worker;
   const createWorker = useCreateWorker();
   const updateWorker = useUpdateWorker();
+  const { symbol: currencySymbol } = useCurrency();
 
   const [specialtyInput, setSpecialtyInput] = useState('');
   const [certificationInput, setCertificationInput] = useState('');
@@ -430,7 +432,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             {workerType === 'fixed_salary' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Salaire mensuel (DH) *
+                  Salaire mensuel ({currencySymbol}) *
                 </label>
                 <input
                   {...register('monthly_salary', { valueAsNumber: true })}
@@ -449,7 +451,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             {workerType === 'daily_worker' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Taux journalier (DH) *
+                  Taux journalier ({currencySymbol}) *
                 </label>
                 <input
                   {...register('daily_rate', { valueAsNumber: true })}
