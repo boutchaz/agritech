@@ -121,7 +121,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               <Select
                 id="texture"
                 value={formData.texture || ''}
-                onChange={(e) => updateField('texture', e.target.value as any)}
+                onChange={(e) => updateField('texture', e.target.value as 'sand' | 'loamy_sand' | 'sandy_loam' | 'loam' | 'silt_loam' | 'silt' | 'sandy_clay_loam' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay' | undefined)}
               >
                 <option value="">Sélectionner...</option>
                 <option value="sand">Sable</option>

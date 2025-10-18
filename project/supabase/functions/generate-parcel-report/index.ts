@@ -2,7 +2,7 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateRequest, validateParcelAccess } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,28 +22,14 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the request
+    const { user, supabase: supabaseClient } = await authenticateRequest(req)
+
     // Get request body
     const { parcel_id, template_id, parcel_data }: ReportRequest = await req.json()
 
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
-
-    // Get user
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser()
-
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    // Validate user has access to this parcel
+    await validateParcelAccess(supabaseClient, user.id, parcel_id)
 
     // Generate report title
     const templateNames: Record<string, string> = {

@@ -11,6 +11,8 @@ import { CommandPalette } from '../components/CommandPalette'
 import { useNavigate } from '@tanstack/react-router'
 import type { Action } from 'kbar'
 import { useKBar } from 'kbar'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
 
 const mockModules: Module[] = [
   {
@@ -39,26 +41,65 @@ const mockSensorData: SensorData[] = [
   }
 ];
 
+const defaultDashboardSettings: DashboardSettings = {
+  showSoilData: true,
+  showClimateData: true,
+  showIrrigationData: true,
+  showMaintenanceData: true,
+  showProductionData: true,
+  showFinancialData: true,
+  showStockAlerts: true,
+  showTaskAlerts: true,
+  layout: {
+    topRow: ['farm', 'soil', 'climate', 'irrigation'],
+    middleRow: ['production', 'financial'],
+    bottomRow: ['alerts', 'tasks']
+  }
+};
+
 const AppContent: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentOrganization, currentFarm, user } = useAuth();
   const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
-  const [dashboardSettings, _setDashboardSettings] = useState<DashboardSettings>({
-    showSoilData: true,
-    showClimateData: true,
-    showIrrigationData: true,
-    showMaintenanceData: true,
-    showProductionData: true,
-    showFinancialData: true,
-    showStockAlerts: true,
-    showTaskAlerts: true,
-    layout: {
-      topRow: ['farm', 'soil', 'climate', 'irrigation'],
-      middleRow: ['production', 'financial'],
-      bottomRow: ['alerts', 'tasks']
-    }
+
+  // Fetch dashboard settings from database
+  const { data: dashboardSettings = defaultDashboardSettings } = useQuery({
+    queryKey: ['dashboard-settings', user?.id, currentOrganization?.id],
+    queryFn: async () => {
+      if (!user || !currentOrganization) return defaultDashboardSettings;
+
+      const { data, error } = await supabase
+        .from('dashboard_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('organization_id', currentOrganization.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching dashboard settings:', error);
+        return defaultDashboardSettings;
+      }
+
+      if (data) {
+        return {
+          showSoilData: data.show_soil_data,
+          showClimateData: data.show_climate_data,
+          showIrrigationData: data.show_irrigation_data,
+          showMaintenanceData: data.show_maintenance_data,
+          showProductionData: data.show_production_data,
+          showFinancialData: data.show_financial_data,
+          showStockAlerts: data.show_stock_alerts,
+          showTaskAlerts: data.show_task_alerts,
+          layout: data.layout
+        };
+      }
+
+      return defaultDashboardSettings;
+    },
+    enabled: !!user && !!currentOrganization,
+    staleTime: 60000, // Cache for 1 minute
   });
 
   const toggleTheme = useCallback(() => {

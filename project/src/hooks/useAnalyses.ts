@@ -11,37 +11,45 @@ import type {
 
 type AnalysisData = SoilAnalysisData | PlantAnalysisData | WaterAnalysisData;
 
-export function useAnalyses(farmId: string, analysisType?: AnalysisType) {
+export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisType, queryType: 'parcel' | 'farm' = 'parcel') {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (farmId) {
+    if (parcelIdOrFarmId) {
       fetchAnalyses();
     }
-  }, [farmId, analysisType]);
+  }, [parcelIdOrFarmId, analysisType, queryType]);
 
   const fetchAnalyses = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // First get all parcels for this farm
-      const { data: parcels, error: parcelsError } = await supabase
-        .from('parcels')
-        .select('id')
-        .eq('farm_id', farmId);
+      let parcelIds: string[] = [];
 
-      if (parcelsError) throw parcelsError;
+      if (queryType === 'farm') {
+        // Get all parcels for this farm
+        const { data: parcels, error: parcelsError } = await supabase
+          .from('parcels')
+          .select('id')
+          .eq('farm_id', parcelIdOrFarmId);
 
-      if (!parcels || parcels.length === 0) {
-        setAnalyses([]);
-        return;
+        if (parcelsError) throw parcelsError;
+
+        if (!parcels || parcels.length === 0) {
+          setAnalyses([]);
+          return;
+        }
+
+        parcelIds = parcels.map(p => p.id);
+      } else {
+        // Query by parcel ID directly
+        parcelIds = [parcelIdOrFarmId];
       }
 
-      // Then get analyses for those parcels
-      const parcelIds = parcels.map(p => p.id);
+      // Get analyses for those parcels
       let query = supabase
         .from('analyses')
         .select('*')

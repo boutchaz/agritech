@@ -8,6 +8,7 @@ import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface Utility {
   id: string;
@@ -51,8 +52,9 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 };
 
 const UtilitiesManagement: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentFarm } = useAuth();
   const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
+  const { format: formatCurrency, symbol: currency } = useCurrency();
   const [utilities, setUtilities] = useState<Utility[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +63,6 @@ const UtilitiesManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<'cards' | 'grouped' | 'list' | 'dashboard'>('grouped');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // Use useMemo to ensure currency updates when organization changes
-  const currency = useMemo(() => {
-    return currentOrganization?.currency || 'EUR';
-  }, [currentOrganization?.currency]);
 
   // Advanced filtering state
   const [filters, setFilters] = useState({
@@ -667,7 +664,7 @@ const UtilitiesManagement: React.FC = () => {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total des charges</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.total.toFixed(2)} {currency}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.total)}</p>
               </div>
             </div>
           </div>
@@ -679,7 +676,7 @@ const UtilitiesManagement: React.FC = () => {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Charges récurrentes</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.recurring.toFixed(2)} {currency}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.recurring)}</p>
               </div>
             </div>
           </div>
@@ -691,7 +688,7 @@ const UtilitiesManagement: React.FC = () => {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">En attente</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.pending.toFixed(2)} {currency}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.pending)}</p>
               </div>
             </div>
           </div>
@@ -812,7 +809,7 @@ const UtilitiesManagement: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {typeTotal.toFixed(2)} {currency}
+                        {formatCurrency(typeTotal)}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Total
@@ -826,7 +823,7 @@ const UtilitiesManagement: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
                           <span className="font-medium text-gray-900 dark:text-white">
-                            {utility.amount.toFixed(2)} {currency}
+                            {formatCurrency(utility.amount)}
                           </span>
                           {utility.is_recurring && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
@@ -840,7 +837,7 @@ const UtilitiesManagement: React.FC = () => {
                           {utility.consumption_value && utility.consumption_value > 0 &&
                             ` • ${utility.consumption_value} ${utility.consumption_unit}`}
                           {utility.consumption_value && utility.consumption_value > 0 &&
-                            ` • ${calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/${utility.consumption_unit}`}
+                            ` • ${calculateUnitCost(utility.amount, utility.consumption_value)} ${currency}/${utility.consumption_unit}`}
                           {utility.notes && ` • ${utility.notes}`}
                         </p>
                       </div>
@@ -932,7 +929,7 @@ const UtilitiesManagement: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Montant</span>
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">{utility.amount.toFixed(2)} {currency}</span>
+                  <span className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</span>
                 </div>
                 {utility.consumption_value && utility.consumption_value > 0 && (
                   <div className="flex justify-between items-center">
@@ -1034,7 +1031,7 @@ const UtilitiesManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {utility.amount.toFixed(2)} {currency}
+                    {formatCurrency(utility.amount)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {utility.consumption_value && utility.consumption_value > 0 ? (
@@ -1135,7 +1132,7 @@ const UtilitiesManagement: React.FC = () => {
                     <YAxis />
                     <Tooltip
                       formatter={(value: any, name: string) => [
-                        `${value} {currency}`,
+                        `${value} ${currency}`,
                         name === 'amount' ? 'Montant' : 'Nombre'
                       ]}
                     />
@@ -1163,7 +1160,7 @@ const UtilitiesManagement: React.FC = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <RechartsPieChart>
                     <Tooltip
-                      formatter={(value: any) => [`${value} {currency}`, 'Montant']}
+                      formatter={(value: any) => [`${value} ${currency}`, 'Montant']}
                     />
                     <Legend />
                     <Pie
@@ -1210,9 +1207,9 @@ const UtilitiesManagement: React.FC = () => {
                   <YAxis />
                   <Tooltip
                     formatter={(value: any, name: string) => {
-                      if (name === 'amount') return [`${value} {currency}`, 'Montant'];
+                      if (name === 'amount') return [`${value} ${currency}`, 'Montant'];
                       if (name === 'consumption') return [`${value}`, 'Consommation'];
-                      if (name === 'unitCost') return [`${value} {currency}/unité`, 'Coût unitaire'];
+                      if (name === 'unitCost') return [`${value} ${currency}/unité`, 'Coût unitaire'];
                       return [value, name];
                     }}
                   />

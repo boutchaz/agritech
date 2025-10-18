@@ -4,10 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { ProfitabilityData, Cost, Revenue } from '../types/cost-tracking';
-import { formatCurrency } from '../utils/currencies';
+import { useCurrency } from '../hooks/useCurrency';
 
 const ProfitabilityDashboard: React.FC = () => {
   const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 3);

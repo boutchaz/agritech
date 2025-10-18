@@ -77,7 +77,7 @@ export interface IndexCalculationResponse {
   timestamp: string;
   aoi_name?: string;
   indices: IndexValue[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface ProcessingJob {
@@ -116,7 +116,7 @@ export interface SatelliteData {
   cloud_coverage_percentage?: number;
   geotiff_url?: string;
   geotiff_expires_at?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -234,7 +234,7 @@ export interface InteractiveDataResponse {
     count: number;
   };
   visualization: VisualizationParams;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface HeatmapDataResponse {
@@ -477,34 +477,38 @@ class SatelliteAPIClient {
 
   // Generate vegetation index image
   async generateIndexImage(request: IndexImageRequest): Promise<IndexImageResponse> {
-    // Use Supabase Edge Function instead of external service
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    // Use Supabase Edge Function with proper authentication
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration missing');
+    // Get the current session to send the user's JWT
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.access_token) {
+      throw new Error('Authentication required to generate index images');
     }
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/generate-index-image`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({
+    // Use supabase.functions.invoke for proper authentication
+    const { data, error } = await supabase.functions.invoke('generate-index-image', {
+      body: {
         aoi: request.aoi,
         date_range: request.date_range,
         index: request.index,
         cloud_coverage: request.cloud_coverage || 10
-      }),
+      },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate index image');
+    if (error) {
+      throw new Error(error.message || 'Failed to generate index image');
     }
 
-    return response.json();
+    return data;
   }
 
   // Generate multiple index images for comparison

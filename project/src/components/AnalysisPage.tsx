@@ -1,25 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
-import { useAnalyses } from '../hooks/useAnalyses';
 import { useAuth } from './MultiTenantAuthProvider';
-import { supabase } from '../lib/supabase';
-import type { AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '../types/analysis';
+import type { AnalysisType } from '../types/analysis';
 import { Select } from './ui/Select';
-import SoilAnalysisForm from './Analysis/SoilAnalysisForm';
+import SoilAnalysisForm from './Analysis/SoilAnalysisFormRHF';
 import PlantAnalysisForm from './Analysis/PlantAnalysisForm';
 import WaterAnalysisForm from './Analysis/WaterAnalysisForm';
 import AnalysisCard from './Analysis/AnalysisCard';
+import { useAnalysesByFarm, useParcels, useAddAnalysis, useDeleteAnalysis } from '../hooks/useAnalysesQuery';
+import type { SoilAnalysisFormValues } from '../schemas/analysisSchemas';
 
 const ITEMS_PER_PAGE = 6;
 
-interface Parcel {
-  id: string;
-  name: string;
-  farm_id: string;
-  area?: number;
-  area_unit?: string;
-  soil_type?: string | null;
-}
+// Parcel interface removed - using the type from useParcels hook instead
 
 const AnalysisPage: React.FC = () => {
   const { currentFarm } = useAuth();
@@ -28,13 +21,12 @@ const AnalysisPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
-  const [parcels, setParcels] = useState<Parcel[]>([]);
-  const [loadingParcels, setLoadingParcels] = useState(true);
 
-  const { analyses, loading, error, addAnalysis, deleteAnalysis } = useAnalyses(
-    currentFarm?.id || '',
-    activeTab
-  );
+  // Use TanStack Query hooks
+  const { data: analyses = [], isLoading: loading, error } = useAnalysesByFarm(currentFarm?.id, activeTab);
+  const { data: parcels = [], isLoading: loadingParcels } = useParcels(currentFarm?.id);
+  const addAnalysisMutation = useAddAnalysis();
+  const deleteAnalysisMutation = useDeleteAnalysis();
 
   // Filter analyses by selected parcel if one is selected
   const filteredAnalyses = useMemo(() => {
@@ -50,47 +42,32 @@ const AnalysisPage: React.FC = () => {
     return filteredAnalyses.slice(startIndex, endIndex);
   }, [filteredAnalyses, currentPage]);
 
-  // Fetch parcels for the current farm
-  useEffect(() => {
-    const fetchParcels = async () => {
-      if (!currentFarm) {
-        setLoadingParcels(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('parcels')
-          .select('id, name, farm_id, area, area_unit, soil_type')
-          .eq('farm_id', currentFarm.id)
-          .order('name');
-
-        if (error) throw error;
-        setParcels(data || []);
-      } catch (err) {
-        console.error('Error fetching parcels:', err);
-      } finally {
-        setLoadingParcels(false);
-      }
-    };
-
-    fetchParcels();
-  }, [currentFarm]);
-
-  useEffect(() => {
+  // Reset to page 1 if current page exceeds total pages
+  React.useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
 
-  const handleSave = async (data: SoilAnalysisData | PlantAnalysisData | WaterAnalysisData, analysisDate: string, laboratory?: string, notes?: string) => {
+  const handleSaveSoil = async (values: SoilAnalysisFormValues) => {
     if (!selectedParcelId) {
       alert('Veuillez sélectionner une parcelle avant d\'ajouter une analyse.');
       return;
     }
 
     try {
-      await addAnalysis(selectedParcelId, activeTab, analysisDate, data, laboratory, notes);
+      // Extract general info from form values
+      const { analysisDate, laboratory, notes, ...data } = values;
+
+      await addAnalysisMutation.mutateAsync({
+        parcelId: selectedParcelId,
+        analysisType: 'soil',
+        analysisDate,
+        data,
+        laboratory: laboratory || undefined,
+        notes: notes || undefined,
+      });
+
       setShowForm(false);
     } catch (err) {
       console.error('Error saving analysis:', err);
@@ -104,7 +81,7 @@ const AnalysisPage: React.FC = () => {
     }
 
     try {
-      await deleteAnalysis(id);
+      await deleteAnalysisMutation.mutateAsync(id);
     } catch (err) {
       console.error('Error deleting analysis:', err);
       alert('Erreur lors de la suppression de l\'analyse.');
@@ -142,21 +119,21 @@ const AnalysisPage: React.FC = () => {
       <div className="p-3 sm:p-4 lg:p-6">
         {activeTab === 'soil' && (
           <SoilAnalysisForm
-            onSave={handleSave}
+            onSave={handleSaveSoil}
             onCancel={() => setShowForm(false)}
             selectedParcel={selectedParcel}
           />
         )}
         {activeTab === 'plant' && (
           <PlantAnalysisForm
-            onSave={handleSave}
+            onSave={() => Promise.resolve()}
             onCancel={() => setShowForm(false)}
             selectedParcel={selectedParcel}
           />
         )}
         {activeTab === 'water' && (
           <WaterAnalysisForm
-            onSave={handleSave}
+            onSave={() => Promise.resolve()}
             onCancel={() => setShowForm(false)}
             selectedParcel={selectedParcel}
           />

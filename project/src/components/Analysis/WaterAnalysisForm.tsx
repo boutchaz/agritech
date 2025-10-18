@@ -106,7 +106,7 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
             <Select
               id="water_source"
               value={formData.water_source}
-              onChange={(e) => updateField('water_source', e.target.value as any)}
+              onChange={(e) => updateField('water_source', e.target.value as 'well' | 'river' | 'irrigation' | 'rainwater' | 'municipal' | 'other')}
               required
             >
               <option value="well">Puits</option>
@@ -282,7 +282,7 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
               <Select
                 id="suitability"
                 value={formData.irrigation_suitability || ''}
-                onChange={(e) => updateField('irrigation_suitability', e.target.value as any)}
+                onChange={(e) => updateField('irrigation_suitability', e.target.value as 'excellent' | 'good' | 'marginal' | 'poor' | 'unsuitable' | undefined)}
               >
                 <option value="">Sélectionner...</option>
                 <option value="excellent">Excellente</option>

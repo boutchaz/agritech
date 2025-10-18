@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.39.7";
+import { authenticateRequest, validateParcelAccess } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,25 +38,16 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Authenticate the request
+    const { user, supabase } = await authenticateRequest(req);
 
     const { parcel_id, current_soil_moisture, weather_forecast, crop_data }: IrrigationRequest = await req.json();
 
-    // Get parcel and farm data
-    const { data: parcel } = await supabase
-      .from('parcels')
-      .select(`
-        id, name, area, soil_type, irrigation_type,
-        farms!inner(id, name, organization_id)
-      `)
-      .eq('id', parcel_id)
-      .single();
+    // Validate user has access to this parcel
+    const parcel = await validateParcelAccess(supabase, user.id, parcel_id);
 
     if (!parcel) {
-      throw new Error('Parcel not found');
+      throw new Error('Parcel not found or access denied');
     }
 
     // Get recent weather data

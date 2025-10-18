@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { Cost, Revenue } from '../types/cost-tracking';
-import { formatCurrency } from '../utils/currencies';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface ParcelProfitabilityProps {
   parcelId: string;
@@ -13,6 +13,7 @@ interface ParcelProfitabilityProps {
 
 const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
   const { currentOrganization, user } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
 
   const [startDate, setStartDate] = useState(() => {

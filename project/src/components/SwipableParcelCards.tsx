@@ -5,6 +5,7 @@ interface Parcel {
   id: string;
   name: string;
   area: number | null;
+  calculated_area?: number | null;
   soil_type?: string | null;
   boundary?: number[][];
 }
@@ -229,7 +230,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
                         {parcel.name}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {parcel.area ? `${parcel.area} hectares` : 'Superficie non définie'}
+                        {(parcel.calculated_area ?? parcel.area) ? `${(parcel.calculated_area ?? parcel.area).toFixed(2)} hectares` : 'Superficie non définie'}
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">

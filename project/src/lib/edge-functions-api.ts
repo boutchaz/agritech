@@ -9,24 +9,30 @@ const EDGE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 /**
  * Generic function to call Supabase Edge Functions
+ * Requires authentication - throws error if user is not authenticated
  */
 async function callEdgeFunction<T>(
   functionName: string,
-  payload: any
+  payload: Record<string, unknown>
 ): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+  // Require authentication - no fallback to anon key
+  if (sessionError || !session?.access_token) {
+    throw new Error('Authentication required. Please sign in to use this feature.');
+  }
 
   const response = await fetch(`${EDGE_FUNCTIONS_URL}/${functionName}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${session.access_token}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({ error: 'Edge function call failed' }));
     throw new Error(error.error || 'Edge function call failed');
   }
 
@@ -92,8 +98,8 @@ export interface CropPlanningRequest {
   crop_preferences?: string[];
   constraints?: {
     max_area_per_crop?: number;
-    rotation_requirements?: any;
-    seasonal_preferences?: any;
+    rotation_requirements?: Record<string, unknown>;
+    seasonal_preferences?: Record<string, unknown>;
   };
 }
 
@@ -111,7 +117,7 @@ export interface CropPlan {
 
 export interface CropPlanningResponse {
   success: boolean;
-  crop_plan: any;
+  crop_plan: CropPlan | CropPlan[];
   plans: CropPlan[];
   summary: {
     total_parcels: number;
@@ -394,7 +400,7 @@ export interface ParcelReportResponse {
     template_id: string;
     title: string;
     status: string;
-    metadata: any;
+    metadata: Record<string, unknown>;
     created_at: string;
   };
 }

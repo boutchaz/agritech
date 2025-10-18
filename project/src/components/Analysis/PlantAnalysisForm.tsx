@@ -102,7 +102,7 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
               <Select
                 id="plant_part"
                 value={formData.plant_part}
-                onChange={(e) => updateField('plant_part', e.target.value as any)}
+                onChange={(e) => updateField('plant_part', e.target.value as 'leaf' | 'stem' | 'root' | 'fruit' | 'whole_plant')}
                 required
               >
                 <option value="leaf">Feuille</option>
