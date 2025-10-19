@@ -80,15 +80,22 @@ class CloudMaskingService:
             cloud_mask = (qa.bitwiseAnd(cloud_bit_mask).gt(0)
                          .Or(qa.bitwiseAnd(cirrus_bit_mask).gt(0)))
 
-            # If SCL band exists, use it for more accurate cloud detection
-            if 'SCL' in image.bandNames().getInfo():
-                scl = image.select('SCL')
-                # SCL cloud classes: 8 (cloud medium), 9 (cloud high), 10 (cirrus)
-                scl_cloud_mask = scl.eq(8).Or(scl.eq(9)).Or(scl.eq(10))
-                # Also consider cloud shadows (class 3)
-                scl_shadow_mask = scl.eq(3)
-                # Combine masks
-                cloud_mask = cloud_mask.Or(scl_cloud_mask).Or(scl_shadow_mask)
+            # Try to use SCL band for more accurate cloud detection (server-side check)
+            # Using a try/except allows server-side execution without getInfo()
+            def add_scl_mask(mask, img):
+                try:
+                    scl = img.select('SCL')
+                    # SCL cloud classes: 8 (cloud medium), 9 (cloud high), 10 (cirrus)
+                    scl_cloud_mask = scl.eq(8).Or(scl.eq(9)).Or(scl.eq(10))
+                    # Also consider cloud shadows (class 3)
+                    scl_shadow_mask = scl.eq(3)
+                    # Combine masks
+                    return mask.Or(scl_cloud_mask).Or(scl_shadow_mask)
+                except:
+                    # If SCL band doesn't exist, return original mask
+                    return mask
+
+            cloud_mask = add_scl_mask(cloud_mask, image)
 
             # Calculate statistics within AOI
             # Count cloudy pixels

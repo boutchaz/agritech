@@ -222,12 +222,15 @@ async def get_available_dates(request: Dict):
         # Get Sentinel-2 collection
         aoi = ee.Geometry(aoi_geometry)
 
-        # Get collection with cloud filter
-        collection = (
-            ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-            .filterBounds(aoi)
-            .filterDate(start_date, end_date)
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', max_cloud_coverage))
+        # Use the same AOI-based cloud filtering as the heatmap endpoint
+        # to ensure consistency between available dates and actual usable imagery
+        collection = earth_engine_service.get_sentinel2_collection(
+            aoi_geometry,
+            start_date,
+            end_date,
+            max_cloud_coverage,
+            use_aoi_cloud_filter=True,  # Match heatmap endpoint behavior
+            cloud_buffer_meters=300
         )
 
         # Get image dates and cloud coverage

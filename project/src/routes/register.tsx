@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -158,32 +159,30 @@ function RegisterPage() {
             helper="Use at least 8 characters with a mix of letters and numbers."
             required
           >
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="new-password"
               required
               placeholder="Create a strong password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="register-password"
-              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              className="rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
           </FormField>
 
           <FormField label="Confirm password" htmlFor="confirm-password" required>
-            <Input
+            <PasswordInput
               id="confirm-password"
               name="confirm-password"
-              type="password"
               autoComplete="new-password"
               required
               placeholder="Re-enter your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               data-testid="register-confirm-password"
-              className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              className="rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
           </FormField>
         </div>

@@ -12,6 +12,7 @@ import {
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer from './LeafletHeatmapViewer';
+import { DatePicker } from '../ui/DatePicker';
 
 interface InteractiveIndexViewerProps {
   parcelId: string;
@@ -35,11 +36,56 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [data, setData] = useState<HeatmapDataResponse | InteractiveDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize with today's date
+  // Available dates state
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [isLoadingDates, setIsLoadingDates] = useState(false);
+
+  // Fetch available dates when boundary changes
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setSelectedDate(today);
-  }, []);
+    if (!boundary) return;
+
+    const fetchAvailableDates = async () => {
+      setIsLoadingDates(true);
+      try {
+        const aoi = {
+          geometry: convertBoundaryToGeoJSON(boundary),
+          name: parcelName || 'Selected Parcel'
+        };
+
+        // Get dates for last 6 months
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(endDate.getMonth() - 6);
+
+        const result = await satelliteApi.getAvailableDates(
+          aoi,
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0],
+          30 // 30% cloud coverage threshold
+        );
+
+        const dates = result.available_dates
+          .filter(d => d.available)
+          .map(d => d.date);
+
+        setAvailableDates(dates);
+
+        // Set initial date to the most recent available date
+        if (dates.length > 0) {
+          setSelectedDate(dates[dates.length - 1]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch available dates:', err);
+        // Fallback to today's date
+        const today = new Date().toISOString().split('T')[0];
+        setSelectedDate(today);
+      } finally {
+        setIsLoadingDates(false);
+      }
+    };
+
+    fetchAvailableDates();
+  }, [boundary, parcelName]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -62,7 +108,16 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate interactive visualization');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate interactive visualization';
+
+      // Provide more helpful error messages
+      if (errorMessage.includes('No images found')) {
+        setError(`No satellite imagery available for ${selectedDate}. Please select a different date from the calendar.`);
+      } else if (errorMessage.includes('cloud coverage')) {
+        setError('Error processing cloud coverage. The selected date may have too much cloud cover.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -169,11 +224,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Date</label>
-            <input
-              type="date"
+            <DatePicker
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              onChange={(date) => date && setSelectedDate(date)}
+              availableDates={availableDates}
+              isLoading={isLoadingDates}
+              disabled={!boundary}
+              placeholder="Select date with satellite data"
             />
           </div>
 
