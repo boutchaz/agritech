@@ -222,16 +222,50 @@ async def get_available_dates(request: Dict):
         # Get Sentinel-2 collection
         aoi = ee.Geometry(aoi_geometry)
 
-        # Use the same AOI-based cloud filtering as the heatmap endpoint
-        # to ensure consistency between available dates and actual usable imagery
+        # Try with AOI-based cloud filtering first
         collection = earth_engine_service.get_sentinel2_collection(
             aoi_geometry,
             start_date,
             end_date,
             max_cloud_coverage,
-            use_aoi_cloud_filter=True,  # Match heatmap endpoint behavior
+            use_aoi_cloud_filter=True,
             cloud_buffer_meters=300
         )
+
+        # Check collection size first
+        collection_size = collection.size().getInfo()
+        logger.info(f"Collection size with AOI cloud filter: {collection_size}")
+
+        # If no images found with AOI filtering, try without it (fallback)
+        if collection_size == 0:
+            logger.info("No images with AOI cloud filter, trying tile-based filtering...")
+            collection = earth_engine_service.get_sentinel2_collection(
+                aoi_geometry,
+                start_date,
+                end_date,
+                max_cloud_coverage,
+                use_aoi_cloud_filter=False  # Disable AOI-based filtering
+            )
+            collection_size = collection.size().getInfo()
+            logger.info(f"Collection size with tile-based filter: {collection_size}")
+
+        if collection_size == 0:
+            logger.warning(f"No images found for AOI in date range {start_date} to {end_date} with cloud coverage < {max_cloud_coverage}%")
+            return {
+                "available_dates": [],
+                "total_images": 0,
+                "date_range": {
+                    "start": start_date,
+                    "end": end_date
+                },
+                "filters": {
+                    "max_cloud_coverage": max_cloud_coverage
+                },
+                "debug_info": {
+                    "message": "No Sentinel-2 images found for this location and time period",
+                    "suggestion": "Try increasing cloud coverage threshold or expanding date range"
+                }
+            }
 
         # Get image dates and cloud coverage
         def extract_date_info(image):

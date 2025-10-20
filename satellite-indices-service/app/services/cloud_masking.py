@@ -155,11 +155,53 @@ class CloudMaskingService:
             Filtered image collection
         """
         def add_aoi_cloud_score(image):
-            """Add cloud coverage percentage as property to image"""
-            cloud_coverage = CloudMaskingService.calculate_cloud_coverage_in_aoi(
-                image, aoi, buffer_meters
-            )
-            return image.set('AOI_CLOUD_COVERAGE', cloud_coverage)
+            """Add cloud coverage percentage as property to image - Server-side computation"""
+            # Apply buffer if specified
+            region = aoi.buffer(buffer_meters) if buffer_meters else aoi
+
+            # Get QA60 band for cloud detection
+            qa = image.select('QA60')
+
+            # Bit masks for cloud detection
+            cloud_bit_mask = 1 << 10  # Opaque clouds
+            cirrus_bit_mask = 1 << 11  # Cirrus clouds
+
+            # Create cloud mask (1 where clouds exist, 0 otherwise)
+            cloud_mask = (qa.bitwiseAnd(cloud_bit_mask).gt(0)
+                         .Or(qa.bitwiseAnd(cirrus_bit_mask).gt(0)))
+
+            # Try to add SCL band for more accurate cloud detection
+            # This is done server-side, no getInfo() call
+            try:
+                scl = image.select('SCL')
+                # SCL cloud classes: 8 (cloud medium), 9 (cloud high), 10 (cirrus), 3 (shadow)
+                scl_cloud_mask = scl.eq(8).Or(scl.eq(9)).Or(scl.eq(10)).Or(scl.eq(3))
+                cloud_mask = cloud_mask.Or(scl_cloud_mask)
+            except:
+                # If SCL band doesn't exist, continue with QA60 only
+                pass
+
+            # Calculate statistics within AOI - all server-side
+            # Count cloudy pixels
+            cloud_pixels = cloud_mask.reduceRegion(
+                reducer=ee.Reducer.sum(),
+                geometry=region,
+                scale=10,  # Use 10m resolution
+                maxPixels=1e9
+            ).get('QA60')
+
+            # Count total pixels
+            total_pixels = cloud_mask.gt(-1).reduceRegion(
+                reducer=ee.Reducer.count(),
+                geometry=region,
+                scale=10,
+                maxPixels=1e9
+            ).get('QA60')
+
+            # Calculate percentage server-side
+            cloud_percentage = ee.Number(cloud_pixels).divide(ee.Number(total_pixels)).multiply(100)
+
+            return image.set('AOI_CLOUD_COVERAGE', cloud_percentage)
 
         # Map the function over collection to add AOI cloud coverage
         scored_collection = collection.map(add_aoi_cloud_score)
