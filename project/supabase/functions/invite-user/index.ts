@@ -174,6 +174,25 @@ serve(async (req) => {
 
       if (inviteError) throw inviteError;
 
+      // Create organization_users record immediately with the invited user's ID
+      // This ensures the user is in the organization when they accept the invitation
+      if (inviteData.user?.id) {
+        const { error: orgUserError } = await supabase
+          .from('organization_users')
+          .insert({
+            user_id: inviteData.user.id,
+            organization_id: organization_id,
+            role_id: role_id,
+            is_active: true,
+            invited_by: user.id
+          });
+
+        if (orgUserError) {
+          console.error('Error creating organization_users record for invited user:', orgUserError);
+          // Don't throw - the invitation email was sent, we just log the error
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
