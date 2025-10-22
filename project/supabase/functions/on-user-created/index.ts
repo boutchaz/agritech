@@ -77,7 +77,56 @@ serve(async (req) => {
 
     console.log('✅ User profile created');
 
-    // 2. Check if user already has organization (invited user)
+    // 2. Check if user was invited to an organization
+    console.log('🔍 Checking invitation metadata:', {
+      raw_user_meta_data: newUser.raw_user_meta_data,
+      user_metadata: newUser.user_metadata
+    });
+
+    const invitedToOrganization = newUser.raw_user_meta_data?.invited_to_organization;
+    const invitedWithRole = newUser.raw_user_meta_data?.invited_with_role;
+    const invitedBy = newUser.raw_user_meta_data?.invited_by;
+
+    console.log('🔍 Invitation details:', {
+      invitedToOrganization,
+      invitedWithRole,
+      invitedBy
+    });
+
+    if (invitedToOrganization && invitedWithRole) {
+      console.log('👥 User was invited to organization:', invitedToOrganization);
+
+      // Add user to the organization they were invited to
+      const { error: orgUserError } = await supabaseAdmin
+        .from('organization_users')
+        .insert({
+          user_id: userId,
+          organization_id: invitedToOrganization,
+          role_id: invitedWithRole,
+          is_active: true,
+          invited_by: invitedBy || userId,
+        });
+
+      if (orgUserError) {
+        console.error('❌ Error adding invited user to organization:', orgUserError);
+        throw new Error(`Adding invited user to organization failed: ${orgUserError.message}`);
+      }
+
+      console.log('✅ Invited user added to organization');
+
+      return new Response(
+        JSON.stringify({
+          message: 'User setup completed (invited user)',
+          userId,
+          profile: true,
+          organization: true,
+          organizationId: invitedToOrganization
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // 3. Check if user already has organization (fallback check)
     const { data: existingOrgUsers, error: checkError } = await supabaseAdmin
       .from('organization_users')
       .select('id')
@@ -89,10 +138,10 @@ serve(async (req) => {
     }
 
     if (existingOrgUsers && existingOrgUsers.length > 0) {
-      console.log('✅ User already has organization (invited user), skipping org creation');
+      console.log('✅ User already has organization, skipping org creation');
       return new Response(
         JSON.stringify({
-          message: 'User setup completed (invited user)',
+          message: 'User setup completed (existing org user)',
           userId,
           profile: true,
           organization: false
@@ -101,7 +150,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Create default organization
+    // 4. Create default organization
     const orgName = newUser.raw_user_meta_data?.organization_name || `${firstName}'s Organization`;
     const orgSlug = `${orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${userId.substring(0, 8)}`;
 
@@ -125,7 +174,7 @@ serve(async (req) => {
 
     console.log('✅ Organization created:', newOrg.id);
 
-    // 4. Get organization_admin role
+    // 5. Get organization_admin role
     const { data: roles, error: rolesError } = await supabaseAdmin
       .from('roles')
       .select('id')
@@ -139,7 +188,7 @@ serve(async (req) => {
 
     const roleId = roles[0].id;
 
-    // 5. Add user to organization with admin role
+    // 6. Add user to organization with admin role
     const { error: orgUserError } = await supabaseAdmin
       .from('organization_users')
       .insert({
@@ -157,7 +206,7 @@ serve(async (req) => {
 
     console.log('✅ User added to organization');
 
-    // 6. Optional: Create default farm for the organization
+    // 7. Optional: Create default farm for the organization
     // Uncomment if you want to create a starter farm
     /*
     const { error: farmError } = await supabaseAdmin
