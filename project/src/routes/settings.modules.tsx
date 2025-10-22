@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import ModulesSettings from '../components/ModulesSettings'
+import RoleProtectedRoute from '../components/RoleProtectedRoute'
 import { useState } from 'react'
 import type { Module } from '../types'
 
@@ -80,10 +81,12 @@ const ModulesSettingsPage = () => {
   };
 
   return (
-    <ModulesSettings
-      modules={modules}
-      onModuleToggle={handleModuleToggle}
-    />
+    <RoleProtectedRoute allowedRoles={['system_admin', 'organization_admin']}>
+      <ModulesSettings
+        modules={modules}
+        onModuleToggle={handleModuleToggle}
+      />
+    </RoleProtectedRoute>
   );
 };
 

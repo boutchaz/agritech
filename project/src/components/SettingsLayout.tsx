@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User } from 'lucide-react';
+import { useAuth } from './MultiTenantAuthProvider';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -9,58 +10,73 @@ interface SettingsLayoutProps {
 const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { userRole } = useAuth();
 
-  const menuItems = [
+  // Define menu items with role requirements
+  const allMenuItems = useMemo(() => [
     {
       id: 'profile',
       name: 'Mon Profil',
       icon: User,
       path: '/settings/profile',
-      description: 'Gérer vos informations personnelles'
-    },
-    {
-      id: 'organization',
-      name: 'Organisation',
-      icon: Building,
-      path: '/settings/organization',
-      description: 'Paramètres de l\'organisation'
-    },
-    {
-      id: 'subscription',
-      name: 'Abonnement',
-      icon: CreditCard,
-      path: '/settings/subscription',
-      description: 'Gérer votre abonnement'
-    },
-    {
-      id: 'modules',
-      name: 'Modules',
-      icon: Boxes,
-      path: '/settings/modules',
-      description: 'Activer/désactiver les modules'
-    },
-    {
-      id: 'users',
-      name: 'Utilisateurs',
-      icon: Users,
-      path: '/settings/users',
-      description: 'Gérer les utilisateurs'
+      description: 'Gérer vos informations personnelles',
+      roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
     },
     {
       id: 'preferences',
       name: 'Préférences',
       icon: Sliders,
       path: '/settings/preferences',
-      description: 'Paramètres de l\'application'
+      description: 'Paramètres de l\'application',
+      roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
+    },
+    {
+      id: 'organization',
+      name: 'Organisation',
+      icon: Building,
+      path: '/settings/organization',
+      description: 'Paramètres de l\'organisation',
+      roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'subscription',
+      name: 'Abonnement',
+      icon: CreditCard,
+      path: '/settings/subscription',
+      description: 'Gérer votre abonnement',
+      roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'modules',
+      name: 'Modules',
+      icon: Boxes,
+      path: '/settings/modules',
+      description: 'Activer/désactiver les modules',
+      roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'users',
+      name: 'Utilisateurs',
+      icon: Users,
+      path: '/settings/users',
+      description: 'Gérer les utilisateurs',
+      roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'dashboard',
       name: 'Tableau de bord',
       icon: LayoutGrid,
       path: '/settings/dashboard',
-      description: 'Configuration du tableau de bord'
+      description: 'Configuration du tableau de bord',
+      roles: ['system_admin', 'organization_admin', 'farm_manager'] // Admin and managers
     }
-  ];
+  ], []);
+
+  // Filter menu items based on user role
+  const menuItems = useMemo(() => {
+    if (!userRole) return [];
+    return allMenuItems.filter(item => item.roles.includes(userRole.role_name));
+  }, [allMenuItems, userRole]);
 
   const isActive = (path: string) => location.pathname === path;
 

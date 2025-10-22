@@ -98,6 +98,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Public routes that don't require authentication
   const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password'];
 
+  // Routes that don't require password to be set (accessible with temporary password)
+  const noPasswordRequiredRoutes = ['/tasks'];
+
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
@@ -342,12 +345,22 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const isOnSetPasswordPage = location.pathname.startsWith('/set-password');
 
   // Redirect to set-password if user hasn't set their password
+  // Skip this check for routes that don't require password setup
   useEffect(() => {
+    const isOnNoPasswordRequiredRoute = noPasswordRequiredRoutes.some(route =>
+      location.pathname.startsWith(route)
+    );
+
+    // Skip password check for routes that don't require it
+    if (isOnNoPasswordRequiredRoute) {
+      return;
+    }
+
     if (!loading && !profileLoading && user && profile && profile.password_set === false && !isOnSetPasswordPage && !isPublicRoute) {
       // User hasn't set their password - redirect to set-password
       window.location.href = '/set-password';
     }
-  }, [loading, profileLoading, user, profile, isOnSetPasswordPage, isPublicRoute]);
+  }, [loading, profileLoading, user, profile, isOnSetPasswordPage, isPublicRoute, location.pathname]);
 
   // Redirect to trial selection if user has organization but no subscription
   useEffect(() => {
