@@ -341,11 +341,11 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Redirect to trial selection if user has organization but no subscription
   useEffect(() => {
-    if (!loading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute) {
+    if (!loading && !subscriptionLoading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute) {
       // User has an organization but no subscription - redirect to trial selection
       window.location.href = '/select-trial';
     }
-  }, [loading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute]);
+  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute]);
 
   const value = {
     user,
