@@ -343,7 +343,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Redirect to set-password if user hasn't set their password
   useEffect(() => {
-    if (!loading && !profileLoading && user && profile && !profile.password_set && !isOnSetPasswordPage && !isPublicRoute) {
+    if (!loading && !profileLoading && user && profile && profile.password_set === false && !isOnSetPasswordPage && !isPublicRoute) {
       // User hasn't set their password - redirect to set-password
       window.location.href = '/set-password';
     }

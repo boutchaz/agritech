@@ -14,7 +14,7 @@ export const Route = createFileRoute('/set-password')({
 
 function SetPasswordPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, refreshUserData } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,22 +30,11 @@ function SetPasswordPage() {
       return;
     }
 
-    // Check if this is the first login (invited user)
-    const checkFirstLogin = async () => {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('password_set')
-        .eq('id', user.id)
-        .single();
-
-      // If password is already set, redirect to dashboard
-      if (profile?.password_set) {
-        navigate({ to: '/dashboard' });
-      }
-    };
-
-    checkFirstLogin();
-  }, [user, navigate]);
+    // If password is already set, redirect to dashboard
+    if (profile?.password_set) {
+      navigate({ to: '/dashboard' });
+    }
+  }, [user, profile, navigate]);
 
   useEffect(() => {
     // Calculate password strength
@@ -104,6 +93,9 @@ function SetPasswordPage() {
           password_set: true,
           updated_at: new Date().toISOString(),
         });
+
+      // Refresh user data to update the profile in the auth context
+      await refreshUserData();
 
       // Redirect to dashboard
       navigate({ to: '/dashboard' });
