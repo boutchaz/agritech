@@ -44,6 +44,7 @@ interface UserProfile {
   phone?: string;
   timezone: string;
   language: string;
+  password_set?: boolean;
 }
 
 interface AuthContextType {
@@ -95,7 +96,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password'];
 
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
@@ -338,14 +339,23 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Check if current route is public or trial selection
   const isPublicRoute = publicRoutes.includes(location.pathname);
   const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
+  const isOnSetPasswordPage = location.pathname.startsWith('/set-password');
+
+  // Redirect to set-password if user hasn't set their password
+  useEffect(() => {
+    if (!loading && !profileLoading && user && profile && !profile.password_set && !isOnSetPasswordPage && !isPublicRoute) {
+      // User hasn't set their password - redirect to set-password
+      window.location.href = '/set-password';
+    }
+  }, [loading, profileLoading, user, profile, isOnSetPasswordPage, isPublicRoute]);
 
   // Redirect to trial selection if user has organization but no subscription
   useEffect(() => {
-    if (!loading && !subscriptionLoading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute) {
+    if (!loading && !subscriptionLoading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
       // User has an organization but no subscription - redirect to trial selection
       window.location.href = '/select-trial';
     }
-  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute]);
+  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage]);
 
   const value = {
     user,
