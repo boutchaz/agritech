@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Save, UserPlus } from 'lucide-react';
+import { X, Save, UserPlus, Shield, AlertCircle } from 'lucide-react';
 import type { Worker, WorkerFormData } from '../../types/workers';
 import {
   WORKER_TYPE_OPTIONS,
@@ -76,6 +76,10 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
   const [specialtyInput, setSpecialtyInput] = useState('');
   const [certificationInput, setCertificationInput] = useState('');
+  const [grantPlatformAccess, setGrantPlatformAccess] = useState(!!worker?.user_id);
+  const [platformAccessLoading, setPlatformAccessLoading] = useState(false);
+
+  const watchEmail = watch('email');
 
   const {
     register,
@@ -171,11 +175,62 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
   const onSubmit = async (data: WorkerFormData) => {
     try {
+      let workerId = worker?.id;
+
+      // 1. Create or update the worker
       if (isEditing) {
         await updateWorker.mutateAsync({ id: worker.id, data });
       } else {
-        await createWorker.mutateAsync({ ...data, organization_id: organizationId });
+        const result = await createWorker.mutateAsync({ ...data, organization_id: organizationId });
+        workerId = result.id;
       }
+
+      // 2. Grant platform access if requested and worker doesn't have it yet
+      if (grantPlatformAccess && data.email && workerId && !worker?.user_id) {
+        setPlatformAccessLoading(true);
+
+        try {
+          const { supabase } = await import('../../lib/supabase');
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (!session) {
+            throw new Error('Not authenticated');
+          }
+
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grant-worker-access`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                worker_id: workerId,
+                email: data.email,
+                first_name: data.first_name,
+                last_name: data.last_name,
+                organization_id: organizationId
+              })
+            }
+          );
+
+          const result = await response.json();
+
+          if (!result.success) {
+            console.error('Failed to grant platform access:', result.error);
+            alert(`Travailleur créé mais l'accès plateforme a échoué: ${result.error}`);
+          } else {
+            alert(result.message || 'Travailleur créé avec accès plateforme!');
+          }
+        } catch (error) {
+          console.error('Error granting platform access:', error);
+          alert('Travailleur créé mais l\'accès plateforme a échoué. Réessayez depuis la page des utilisateurs.');
+        } finally {
+          setPlatformAccessLoading(false);
+        }
+      }
+
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -339,6 +394,54 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Adresse complète"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Platform Access */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    Accès à la plateforme
+                  </h4>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={grantPlatformAccess}
+                      onChange={(e) => setGrantPlatformAccess(e.target.checked)}
+                      disabled={platformAccessLoading || (isEditing && !!worker?.user_id)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                  {grantPlatformAccess
+                    ? 'Ce travailleur pourra se connecter et consulter ses tâches assignées avec un accès limité.'
+                    : 'Donnez accès à la plateforme pour que ce travailleur puisse consulter ses tâches.'}
+                </p>
+
+                {grantPlatformAccess && !watchEmail && (
+                  <div className="flex items-start gap-2 mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                    <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      Un email est requis pour créer un compte plateforme. Veuillez renseigner l'email du travailleur.
+                    </p>
+                  </div>
+                )}
+
+                {isEditing && worker?.user_id && (
+                  <div className="flex items-start gap-2 mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <Shield className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Ce travailleur dispose déjà d'un accès plateforme (Rôle: Travailleur de ferme).
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

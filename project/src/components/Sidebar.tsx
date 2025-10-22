@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -218,6 +218,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <Users className="h-5 w-5" />
           <span>{t('nav.personnel')}</span>
+        </button>
+
+        <button
+          onClick={() => handleNavigation('/tasks')}
+          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+            currentPath === '/tasks'
+              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <CheckSquare className="h-5 w-5" />
+          <span>{t('nav.tasks')}</span>
         </button>
 
         {/* Charges Section */}

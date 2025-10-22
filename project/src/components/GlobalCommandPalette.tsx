@@ -61,6 +61,14 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
         perform: () => navigate({ to: '/farm-hierarchy' }),
       },
       {
+        id: 'go-tasks',
+        name: 'Gérer les tâches',
+        shortcut: ['g', 'k'],
+        keywords: 'tâches tasks missions travail',
+        section: 'Navigation',
+        perform: () => navigate({ to: '/tasks' }),
+      },
+      {
         id: 'go-settings',
         name: 'Ouvrir les paramètres',
         shortcut: ['g', 't'],

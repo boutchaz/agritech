@@ -252,15 +252,15 @@ const StockManagement: React.FC = () => {
             farm_id: currentFarm?.id,
             name: newPurchase.product_name,
             category: newPurchase.category || 'other',
-            brand: newPurchase.brand,
-            packaging_type: newPurchase.packaging_type,
-            packaging_size: newPurchase.packaging_size,
+            brand: newPurchase.brand || null,
+            packaging_type: newPurchase.packaging_type || null,
+            packaging_size: newPurchase.packaging_size || null,
             quantity: newPurchase.quantity,
             unit: newPurchase.unit,
             cost_per_unit: newPurchase.cost_per_unit,
-            supplier: newPurchase.supplier,
-            warehouse_id: newPurchase.warehouse_id,
-            batch_number: newPurchase.batch_number,
+            supplier: newPurchase.supplier || null,
+            warehouse_id: newPurchase.warehouse_id || null,
+            batch_number: newPurchase.batch_number || null,
             minimum_stock: 10
           }])
           .select()
@@ -305,10 +305,10 @@ const StockManagement: React.FC = () => {
           .update({
             quantity: newQuantity,
             cost_per_unit: newPurchase.cost_per_unit,
-            supplier: newPurchase.supplier,
-            batch_number: newPurchase.batch_number || product.batch_number,
-            packaging_type: newPurchase.packaging_type || product.packaging_type,
-            packaging_size: newPurchase.packaging_size || product.packaging_size
+            supplier: newPurchase.supplier || null,
+            batch_number: newPurchase.batch_number || product.batch_number || null,
+            packaging_type: newPurchase.packaging_type || product.packaging_type || null,
+            packaging_size: newPurchase.packaging_size || product.packaging_size || null
           })
           .eq('id', product.id)
           .eq('organization_id', currentOrganization.id);

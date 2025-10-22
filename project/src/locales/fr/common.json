@@ -46,7 +46,8 @@
     "farmHierarchy": "Gestion des Fermes",
     "productApplications": "Applications de produits",
     "expenses": "Charges",
-    "personnel": "Personnel"
+    "personnel": "Personnel",
+    "tasks": "Tâches"
   },
   "auth": {
     "login": "Connexion",

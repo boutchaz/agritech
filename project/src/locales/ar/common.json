@@ -46,7 +46,8 @@
     "farmHierarchy": "إدارة المزارع",
     "productApplications": "تطبيقات المنتجات",
     "expenses": "التكاليف",
-    "personnel": "الموظفون"
+    "personnel": "الموظفون",
+    "tasks": "المهام"
   },
   "auth": {
     "login": "تسجيل الدخول",

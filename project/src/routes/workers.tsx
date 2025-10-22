@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { Users, Calculator, Building2, UserCog, Lock, AlertCircle } from 'lucide-react';
+import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings } from 'lucide-react';
 import WorkersList from '../components/Workers/WorkersList';
 import MetayageCalculator from '../components/Workers/MetayageCalculator';
 import { useAuth } from '../components/MultiTenantAuthProvider';
@@ -158,6 +158,30 @@ function WorkersPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Info banner linking to users settings */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        Personnel vs Utilisateurs de la plateforme
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Cette page gère le personnel de ferme (ouvriers, métayers). Vous pouvez donner un accès plateforme limité aux travailleurs pour consulter leurs tâches. Gérez tous les utilisateurs via Paramètres → Utilisateurs.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/settings/users"
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md whitespace-nowrap transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Utilisateurs
+                  </Link>
+                </div>
+              </div>
+
               {/* Tabs */}
               <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="flex space-x-8" aria-label="Tabs">

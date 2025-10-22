@@ -10,6 +10,9 @@ import {
   XCircle,
   UserX,
   Lock,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
 } from 'lucide-react';
 import { useWorkers, useDeactivateWorker, useDeleteWorker } from '../../hooks/useWorkers';
 import { getWorkerTypeLabel, getCompensationDisplay } from '../../types/workers';
@@ -27,6 +30,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<WorkerType | 'all'>('all');
   const [filterActive, setFilterActive] = useState<boolean | 'all'>('all');
+  const [filterPlatformAccess, setFilterPlatformAccess] = useState<'all' | 'with' | 'without'>('all');
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
@@ -46,8 +50,12 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
     const matchesType = filterType === 'all' || worker.worker_type === filterType;
     const matchesActive = filterActive === 'all' || worker.is_active === filterActive;
     const matchesFarm = selectedFarm === 'all' || worker.farm_id === selectedFarm;
+    const matchesPlatformAccess =
+      filterPlatformAccess === 'all' ||
+      (filterPlatformAccess === 'with' && !!worker.user_id) ||
+      (filterPlatformAccess === 'without' && !worker.user_id);
 
-    return matchesSearch && matchesType && matchesActive && matchesFarm;
+    return matchesSearch && matchesType && matchesActive && matchesFarm && matchesPlatformAccess;
   });
 
   const handleEdit = (worker: Worker) => {
@@ -127,7 +135,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{workers.length}</p>
@@ -150,11 +158,17 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             {workers.filter(w => w.worker_type === 'metayage').length}
           </p>
         </div>
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+          <p className="text-sm text-indigo-600 dark:text-indigo-400 mb-1">Accès plateforme</p>
+          <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
+            {workers.filter(w => w.user_id).length}
+          </p>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -210,6 +224,19 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
               <option value="false">Inactifs</option>
             </select>
           </div>
+
+          {/* Platform Access Filter */}
+          <div>
+            <select
+              value={filterPlatformAccess}
+              onChange={(e) => setFilterPlatformAccess(e.target.value as 'all' | 'with' | 'without')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="all">Tous (Accès plateforme)</option>
+              <option value="with">Avec accès</option>
+              <option value="without">Sans accès</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -247,6 +274,9 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Accès plateforme
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
@@ -306,6 +336,35 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                           <UserX className="w-3 h-3" />
                           Inactif
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {worker.user_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 rounded-full">
+                            <ShieldCheck className="w-3 h-3" />
+                            Activé
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            (Travailleur de ferme)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded-full">
+                            <ShieldOff className="w-3 h-3" />
+                            Non activé
+                          </span>
+                          {worker.email && (
+                            <button
+                              onClick={() => handleEdit(worker)}
+                              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline"
+                              title="Modifier pour activer l'accès"
+                            >
+                              Activer
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

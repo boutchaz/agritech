@@ -46,7 +46,8 @@
     "farmHierarchy": "Farm Management",
     "productApplications": "Product Applications",
     "expenses": "Expenses",
-    "personnel": "Personnel"
+    "personnel": "Personnel",
+    "tasks": "Tasks"
   },
   "auth": {
     "login": "Login",

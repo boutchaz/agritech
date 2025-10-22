@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
-import OrganizationSwitcher from '../components/OrganizationSwitcher';
-import FarmHierarchyTree from '../components/FarmHierarchyTree';
+import PageHeader from '../components/PageHeader';
+import ModernFarmHierarchy from '../components/FarmHierarchy/ModernFarmHierarchy';
 import FarmRoleManager from '../components/FarmRoleManager';
 import { useState } from 'react';
+import { Building2, Settings } from 'lucide-react';
 import type { Module } from '../types';
 
 const mockModules: Module[] = [
@@ -23,7 +24,7 @@ const mockModules: Module[] = [
 ];
 
 function FarmHierarchyPage() {
-  const { currentOrganization, currentFarm, user } = useAuth();
+  const { currentOrganization, user } = useAuth();
   const [selectedFarm, setSelectedFarm] = useState<{ id: string; name: string } | null>(null);
   const [activeModule, setActiveModule] = useState('farm-hierarchy');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -65,59 +66,45 @@ function FarmHierarchyPage() {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {currentOrganization.name}
-            </h1>
-            {currentFarm && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                • {currentFarm.name}
-              </span>
-            )}
-          </div>
-          <OrganizationSwitcher />
-        </div>
-        <div className="p-6 space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {selectedFarm ? 'Gestion des Rôles' : 'Gestion des Fermes'}
-            </h2>
-            {selectedFarm && (
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        <PageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name },
+            { icon: Building2, label: 'Hiérarchie des Fermes', isActive: true }
+          ]}
+        />
+
+        <div className="p-3 sm:p-4 lg:p-6">
+          {selectedFarm ? (
+            <div>
+              {/* Back Button */}
               <button
                 onClick={() => setSelectedFarm(null)}
-                className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600"
+                className="mb-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ← Retour à la hiérarchie
               </button>
-            )}
-          </div>
 
-          {selectedFarm ? (
-            <FarmRoleManager
-              farmId={selectedFarm.id}
-              farmName={selectedFarm.name}
-              onClose={() => setSelectedFarm(null)}
-            />
+              {/* Role Manager */}
+              <FarmRoleManager
+                farmId={selectedFarm.id}
+                farmName={selectedFarm.name}
+                onClose={() => setSelectedFarm(null)}
+              />
+            </div>
           ) : (
-            <FarmHierarchyTree
+            <ModernFarmHierarchy
               organizationId={currentOrganization.id}
-              onManageRoles={(farmId) => {
-                // Find farm name from the tree data
+              onFarmSelect={(farmId) => {
+                console.log('Select farm:', farmId);
+                // TODO: Navigate to farm details
+              }}
+              onManageFarm={(farmId) => {
                 setSelectedFarm({ id: farmId, name: `Farm ${farmId}` });
               }}
               onAddParcel={(farmId) => {
                 console.log('Add parcel to farm:', farmId);
                 // TODO: Implement add parcel functionality
-              }}
-              onEditParcel={(parcelId) => {
-                console.log('Edit parcel:', parcelId);
-                // TODO: Implement edit parcel functionality
-              }}
-              onDeleteParcel={(parcelId) => {
-                console.log('Delete parcel:', parcelId);
-                // TODO: Implement delete parcel functionality
               }}
             />
           )}

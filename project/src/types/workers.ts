@@ -25,6 +25,7 @@ export interface Worker {
   id: string;
   organization_id: string;
   farm_id?: string;
+  user_id?: string; // Links to platform user account for workers with system access
 
   // Personal Information
   first_name: string;
