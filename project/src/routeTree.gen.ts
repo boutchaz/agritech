@@ -35,8 +35,10 @@ import { Route as AnalysesRouteImport } from './routes/analyses'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
+import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
 import { Route as SettingsSubscriptionRouteImport } from './routes/settings.subscription'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
@@ -174,6 +176,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksIndexRoute = TasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TasksRoute,
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -183,6 +190,11 @@ const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => OnboardingRoute,
+} as any)
+const TasksCalendarRoute = TasksCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => TasksRoute,
 } as any)
 const SettingsUsersRoute = SettingsUsersRouteImport.update({
   id: '/users',
@@ -243,7 +255,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -253,8 +265,10 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/tasks/calendar': typeof TasksCalendarRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -277,7 +291,6 @@ export interface FileRoutesByTo {
   '/set-password': typeof SetPasswordRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
-  '/tasks': typeof TasksRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -287,8 +300,10 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/tasks/calendar': typeof TasksCalendarRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -315,7 +330,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -325,8 +340,10 @@ export interface FileRoutesById {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/tasks/calendar': typeof TasksCalendarRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -363,8 +380,10 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/tasks/calendar'
     | '/onboarding/'
     | '/settings/'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -387,7 +406,6 @@ export interface FileRouteTypes {
     | '/set-password'
     | '/soil-analysis'
     | '/stock'
-    | '/tasks'
     | '/utilities'
     | '/workers'
     | '/settings/dashboard'
@@ -397,8 +415,10 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/tasks/calendar'
     | '/onboarding'
     | '/settings'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
@@ -434,8 +454,10 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/tasks/calendar'
     | '/onboarding/'
     | '/settings/'
+    | '/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -462,7 +484,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
-  TasksRoute: typeof TasksRoute
+  TasksRoute: typeof TasksRouteWithChildren
   UtilitiesRoute: typeof UtilitiesRoute
   WorkersRoute: typeof WorkersRoute
 }
@@ -651,6 +673,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/': {
+      id: '/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof TasksIndexRouteImport
+      parentRoute: typeof TasksRoute
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -664,6 +693,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/'
       preLoaderRoute: typeof OnboardingIndexRouteImport
       parentRoute: typeof OnboardingRoute
+    }
+    '/tasks/calendar': {
+      id: '/tasks/calendar'
+      path: '/calendar'
+      fullPath: '/tasks/calendar'
+      preLoaderRoute: typeof TasksCalendarRouteImport
+      parentRoute: typeof TasksRoute
     }
     '/settings/users': {
       id: '/settings/users'
@@ -755,6 +791,18 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
 
+interface TasksRouteChildren {
+  TasksCalendarRoute: typeof TasksCalendarRoute
+  TasksIndexRoute: typeof TasksIndexRoute
+}
+
+const TasksRouteChildren: TasksRouteChildren = {
+  TasksCalendarRoute: TasksCalendarRoute,
+  TasksIndexRoute: TasksIndexRoute,
+}
+
+const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModuleIdRoute: ModuleIdRoute,
@@ -779,7 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,
-  TasksRoute: TasksRoute,
+  TasksRoute: TasksRouteWithChildren,
   UtilitiesRoute: UtilitiesRoute,
   WorkersRoute: WorkersRoute,
 }

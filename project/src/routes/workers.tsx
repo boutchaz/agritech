@@ -9,6 +9,10 @@ import PageHeader from '../components/PageHeader';
 import type { Module } from '../types';
 import { useCan } from '../lib/casl/AbilityContext';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 const mockModules: Module[] = [
   {
@@ -30,11 +34,9 @@ function WorkersPage() {
   const [modules] = useState(mockModules);
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'list' | 'calculator'>('list');
 
   // Check if user has access to workers page
   const canReadWorkers = can('read', 'Worker');
-  const canManageWorkers = can('manage', 'Worker');
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -101,33 +103,29 @@ function WorkersPage() {
           />
           <div className="p-6">
             <div className="max-w-2xl mx-auto mt-12">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full">
-                    <Lock className="w-12 h-12 text-red-600 dark:text-red-400" />
-                  </div>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Accès Restreint
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Vous n'avez pas les permissions nécessaires pour accéder à la gestion du personnel.
-                </p>
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                        Demander l'accès
-                      </p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Contactez votre administrateur pour obtenir les permissions nécessaires.
-                        Les rôles suivants peuvent accéder à cette page : Administrateur, Gestionnaire de ferme.
-                      </p>
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full">
+                      <Lock className="w-12 h-12 text-red-600 dark:text-red-400" />
                     </div>
                   </div>
-                </div>
-              </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    Accès Restreint
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Vous n'avez pas les permissions nécessaires pour accéder à la gestion du personnel.
+                  </p>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Demander l'accès</AlertTitle>
+                    <AlertDescription>
+                      Contactez votre administrateur pour obtenir les permissions nécessaires.
+                      Les rôles suivants peuvent accéder à cette page : Administrateur, Gestionnaire de ferme.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </main>
@@ -160,69 +158,43 @@ function WorkersPage() {
           ) : (
             <div className="space-y-6">
               {/* Info banner linking to users settings */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                        Personnel vs Utilisateurs de la plateforme
-                      </p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Cette page gère le personnel de ferme (ouvriers, métayers). Vous pouvez donner un accès plateforme limité aux travailleurs pour consulter leurs tâches. Gérez tous les utilisateurs via Paramètres → Utilisateurs.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    to="/settings/users"
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md whitespace-nowrap transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Utilisateurs
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Personnel vs Utilisateurs de la plateforme</AlertTitle>
+                <AlertDescription className="flex items-center justify-between gap-4">
+                  <span>
+                    Cette page gère le personnel de ferme (ouvriers, métayers). Vous pouvez donner un accès plateforme limité aux travailleurs pour consulter leurs tâches. Gérez tous les utilisateurs via Paramètres → Utilisateurs.
+                  </span>
+                  <Link to="/settings/users">
+                    <Button variant="default" size="sm" className="whitespace-nowrap">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Utilisateurs
+                    </Button>
                   </Link>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
 
-              {/* Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="flex space-x-8" aria-label="Tabs">
-                  <button
-                    onClick={() => setActiveTab('list')}
-                    className={`
-                      flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
-                      ${activeTab === 'list'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }
-                    `}
-                  >
-                    <Users className="w-5 h-5" />
+              {/* Tabs with shadcn/ui */}
+              <Tabs defaultValue="list" className="w-full">
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="list" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
                     Gestion du Personnel
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('calculator')}
-                    className={`
-                      flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
-                      ${activeTab === 'calculator'
-                        ? 'border-purple-500 text-purple-600 dark:text-purple-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }
-                    `}
-                  >
-                    <Calculator className="w-5 h-5" />
+                  </TabsTrigger>
+                  <TabsTrigger value="calculator" className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4" />
                     Calculateur Métayage
-                  </button>
-                </nav>
-              </div>
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Content */}
-              <div>
-                {activeTab === 'list' ? (
+                <TabsContent value="list" className="mt-6">
                   <WorkersList
                     organizationId={currentOrganization.id}
                     farms={farms}
                   />
-                ) : (
+                </TabsContent>
+
+                <TabsContent value="calculator" className="mt-6">
                   <MetayageCalculator
                     organizationId={currentOrganization.id}
                     farmId={currentFarm?.id}
@@ -230,8 +202,8 @@ function WorkersPage() {
                       // Could show a success toast here
                     }}
                   />
-                )}
-              </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>

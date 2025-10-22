@@ -79,8 +79,6 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const [grantPlatformAccess, setGrantPlatformAccess] = useState(!!worker?.user_id);
   const [platformAccessLoading, setPlatformAccessLoading] = useState(false);
 
-  const watchEmail = watch('email');
-
   const {
     register,
     handleSubmit,
@@ -126,6 +124,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     },
   });
 
+  const watchEmail = watch('email');
   const workerType = watch('worker_type');
   const metayageType = watch('metayage_type');
   const dailyRate = watch('daily_rate');
