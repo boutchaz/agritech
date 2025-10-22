@@ -166,9 +166,10 @@ serve(async (req) => {
             last_name: last_name || '',
             invited_to_organization: organization_id,
             invited_with_role: role_id,
-            invited_by: user.id
+            invited_by: user.id,
+            needs_password_setup: true
           },
-          redirectTo: `${Deno.env.get('APP_URL') || 'http://localhost:5173'}/onboarding`
+          redirectTo: `${Deno.env.get('APP_URL') || 'http://localhost:5173'}/set-password`
         }
       );
 

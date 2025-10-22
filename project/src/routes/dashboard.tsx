@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Dashboard from '../components/Dashboard'
@@ -8,11 +7,12 @@ import SubscriptionBanner from '../components/SubscriptionBanner'
 import { Home, Building2, Search } from 'lucide-react'
 import type { Module, SensorData, DashboardSettings } from '../types'
 import { CommandPalette } from '../components/CommandPalette'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import type { Action } from 'kbar'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { withRouteProtection } from '../components/authorization/withRouteProtection'
 
 const mockModules: Module[] = [
   {
@@ -215,8 +215,8 @@ const AppContent: React.FC = () => {
           <SubscriptionBanner />
           <PageHeader
             breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name },
-              ...(currentFarm ? [{ icon: Home, label: currentFarm.name }] : []),
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
               { icon: Home, label: 'Tableau de bord', isActive: true }
             ]}
             actions={<QuickActionsButton />}
@@ -229,7 +229,7 @@ const AppContent: React.FC = () => {
 };
 
 export const Route = createFileRoute('/dashboard')({
-  component: AppContent,
+  component: withRouteProtection(AppContent, 'read', 'Dashboard'),
 })
 
 const QuickActionsButton: React.FC = () => {

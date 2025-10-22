@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader'
 import { useState } from 'react'
 import { Building2, Package } from 'lucide-react'
 import type { Module } from '../types'
+import { withRouteProtection } from '../components/authorization/withRouteProtection'
 
 const mockModules: Module[] = [
   {
@@ -58,7 +59,7 @@ const AppContent: React.FC = () => {
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         <PageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name },
+            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: Package, label: 'Gestion du Stock', isActive: true }
           ]}
         />
@@ -69,5 +70,5 @@ const AppContent: React.FC = () => {
 };
 
 export const Route = createFileRoute('/stock')({
-  component: AppContent,
+  component: withRouteProtection(AppContent, 'read', 'Stock'),
 })

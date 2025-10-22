@@ -5,6 +5,7 @@ import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Spro
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
+import { ProtectedNavItem } from './authorization/ProtectedNavItem';
 
 interface SidebarProps {
   modules: Module[];
@@ -121,79 +122,89 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <button
-          onClick={() => handleNavigation('/dashboard')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/dashboard'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Home className="h-5 w-5" />
-          <span>{t('nav.dashboard')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Dashboard">
+          <button
+            onClick={() => handleNavigation('/dashboard')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/dashboard'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <Home className="h-5 w-5" />
+            <span>{t('nav.dashboard')}</span>
+          </button>
+        </ProtectedNavItem>
 
+        <ProtectedNavItem action="read" subject="Analysis">
+          <button
+            onClick={() => handleNavigation('/analyses')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/analyses'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span>{t('nav.analyses')}</span>
+          </button>
+        </ProtectedNavItem>
 
-        <button
-          onClick={() => handleNavigation('/analyses')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/analyses'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <FileText className="h-5 w-5" />
-          <span>{t('nav.analyses')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Parcel">
+          <button
+            onClick={() => handleNavigation('/parcels')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/parcels'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <Map className="h-5 w-5" />
+            <span>{t('nav.parcels')}</span>
+          </button>
+        </ProtectedNavItem>
 
-        <button
-          onClick={() => handleNavigation('/parcels')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/parcels'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Map className="h-5 w-5" />
-          <span>{t('nav.parcels')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Stock">
+          <button
+            onClick={() => handleNavigation('/stock')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/stock'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <Package className="h-5 w-5" />
+            <span>{t('nav.stock')}</span>
+          </button>
+        </ProtectedNavItem>
 
+        <ProtectedNavItem action="read" subject="Infrastructure">
+          <button
+            onClick={() => handleNavigation('/infrastructure')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/infrastructure'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <Building2 className="h-5 w-5" />
+            <span>{t('nav.infrastructure')}</span>
+          </button>
+        </ProtectedNavItem>
 
-        <button
-          onClick={() => handleNavigation('/stock')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/stock'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Package className="h-5 w-5" />
-          <span>{t('nav.stock')}</span>
-        </button>
-
-        <button
-          onClick={() => handleNavigation('/infrastructure')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/infrastructure'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Building2 className="h-5 w-5" />
-          <span>{t('nav.infrastructure')}</span>
-        </button>
-
-        <button
-          onClick={() => handleNavigation('/farm-hierarchy')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/farm-hierarchy'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Network className="h-5 w-5" />
-          <span>{t('nav.farmHierarchy')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="FarmHierarchy">
+          <button
+            onClick={() => handleNavigation('/farm-hierarchy')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/farm-hierarchy'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <Network className="h-5 w-5" />
+            <span>{t('nav.farmHierarchy')}</span>
+          </button>
+        </ProtectedNavItem>
 
         {/* <button
           onClick={() => handleNavigation('/satellite-analysis')}
@@ -208,47 +219,53 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button> */}
 
         {/* Personnel Section */}
-        <button
-          onClick={() => handleNavigation('/workers')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/workers'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Users className="h-5 w-5" />
-          <span>{t('nav.personnel')}</span>
-        </button>
-
-        <button
-          onClick={() => handleNavigation('/tasks')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/tasks'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <CheckSquare className="h-5 w-5" />
-          <span>{t('nav.tasks')}</span>
-        </button>
-
-        {/* Charges Section */}
-        <div className="pt-4">
-          <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            {t('nav.expenses')}
-          </h3>
+        <ProtectedNavItem action="read" subject="Worker">
           <button
-            onClick={() => handleNavigation('/utilities')}
-            className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-              currentPath === '/utilities'
+            onClick={() => handleNavigation('/workers')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/workers'
                 ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
-            <Wallet className="h-5 w-5" />
-            <span>{t('nav.utilities')}</span>
+            <Users className="h-5 w-5" />
+            <span>{t('nav.personnel')}</span>
           </button>
-        </div>
+        </ProtectedNavItem>
+
+        <ProtectedNavItem action="read" subject="Task">
+          <button
+            onClick={() => handleNavigation('/tasks')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentPath === '/tasks'
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <CheckSquare className="h-5 w-5" />
+            <span>{t('nav.tasks')}</span>
+          </button>
+        </ProtectedNavItem>
+
+        {/* Charges Section */}
+        <ProtectedNavItem action="read" subject="Utility">
+          <div className="pt-4">
+            <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
+              {t('nav.expenses')}
+            </h3>
+            <button
+              onClick={() => handleNavigation('/utilities')}
+              className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
+                currentPath === '/utilities'
+                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Wallet className="h-5 w-5" />
+              <span>{t('nav.utilities')}</span>
+            </button>
+          </div>
+        </ProtectedNavItem>
 
         <div className="pt-4">
           <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
@@ -292,31 +309,37 @@ const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => handleNavigation('/alerts')}
-          className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-        >
-          <AlertCircle className="h-5 w-5" />
-          <span>Alertes</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Dashboard">
+          <button
+            onClick={() => handleNavigation('/alerts')}
+            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          >
+            <AlertCircle className="h-5 w-5" />
+            <span>Alertes</span>
+          </button>
+        </ProtectedNavItem>
 
-        <button
-          onClick={() => handleNavigation('/reports')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${
-            currentPath === '/reports' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : ''
-          }`}
-        >
-          <FileSpreadsheet className="h-5 w-5" />
-          <span>{t('nav.reports')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Report">
+          <button
+            onClick={() => handleNavigation('/reports')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${
+              currentPath === '/reports' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : ''
+            }`}
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span>{t('nav.reports')}</span>
+          </button>
+        </ProtectedNavItem>
 
-        <button
-          onClick={() => handleNavigation('/settings/profile')}
-          className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-        >
-          <Settings className="h-5 w-5" />
-          <span>{t('nav.settings')}</span>
-        </button>
+        <ProtectedNavItem action="read" subject="Settings">
+          <button
+            onClick={() => handleNavigation('/settings/profile')}
+            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          >
+            <Settings className="h-5 w-5" />
+            <span>{t('nav.settings')}</span>
+          </button>
+        </ProtectedNavItem>
 
         <button
           onClick={onThemeToggle}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
 import { FormField } from './ui/FormField';
@@ -25,7 +25,7 @@ interface PasswordChangeData {
 }
 
 const ProfileSettings: React.FC = () => {
-  const { user } = useAuth();
+  const { user, currentOrganization, userRole } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -287,6 +287,39 @@ const ProfileSettings: React.FC = () => {
                 value={user?.email || ''}
                 disabled
               />
+            </FormField>
+
+            <FormField
+              label={<><Shield className="inline h-4 w-4 mr-1" /> Rôle</>}
+              htmlFor="role"
+              helper={currentOrganization ? `Rôle dans ${currentOrganization.name}` : 'Rôle dans l\'organisation'}
+            >
+              <div className="flex items-center gap-2">
+                <Input
+                  id="role"
+                  type="text"
+                  value={userRole?.role_display_name || userRole?.role_name || 'N/A'}
+                  disabled
+                  className="flex-1"
+                />
+                <span className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  userRole?.role_name === 'organization_admin'
+                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
+                    : userRole?.role_name === 'farm_manager'
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                    : userRole?.role_name === 'farm_worker'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                    : userRole?.role_name === 'day_laborer'
+                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                }`}>
+                  {userRole?.role_name === 'organization_admin' ? 'Administrateur'
+                    : userRole?.role_name === 'farm_manager' ? 'Gestionnaire'
+                    : userRole?.role_name === 'farm_worker' ? 'Employé'
+                    : userRole?.role_name === 'day_laborer' ? 'Journalier'
+                    : 'Autre'}
+                </span>
+              </div>
             </FormField>
 
             <FormField label={<><Phone className="inline h-4 w-4 mr-1" /> Téléphone</>} htmlFor="phone">

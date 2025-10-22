@@ -24,8 +24,13 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
     queryKey: ['tasks', organizationId, filters],
     queryFn: async () => {
       let query = supabase
-        .from('task_summary')
-        .select('*')
+        .from('tasks')
+        .select(`
+          *,
+          worker:workers!assigned_to(first_name, last_name),
+          farm:farms!farm_id(name),
+          parcel:parcels!parcel_id(name)
+        `)
         .eq('organization_id', organizationId);
 
       if (filters?.status) {
@@ -83,8 +88,13 @@ export function useTask(taskId: string | null) {
     queryKey: ['task', taskId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('task_summary')
-        .select('*')
+        .from('tasks')
+        .select(`
+          *,
+          worker:workers!assigned_to(first_name, last_name),
+          farm:farms!farm_id(name),
+          parcel:parcels!parcel_id(name)
+        `)
         .eq('id', taskId!)
         .single();
 
@@ -121,18 +131,18 @@ export function useTaskComments(taskId: string | null) {
         .from('task_comments')
         .select(`
           *,
-          user:user_id(email),
-          worker:worker_id(first_name, last_name)
+          user:auth.users!user_id(email),
+          worker:workers!worker_id(first_name, last_name)
         `)
         .eq('task_id', taskId!)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       return (data || []).map(comment => ({
         ...comment,
         user_name: comment.user?.email,
-        worker_name: comment.worker 
+        worker_name: comment.worker
           ? `${comment.worker.first_name} ${comment.worker.last_name}`
           : undefined,
       })) as TaskComment[];
@@ -149,16 +159,16 @@ export function useTaskTimeLogs(taskId: string | null) {
         .from('task_time_logs')
         .select(`
           *,
-          worker:worker_id(first_name, last_name)
+          worker:workers!worker_id(first_name, last_name)
         `)
         .eq('task_id', taskId!)
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      
+
       return (data || []).map(log => ({
         ...log,
-        worker_name: log.worker 
+        worker_name: log.worker
           ? `${log.worker.first_name} ${log.worker.last_name}`
           : undefined,
       })) as TaskTimeLog[];
@@ -195,7 +205,7 @@ export function useTaskStatistics(organizationId: string, filters?: TaskFilters)
         .from('tasks')
         .select(`
           *,
-          worker:assigned_to(first_name, last_name)
+          worker:workers!assigned_to(first_name, last_name)
         `)
         .eq('organization_id', organizationId);
 
@@ -385,7 +395,7 @@ export function useClockOut() {
           notes: request.notes,
         })
         .eq('id', request.time_log_id)
-        .select('*, task:task_id(id, organization_id)')
+        .select('*, task:tasks!task_id(id, organization_id)')
         .single();
 
       if (error) throw error;

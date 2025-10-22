@@ -15,6 +15,7 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as SelectTrialRouteImport } from './routes/select-trial'
 import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analysis'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -72,6 +73,11 @@ const SoilAnalysisRoute = SoilAnalysisRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetPasswordRoute = SetPasswordRouteImport.update({
+  id: '/set-password',
+  path: '/set-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SelectTrialRoute = SelectTrialRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
+  '/set-password': typeof SetPasswordRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
+  '/set-password': typeof SetPasswordRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
+  '/set-password': typeof SetPasswordRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
+    | '/set-password'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
+    | '/set-password'
     | '/soil-analysis'
     | '/stock'
     | '/tasks'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
+    | '/set-password'
     | '/settings'
     | '/soil-analysis'
     | '/stock'
@@ -446,6 +458,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   SatelliteAnalysisRoute: typeof SatelliteAnalysisRoute
   SelectTrialRoute: typeof SelectTrialRoute
+  SetPasswordRoute: typeof SetPasswordRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
@@ -496,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/set-password': {
+      id: '/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof SetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/select-trial': {
@@ -755,6 +775,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   SatelliteAnalysisRoute: SatelliteAnalysisRoute,
   SelectTrialRoute: SelectTrialRoute,
+  SetPasswordRoute: SetPasswordRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,

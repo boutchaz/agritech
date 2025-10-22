@@ -13,6 +13,8 @@ export type Subject =
   | 'User' | 'Organization' | 'Subscription' | 'Role'
   | 'Cost' | 'Revenue' | 'Utility' | 'Structure' | 'Tree'
   | 'SatelliteReport' | 'Sensor' | 'Analytics' | 'API'
+  | 'Stock' | 'Infrastructure' | 'FarmHierarchy' | 'Task' | 'Report' | 'Settings'
+  | 'Dashboard'
   | 'all';
 
 // Define ability type
@@ -66,6 +68,13 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Structure');
     can('manage', 'Tree');
     can('manage', 'User');
+    can('manage', 'Stock');
+    can('manage', 'Infrastructure');
+    can('manage', 'FarmHierarchy');
+    can('manage', 'Task');
+    can('manage', 'Report');
+    can('manage', 'Settings');
+    can('read', 'Dashboard');
     can('invite', 'User');
     can('remove', 'User');
     can('read', 'Organization');
@@ -86,9 +95,17 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Utility');
     can('manage', 'Structure');
     can('manage', 'Tree');
+    can('manage', 'Stock');
+    can('manage', 'Infrastructure');
+    can('manage', 'FarmHierarchy');
+    can('manage', 'Task');
+    can('read', 'Report');
+    can('read', 'Dashboard');
     can('read', 'Farm');
     can('update', 'Farm');
     can('read', 'User');
+    can('read', 'Settings');
+    can('update', 'Settings'); // Allow updating their profile
   }
 
   // Farm Worker - Basic operations
@@ -103,14 +120,19 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Employee');
     can('read', 'DayLaborer');
     can('read', 'Worker');
+    can('read', 'Dashboard');
+    can('read', 'Task');
+    can('update', 'Task'); // Can update their assigned tasks
+    can('read', 'Settings');
+    can('update', 'Settings'); // Can update their profile
   }
 
-  // Day Laborer - Very limited access
+  // Day Laborer - Very limited access (only tasks and profile)
   if (role.name === 'day_laborer') {
-    can('read', 'Parcel');
-    can('read', 'Farm');
-    can('create', 'Analysis');
-    can('read', 'Analysis');
+    can('read', 'Task'); // Can only view their assigned tasks
+    can('update', 'Task'); // Can update their assigned tasks (clock in/out, progress)
+    can('read', 'Settings'); // Can view their profile settings
+    can('update', 'Settings'); // Can update their profile
   }
 
   // Viewer - Read-only access
@@ -121,6 +143,11 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Cost');
     can('read', 'Revenue');
     can('read', 'Worker');
+    can('read', 'Dashboard');
+    can('read', 'FarmHierarchy');
+    can('read', 'Task');
+    can('read', 'Report');
+    can('read', 'Settings');
   }
 
   // ============================================

@@ -59,6 +59,7 @@ serve(async (req) => {
     // 1. Create user profile
     const firstName = newUser.raw_user_meta_data?.first_name || email.split('@')[0];
     const lastName = newUser.raw_user_meta_data?.last_name || '';
+    const needsPasswordSetup = newUser.raw_user_meta_data?.needs_password_setup === true;
 
     const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
@@ -68,6 +69,7 @@ serve(async (req) => {
         last_name: lastName,
         timezone: newUser.raw_user_meta_data?.timezone || 'Africa/Casablanca',
         language: newUser.raw_user_meta_data?.language || 'fr',
+        password_set: !needsPasswordSetup, // FALSE if invited user, TRUE otherwise
       });
 
     if (profileError && profileError.code !== '23505') {
@@ -92,6 +94,31 @@ serve(async (req) => {
       invitedWithRole,
       invitedBy
     });
+
+    // Check if user already has organization_users record (created during invitation)
+    const { data: existingOrgUsers, error: checkError } = await supabaseAdmin
+      .from('organization_users')
+      .select('id, organization_id, role_id')
+      .eq('user_id', userId)
+      .limit(1);
+
+    if (checkError) {
+      console.error('⚠️ Error checking existing organizations:', checkError);
+    }
+
+    if (existingOrgUsers && existingOrgUsers.length > 0) {
+      console.log('✅ User already has organization_users record:', existingOrgUsers[0]);
+      return new Response(
+        JSON.stringify({
+          message: 'User setup completed (existing org user)',
+          userId,
+          profile: true,
+          organization: true,
+          organizationId: existingOrgUsers[0].organization_id
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
     if (invitedToOrganization && invitedWithRole) {
       console.log('👥 User was invited to organization:', invitedToOrganization);
@@ -126,31 +153,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Check if user already has organization (fallback check)
-    const { data: existingOrgUsers, error: checkError } = await supabaseAdmin
-      .from('organization_users')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1);
-
-    if (checkError) {
-      console.error('⚠️ Error checking existing organizations:', checkError);
-    }
-
-    if (existingOrgUsers && existingOrgUsers.length > 0) {
-      console.log('✅ User already has organization, skipping org creation');
-      return new Response(
-        JSON.stringify({
-          message: 'User setup completed (existing org user)',
-          userId,
-          profile: true,
-          organization: false
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    }
-
-    // 4. Create default organization
+    // 3. Create default organization (only if no invitation and no existing org)
     const orgName = newUser.raw_user_meta_data?.organization_name || `${firstName}'s Organization`;
     const orgSlug = `${orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${userId.substring(0, 8)}`;
 
@@ -174,7 +177,7 @@ serve(async (req) => {
 
     console.log('✅ Organization created:', newOrg.id);
 
-    // 5. Get organization_admin role
+    // 4. Get organization_admin role
     const { data: roles, error: rolesError } = await supabaseAdmin
       .from('roles')
       .select('id')
@@ -188,7 +191,7 @@ serve(async (req) => {
 
     const roleId = roles[0].id;
 
-    // 6. Add user to organization with admin role
+    // 5. Add user to organization with admin role
     const { error: orgUserError } = await supabaseAdmin
       .from('organization_users')
       .insert({
