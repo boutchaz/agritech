@@ -12,6 +12,7 @@ import {
   HeatmapDataResponse,
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
+import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 
 // Fix Leaflet default icon issue with Webpack
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -29,42 +30,59 @@ interface LeafletHeatmapViewerProps {
   selectedIndex?: VegetationIndexType;
   selectedDate?: string;
   embedded?: boolean; // When true, hides the configuration panel and is used within other components
+  colorPalette?: ColorPalette; // Color palette to use for the heatmap
+  compact?: boolean; // When true, shows a minimal version suitable for grid display
+  baseLayer?: 'osm' | 'satellite'; // Base map layer
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-const GridHeatmapLayer: React.FC<{
+export const GridHeatmapLayer: React.FC<{
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
-}> = ({ data, selectedIndex }) => {
+  colorPalette?: ColorPalette;
+  opacity?: number;
+}> = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Color interpolation function matching desired.png
+  // Color interpolation function using selected palette
   const getColorForValue = (value: number, min: number, max: number): string => {
-    const normalized = (value - min) / (max - min);
+    const normalized = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    const palette = COLOR_PALETTES[colorPalette];
+    const colors = palette.colors;
 
-    // Color gradient from red to green (matching desired.png)
-    if (normalized <= 0.2) {
-      // Red to orange
-      const t = normalized / 0.2;
-      return `rgb(${Math.round(220 + (255 - 220) * t)}, ${Math.round(20 * t)}, ${Math.round(60 * (1 - t))})`;
-    } else if (normalized <= 0.4) {
-      // Orange to yellow
-      const t = (normalized - 0.2) / 0.2;
-      return `rgb(255, ${Math.round(165 + (255 - 165) * t)}, ${Math.round(0 + 50 * t)})`;
-    } else if (normalized <= 0.6) {
-      // Yellow to light green
-      const t = (normalized - 0.4) / 0.2;
-      return `rgb(${Math.round(255 - 100 * t)}, 255, ${Math.round(50 + 100 * t)})`;
-    } else if (normalized <= 0.8) {
-      // Light green to green
-      const t = (normalized - 0.6) / 0.2;
-      return `rgb(${Math.round(155 - 55 * t)}, ${Math.round(255 - 50 * t)}, ${Math.round(150 - 50 * t)})`;
-    } else {
-      // Green to dark green
-      const t = (normalized - 0.8) / 0.2;
-      return `rgb(${Math.round(100 - 50 * t)}, ${Math.round(205 - 55 * t)}, ${Math.round(100 - 50 * t)})`;
+    // Interpolate between colors in the palette
+    const index = normalized * (colors.length - 1);
+    const lowerIndex = Math.floor(index);
+    const upperIndex = Math.ceil(index);
+
+    if (lowerIndex === upperIndex) {
+      return colors[lowerIndex];
     }
+
+    const t = index - lowerIndex;
+    const lowerColor = hexToRgb(colors[lowerIndex]);
+    const upperColor = hexToRgb(colors[upperIndex]);
+
+    if (!lowerColor || !upperColor) {
+      return colors[lowerIndex];
+    }
+
+    const r = Math.round(lowerColor.r + (upperColor.r - lowerColor.r) * t);
+    const g = Math.round(lowerColor.g + (upperColor.g - lowerColor.g) * t);
+    const b = Math.round(lowerColor.b + (upperColor.b - lowerColor.b) * t);
+
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  // Helper function to convert hex to RGB
+  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
   };
 
   useEffect(() => {
@@ -116,10 +134,10 @@ const GridHeatmapLayer: React.FC<{
 
       const rectangle = L.rectangle(bounds, {
         fillColor: color,
-        fillOpacity: 1.0,
+        fillOpacity: opacity,
         color: color,
         weight: 0.1,
-        opacity: 0.1
+        opacity: Math.min(0.3, opacity)
       }).bindTooltip(
         `${selectedIndex}: ${point.value.toFixed(3)}<br/>
          Lat: ${point.lat.toFixed(6)}<br/>
@@ -162,11 +180,15 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   initialData,
   selectedIndex: propSelectedIndex,
   selectedDate: propSelectedDate,
-  embedded = false
+  embedded = false,
+  colorPalette = 'red-green',
+  compact = false,
+  baseLayer = 'osm'
 }) => {
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NDVI');
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
   const [samplePoints, setSamplePoints] = useState(10000); // Start with high detail
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | null>(initialData || null);
@@ -520,7 +542,25 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           )}
         </div>
 
-        <div className="h-96 border rounded-lg overflow-hidden relative">
+        <div className={`border rounded-lg overflow-hidden relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : 'h-96'}`}>
+          {/* Fullscreen Toggle Button */}
+          {!compact && (
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-100 border-2 border-gray-300 rounded-lg p-2 shadow-lg transition-colors"
+              title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+            >
+              {isFullscreen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
+          )}
           <ColorScale />
           {/* Statistics Box (like desired.png) */}
           {data && (
@@ -538,10 +578,17 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             style={{ height: '100%', width: '100%' }}
             className="leaflet-container"
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            {baseLayer === 'satellite' ? (
+              <TileLayer
+                attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            ) : (
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            )}
 
             {/* AOI Polygon Boundary - Matching research notebook style */}
             {polygonPositions.length > 0 && (
@@ -570,25 +617,27 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             )}
 
             {/* Grid Heatmap Layer */}
-            <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} />
+            <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} />
           </MapContainer>
         </div>
 
-        {/* Legend and Information */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <MousePointer className="w-4 h-4 text-blue-600" />
-            <span className="font-medium text-blue-800">Interactive Map Features</span>
+        {/* Legend and Information (hide in compact mode) */}
+        {!compact && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <MousePointer className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-blue-800">Interactive Map Features</span>
+            </div>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• <strong>Real Data:</strong> Actual Sentinel-2 satellite pixel values from Earth Engine</p>
+              <p>• <strong>AOI Boundary:</strong> Black/white dashed line shows the exact field boundary</p>
+              <p>• <strong>Grid Pixels:</strong> Each rectangle represents a {data?.metadata?.sample_scale || 10}m satellite pixel</p>
+              <p>• <strong>Color Scale:</strong> {COLOR_PALETTES[colorPalette || 'red-green'].description}</p>
+              <p>• <strong>Interaction:</strong> Hover over pixels to see exact values and coordinates</p>
+              <p>• <strong>Data Source:</strong> {data?.metadata?.data_source || 'Sentinel-2 Earth Engine'}</p>
+            </div>
           </div>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>• <strong>Real Data:</strong> Actual Sentinel-2 satellite pixel values from Earth Engine</p>
-            <p>• <strong>AOI Boundary:</strong> Black/white dashed line shows the exact field boundary</p>
-            <p>• <strong>Grid Pixels:</strong> Each rectangle represents a {data?.metadata?.sample_scale || 10}m satellite pixel</p>
-            <p>• <strong>Color Scale:</strong> Red = Low {selectedIndex}, Green = High {selectedIndex}</p>
-            <p>• <strong>Interaction:</strong> Hover over pixels to see exact values and coordinates</p>
-            <p>• <strong>Data Source:</strong> {data?.metadata?.data_source || 'Sentinel-2 Earth Engine'}</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

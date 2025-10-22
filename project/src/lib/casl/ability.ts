@@ -9,7 +9,7 @@ export type Action =
 
 // Define all possible subjects (resources)
 export type Subject =
-  | 'Farm' | 'Parcel' | 'Analysis' | 'Employee' | 'DayLaborer'
+  | 'Farm' | 'Parcel' | 'Analysis' | 'Employee' | 'DayLaborer' | 'Worker'
   | 'User' | 'Organization' | 'Subscription' | 'Role'
   | 'Cost' | 'Revenue' | 'Utility' | 'Structure' | 'Tree'
   | 'SatelliteReport' | 'Sensor' | 'Analytics' | 'API'
@@ -59,6 +59,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Analysis');
     can('manage', 'Employee');
     can('manage', 'DayLaborer');
+    can('manage', 'Worker');
     can('manage', 'Cost');
     can('manage', 'Revenue');
     can('manage', 'Utility');
@@ -79,6 +80,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Analysis');
     can('manage', 'Employee');
     can('manage', 'DayLaborer');
+    can('manage', 'Worker');
     can('manage', 'Cost');
     can('manage', 'Revenue');
     can('manage', 'Utility');
@@ -100,6 +102,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Cost');
     can('read', 'Employee');
     can('read', 'DayLaborer');
+    can('read', 'Worker');
   }
 
   // Day Laborer - Very limited access
@@ -117,6 +120,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Analysis');
     can('read', 'Cost');
     can('read', 'Revenue');
+    can('read', 'Worker');
   }
 
   // ============================================

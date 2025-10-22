@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as UtilitiesRouteImport } from './routes/utilities'
+import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as StockRouteImport } from './routes/stock'
 import { Route as SoilAnalysisRouteImport } from './routes/soil-analysis'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -51,6 +52,11 @@ const WorkersRoute = WorkersRouteImport.update({
 const UtilitiesRoute = UtilitiesRouteImport.update({
   id: '/utilities',
   path: '/utilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StockRoute = StockRouteImport.update({
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/select-trial': typeof SelectTrialRoute
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
+  '/tasks': typeof TasksRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/soil-analysis'
     | '/stock'
+    | '/tasks'
     | '/utilities'
     | '/workers'
     | '/settings/dashboard'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/select-trial'
     | '/soil-analysis'
     | '/stock'
+    | '/tasks'
     | '/utilities'
     | '/workers'
     | '/settings/dashboard'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/soil-analysis'
     | '/stock'
+    | '/tasks'
     | '/utilities'
     | '/workers'
     | '/settings/dashboard'
@@ -437,6 +449,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
   StockRoute: typeof StockRoute
+  TasksRoute: typeof TasksRoute
   UtilitiesRoute: typeof UtilitiesRoute
   WorkersRoute: typeof WorkersRoute
 }
@@ -455,6 +468,13 @@ declare module '@tanstack/react-router' {
       path: '/utilities'
       fullPath: '/utilities'
       preLoaderRoute: typeof UtilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stock': {
@@ -738,6 +758,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
   StockRoute: StockRoute,
+  TasksRoute: TasksRoute,
   UtilitiesRoute: UtilitiesRoute,
   WorkersRoute: WorkersRoute,
 }

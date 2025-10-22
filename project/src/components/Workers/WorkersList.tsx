@@ -9,11 +9,14 @@ import {
   CheckCircle,
   XCircle,
   UserX,
+  Lock,
 } from 'lucide-react';
 import { useWorkers, useDeactivateWorker, useDeleteWorker } from '../../hooks/useWorkers';
 import { getWorkerTypeLabel, getCompensationDisplay } from '../../types/workers';
 import type { Worker, WorkerType } from '../../types/workers';
 import WorkerForm from './WorkerForm';
+import { Can } from '../authorization/Can';
+import { useCan } from '../../lib/casl/AbilityContext';
 
 interface WorkersListProps {
   organizationId: string;
@@ -31,6 +34,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const { data: workers = [], isLoading } = useWorkers(organizationId);
   const deactivateWorker = useDeactivateWorker();
   const deleteWorker = useDeleteWorker();
+  const { can } = useCan();
 
   // Filter workers
   const filteredWorkers = workers.filter(worker => {
@@ -99,16 +103,27 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             Gérez vos salariés, ouvriers et travailleurs en métayage
           </p>
         </div>
-        <button
-          onClick={() => {
-            setSelectedWorker(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        <Can
+          I="create"
+          a="Worker"
+          fallback={
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed">
+              <Lock className="w-5 h-5" />
+              <span>Accès restreint</span>
+            </div>
+          }
         >
-          <Plus className="w-5 h-5" />
-          <span>Ajouter un travailleur</span>
-        </button>
+          <button
+            onClick={() => {
+              setSelectedWorker(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Ajouter un travailleur</span>
+          </button>
+        </Can>
       </div>
 
       {/* Stats Cards */}
@@ -295,29 +310,41 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(worker)}
-                          className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                          title="Modifier"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {worker.is_active && (
+                        <Can I="update" a="Worker">
                           <button
-                            onClick={() => handleDeactivate(worker.id)}
-                            className="p-1 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200"
-                            title="Désactiver"
+                            onClick={() => handleEdit(worker)}
+                            className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                            title="Modifier"
                           >
-                            <UserX className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </button>
+                        </Can>
+                        {worker.is_active && (
+                          <Can I="deactivate" a="Worker">
+                            <button
+                              onClick={() => handleDeactivate(worker.id)}
+                              className="p-1 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200"
+                              title="Désactiver"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          </Can>
                         )}
-                        <button
-                          onClick={() => handleDelete(worker.id)}
-                          className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <Can I="delete" a="Worker">
+                          <button
+                            onClick={() => handleDelete(worker.id)}
+                            className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </Can>
+                        {!can('update', 'Worker') && !can('delete', 'Worker') && (
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
+                            Vue seule
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
