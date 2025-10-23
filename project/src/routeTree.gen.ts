@@ -25,6 +25,7 @@ import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
+import { Route as HarvestsRouteImport } from './routes/harvests'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
 import { Route as EmployeesRouteImport } from './routes/employees'
@@ -125,6 +126,11 @@ const LoginRoute = LoginRouteImport.update({
 const InfrastructureRoute = InfrastructureRouteImport.update({
   id: '/infrastructure',
   path: '/infrastructure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HarvestsRoute = HarvestsRouteImport.update({
+  id: '/harvests',
+  path: '/harvests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/harvests': typeof HarvestsRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/harvests': typeof HarvestsRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/employees': typeof EmployeesRoute
   '/farm-hierarchy': typeof FarmHierarchyRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/harvests': typeof HarvestsRoute
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/employees'
     | '/farm-hierarchy'
     | '/forgot-password'
+    | '/harvests'
     | '/infrastructure'
     | '/login'
     | '/onboarding'
@@ -395,6 +405,7 @@ export interface FileRouteTypes {
     | '/employees'
     | '/farm-hierarchy'
     | '/forgot-password'
+    | '/harvests'
     | '/infrastructure'
     | '/login'
     | '/parcels'
@@ -431,6 +442,7 @@ export interface FileRouteTypes {
     | '/employees'
     | '/farm-hierarchy'
     | '/forgot-password'
+    | '/harvests'
     | '/infrastructure'
     | '/login'
     | '/onboarding'
@@ -471,6 +483,7 @@ export interface RootRouteChildren {
   EmployeesRoute: typeof EmployeesRoute
   FarmHierarchyRoute: typeof FarmHierarchyRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  HarvestsRoute: typeof HarvestsRoute
   InfrastructureRoute: typeof InfrastructureRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       path: '/infrastructure'
       fullPath: '/infrastructure'
       preLoaderRoute: typeof InfrastructureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/harvests': {
+      id: '/harvests'
+      path: '/harvests'
+      fullPath: '/harvests'
+      preLoaderRoute: typeof HarvestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -814,6 +834,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmployeesRoute: EmployeesRoute,
   FarmHierarchyRoute: FarmHierarchyRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  HarvestsRoute: HarvestsRoute,
   InfrastructureRoute: InfrastructureRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,

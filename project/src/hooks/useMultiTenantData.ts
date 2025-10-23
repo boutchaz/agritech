@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { authSupabase } from '../lib/auth-authSupabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 interface UseDataOptions {

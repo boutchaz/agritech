@@ -6,6 +6,12 @@ import { useAuth } from './MultiTenantAuthProvider';
 import { useParcels } from '../hooks/useParcels';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import { useNavigate } from '@tanstack/react-router';
+import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';
+import ParcelsOverviewWidget from './Dashboard/ParcelsOverviewWidget';
+import StockAlertsWidget from './Dashboard/StockAlertsWidget';
+import WorkersActivityWidget from './Dashboard/WorkersActivityWidget';
+import SoilAnalysisWidget from './Dashboard/SoilAnalysisWidget';
+import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 
 interface DashboardProps {
   sensorData: SensorData[];
@@ -270,23 +276,22 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         );
 
       case 'tasks':
-        return settings.showTaskAlerts && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Tâches à venir
-            </h3>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
-                  <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
-                    Taille des arbres prévue demain
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return settings.showTaskAlerts && <UpcomingTasksWidget />;
+
+      case 'parcels':
+        return <ParcelsOverviewWidget />;
+
+      case 'stock':
+        return settings.showStockAlerts && <StockAlertsWidget />;
+
+      case 'workers':
+        return <WorkersActivityWidget />;
+
+      case 'soil':
+        return settings.showSoilData && <SoilAnalysisWidget />;
+
+      case 'harvests':
+        return <HarvestSummaryWidget />;
 
       default:
         return null;
@@ -310,29 +315,42 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         </div>
       </div>
 
+      {/* Main Widgets Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        {settings.layout.topRow.map((widgetType, index) => (
-          <div key={`top-${widgetType}-${index}`}>
-            {renderWidget(widgetType)}
-          </div>
-        ))}
+        <ParcelsOverviewWidget />
+        <WorkersActivityWidget />
+        {settings.showStockAlerts && <StockAlertsWidget />}
+        <HarvestSummaryWidget />
       </div>
 
+      {/* Tasks and Soil Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-        {settings.layout.middleRow.map((widgetType, index) => (
-          <div key={`middle-${widgetType}-${index}`}>
-            {renderWidget(widgetType)}
-          </div>
-        ))}
+        {settings.showTaskAlerts && <UpcomingTasksWidget />}
+        {settings.showSoilData && <SoilAnalysisWidget />}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-        {settings.layout.bottomRow.map((widgetType, index) => (
-          <div key={`bottom-${widgetType}-${index}`}>
-            {renderWidget(widgetType)}
-          </div>
-        ))}
-      </div>
+      {/* Additional Widgets from Settings */}
+      {settings.layout?.middleRow && settings.layout.middleRow.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+          {settings.layout.middleRow
+            .filter(w => !['tasks', 'soil'].includes(w))
+            .map((widgetType, index) => (
+              <div key={`middle-${widgetType}-${index}`}>
+                {renderWidget(widgetType)}
+              </div>
+            ))}
+        </div>
+      )}
+
+      {settings.layout?.bottomRow && settings.layout.bottomRow.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+          {settings.layout.bottomRow.map((widgetType, index) => (
+            <div key={`bottom-${widgetType}-${index}`}>
+              {renderWidget(widgetType)}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

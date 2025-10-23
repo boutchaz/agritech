@@ -51,9 +51,9 @@ const defaultDashboardSettings: DashboardSettings = {
   showStockAlerts: true,
   showTaskAlerts: true,
   layout: {
-    topRow: ['farm', 'soil', 'climate', 'irrigation'],
-    middleRow: ['production', 'financial'],
-    bottomRow: ['alerts', 'tasks']
+    topRow: ['parcels', 'workers', 'stock', 'harvests'],
+    middleRow: ['tasks', 'soil'],
+    bottomRow: ['climate', 'irrigation']
   }
 };
 
