@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, Leaf, Shield } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/Input';
@@ -79,14 +79,14 @@ function SetPasswordPage() {
 
     try {
       // Update user password
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error: updateError } = await authSupabase.auth.updateUser({
         password: password,
       });
 
       if (updateError) throw updateError;
 
       // Mark password as set in user profile
-      await supabase
+      await authSupabase
         .from('user_profiles')
         .upsert({
           id: user!.id,

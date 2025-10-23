@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
-import { supabase } from '../lib/supabase'
+import { authSupabase } from '../lib/auth-supabase'
 
 export const Route = createFileRoute('/forgot-password')({
   component: ForgotPasswordPage,
@@ -27,7 +27,7 @@ function ForgotPasswordPage() {
     setError(null)
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await authSupabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback`,
       })
 

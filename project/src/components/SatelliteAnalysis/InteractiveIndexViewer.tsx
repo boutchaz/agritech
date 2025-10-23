@@ -69,7 +69,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [selectedDate, setSelectedDate] = useState('');
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('red-green');
-  const [baseLayer, setBaseLayer] = useState<'osm' | 'satellite'>('osm');
+  const [baseLayer, setBaseLayer] = useState<'osm' | 'satellite'>('satellite');
 
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | InteractiveDataResponse | null>(null);

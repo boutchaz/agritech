@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-authSupabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 interface UseDataOptions {
@@ -31,7 +31,7 @@ export function useMultiTenantData<T extends { id: string }>(
   const { table, columns = '*', filters = {}, orderBy, realtime = false } = options;
 
   const buildQuery = useCallback(() => {
-    let query = supabase.from(table).select(columns);
+    let query = authSupabase.from(table).select(columns);
 
     // Apply organization filter
     if (currentOrganization) {
@@ -97,7 +97,7 @@ export function useMultiTenantData<T extends { id: string }>(
         ...(currentFarm && filters.include_farm ? { farm_id: currentFarm.id } : {})
       };
 
-      const { data: result, error: createError } = await supabase
+      const { data: result, error: createError } = await authSupabase
         .from(table)
         .insert(newItem)
         .select()
@@ -119,7 +119,7 @@ export function useMultiTenantData<T extends { id: string }>(
 
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<T | null> => {
     try {
-      const { data: result, error: updateError } = await supabase
+      const { data: result, error: updateError } = await authSupabase
         .from(table)
         .update(updates)
         .eq('id', id)
@@ -142,7 +142,7 @@ export function useMultiTenantData<T extends { id: string }>(
 
   const deleteRecord = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await authSupabase
         .from(table)
         .delete()
         .eq('id', id);
@@ -172,7 +172,7 @@ export function useMultiTenantData<T extends { id: string }>(
       return;
     }
 
-    const channel = supabase
+    const channel = authSupabase
       .channel(`${table}_changes`)
       .on(
         'postgres_changes',
@@ -203,7 +203,7 @@ export function useMultiTenantData<T extends { id: string }>(
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      authSupabase.removeChannel(channel);
     };
   }, [table, realtime, currentOrganization]);
 

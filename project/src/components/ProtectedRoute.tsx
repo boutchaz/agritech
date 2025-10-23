@@ -28,7 +28,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check authentication first
   if (!user) {
-    return <Auth onAuthSuccess={() => {}} />;
+    // Redirect to login page instead of showing inline auth form
+    window.location.href = '/login';
+    return null;
   }
 
   // Check subscription if required

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase, type UserProfile, type Farm, type Organization } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
+import type { UserProfile, Farm, Organization } from '../lib/supabase';
 
 // Extended organization type with role info from join
 interface OrganizationWithRole extends Organization {
@@ -23,7 +24,7 @@ export const useUserProfile = (userId: string | undefined) => {
 
       // Try using RPC function first (more reliable with permissions)
       try {
-        const { data: rpcData, error: rpcError } = await supabase
+        const { data: rpcData, error: rpcError } = await authSupabase
           .rpc('get_current_user_profile');
 
         if (!rpcError && rpcData) {
@@ -34,7 +35,7 @@ export const useUserProfile = (userId: string | undefined) => {
       }
 
       // Fallback to direct query
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
@@ -62,7 +63,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
       if (!userId) return [];
 
       // First, get organization IDs and roles from organization_users
-      const { data: orgUsers, error: orgUsersError } = await supabase
+      const { data: orgUsers, error: orgUsersError } = await authSupabase
         .from('organization_users')
         .select('organization_id, role, is_active')
         .eq('user_id', userId)
@@ -81,8 +82,8 @@ export const useUserOrganizations = (userId: string | undefined) => {
       }
 
       // Then fetch organization details for each org
-      const orgIds = orgUsers.map(ou => ou.organization_id);
-      const { data: orgs, error: orgsError } = await supabase
+      const orgIds = orgUsers.map(ou => ou.organization_id).filter(Boolean) as string[];
+      const { data: orgs, error: orgsError } = await authSupabase
         .from('organizations')
         .select('id, name, slug, onboarding_completed, currency, timezone, language')
         .in('id', orgIds);
@@ -123,7 +124,7 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .rpc('get_organization_farms', { org_uuid: organizationId });
 
       if (error) {
@@ -149,7 +150,7 @@ export const useSignOut = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await authSupabase.auth.signOut();
       if (error) throw error;
     },
     onSuccess: () => {

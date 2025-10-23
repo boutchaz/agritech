@@ -1,42 +1,7 @@
--- Link tasks to platform users instead of just worker names
--- This allows proper assignment to users who can actually see their tasks
+-- Migration to handle existing constraints and apply missing parts
+-- This migration is designed to work with existing database state
 
--- First, let's understand what we have:
--- - tasks.assigned_to is currently TEXT (can be worker name or UUID)
--- - workers.user_id links workers to auth.users
-
--- Step 1: Change assigned_to to be a UUID reference to auth.users
--- We'll rename the old column first for safety
-DO $$
-BEGIN
-  -- Only proceed if assigned_to is currently text type
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'tasks'
-    AND column_name = 'assigned_to'
-    AND data_type = 'text'
-  ) THEN
-    -- Rename old column as backup
-    ALTER TABLE tasks RENAME COLUMN assigned_to TO assigned_to_old;
-
-    -- Add new assigned_to as UUID
-    ALTER TABLE tasks ADD COLUMN assigned_to uuid REFERENCES auth.users(id) ON DELETE SET NULL;
-
-    -- Try to migrate data if possible (if assigned_to_old contains valid UUIDs)
-    UPDATE tasks
-    SET assigned_to = assigned_to_old::uuid
-    WHERE assigned_to_old IS NOT NULL
-    AND assigned_to_old ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
-
-    -- Drop old column after verification
-    -- ALTER TABLE tasks DROP COLUMN assigned_to_old; -- Uncomment after verification
-  END IF;
-END $$;
-
--- Step 2: Add index for better performance
-CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
-
--- Step 3: Create a view to get all assignable users in an organization
+-- Step 1: Create the assignable_users view (this is the main thing we need)
 CREATE OR REPLACE VIEW assignable_users AS
 SELECT DISTINCT
   u.id as user_id,
@@ -58,14 +23,41 @@ LEFT JOIN workers w ON w.user_id = u.id AND w.is_active = true
 WHERE ou.role IN ('admin', 'manager', 'member')
 ORDER BY up.last_name, up.first_name;
 
--- Step 4: Grant permissions
+-- Grant permissions
 GRANT SELECT ON assignable_users TO authenticated;
 
--- Step 5: Add comments
-COMMENT ON COLUMN tasks.assigned_to IS 'User ID of the person assigned to this task. References auth.users, allowing platform users to see their assigned tasks.';
+-- Add comment
 COMMENT ON VIEW assignable_users IS 'View of all users who can be assigned to tasks, including workers with platform access and regular organization members.';
 
--- Step 6: Update RLS policy to allow users to see tasks assigned to them
+-- Step 2: Handle tasks.assigned_to column if it doesn't exist as UUID
+DO $$
+BEGIN
+  -- Check if assigned_to column exists and is not UUID type
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'tasks'
+    AND column_name = 'assigned_to'
+    AND data_type != 'uuid'
+  ) THEN
+    -- Rename old column as backup
+    ALTER TABLE tasks RENAME COLUMN assigned_to TO assigned_to_old;
+    
+    -- Add new assigned_to as UUID
+    ALTER TABLE tasks ADD COLUMN assigned_to uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+    
+    -- Try to migrate data if possible
+    UPDATE tasks
+    SET assigned_to = assigned_to_old::uuid
+    WHERE assigned_to_old IS NOT NULL
+    AND assigned_to_old ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+  END IF;
+END $$;
+
+-- Step 3: Add index for better performance (if it doesn't exist)
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
+
+-- Step 4: Update RLS policy to allow users to see tasks assigned to them
+DROP POLICY IF EXISTS "Users can view tasks assigned to them" ON tasks;
 CREATE POLICY "Users can view tasks assigned to them"
   ON tasks
   FOR SELECT
@@ -73,7 +65,7 @@ CREATE POLICY "Users can view tasks assigned to them"
     assigned_to = auth.uid()
   );
 
--- Step 7: Create a helper function to get user's assignable tasks
+-- Step 5: Create helper function for user tasks
 CREATE OR REPLACE FUNCTION get_user_tasks(user_uuid uuid)
 RETURNS TABLE (
   task_id uuid,

@@ -12,7 +12,9 @@ ALTER TABLE parcels
 
 -- Add check constraint for planting_year (must be reasonable year)
 ALTER TABLE parcels
-  ADD CONSTRAINT IF NOT EXISTS parcels_planting_year_check 
+  DROP CONSTRAINT IF EXISTS parcels_planting_year_check;
+ALTER TABLE parcels
+  ADD CONSTRAINT parcels_planting_year_check 
   CHECK (
     planting_year IS NULL OR 
     (planting_year >= 1900 AND planting_year <= EXTRACT(YEAR FROM CURRENT_DATE) + 10)
@@ -20,7 +22,9 @@ ALTER TABLE parcels
 
 -- Add check constraint for tree_count (must be positive)
 ALTER TABLE parcels
-  ADD CONSTRAINT IF NOT EXISTS parcels_tree_count_check 
+  DROP CONSTRAINT IF EXISTS parcels_tree_count_check;
+ALTER TABLE parcels
+  ADD CONSTRAINT parcels_tree_count_check 
   CHECK (tree_count IS NULL OR tree_count > 0);
 
 -- Add comments for documentation

@@ -4,7 +4,7 @@ import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
-import { supabase } from '../lib/supabase'
+import { authSupabase } from '../lib/auth-supabase'
 import { useAuth } from '../hooks/useAuth'
 
 export const Route = createFileRoute('/login')({
@@ -31,7 +31,7 @@ function LoginPage() {
     setError(null)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await authSupabase.auth.signInWithPassword({
         email,
         password,
       })

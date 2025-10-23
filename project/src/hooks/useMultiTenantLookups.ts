@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-authSupabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 // ============================================================================
@@ -75,7 +75,7 @@ export function useCropTypes() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('crop_types')
         .select('*')
         .or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
@@ -105,7 +105,7 @@ export function useCropTypes() {
   const addCropType = async (name: string, description?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('crop_types')
       .insert([{
         name,
@@ -122,7 +122,7 @@ export function useCropTypes() {
   };
 
   const updateCropType = async (id: string, updates: Partial<Pick<CropType, 'name' | 'description'>>) => {
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('crop_types')
       .update(updates)
       .eq('id', id)
@@ -138,7 +138,7 @@ export function useCropTypes() {
   };
 
   const deleteCropType = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await authSupabase
       .from('crop_types')
       .delete()
       .eq('id', id);
@@ -178,7 +178,7 @@ export function useProductCategories() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('product_categories')
         .select('*')
         .or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
@@ -207,7 +207,7 @@ export function useProductCategories() {
   const addCategory = async (name: string, description?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('product_categories')
       .insert([{
         name,
@@ -224,7 +224,7 @@ export function useProductCategories() {
   };
 
   const updateCategory = async (id: string, updates: Partial<Pick<ProductCategory, 'name' | 'description'>>) => {
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('product_categories')
       .update(updates)
       .eq('id', id)
@@ -240,7 +240,7 @@ export function useProductCategories() {
   };
 
   const deleteCategory = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await authSupabase
       .from('product_categories')
       .delete()
       .eq('id', id);
@@ -280,7 +280,7 @@ export function useTaskCategories() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('task_categories')
         .select('*')
         .or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
@@ -309,7 +309,7 @@ export function useTaskCategories() {
   const addCategory = async (name: string, description?: string, color?: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('task_categories')
       .insert([{
         name,
@@ -330,7 +330,7 @@ export function useTaskCategories() {
     id: string,
     updates: Partial<Pick<TaskCategory, 'name' | 'description' | 'color'>>
   ) => {
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('task_categories')
       .update(updates)
       .eq('id', id)
@@ -346,7 +346,7 @@ export function useTaskCategories() {
   };
 
   const deleteCategory = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await authSupabase
       .from('task_categories')
       .delete()
       .eq('id', id);
@@ -386,7 +386,7 @@ export function useTestTypes() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('test_types')
         .select('*')
         .or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
@@ -415,7 +415,7 @@ export function useTestTypes() {
   const addTestType = async (name: string, description?: string, parameters?: TestTypeParameters) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('test_types')
       .insert([{
         name,
@@ -436,7 +436,7 @@ export function useTestTypes() {
     id: string,
     updates: Partial<Pick<TestType, 'name' | 'description' | 'parameters'>>
   ) => {
-    const { data, error } = await supabase
+    const { data, error } = await authSupabase
       .from('test_types')
       .update(updates)
       .eq('id', id)
@@ -452,7 +452,7 @@ export function useTestTypes() {
   };
 
   const deleteTestType = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await authSupabase
       .from('test_types')
       .delete()
       .eq('id', id);

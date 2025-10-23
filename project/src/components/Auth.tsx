@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { Lock, Mail, User } from 'lucide-react';
 import { setupNewUser, checkUserNeedsOnboarding } from '../utils/authSetup';
 
@@ -21,7 +21,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isSignUp) {
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await authSupabase.auth.signUp({
           email,
           password,
           options: {
@@ -38,7 +38,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           }
           if (signUpError.message.includes('Error sending confirmation email')) {
             // Try to sign in directly if email confirmation fails
-            const { data: signInData } = await supabase.auth.signInWithPassword({
+            const { data: signInData } = await authSupabase.auth.signInWithPassword({
               email,
               password,
             });
@@ -79,7 +79,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           }
         }
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        const { data, error: signInError } = await authSupabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -103,6 +103,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             });
           }
 
+          // User is authenticated via cloud Supabase
+          console.log('User authenticated successfully via cloud Supabase');
           onAuthSuccess();
         }
       }

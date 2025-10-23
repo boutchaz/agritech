@@ -4,7 +4,7 @@ import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
-import { supabase } from '../lib/supabase'
+import { authSupabase } from '../lib/auth-supabase'
 import { useAuth } from '../hooks/useAuth'
 
 export const Route = createFileRoute('/register')({
@@ -42,7 +42,7 @@ function RegisterPage() {
     try {
       // Sign up the user with organization name in metadata
       // The backend trigger will automatically create profile and organization
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await authSupabase.auth.signUp({
         email,
         password,
         options: {

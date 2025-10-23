@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
-import { supabase } from './lib/supabase'
+import { authSupabase } from './lib/auth-supabase'
 import './i18n/config'
 import './index.css'
 
@@ -42,12 +42,12 @@ declare module '@tanstack/react-router' {
 
 // Check auth state before rendering
 async function init() {
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session } } = await authSupabase.auth.getSession()
   routerContext.auth.user = session?.user || null
   routerContext.auth.isLoading = false
 
   // Subscribe to auth changes
-  supabase.auth.onAuthStateChange((_event, session) => {
+  authSupabase.auth.onAuthStateChange((_event, session) => {
     routerContext.auth.user = session?.user || null
     router.invalidate()
   })

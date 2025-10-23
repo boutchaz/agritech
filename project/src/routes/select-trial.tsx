@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
-import { supabase } from '../lib/supabase'
+import { authSupabase } from '../lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/select-trial')({
@@ -71,7 +71,7 @@ function SelectTrialPage() {
       trialEndDate.setDate(trialEndDate.getDate() + 14)
 
       // Create trial subscription
-      const { error: insertError } = await supabase
+      const { error: insertError } = await authSupabase
         .from('subscriptions')
         .insert({
           organization_id: currentOrganization.id,

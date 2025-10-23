@@ -11,7 +11,7 @@ import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import type { Action } from 'kbar'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { authSupabase } from '../lib/auth-supabase'
 import { withRouteProtection } from '../components/authorization/withRouteProtection'
 
 const mockModules: Module[] = [
@@ -70,7 +70,7 @@ const AppContent: React.FC = () => {
     queryFn: async () => {
       if (!user || !currentOrganization) return defaultDashboardSettings;
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('dashboard_settings')
         .select('*')
         .eq('user_id', user.id)

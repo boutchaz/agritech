@@ -27,8 +27,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
     task_type: task?.task_type || 'general',
     priority: task?.priority || 'medium',
     farm_id: task?.farm_id || '',
-    parcel_id: task?.parcel_id || '',
-    assigned_to: task?.assigned_to || '',
+    parcel_id: task?.parcel_id || undefined,
+    assigned_to: task?.assigned_to || undefined,
     scheduled_start: task?.scheduled_start?.split('T')[0] || '',
     due_date: task?.due_date || '',
     estimated_duration: task?.estimated_duration || 8,
@@ -171,8 +171,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
               Assigné à (utilisateur plateforme)
             </label>
             <select
-              value={formData.assigned_to}
-              onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+              value={formData.assigned_to || ''}
+              onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value || undefined })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Non assigné</option>

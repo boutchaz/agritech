@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import type { User } from '@supabase/supabase-js';
 import type { UserRole } from '../types/auth';
-import Auth from './Auth';
 import SubscriptionRequired from './SubscriptionRequired';
 import {
   useUserProfile,
@@ -207,7 +206,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     }
 
     try {
-      const { data: roleData, error } = await supabase
+      const { data: roleData, error } = await authSupabase
         .rpc('get_user_role', {
           user_id: user.id,
           org_id: currentOrganization.id
@@ -302,7 +301,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Auth state management
   useEffect(() => {
     // Check active sessions and set the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    authSupabase.auth.getSession().then(({ data: { session } }) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
       setShowAuth(!sessionUser);
@@ -310,7 +309,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = authSupabase.auth.onAuthStateChange(async (event, session) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
 
@@ -335,9 +334,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleAuthSuccess = () => {
-    setShowAuth(false);
-  };
 
   // Check if current route is public or trial selection
   const isPublicRoute = publicRoutes.includes(location.pathname);
@@ -402,7 +398,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Show authentication form (but not on public routes)
   if (showAuth && !isPublicRoute) {
-    return <Auth onAuthSuccess={handleAuthSuccess} />;
+    // Redirect to login page instead of showing inline auth form
+    window.location.href = '/login';
+    return null;
   }
 
   // Check subscription status (block access if no valid subscription)

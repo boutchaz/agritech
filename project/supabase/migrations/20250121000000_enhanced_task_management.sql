@@ -36,22 +36,28 @@ ALTER TABLE tasks
 
 -- Update assigned_to to be UUID reference to worker
 ALTER TABLE tasks ALTER COLUMN assigned_to TYPE UUID USING assigned_to::UUID;
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_assigned_to_fkey;
 ALTER TABLE tasks ADD CONSTRAINT tasks_assigned_to_fkey 
   FOREIGN KEY (assigned_to) REFERENCES workers(id) ON DELETE SET NULL;
 
 -- Add constraints
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
 ALTER TABLE tasks ADD CONSTRAINT tasks_status_check 
   CHECK (status IN ('pending', 'assigned', 'in_progress', 'paused', 'completed', 'cancelled', 'overdue'));
 
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_priority_check;
 ALTER TABLE tasks ADD CONSTRAINT tasks_priority_check 
   CHECK (priority IN ('low', 'medium', 'high', 'urgent'));
 
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_completion_check;
 ALTER TABLE tasks ADD CONSTRAINT tasks_completion_check 
   CHECK (completion_percentage >= 0 AND completion_percentage <= 100);
 
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_quality_rating_check;
 ALTER TABLE tasks ADD CONSTRAINT tasks_quality_rating_check 
   CHECK (quality_rating IS NULL OR (quality_rating >= 1 AND quality_rating <= 5));
 
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_task_type_check;
 ALTER TABLE tasks ADD CONSTRAINT tasks_task_type_check 
   CHECK (task_type IN ('planting', 'harvesting', 'irrigation', 'fertilization', 'maintenance', 'general', 'pest_control', 'pruning', 'soil_preparation'));
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 
 export interface AssignableUser {
   user_id: string;
@@ -30,7 +30,7 @@ export const useAssignableUsers = (organizationId: string | null) => {
 
       // First, try the view if it exists
       try {
-        const { data: viewData, error: viewError } = await supabase
+        const { data: viewData, error: viewError } = await authSupabase
           .from('assignable_users')
           .select('*')
           .eq('organization_id', organizationId)
@@ -46,65 +46,73 @@ export const useAssignableUsers = (organizationId: string | null) => {
         console.warn('assignable_users view not found, using fallback query:', err);
       }
 
-      // Fallback: Query organization users directly
-      console.log('useAssignableUsers: Using fallback query for organization_users');
-      const { data: orgUsers, error: orgError } = await supabase
-        .from('organization_users')
-        .select(`
-          user_id,
-          role,
-          organization_id,
-          user_profiles!inner (
-            id,
-            first_name,
-            last_name
-          )
-        `)
-        .eq('organization_id', organizationId);
+          // Fallback: Query organization users directly
+          console.log('useAssignableUsers: Using fallback query for organization_users');
+          const { data: orgUsers, error: orgError } = await authSupabase
+            .from('organization_users')
+            .select(`
+              user_id,
+              role,
+              organization_id
+            `)
+            .eq('organization_id', organizationId)
+            .eq('is_active', true);
 
-      console.log('useAssignableUsers: Organization users query result:', { orgUsers, orgError });
+          console.log('useAssignableUsers: Organization users query result:', { orgUsers, orgError });
 
-      if (orgError) {
-        console.error('useAssignableUsers: Organization users query error:', orgError);
-        throw orgError;
-      }
+          if (orgError) {
+            console.error('useAssignableUsers: Organization users query error:', orgError);
+            throw orgError;
+          }
 
-      // Get workers for these users
-      const userIds = orgUsers?.map(u => u.user_id) || [];
-      console.log('useAssignableUsers: Found user IDs:', userIds);
+          // Get user profiles for these users
+          const userIds = orgUsers?.map(u => u.user_id) || [];
+          console.log('useAssignableUsers: Found user IDs:', userIds);
 
-      let workersMap = new Map();
-      if (userIds.length > 0) {
-        const { data: workers } = await supabase
-          .from('workers')
-          .select('id, user_id, position')
-          .in('user_id', userIds)
-          .eq('is_active', true);
+          let profilesMap = new Map();
+          if (userIds.length > 0) {
+            const { data: profiles } = await authSupabase
+              .from('user_profiles')
+              .select('id, first_name, last_name')
+              .in('id', userIds);
 
-        console.log('useAssignableUsers: Workers query result:', workers);
-        workersMap = new Map(workers?.map(w => [w.user_id, w]) || []);
-      }
+            console.log('useAssignableUsers: User profiles query result:', profiles);
+            profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+          }
 
-      // Combine the data
-      const assignableUsers: AssignableUser[] = (orgUsers || [])
-        .filter(ou => ['organization_admin', 'farm_manager', 'farm_worker', 'day_laborer'].includes(ou.role))
-        .map(ou => {
-          const profile = ou.user_profiles as any;
-          const worker = workersMap.get(ou.user_id);
+          // Get workers for these users
+          let workersMap = new Map();
+          if (userIds.length > 0) {
+            const { data: workers } = await authSupabase
+              .from('workers')
+              .select('id, user_id, position')
+              .in('user_id', userIds)
+              .eq('is_active', true);
 
-          return {
-            user_id: ou.user_id,
-            first_name: profile?.first_name || '',
-            last_name: profile?.last_name || '',
-            full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
-            organization_id: ou.organization_id,
-            role: ou.role,
-            worker_id: worker?.id || null,
-            worker_position: worker?.position || null,
-            user_type: worker ? 'worker' as const : 'user' as const,
-          };
-        })
-        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+            console.log('useAssignableUsers: Workers query result:', workers);
+            workersMap = new Map(workers?.map(w => [w.user_id, w]) || []);
+          }
+
+          // Combine the data - use actual roles from the database
+          const assignableUsers: AssignableUser[] = (orgUsers || [])
+            .filter(ou => ['admin', 'manager', 'member'].includes(ou.role)) // Use actual roles from schema
+            .map(ou => {
+              const profile = profilesMap.get(ou.user_id);
+              const worker = workersMap.get(ou.user_id);
+
+              return {
+                user_id: ou.user_id,
+                first_name: profile?.first_name || '',
+                last_name: profile?.last_name || '',
+                full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+                organization_id: ou.organization_id,
+                role: ou.role,
+                worker_id: worker?.id || null,
+                worker_position: worker?.position || null,
+                user_type: worker ? 'worker' as const : 'user' as const,
+              };
+            })
+            .sort((a, b) => a.last_name.localeCompare(b.last_name));
 
       console.log('useAssignableUsers: Final assignable users:', assignableUsers);
       return assignableUsers;

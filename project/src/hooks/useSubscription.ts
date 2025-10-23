@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { PlanType } from '../lib/polar';
 
@@ -61,7 +61,7 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         return null;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('subscriptions')
         .select('*')
         .eq('organization_id', orgId)
@@ -99,7 +99,7 @@ export const useSubscriptionUsage = () => {
     queryFn: async (): Promise<SubscriptionUsage | null> => {
       if (!currentOrganization?.id) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('subscription_usage')
         .select('*')
         .eq('organization_id', currentOrganization.id)
@@ -145,7 +145,7 @@ export const useUpdateSubscription = () => {
         updateData.polar_subscription_id = polarSubscriptionId;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from('subscriptions')
         .update(updateData)
         .eq('organization_id', currentOrganization.id)

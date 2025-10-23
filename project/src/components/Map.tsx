@@ -105,7 +105,7 @@ const MapComponent: React.FC<MapProps> = ({
     planting_date: '',
     planting_type: ''
   });
-  const [mapType, setMapType] = useState<'osm' | 'satellite'>('osm');
+  const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);

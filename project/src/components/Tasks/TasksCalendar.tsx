@@ -158,12 +158,24 @@ const CalendarContent: React.FC<{
             {/* Calendar Grid */}
             <CalendarHeader className="mb-2" />
             <CalendarBody features={features}>
-              {(date) => (
-                <CalendarItem
-                  key={date.toISOString()}
-                  date={date}
-                  onClick={() => handleDateClick(date)}
-                />
+              {({ feature }) => (
+                <div
+                  key={feature.id}
+                  className="cursor-pointer hover:opacity-80"
+                  onClick={() => {
+                    // Get the task from the feature
+                    const task = (feature as Feature & { _task: Task })._task;
+                    if (task) {
+                      onTaskSelect(task);
+                      // Also set the selected date
+                      if (task.scheduled_start) {
+                        setSelectedDate(parseISO(task.scheduled_start));
+                      }
+                    }
+                  }}
+                >
+                  <CalendarItem feature={feature} />
+                </div>
               )}
             </CalendarBody>
           </div>

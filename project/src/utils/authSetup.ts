@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-authSupabase';
 
 interface SetupNewUserParams {
   userId: string;
@@ -27,7 +27,7 @@ export async function setupNewUser({
     // 1. Create user profile
     const defaultFirstName = firstName || email.split('@')[0];
     console.log('📝 Creating user profile:', { userId, defaultFirstName });
-    const { error: profileError } = await supabase
+    const { error: profileError } = await authSupabase
       .from('user_profiles')
       .insert({
         id: userId,
@@ -44,7 +44,7 @@ export async function setupNewUser({
     console.log('✅ User profile created');
 
     // 2. Check if user already has an organization
-    const { data: existingOrgUsers, error: checkError } = await supabase
+    const { data: existingOrgUsers, error: checkError } = await authSupabase
       .from('organization_users')
       .select('id')
       .eq('user_id', userId)
@@ -65,7 +65,7 @@ export async function setupNewUser({
     const orgSlug = `${defaultOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${userId.substring(0, 8)}`;
 
     console.log('🏢 Creating organization:', { defaultOrgName, orgSlug });
-    const { data: newOrg, error: orgError } = await supabase
+    const { data: newOrg, error: orgError } = await authSupabase
       .from('organizations')
       .insert({
         name: defaultOrgName,
@@ -85,7 +85,7 @@ export async function setupNewUser({
     console.log('✅ Organization created:', newOrg.id);
 
     // 4. Get organization_admin role
-    const { data: roles, error: rolesError } = await supabase
+    const { data: roles, error: rolesError } = await authSupabase
       .from('roles')
       .select('id')
       .eq('name', 'organization_admin')
@@ -105,7 +105,7 @@ export async function setupNewUser({
       role_id: roleId,
     });
 
-    const { data: orgUserData, error: orgUserError } = await supabase
+    const { data: orgUserData, error: orgUserError } = await authSupabase
       .from('organization_users')
       .insert({
         user_id: userId,
@@ -139,7 +139,7 @@ export async function setupNewUser({
 export async function checkUserNeedsOnboarding(userId: string): Promise<boolean> {
   try {
     // Check if user has a profile
-    const { data: profile } = await supabase
+    const { data: profile } = await authSupabase
       .from('user_profiles')
       .select('id')
       .eq('id', userId)
@@ -148,7 +148,7 @@ export async function checkUserNeedsOnboarding(userId: string): Promise<boolean>
     if (!profile) return true;
 
     // Check if user has an organization membership
-    const { data: orgUsers } = await supabase
+    const { data: orgUsers } = await authSupabase
       .from('organization_users')
       .select('organization_id, organizations!inner(onboarding_completed)')
       .eq('user_id', userId)
