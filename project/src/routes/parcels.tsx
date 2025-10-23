@@ -7,7 +7,7 @@ import { Textarea } from '../components/ui/Textarea'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
-import PageHeader from '../components/PageHeader'
+import ModernPageHeader from '../components/ModernPageHeader'
 import ParcelCard from '../components/ParcelCard'
 import { useFarms, useParcelsByFarm, useParcelsByFarms, useParcelById, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
 import type { Module, SensorData } from '../types'
@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
   const search = Route.useSearch();
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('parcels');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode] = useState(false);
   const [modules] = useState(mockModules);
   const [_sensorData, _setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
@@ -67,10 +67,14 @@ const AppContent: React.FC = () => {
   const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
   const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  // Debug logging for farmId issue
+  console.warn('🔍 FarmId Debug:', {
+    selectedFarmId,
+    currentFarmId: currentFarm?.id,
+    targetFarmId,
+    mapFarmId: targetFarmId, // This is what Map component will use
+    currentFarmName: currentFarm?.name
+  });
 
   // Sync URL search params to state (URL is source of truth)
   useEffect(() => {
@@ -102,7 +106,11 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (isSyncingRef.current) return;
 
-    const newSearch: { parcelId?: string; tab?: string; farmId?: string } = {};
+    const newSearch: { parcelId: string | undefined; tab: string | undefined; farmId: string | undefined } = {
+      parcelId: undefined,
+      tab: undefined,
+      farmId: undefined
+    };
     const currentParcelId = search.parcelId || null;
     const currentTab = search.tab || 'overview';
     const currentFarmId = search.farmId || null;
@@ -188,15 +196,24 @@ const AppContent: React.FC = () => {
         activeModule={activeModule}
         onModuleChange={setActiveModule}
         isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
+        onThemeToggle={() => {}}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: TreePine, label: 'Fermes' },
             { icon: MapPin, label: 'Parcelles', isActive: true }
           ]}
+          title="Gestion des Parcelles"
+          subtitle={(() => {
+            const targetFarmId = selectedFarmId || currentFarm?.id;
+            const farm = farms?.find(f => f.id === targetFarmId);
+            const farmName = farm?.name || currentFarm?.name;
+            return farmName
+              ? `${parcels.length} parcelle${parcels.length !== 1 ? 's' : ''} - ${farmName}`
+              : `${parcels.length} parcelle${parcels.length !== 1 ? 's' : ''} - Toutes les fermes`;
+          })()}
           actions={
             farms && farms.length > 1 ? (
               <select
@@ -215,7 +232,7 @@ const AppContent: React.FC = () => {
           }
         />
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6 hidden">
             <div className="w-full sm:w-auto">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Gestion des Parcelles
@@ -305,16 +322,31 @@ const AppContent: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {currentFarm || selectedFarmId
-                    ? `Aucune parcelle trouvée pour ${farms.find(f => f.id === (selectedFarmId || currentFarm?.id))?.name || currentFarm?.name}.`
+                    ? `Aucune parcelle trouvée pour ${(() => {
+                        const targetFarmId = selectedFarmId || currentFarm?.id;
+                        const farm = farms?.find(f => f.id === targetFarmId);
+                        return farm?.name || 'cette ferme';
+                      })()}.`
                     : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
                 </p>
                 {(currentFarm || selectedFarmId) && (
-                  <button
-                    onClick={() => setShowAddParcelMap(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    Ajouter une parcelle
-                  </button>
+                  <div className="space-x-3">
+                    <button
+                      onClick={() => setShowAddParcelMap(true)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      Ajouter une parcelle
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Manual refresh of React Query cache
+                        window.location.reload();
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Actualiser
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -338,7 +370,7 @@ const AppContent: React.FC = () => {
                 center={[31.7917, -7.0926]}
                 zones={[]}
                 sensors={[]}
-                farmId={currentFarm?.id}
+                farmId={targetFarmId}
                 enableDrawing={true}
                 selectedParcelId={selectedParcelId}
                 onParcelSelect={handleParcelSelect}
@@ -677,6 +709,10 @@ export const Route = createFileRoute('/parcels')({
       parcelId: (search.parcelId as string) || undefined,
       tab: (search.tab as string) || undefined,
       farmId: (search.farmId as string) || undefined,
+    } as {
+      parcelId: string | undefined;
+      tab: string | undefined;
+      farmId: string | undefined;
     };
   },
 })

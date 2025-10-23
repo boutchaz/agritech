@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
-import PageHeader from '../components/PageHeader';
+import ModernPageHeader from '../components/ModernPageHeader';
 import ModernFarmHierarchy from '../components/FarmHierarchy/ModernFarmHierarchy';
 import FarmRoleManager from '../components/FarmRoleManager';
 import { useState } from 'react';
@@ -68,11 +68,13 @@ function FarmHierarchyPage() {
         onThemeToggle={toggleTheme}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: Building2, label: 'Hiérarchie des Fermes', isActive: true }
           ]}
+          title="Gestion des Fermes et Parcelles"
+          subtitle="Organisez et gérez vos fermes et parcelles"
         />
 
         <div className="p-3 sm:p-4 lg:p-6">

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Dashboard from '../components/Dashboard'
-import PageHeader from '../components/PageHeader'
+import ModernPageHeader from '../components/ModernPageHeader'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import { Home, Building2, Search } from 'lucide-react'
 import type { Module, SensorData, DashboardSettings } from '../types'
@@ -213,12 +213,14 @@ const AppContent: React.FC = () => {
         />
         <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
           <SubscriptionBanner />
-          <PageHeader
+          <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
               ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
               { icon: Home, label: 'Tableau de bord', isActive: true }
             ]}
+            title="Tableau de bord"
+            subtitle="Vue d'ensemble de votre exploitation agricole"
             actions={<QuickActionsButton />}
           />
           <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />

@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import StockManagement from '../components/StockManagement'
-import PageHeader from '../components/PageHeader'
+import ModernPageHeader from '../components/ModernPageHeader'
 import { useState } from 'react'
 import { Building2, Package } from 'lucide-react'
 import type { Module } from '../types'
@@ -57,11 +57,13 @@ const AppContent: React.FC = () => {
         onThemeToggle={toggleTheme}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: Package, label: 'Gestion du Stock', isActive: true }
           ]}
+          title="Gestion du Stock"
+          subtitle="Gérez vos achats, inventaire et fournisseurs"
         />
         <StockManagement />
       </main>

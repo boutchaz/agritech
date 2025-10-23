@@ -89,21 +89,36 @@ export function useParcels(farmId: string | null) {
       planting_density?: number;
       irrigation_type?: string;
       crop_id?: string;
+      variety?: string;
+      planting_date?: string;
+      planting_type?: string;
     } = {}
   ) => {
     if (!farmId) throw new Error('No farm ID provided');
 
     try {
+      // Build parcel data object with only defined fields
+      const parcelData: any = {
+        name,
+        boundary,
+        farm_id: farmId
+      };
+
+      // Only add fields that are defined
+      if (details.soil_type !== undefined) parcelData.soil_type = details.soil_type;
+      if (details.area !== undefined) parcelData.area = details.area;
+      if (details.calculated_area !== undefined) parcelData.calculated_area = details.calculated_area;
+      if (details.perimeter !== undefined) parcelData.perimeter = details.perimeter;
+      if (details.planting_density !== undefined) parcelData.planting_density = details.planting_density;
+      if (details.irrigation_type !== undefined) parcelData.irrigation_type = details.irrigation_type;
+      if (details.crop_id !== undefined) parcelData.crop_id = details.crop_id;
+      if (details.variety !== undefined) parcelData.variety = details.variety;
+      if (details.planting_date !== undefined) parcelData.planting_date = details.planting_date;
+      if (details.planting_type !== undefined) parcelData.planting_type = details.planting_type;
+
       const { data, error } = await supabase
         .from('parcels')
-        .insert([
-          {
-            name,
-            boundary,
-            farm_id: farmId,
-            ...details
-          }
-        ])
+        .insert(parcelData)
         .select()
         .single();
 

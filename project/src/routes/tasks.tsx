@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { CheckSquare, Calendar, Building2 } from 'lucide-react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
-import PageHeader from '../components/PageHeader';
+import ModernPageHeader from '../components/ModernPageHeader';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { cn } from '../lib/utils';
@@ -58,11 +58,13 @@ function TasksLayout() {
         onThemeToggle={toggleTheme}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: CheckSquare, label: 'Tâches', isActive: true }
           ]}
+          title="Gestion des Tâches"
+          subtitle="Planifiez et suivez les tâches agricoles"
         />
 
         <div className="p-3 sm:p-4 lg:p-6">

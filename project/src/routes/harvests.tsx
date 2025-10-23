@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
-import PageHeader from '../components/PageHeader';
+import ModernPageHeader from '../components/ModernPageHeader';
 import { Package, Plus, Filter, Download, Calendar, TrendingUp, Building2 } from 'lucide-react';
 import { useHarvests, useHarvestStatistics, useDeleteHarvest } from '../hooks/useHarvests';
 import { useFarms } from '../hooks/useParcelsQuery';
@@ -39,12 +39,24 @@ function HarvestsPage() {
 
   // Filters state
   const [filters, setFilters] = useState<HarvestFilters>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Data fetching
   const { data: harvests = [], isLoading } = useHarvests(currentOrganization?.id || '', filters);
   const { data: statistics } = useHarvestStatistics(currentOrganization?.id || '');
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const deleteHarvestMutation = useDeleteHarvest();
+
+  // Filter harvests by search query
+  const filteredHarvests = useMemo(() => {
+    if (!searchQuery) return harvests;
+    const query = searchQuery.toLowerCase();
+    return harvests.filter(harvest =>
+      harvest.crop_name?.toLowerCase().includes(query) ||
+      harvest.parcel_name?.toLowerCase().includes(query) ||
+      harvest.farm_name?.toLowerCase().includes(query)
+    );
+  }, [harvests, searchQuery]);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -131,28 +143,17 @@ function HarvestsPage() {
       />
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: Package, label: 'Récoltes', isActive: true }
           ]}
-        />
-
-        <div className="p-6 space-y-6">
-          {/* Statistics */}
-          {statistics && <HarvestStatistics statistics={statistics} />}
-
-          {/* Header Actions */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Gestion des Récoltes
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {harvests.length} récolte{harvests.length !== 1 ? 's' : ''} enregistrée{harvests.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-
+          title="Gestion des Récoltes"
+          subtitle={`${filteredHarvests.length} récolte${filteredHarvests.length !== 1 ? 's' : ''} enregistrée${filteredHarvests.length !== 1 ? 's' : ''}`}
+          showSearch={true}
+          searchPlaceholder="Rechercher par culture, parcelle, ferme..."
+          onSearch={setSearchQuery}
+          actions={
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -179,7 +180,12 @@ function HarvestsPage() {
                 Nouvelle Récolte
               </button>
             </div>
-          </div>
+          }
+        />
+
+        <div className="p-6 space-y-6">
+          {/* Statistics */}
+          {statistics && <HarvestStatistics statistics={statistics} />}
 
           {/* Filters Panel */}
           {showFilters && (
@@ -264,26 +270,28 @@ function HarvestsPage() {
                 <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-64"></div>
               ))}
             </div>
-          ) : harvests.length === 0 ? (
+          ) : filteredHarvests.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
               <Package className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Aucune récolte enregistrée
+                {searchQuery ? 'Aucun résultat trouvé' : 'Aucune récolte enregistrée'}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Commencez par enregistrer votre première récolte
+                {searchQuery ? 'Essayez de modifier votre recherche' : 'Commencez par enregistrer votre première récolte'}
               </p>
-              <button
-                onClick={handleAddHarvest}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-              >
-                <Plus className="h-4 w-4" />
-                Nouvelle Récolte
-              </button>
+              {!searchQuery && (
+                <button
+                  onClick={handleAddHarvest}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nouvelle Récolte
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {harvests.map(harvest => (
+              {filteredHarvests.map(harvest => (
                 <HarvestCard
                   key={harvest.id}
                   harvest={harvest}

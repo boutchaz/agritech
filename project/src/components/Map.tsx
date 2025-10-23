@@ -15,9 +15,9 @@ import { fromLonLat, transform } from 'ol/proj';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import Draw from 'ol/interaction/Draw';
 import type { SensorData } from '../types';
-import { useParcels } from '../hooks/useParcels';
+import { useAddParcel } from '../hooks/useParcelsQuery';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
-import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
 
@@ -163,10 +163,10 @@ const MapComponent: React.FC<MapProps> = ({
   });
 
   // Always call the hook, but pass farmId which might be undefined
-  const { addParcel, deleteParcel, parcels: hookParcels } = useParcels(farmId || '');
+  const addParcelMutation = useAddParcel();
 
-  // Use prop parcels if provided, otherwise fall back to hook parcels (only if farmId exists)
-  const parcels = Array.isArray(propParcels) ? propParcels : (farmId && Array.isArray(hookParcels) ? hookParcels : []);
+  // Use prop parcels if provided, otherwise empty array
+  const parcels = Array.isArray(propParcels) ? propParcels : [];
   const { 
     calculateIndices, 
     getTimeSeries, 
@@ -1019,18 +1019,31 @@ const MapComponent: React.FC<MapProps> = ({
   }, [center, zones, sensors, parcels, farmId, enableDrawing, mapType, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect]);
 
   const handleSaveParcel = async () => {
-    if (!addParcel || !parcelName || tempBoundary.length === 0) return;
+    if (!farmId || !parcelName || tempBoundary.length === 0) return;
 
     console.log('Saving parcel with boundary:', tempBoundary[0], 'to', tempBoundary[tempBoundary.length - 1]);
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
-      const newParcel = await addParcel(parcelName, tempBoundary, {
-        ...parcelDetails,
-        irrigation_type: normalizedIrrigation,
+      const parcelData = {
+        name: parcelName,
+        farm_id: farmId,
+        boundary: tempBoundary,
+        description: '',
+        area: parcelDetails.area || calculatedArea,
+        area_unit: 'hectares',
+        soil_type: parcelDetails.soil_type || undefined,
+        irrigation_type: normalizedIrrigation || undefined,
+        tree_type: parcelDetails.variety || undefined,
+        variety: parcelDetails.variety || undefined,
+        planting_date: parcelDetails.planting_date || undefined,
+        planting_type: parcelDetails.planting_type || undefined,
         calculated_area: calculatedArea,
         perimeter: calculatedPerimeter
-      });
+      };
+
+      const newParcel = await addParcelMutation.mutateAsync(parcelData);
+      
       setShowNameDialog(false);
       setShowParcelForm(false);
       setParcelName('');
@@ -1720,32 +1733,7 @@ const MapComponent: React.FC<MapProps> = ({
                 <BarChart3 className="h-4 w-4" />
                 <span>Série Temporelle</span>
               </button>
-              {selectedParcel.id && deleteParcel && (
-                <button
-                  onClick={async () => {
-                    if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${selectedParcel.name}" ?`)) {
-                      try {
-                        await deleteParcel(selectedParcel.id!);
-                        setSelectedParcel(null);
-                        // Remove from map
-                        if (vectorSourceRef.current) {
-                          const features = vectorSourceRef.current.getFeatures();
-                          const parcelFeature = features.find(f => f.get('parcelId') === selectedParcel.id!);
-                          if (parcelFeature) {
-                            vectorSourceRef.current.removeFeature(parcelFeature);
-                          }
-                        }
-                      } catch (_error) {
-                        alert('Erreur lors de la suppression de la parcelle');
-                      }
-                    }
-                  }}
-                  className="flex items-center space-x-1 px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Supprimer</span>
-                </button>
-              )}
+              {/* Delete functionality removed - handled in parent component */}
             </div>
           </div>
           

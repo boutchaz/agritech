@@ -5,7 +5,7 @@ import WorkersList from '../components/Workers/WorkersList';
 import MetayageCalculator from '../components/Workers/MetayageCalculator';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
-import PageHeader from '../components/PageHeader';
+import ModernPageHeader from '../components/ModernPageHeader';
 import type { Module } from '../types';
 import { useCan } from '../lib/casl/AbilityContext';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
@@ -95,7 +95,7 @@ function WorkersPage() {
           onThemeToggle={toggleTheme}
         />
         <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-          <PageHeader
+          <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
               { icon: UserCog, label: 'Personnel', isActive: true }
@@ -143,11 +143,13 @@ function WorkersPage() {
         onThemeToggle={toggleTheme}
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <PageHeader
+        <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             { icon: UserCog, label: 'Personnel', isActive: true }
           ]}
+          title="Gestion du Personnel"
+          subtitle="Gérez votre personnel agricole et calculez le métayage"
         />
         <div className="p-3 sm:p-4 lg:p-6">
           {farmsLoading ? (
