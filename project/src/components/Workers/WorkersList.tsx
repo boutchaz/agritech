@@ -415,21 +415,20 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
       )}
 
       {/* Worker Form Modal */}
-      {showForm && (
-        <WorkerForm
-          worker={selectedWorker}
-          organizationId={organizationId}
-          farms={farms}
-          onClose={() => {
-            setShowForm(false);
-            setSelectedWorker(null);
-          }}
-          onSuccess={() => {
-            setShowForm(false);
-            setSelectedWorker(null);
-          }}
-        />
-      )}
+      <WorkerForm
+        open={showForm}
+        worker={selectedWorker}
+        organizationId={organizationId}
+        farms={farms}
+        onClose={() => {
+          setShowForm(false);
+          setSelectedWorker(null);
+        }}
+        onSuccess={() => {
+          setShowForm(false);
+          setSelectedWorker(null);
+        }}
+      />
     </div>
   );
 };

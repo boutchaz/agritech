@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Save, UserPlus, Shield, AlertCircle } from 'lucide-react';
+import { Save, UserPlus, Shield, AlertCircle, X } from 'lucide-react';
 import type { Worker, WorkerFormData } from '../../types/workers';
 import {
   WORKER_TYPE_OPTIONS,
@@ -11,6 +11,14 @@ import {
 } from '../../types/workers';
 import { useCreateWorker, useUpdateWorker } from '../../hooks/useWorkers';
 import { useCurrency } from '../../hooks/useCurrency';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
 
 // Zod schema with conditional validation
 const workerSchema = z.object({
@@ -38,23 +46,42 @@ const workerSchema = z.object({
   bank_account: z.string().optional(),
   payment_method: z.string().optional(),
   notes: z.string().optional(),
-}).refine((data) => {
+}).superRefine((data, ctx) => {
   // Validation based on worker type
   if (data.worker_type === 'fixed_salary' && !data.monthly_salary) {
-    return false;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['monthly_salary'],
+      message: 'Le salaire mensuel est requis pour un employé à salaire fixe',
+    });
   }
   if (data.worker_type === 'daily_worker' && !data.daily_rate) {
-    return false;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['daily_rate'],
+      message: 'Le tarif journalier est requis pour un travailleur journalier',
+    });
   }
-  if (data.worker_type === 'metayage' && (!data.metayage_percentage || !data.metayage_type)) {
-    return false;
+  if (data.worker_type === 'metayage') {
+    if (!data.metayage_percentage) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['metayage_percentage'],
+        message: 'Le pourcentage de métayage est requis',
+      });
+    }
+    if (!data.metayage_type) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['metayage_type'],
+        message: 'Le type de métayage est requis',
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Informations de rémunération manquantes pour ce type de travailleur',
 });
 
 interface WorkerFormProps {
+  open: boolean;
   worker?: Worker | null;
   organizationId: string;
   farms: Array<{ id: string; name: string }>;
@@ -63,6 +90,7 @@ interface WorkerFormProps {
 }
 
 const WorkerForm: React.FC<WorkerFormProps> = ({
+  open,
   worker,
   organizationId,
   farms,
@@ -87,6 +115,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     formState: { errors, isSubmitting },
   } = useForm<WorkerFormData>({
     resolver: zodResolver(workerSchema),
+    mode: 'onBlur',
     defaultValues: worker ? {
       first_name: worker.first_name,
       last_name: worker.last_name,
@@ -115,10 +144,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     } : {
       first_name: '',
       last_name: '',
-      worker_type: 'daily_worker',
+      worker_type: 'fixed_salary',
       hire_date: new Date().toISOString().split('T')[0],
       is_cnss_declared: false,
-      daily_rate: 0, // Default for daily_worker type (required by DB constraint)
       specialties: [],
       certifications: [],
     },
@@ -134,22 +162,23 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const specialties = watch('specialties') || [];
   const certifications = watch('certifications') || [];
 
-  // Ensure required compensation fields are set based on worker type
+  // Clear compensation fields when worker type changes
   useEffect(() => {
-    if (!isEditing && workerType === 'daily_worker') {
-      if (!dailyRate) {
-        setValue('daily_rate', 0); // Required for daily_worker
+    if (!isEditing) {
+      if (workerType === 'fixed_salary') {
+        setValue('daily_rate', undefined);
+        setValue('metayage_percentage', undefined);
+        setValue('metayage_type', undefined);
+      } else if (workerType === 'daily_worker') {
+        setValue('monthly_salary', undefined);
+        setValue('metayage_percentage', undefined);
+        setValue('metayage_type', undefined);
+      } else if (workerType === 'metayage') {
+        setValue('monthly_salary', undefined);
+        setValue('daily_rate', undefined);
       }
     }
-  }, [workerType, dailyRate, isEditing, setValue]);
-
-  useEffect(() => {
-    if (!isEditing && workerType === 'fixed_salary') {
-      if (!monthlySalary) {
-        setValue('monthly_salary', 0); // Required for fixed_salary
-      }
-    }
-  }, [workerType, monthlySalary, isEditing, setValue]);
+  }, [workerType, isEditing, setValue]);
 
   useEffect(() => {
     if (!isEditing && workerType === 'metayage') {
@@ -260,23 +289,38 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
             <UserPlus className="w-6 h-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {isEditing ? 'Modifier le travailleur' : 'Ajouter un travailleur'}
-            </h2>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+            <span>{isEditing ? 'Modifier le travailleur' : 'Ajouter un travailleur'}</span>
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Error Summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+                    Veuillez corriger les erreurs suivantes:
+                  </h4>
+                  <ul className="text-sm text-red-700 dark:text-red-300 space-y-1 list-disc list-inside">
+                    {Object.entries(errors).map(([field, error]) => (
+                      <li key={field}>
+                        {error?.message || `Erreur dans le champ: ${field}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Worker Type */}
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -741,35 +785,34 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="px-6 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Annuler
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   <span>Enregistrement...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                   <span>{isEditing ? 'Mettre à jour' : 'Créer'}</span>
                 </>
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

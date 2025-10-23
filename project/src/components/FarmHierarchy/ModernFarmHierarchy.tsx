@@ -464,9 +464,9 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       {/* Delete Farm Confirmation Dialog */}
       <AlertDialog open={!!farmToDelete} onOpenChange={(open) => !open && setFarmToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
               Êtes-vous sûr de vouloir supprimer la ferme <strong className="text-gray-900 dark:text-white">{farmToDelete?.name}</strong> ?
               <br /><br />

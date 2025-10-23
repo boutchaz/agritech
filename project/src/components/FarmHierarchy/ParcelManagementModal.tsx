@@ -430,39 +430,35 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     </div>
 
       {/* Delete Parcel Confirmation Dialog */}
-      {parcelToDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-              Confirmer la suppression
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Êtes-vous sûr de vouloir supprimer la parcelle <strong>{parcelToDelete.name}</strong> ?
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-400 mb-6">
-              ⚠️ Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setParcelToDelete(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => {
+      <AlertDialog open={!!parcelToDelete} onOpenChange={(open) => !open && setParcelToDelete(null)}>
+        <AlertDialogContent className="bg-white dark:bg-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la parcelle <strong className="text-gray-900 dark:text-white">{parcelToDelete?.name}</strong> ?
+              <br /><br />
+              <span className="text-red-600 dark:text-red-400">
+                ⚠️ Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (parcelToDelete) {
                   deleteParcelMutation.mutate(parcelToDelete.id);
                   setParcelToDelete(null);
-                }}
-                disabled={deleteParcelMutation.isPending}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {deleteParcelMutation.isPending ? 'Suppression...' : 'Supprimer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                }
+              }}
+              disabled={deleteParcelMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteParcelMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

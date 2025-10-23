@@ -20,6 +20,14 @@ import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 interface MapProps {
   center: [number, number];
@@ -1183,12 +1191,29 @@ const MapComponent: React.FC<MapProps> = ({
           </div>
         )}
 
-        {farmId && enableDrawing && showParcelForm && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4">Détails de la parcelle: {parcelName}</h3>
-              
-              <div className="space-y-4">
+        <Dialog open={farmId && enableDrawing && showParcelForm} onOpenChange={(open) => {
+          if (!open) {
+            setShowParcelForm(false);
+            setShowNameDialog(false);
+            setParcelName('');
+            setTempBoundary([]);
+            setParcelDetails({
+              soil_type: '',
+              area: 0,
+              planting_density: 0,
+              irrigation_type: '',
+              variety: '',
+              planting_date: '',
+              planting_type: ''
+            });
+          }
+        }}>
+          <DialogContent className="max-w-[500px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 dark:text-white">Détails de la parcelle: {parcelName}</DialogTitle>
+            </DialogHeader>
+
+              <div className="space-y-4 py-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Type de sol
@@ -1342,37 +1367,36 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowParcelForm(false);
-                    setShowNameDialog(false);
-                    setParcelName('');
-                    setTempBoundary([]);
-                    setParcelDetails({
-                      soil_type: '',
-                      area: 0,
-                      planting_density: 0,
-                      irrigation_type: '',
-                      variety: '',
-                      planting_date: '',
-                      planting_type: ''
-                    });
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSaveParcel}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowParcelForm(false);
+                  setShowNameDialog(false);
+                  setParcelName('');
+                  setTempBoundary([]);
+                  setParcelDetails({
+                    soil_type: '',
+                    area: 0,
+                    planting_density: 0,
+                    irrigation_type: '',
+                    variety: '',
+                    planting_date: '',
+                    planting_type: ''
+                  });
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleSaveParcel}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Location and Search Controls */}
         <div className="absolute top-4 right-4 space-y-2 z-20">

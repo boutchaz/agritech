@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { X, User, UserCog } from 'lucide-react';
-import { useCreateTask, useUpdateTask, useTaskCategories } from '../../hooks/useTasks';
-import { useAssignableUsers } from '../../hooks/useAssignableUsers';
+import { X, UserCog } from 'lucide-react';
+import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
+import { useWorkers } from '../../hooks/useWorkers';
 import type { Task, CreateTaskRequest, TaskType, TaskPriority } from '../../types/tasks';
-import { getTaskTypeLabel, getTaskPriorityLabel, TASK_TYPE_LABELS } from '../../types/tasks';
-import { Badge } from '../ui/badge';
+import { TASK_TYPE_LABELS } from '../../types/tasks';
 
 interface TaskFormProps {
   task?: Task | null;
@@ -37,8 +36,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const { data: categories = [] } = useTaskCategories(organizationId);
-  const { data: assignableUsers = [] } = useAssignableUsers(organizationId);
+  const { data: workers = [] } = useWorkers(organizationId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,8 +165,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* Assigned To */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Assigné à (utilisateur plateforme)
+              <UserCog className="w-4 h-4" />
+              Assigné à (travailleur)
             </label>
             <select
               value={formData.assigned_to || ''}
@@ -176,14 +174,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Non assigné</option>
-              {assignableUsers.map(user => (
-                <option key={user.user_id} value={user.user_id}>
-                  {user.full_name} {user.worker_position ? `(${user.worker_position})` : ''} - {user.role}
+              {workers.map(worker => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.first_name} {worker.last_name} - {worker.position}
                 </option>
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Seuls les utilisateurs avec accès plateforme peuvent être assignés aux tâches
+              Sélectionnez un travailleur pour assigner cette tâche
             </p>
           </div>
 

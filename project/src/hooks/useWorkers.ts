@@ -91,9 +91,31 @@ export const useCreateWorker = () => {
 
   return useMutation({
     mutationFn: async (data: WorkerFormData & { organization_id: string }) => {
+      // Sanitize data: convert empty strings to null for UUID and optional fields
+      const sanitizedData = {
+        ...data,
+        farm_id: data.farm_id || null,
+        email: data.email || null,
+        cin: data.cin || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        date_of_birth: data.date_of_birth || null,
+        position: data.position || null,
+        cnss_number: data.cnss_number || null,
+        bank_account: data.bank_account || null,
+        payment_method: data.payment_method || null,
+        notes: data.notes || null,
+        monthly_salary: data.monthly_salary || null,
+        daily_rate: data.daily_rate || null,
+        metayage_type: data.metayage_type || null,
+        metayage_percentage: data.metayage_percentage || null,
+        calculation_basis: data.calculation_basis || null,
+        payment_frequency: data.payment_frequency || null,
+      };
+
       const { data: worker, error } = await supabase
         .from('workers')
-        .insert(data)
+        .insert(sanitizedData)
         .select()
         .single();
 
@@ -113,9 +135,30 @@ export const useUpdateWorker = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<WorkerFormData> }) => {
+      // Sanitize data: convert empty strings to null for UUID and optional fields
+      const sanitizedData: any = { ...data };
+
+      if ('farm_id' in sanitizedData) sanitizedData.farm_id = sanitizedData.farm_id || null;
+      if ('email' in sanitizedData) sanitizedData.email = sanitizedData.email || null;
+      if ('cin' in sanitizedData) sanitizedData.cin = sanitizedData.cin || null;
+      if ('phone' in sanitizedData) sanitizedData.phone = sanitizedData.phone || null;
+      if ('address' in sanitizedData) sanitizedData.address = sanitizedData.address || null;
+      if ('date_of_birth' in sanitizedData) sanitizedData.date_of_birth = sanitizedData.date_of_birth || null;
+      if ('position' in sanitizedData) sanitizedData.position = sanitizedData.position || null;
+      if ('cnss_number' in sanitizedData) sanitizedData.cnss_number = sanitizedData.cnss_number || null;
+      if ('bank_account' in sanitizedData) sanitizedData.bank_account = sanitizedData.bank_account || null;
+      if ('payment_method' in sanitizedData) sanitizedData.payment_method = sanitizedData.payment_method || null;
+      if ('notes' in sanitizedData) sanitizedData.notes = sanitizedData.notes || null;
+      if ('monthly_salary' in sanitizedData) sanitizedData.monthly_salary = sanitizedData.monthly_salary || null;
+      if ('daily_rate' in sanitizedData) sanitizedData.daily_rate = sanitizedData.daily_rate || null;
+      if ('metayage_type' in sanitizedData) sanitizedData.metayage_type = sanitizedData.metayage_type || null;
+      if ('metayage_percentage' in sanitizedData) sanitizedData.metayage_percentage = sanitizedData.metayage_percentage || null;
+      if ('calculation_basis' in sanitizedData) sanitizedData.calculation_basis = sanitizedData.calculation_basis || null;
+      if ('payment_frequency' in sanitizedData) sanitizedData.payment_frequency = sanitizedData.payment_frequency || null;
+
       const { data: worker, error } = await supabase
         .from('workers')
-        .update(data)
+        .update(sanitizedData)
         .eq('id', id)
         .select()
         .single();
