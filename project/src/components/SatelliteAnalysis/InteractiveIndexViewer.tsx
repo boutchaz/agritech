@@ -15,6 +15,11 @@ import {
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { DatePicker } from '../ui/DatePicker';
+import { Button } from '../ui/button';
+import { Select } from '../ui/Select';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { cn } from '../../lib/utils';
 
 interface InteractiveIndexViewerProps {
   parcelId: string;
@@ -40,7 +45,7 @@ export const COLOR_PALETTES: Record<ColorPalette, { name: string; colors: string
   },
   'blue-red': {
     name: 'Bleu-Rouge',
-    colors: ['#0000ff', '#4169e1', '#00bfff', '#ffffff', '#ff69b4', '#ff0000', '#8b0000'],
+    colors: ['#8b0000', '#ff0000', '#ff69b4', '#ffffff', '#00bfff', '#4169e1', '#0000ff'],
     description: 'Contraste thermique'
   },
   'rainbow': {
@@ -79,6 +84,11 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   // Overlay opacity control (per index)
   const [overlayOpacity, setOverlayOpacity] = useState<Map<VegetationIndexType, number>>(
     new Map([['NDVI', 0.7], ['NDRE', 0.7], ['NDMI', 0.7]])
+  );
+
+  // Per-index color palette selection for multi-grid view
+  const [indexColorPalettes, setIndexColorPalettes] = useState<Map<VegetationIndexType, ColorPalette>>(
+    new Map([['NDVI', 'red-green'], ['NDRE', 'viridis'], ['NDMI', 'blue-red']])
   );
 
   // Available dates state
@@ -171,6 +181,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         }
 
         setMultiData(results);
+
+        // Initialize color palettes for any new indices that don't have one
+        const newPalettes = new Map(indexColorPalettes);
+        let updated = false;
+        for (const index of selectedIndices) {
+          if (!newPalettes.has(index)) {
+            newPalettes.set(index, getDefaultPaletteForIndex(index));
+            updated = true;
+          }
+        }
+        if (updated) {
+          setIndexColorPalettes(newPalettes);
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate interactive visualization';
@@ -297,64 +320,49 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         <h3 className="font-medium text-gray-900">Configuration</h3>
 
         {/* View Mode Selector */}
-        <div className="flex gap-2 p-1 bg-white rounded-lg border">
-          <button
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'single' ? 'default' : 'outline'}
+            className={cn("flex-1", viewMode === 'single' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('single')}
-            className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors text-sm ${
-              viewMode === 'single'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
           >
             Vue Simple
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={viewMode === 'multi-grid' ? 'default' : 'outline'}
+            className={cn("flex-1", viewMode === 'multi-grid' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('multi-grid')}
-            className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors text-sm ${
-              viewMode === 'multi-grid'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
           >
             Multi-Grille
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={viewMode === 'multi-overlay' ? 'default' : 'outline'}
+            className={cn("flex-1", viewMode === 'multi-overlay' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('multi-overlay')}
-            className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors text-sm ${
-              viewMode === 'multi-overlay'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
           >
             Multi-Overlay
-          </button>
+          </Button>
         </div>
 
         {/* Base Layer Selector (for leaflet views) */}
         {(viewMode === 'single' && visualizationType === 'leaflet') || viewMode !== 'single' ? (
           <div>
             <label className="text-sm font-medium mb-2 block">Fond de Carte</label>
-            <div className="flex gap-2 p-1 bg-white rounded-lg border">
-              <button
+            <div className="flex gap-2">
+              <Button
+                variant={baseLayer === 'osm' ? 'default' : 'outline'}
+                className={cn("flex-1", baseLayer === 'osm' && "bg-blue-600 hover:bg-blue-700")}
                 onClick={() => setBaseLayer('osm')}
-                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors text-sm ${
-                  baseLayer === 'osm'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 OpenStreetMap
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={baseLayer === 'satellite' ? 'default' : 'outline'}
+                className={cn("flex-1", baseLayer === 'satellite' && "bg-blue-600 hover:bg-blue-700")}
                 onClick={() => setBaseLayer('satellite')}
-                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors text-sm ${
-                  baseLayer === 'satellite'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 🛰️ Vue Satellite
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
@@ -460,52 +468,96 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           </div>
         )}
 
-        {/* Color Palette Selector (only for leaflet heatmap, not for overlay mode) */}
-        {((viewMode === 'single' && visualizationType === 'leaflet') || viewMode === 'multi-grid') ? (
+        {/* Color Palette Selector for Single View */}
+        {viewMode === 'single' && visualizationType === 'leaflet' && (
           <div>
             <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
               {(Object.entries(COLOR_PALETTES) as [ColorPalette, typeof COLOR_PALETTES[ColorPalette]][]).map(([key, palette]) => (
-                <button
+                <Button
                   key={key}
+                  variant="outline"
                   onClick={() => setColorPalette(key)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    colorPalette === key
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={cn(
+                    "h-auto flex-col items-start p-3",
+                    colorPalette === key && "border-green-600 bg-green-50 dark:bg-green-900/20"
+                  )}
                 >
                   <div className="text-xs font-medium mb-1">{palette.name}</div>
-                  <div className="flex h-4 rounded overflow-hidden">
+                  <div className="flex h-4 w-full rounded overflow-hidden">
                     {palette.colors.map((color, i) => (
                       <div key={i} style={{ backgroundColor: color, flex: 1 }} />
                     ))}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{palette.description}</div>
-                </button>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{palette.description}</div>
+                </Button>
               ))}
             </div>
           </div>
-        ) : null}
+        )}
+
+        {/* Color Palette Selectors for Multi-Grid View - Per Index */}
+        {viewMode === 'multi-grid' && selectedIndices.length > 0 && (
+          <div>
+            <label className="text-sm font-medium mb-3 block">Palettes de Couleurs par Indice</label>
+            <div className="space-y-3">
+              {selectedIndices.map((index) => (
+                <div key={index} className="bg-white rounded-lg border p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getIndexColor(index) }}
+                      />
+                      <span className="text-sm font-medium">{index}</span>
+                    </div>
+                    <select
+                      value={indexColorPalettes.get(index) || 'red-green'}
+                      onChange={(e) => {
+                        const newPalettes = new Map(indexColorPalettes);
+                        newPalettes.set(index, e.target.value as ColorPalette);
+                        setIndexColorPalettes(newPalettes);
+                      }}
+                      className="text-xs px-2 py-1 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      {Object.entries(COLOR_PALETTES).map(([key, palette]) => (
+                        <option key={key} value={key}>
+                          {palette.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Show color preview */}
+                  <div className="flex h-3 rounded overflow-hidden">
+                    {COLOR_PALETTES[indexColorPalettes.get(index) || 'red-green'].colors.map((color, i) => (
+                      <div key={i} style={{ backgroundColor: color, flex: 1 }} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={generateVisualization}
             disabled={isLoading || !boundary || (viewMode !== 'single' && selectedIndices.length === 0)}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bg-green-600 hover:bg-green-700"
           >
-            {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
+            {isLoading ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <ZoomIn className="w-4 h-4 mr-2" />}
             {isLoading ? 'Génération...' : 'Générer la Visualisation'}
-          </button>
+          </Button>
 
           {((viewMode === 'single' && data) || (viewMode !== 'single' && multiData.size > 0)) && (
-            <button
+            <Button
               onClick={downloadData}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 mr-2" />
               Exporter les Données
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -640,7 +692,16 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 </div>
 
                 {/* Mini heatmap */}
-                <div className="h-48">
+                <div className="relative h-48">
+                  {/* Index Badge Overlay */}
+                  <div className="absolute top-2 left-2 z-[1000] flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getIndexColor(index) }}
+                    />
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{index}</span>
+                  </div>
+
                   <LeafletHeatmapViewer
                     parcelId={parcelId}
                     parcelName={parcelName}
@@ -649,7 +710,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                     selectedIndex={index}
                     selectedDate={selectedDate}
                     embedded={true}
-                    colorPalette={colorPalette}
+                    colorPalette={indexColorPalettes.get(index) || 'red-green'}
                     baseLayer={baseLayer}
                     compact={true}
                   />
@@ -982,8 +1043,8 @@ const MultiIndexOverlayMap: React.FC<{
   );
 };
 
-// Helper to get appropriate color palette for each index
-function getIndexColorPalette(index: VegetationIndexType): ColorPalette {
+// Helper to get default color palette for each index
+function getDefaultPaletteForIndex(index: VegetationIndexType): ColorPalette {
   // Assign different palettes to different indices for better distinction
   const paletteMap: Record<VegetationIndexType, ColorPalette> = {
     NDVI: 'red-green',
@@ -1000,6 +1061,11 @@ function getIndexColorPalette(index: VegetationIndexType): ColorPalette {
     TCARI: 'viridis'
   };
   return paletteMap[index] || 'red-green';
+}
+
+// Helper to get appropriate color palette for each index (for overlay view)
+function getIndexColorPalette(index: VegetationIndexType): ColorPalette {
+  return getDefaultPaletteForIndex(index);
 }
 
 export default InteractiveIndexViewer;
