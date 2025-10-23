@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import PageHeader from '../components/PageHeader';
@@ -24,6 +24,7 @@ const mockModules: Module[] = [
 ];
 
 function FarmHierarchyPage() {
+  const navigate = useNavigate();
   const { currentOrganization, user } = useAuth();
   const [selectedFarm, setSelectedFarm] = useState<{ id: string; name: string } | null>(null);
   const [activeModule, setActiveModule] = useState('farm-hierarchy');
@@ -103,8 +104,11 @@ function FarmHierarchyPage() {
                 setSelectedFarm({ id: farmId, name: `Farm ${farmId}` });
               }}
               onAddParcel={(farmId) => {
-                console.log('Add parcel to farm:', farmId);
-                // TODO: Implement add parcel functionality
+                // Navigate to parcels route with farmId pre-selected to enable map-based parcel creation
+                navigate({
+                  to: '/parcels',
+                  search: { farmId }
+                });
               }}
             />
           )}

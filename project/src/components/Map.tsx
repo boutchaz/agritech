@@ -34,7 +34,7 @@ interface MapProps {
   sensors?: SensorData[];
   farmId?: string;
   enableDrawing?: boolean;
-  onParcelAdded?: () => void;
+  onParcelAdded?: (parcel: any) => void;
   selectedParcelId?: string | null;
   onParcelSelect?: (parcelId: string) => void;
   parcels?: any[]; // Allow passing parcels as prop
@@ -1025,7 +1025,7 @@ const MapComponent: React.FC<MapProps> = ({
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
-      await addParcel(parcelName, tempBoundary, {
+      const newParcel = await addParcel(parcelName, tempBoundary, {
         ...parcelDetails,
         irrigation_type: normalizedIrrigation,
         calculated_area: calculatedArea,
@@ -1047,9 +1047,9 @@ const MapComponent: React.FC<MapProps> = ({
       setCalculatedArea(0);
       setCalculatedPerimeter(0);
 
-      // Call the callback if provided
+      // Call the callback if provided, passing the new parcel
       if (onParcelAdded) {
-        onParcelAdded();
+        onParcelAdded(newParcel);
       }
     } catch (error) {
       console.error('Error saving parcel:', error);

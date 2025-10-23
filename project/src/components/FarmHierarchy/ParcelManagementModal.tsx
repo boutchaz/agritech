@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,6 +41,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   farmName,
   onClose
 }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -171,9 +173,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   };
 
   const handleAddNew = () => {
-    setEditingParcel(null);
-    reset();
-    setShowForm(true);
+    // Redirect to parcels page with farm pre-selected for map-based parcel creation
+    navigate({
+      to: '/parcels',
+      search: { farmId }
+    });
   };
 
   const totalArea = parcels.reduce((sum, p) => sum + p.area, 0);
@@ -329,15 +333,22 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
               {parcels.map((parcel) => (
                 <div
                   key={parcel.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer group"
+                  onClick={() => {
+                    // Navigate to parcels page with this parcel selected
+                    navigate({
+                      to: '/parcels',
+                      search: { farmId, parcelId: parcel.id }
+                    });
+                  }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
+                        <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
                           {parcel.name}
                         </h4>
                         {parcel.crop_type && (
@@ -349,14 +360,22 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleEdit(parcel)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(parcel);
+                        }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                        title="Modifier"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(parcel.id, parcel.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(parcel.id, parcel.name);
+                        }}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        title="Supprimer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -376,6 +395,13 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         <span className="text-gray-900 dark:text-white">{parcel.soil_type}</span>
                       </div>
                     )}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      Cliquer pour voir sur la carte
+                    </span>
                   </div>
                 </div>
               ))}

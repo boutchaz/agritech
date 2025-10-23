@@ -345,9 +345,13 @@ const AppContent: React.FC = () => {
                 parcels={directParcel && !parcels.find(p => p.id === directParcel.id) 
                   ? [...parcels, directParcel]  // Include directParcel if not already in list
                   : parcels}
-                onParcelAdded={() => {
+                onParcelAdded={(newParcel) => {
                   // React Query will automatically refetch the data
                   setShowAddParcelMap(false);
+                  // Redirect to the newly created parcel
+                  if (newParcel?.id) {
+                    setSelectedParcelId(newParcel.id);
+                  }
                 }}
               />
 
