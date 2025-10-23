@@ -9,6 +9,16 @@ import FarmCard from './FarmCard';
 import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import { Building2, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 interface FarmNode {
   farm_id: string;
@@ -49,6 +59,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedFarmForParcels, setSelectedFarmForParcels] = useState<{ id: string; name: string } | null>(null);
   const [selectedFarmForDetails, setSelectedFarmForDetails] = useState<string | null>(null);
+  const [farmToDelete, setFarmToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const {
     register,
@@ -230,6 +241,27 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     createFarmMutation.mutate(data);
   };
 
+  // Delete farm mutation
+  const deleteFarmMutation = useMutation({
+    mutationFn: async (farmId: string) => {
+      // Delete farm (cascade will handle related data via DB constraints)
+      const { error } = await supabase
+        .from('farms')
+        .delete()
+        .eq('id', farmId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      setFarmToDelete(null);
+    },
+    onError: (error: any) => {
+      console.error('Error deleting farm:', error);
+      alert(`Erreur lors de la suppression de la ferme: ${error.message}`);
+    }
+  });
+
   // Filter farms based on search
   const filteredFarms = useMemo(() => {
     if (!searchTerm) return farms;
@@ -290,6 +322,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           onSelect={() => setSelectedFarmForDetails(farm.farm_id)}
           onManage={() => onManageFarm?.(farm.farm_id)}
           onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+          onDelete={() => setFarmToDelete({ id: farm.farm_id, name: farm.farm_name })}
         />
         {farm.children && farm.children.length > 0 && (
           <div className="ml-8 space-y-3">
@@ -428,6 +461,32 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           }}
         />
       )}
+
+      {/* Delete Farm Confirmation Dialog */}
+      <AlertDialog open={!!farmToDelete} onOpenChange={(open) => !open && setFarmToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la ferme <strong className="text-gray-900 dark:text-white">{farmToDelete?.name}</strong> ?
+              <br /><br />
+              <span className="text-red-600 dark:text-red-400">
+                ⚠️ Cette action supprimera également toutes les parcelles, analyses, tâches et autres données associées à cette ferme. Cette action est irréversible.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => farmToDelete && deleteFarmMutation.mutate(farmToDelete.id)}
+              disabled={deleteFarmMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteFarmMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

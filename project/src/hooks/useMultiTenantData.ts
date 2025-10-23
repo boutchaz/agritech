@@ -223,8 +223,8 @@ export const useInventory = () => useMultiTenantData({
   table: 'inventory',
   columns: `
     *,
-    product_categories (name, code),
-    product_subcategories (name, code)
+    product_categories (name, description),
+    product_subcategories (name, description)
   `,
   orderBy: { column: 'name' },
   realtime: true

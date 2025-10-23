@@ -6,6 +6,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
 import { X, Plus, Leaf, Edit, Trash2, MapPin } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 
 interface Parcel {
   id: string;
@@ -45,6 +62,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
+  const [parcelToDelete, setParcelToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const {
     register,
@@ -163,9 +181,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   };
 
   const handleDelete = (parcelId: string, parcelName: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${parcelName}" ?`)) {
-      deleteParcelMutation.mutate(parcelId);
-    }
+    setParcelToDelete({ id: parcelId, name: parcelName });
   };
 
   const onSubmit = (data: ParcelFormValues) => {
@@ -183,6 +199,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const totalArea = parcels.reduce((sum, p) => sum + p.area, 0);
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -409,7 +426,44 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
           )}
         </div>
       </div>
+
     </div>
+
+      {/* Delete Parcel Confirmation Dialog */}
+      {parcelToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              Confirmer la suppression
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Êtes-vous sûr de vouloir supprimer la parcelle <strong>{parcelToDelete.name}</strong> ?
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mb-6">
+              ⚠️ Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setParcelToDelete(null)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  deleteParcelMutation.mutate(parcelToDelete.id);
+                  setParcelToDelete(null);
+                }}
+                disabled={deleteParcelMutation.isPending}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleteParcelMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

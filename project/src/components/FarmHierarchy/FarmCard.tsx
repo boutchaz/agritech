@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Building2,
   MapPin,
   Users,
   MoreVertical,
   ChevronRight,
-  Leaf
+  Leaf,
+  Trash2
 } from 'lucide-react';
 
 interface FarmCardProps {
@@ -24,9 +25,12 @@ interface FarmCardProps {
   onSelect?: () => void;
   onManage?: () => void;
   onViewParcels?: () => void;
+  onDelete?: () => void;
 }
 
-const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewParcels }) => {
+const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewParcels, onDelete }) => {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <div
       className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition-all duration-200 hover:shadow-lg overflow-hidden"
@@ -62,12 +66,43 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
           </div>
 
           {/* Actions Menu */}
-          <button
-            onClick={onManage}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                {onManage && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onManage();
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-lg"
+                  >
+                    Gérer les rôles
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete();
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 last:rounded-b-lg flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Supprimer la ferme
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
