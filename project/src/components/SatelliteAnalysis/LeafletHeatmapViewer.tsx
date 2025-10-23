@@ -362,38 +362,58 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     return [];
   }, [data?.aoi_boundary, boundary]);
 
-  // Color scale component matching desired.png
+  // Color scale component using the selected color palette
   const ColorScale: React.FC = () => {
     if (!data) return null;
 
     const steps = 20;
     const stepHeight = 20;
     const scaleHeight = steps * stepHeight;
+    const palette = COLOR_PALETTES[colorPalette || 'red-green'];
+
+    // Helper function to interpolate colors from the palette
+    const getColorForNormalized = (normalized: number): string => {
+      const colors = palette.colors;
+      const index = normalized * (colors.length - 1);
+      const lowerIndex = Math.floor(index);
+      const upperIndex = Math.ceil(index);
+
+      if (lowerIndex === upperIndex) {
+        return colors[lowerIndex];
+      }
+
+      const t = index - lowerIndex;
+      const lower = colors[lowerIndex];
+      const upper = colors[upperIndex];
+
+      // Parse hex colors and interpolate
+      const lowerRGB = {
+        r: parseInt(lower.slice(1, 3), 16),
+        g: parseInt(lower.slice(3, 5), 16),
+        b: parseInt(lower.slice(5, 7), 16)
+      };
+      const upperRGB = {
+        r: parseInt(upper.slice(1, 3), 16),
+        g: parseInt(upper.slice(3, 5), 16),
+        b: parseInt(upper.slice(5, 7), 16)
+      };
+
+      const r = Math.round(lowerRGB.r + (upperRGB.r - lowerRGB.r) * t);
+      const g = Math.round(lowerRGB.g + (upperRGB.g - lowerRGB.g) * t);
+      const b = Math.round(lowerRGB.b + (upperRGB.b - lowerRGB.b) * t);
+
+      return `rgb(${r}, ${g}, ${b})`;
+    };
 
     return (
-      <div className="absolute top-4 right-4 bg-white p-2 rounded shadow-lg border z-[1000]">
+      <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-[1000]">
         <div className="flex items-center">
           <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
             {Array.from({ length: steps }).map((_, i) => {
               const value = data.statistics.max - (i / (steps - 1)) * (data.statistics.max - data.statistics.min);
               const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
-              let color;
-              if (normalized <= 0.2) {
-                const t = normalized / 0.2;
-                color = `rgb(${Math.round(220 + (255 - 220) * t)}, ${Math.round(20 * t)}, ${Math.round(60 * (1 - t))})`;
-              } else if (normalized <= 0.4) {
-                const t = (normalized - 0.2) / 0.2;
-                color = `rgb(255, ${Math.round(165 + (255 - 165) * t)}, ${Math.round(0 + 50 * t)})`;
-              } else if (normalized <= 0.6) {
-                const t = (normalized - 0.4) / 0.2;
-                color = `rgb(${Math.round(255 - 100 * t)}, 255, ${Math.round(50 + 100 * t)})`;
-              } else if (normalized <= 0.8) {
-                const t = (normalized - 0.6) / 0.2;
-                color = `rgb(${Math.round(155 - 55 * t)}, ${Math.round(255 - 50 * t)}, ${Math.round(150 - 50 * t)})`;
-              } else {
-                const t = (normalized - 0.8) / 0.2;
-                color = `rgb(${Math.round(100 - 50 * t)}, ${Math.round(205 - 55 * t)}, ${Math.round(100 - 50 * t)})`;
-              }
+              const color = getColorForNormalized(normalized);
+
               return (
                 <div
                   key={i}
@@ -407,7 +427,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               );
             })}
           </div>
-          <div className="flex flex-col justify-between text-xs" style={{ height: scaleHeight }}>
+          <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
             <span>{data.statistics.max.toFixed(1)}</span>
             <span>{((data.statistics.max + data.statistics.min) / 2).toFixed(1)}</span>
             <span>{data.statistics.min.toFixed(1)}</span>
