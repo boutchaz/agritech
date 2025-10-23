@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
 import { ProtectedNavItem } from './authorization/ProtectedNavItem';
+import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
+import { cn } from '../lib/utils';
 
 interface SidebarProps {
   modules: Module[];
@@ -26,6 +30,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { t } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showAgricultureModules, setShowAgricultureModules] = useState(false);
+  const [showElevageModules, setShowElevageModules] = useState(false);
 
   const currentPath = location.pathname;
 
@@ -91,263 +97,307 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
-        transform transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className={cn(
+        "fixed lg:static inset-y-0 left-0 z-50",
+        "h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col",
+        "transform transition-transform duration-300 ease-in-out",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center space-x-2 min-w-0 flex-1">
-              <Leaf className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400 flex-shrink-0" />
-              <span className="text-base sm:text-xl font-bold text-gray-800 dark:text-white truncate">
-                {currentOrganization?.name || t('app.name')}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-shrink-0">
-                <LanguageSwitcher />
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <Leaf className="h-6 w-6 text-white" />
               </div>
-              {/* Close button for mobile */}
-              <button
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                  {currentOrganization?.name || t('app.name')}
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">AgriTech Platform</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <LanguageSwitcher />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-8 w-8"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label="Close menu"
               >
-                <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-              </button>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
-      
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <ProtectedNavItem action="read" subject="Dashboard">
-          <button
-            onClick={() => handleNavigation('/dashboard')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/dashboard'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Home className="h-5 w-5" />
-            <span>{t('nav.dashboard')}</span>
-          </button>
-        </ProtectedNavItem>
 
-        <ProtectedNavItem action="read" subject="Analysis">
-          <button
-            onClick={() => handleNavigation('/analyses')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/analyses'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <FileText className="h-5 w-5" />
-            <span>{t('nav.analyses')}</span>
-          </button>
-        </ProtectedNavItem>
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3">
+        <nav className="space-y-1 py-4">
+          {/* Main Navigation */}
+          <div className="space-y-1">
+            <ProtectedNavItem action="read" subject="Dashboard">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/dashboard' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/dashboard')}
+              >
+                <Home className="mr-3 h-4 w-4" />
+                {t('nav.dashboard')}
+              </Button>
+            </ProtectedNavItem>
 
-        <ProtectedNavItem action="read" subject="Parcel">
-          <button
-            onClick={() => handleNavigation('/parcels')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/parcels'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Map className="h-5 w-5" />
-            <span>{t('nav.parcels')}</span>
-          </button>
-        </ProtectedNavItem>
+            <ProtectedNavItem action="read" subject="Analysis">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/analyses' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/analyses')}
+              >
+                <FileText className="mr-3 h-4 w-4" />
+                {t('nav.analyses')}
+              </Button>
+            </ProtectedNavItem>
 
-        <ProtectedNavItem action="read" subject="Stock">
-          <button
-            onClick={() => handleNavigation('/stock')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/stock'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Package className="h-5 w-5" />
-            <span>{t('nav.stock')}</span>
-          </button>
-        </ProtectedNavItem>
+            <ProtectedNavItem action="read" subject="Parcel">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/parcels' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/parcels')}
+              >
+                <Map className="mr-3 h-4 w-4" />
+                {t('nav.parcels')}
+              </Button>
+            </ProtectedNavItem>
 
-        <ProtectedNavItem action="read" subject="Infrastructure">
-          <button
-            onClick={() => handleNavigation('/infrastructure')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/infrastructure'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Building2 className="h-5 w-5" />
-            <span>{t('nav.infrastructure')}</span>
-          </button>
-        </ProtectedNavItem>
+            <ProtectedNavItem action="read" subject="Stock">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/stock' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/stock')}
+              >
+                <Package className="mr-3 h-4 w-4" />
+                {t('nav.stock')}
+              </Button>
+            </ProtectedNavItem>
 
-        <ProtectedNavItem action="read" subject="FarmHierarchy">
-          <button
-            onClick={() => handleNavigation('/farm-hierarchy')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/farm-hierarchy'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Network className="h-5 w-5" />
-            <span>{t('nav.farmHierarchy')}</span>
-          </button>
-        </ProtectedNavItem>
+            <ProtectedNavItem action="read" subject="Infrastructure">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/infrastructure' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/infrastructure')}
+              >
+                <Building2 className="mr-3 h-4 w-4" />
+                {t('nav.infrastructure')}
+              </Button>
+            </ProtectedNavItem>
 
-        {/* <button
-          onClick={() => handleNavigation('/satellite-analysis')}
-          className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-            currentPath === '/satellite-analysis'
-              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Satellite className="h-5 w-5" />
-          <span>{t('nav.satelliteAnalysis')}</span>
-        </button> */}
-
-        {/* Personnel Section */}
-        <ProtectedNavItem action="read" subject="Worker">
-          <button
-            onClick={() => handleNavigation('/workers')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/workers'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Users className="h-5 w-5" />
-            <span>{t('nav.personnel')}</span>
-          </button>
-        </ProtectedNavItem>
-
-        <ProtectedNavItem action="read" subject="Task">
-          <button
-            onClick={() => handleNavigation('/tasks')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              currentPath === '/tasks'
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <CheckSquare className="h-5 w-5" />
-            <span>{t('nav.tasks')}</span>
-          </button>
-        </ProtectedNavItem>
-
-        {/* Charges Section */}
-        <ProtectedNavItem action="read" subject="Utility">
-          <div className="pt-4">
-            <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-              {t('nav.expenses')}
-            </h3>
-            <button
-              onClick={() => handleNavigation('/utilities')}
-              className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-                currentPath === '/utilities'
-                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <Wallet className="h-5 w-5" />
-              <span>{t('nav.utilities')}</span>
-            </button>
+            <ProtectedNavItem action="read" subject="FarmHierarchy">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/farm-hierarchy' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/farm-hierarchy')}
+              >
+                <Network className="mr-3 h-4 w-4" />
+                {t('nav.farmHierarchy')}
+              </Button>
+            </ProtectedNavItem>
           </div>
-        </ProtectedNavItem>
 
-        <div className="pt-4">
-          <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            Agriculture
-          </h3>
-          {agricultureModules.map((module) => (
-            <button
-              key={module.id}
-              onClick={() => handleNavigation(`/${module.id}`)}
-              className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-                currentPath === `/${module.id}`
-                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {getModuleIcon(module.icon)}
-              <span>{module.name}</span>
-            </button>
-          ))}
-        </div>
 
-        <div className="pt-4">
-          <h3 className="px-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            Élevage
-          </h3>
-          {elevageModules.map((module) => (
-            <button
-              key={module.id}
-              onClick={() => handleNavigation(`/${module.id}`)}
-              className={`w-full flex items-center space-x-3 p-3 mt-2 rounded-lg transition-colors ${
-                currentPath === `/${module.id}`
-                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {getModuleIcon(module.icon)}
-              <span>{module.name}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+          {/* Personnel Section */}
+          <Separator className="my-3" />
+          <div className="space-y-1">
+            <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Personnel
+            </h3>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <ProtectedNavItem action="read" subject="Worker">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/workers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/workers')}
+              >
+                <Users className="mr-3 h-4 w-4" />
+                {t('nav.personnel')}
+              </Button>
+            </ProtectedNavItem>
+
+            <ProtectedNavItem action="read" subject="Task">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/tasks' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/tasks')}
+              >
+                <CheckSquare className="mr-3 h-4 w-4" />
+                {t('nav.tasks')}
+              </Button>
+            </ProtectedNavItem>
+          </div>
+
+
+          {/* Expenses Section */}
+          <ProtectedNavItem action="read" subject="Utility">
+            <Separator className="my-3" />
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                {t('nav.expenses')}
+              </h3>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/utilities' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/utilities')}
+              >
+                <Wallet className="mr-3 h-4 w-4" />
+                {t('nav.utilities')}
+              </Button>
+            </div>
+          </ProtectedNavItem>
+
+          {/* Agriculture Modules */}
+          {agricultureModules.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                  onClick={() => setShowAgricultureModules(!showAgricultureModules)}
+                >
+                  Agriculture
+                  {showAgricultureModules ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                </Button>
+                {showAgricultureModules && agricultureModules.map((module) => (
+                  <Button
+                    key={module.id}
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === `/${module.id}` && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={() => handleNavigation(`/${module.id}`)}
+                  >
+                    <span className="mr-3">{getModuleIcon(module.icon)}</span>
+                    {module.name}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Elevage Modules */}
+          {elevageModules.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                  onClick={() => setShowElevageModules(!showElevageModules)}
+                >
+                  Élevage
+                  {showElevageModules ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                </Button>
+                {showElevageModules && elevageModules.map((module) => (
+                  <Button
+                    key={module.id}
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === `/${module.id}` && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={() => handleNavigation(`/${module.id}`)}
+                  >
+                    <span className="mr-3">{getModuleIcon(module.icon)}</span>
+                    {module.name}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )}
+        </nav>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
         <ProtectedNavItem action="read" subject="Dashboard">
-          <button
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start text-gray-600 dark:text-gray-400",
+              currentPath === '/alerts' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+            )}
             onClick={() => handleNavigation('/alerts')}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            <AlertCircle className="h-5 w-5" />
-            <span>Alertes</span>
-          </button>
+            <AlertCircle className="mr-3 h-4 w-4" />
+            Alertes
+          </Button>
         </ProtectedNavItem>
 
         <ProtectedNavItem action="read" subject="Report">
-          <button
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start text-gray-600 dark:text-gray-400",
+              currentPath === '/reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+            )}
             onClick={() => handleNavigation('/reports')}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${
-              currentPath === '/reports' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : ''
-            }`}
           >
-            <FileSpreadsheet className="h-5 w-5" />
-            <span>{t('nav.reports')}</span>
-          </button>
+            <FileSpreadsheet className="mr-3 h-4 w-4" />
+            {t('nav.reports')}
+          </Button>
         </ProtectedNavItem>
 
         <ProtectedNavItem action="read" subject="Settings">
-          <button
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start text-gray-600 dark:text-gray-400",
+              currentPath.startsWith('/settings') && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+            )}
             onClick={() => handleNavigation('/settings/profile')}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            <Settings className="h-5 w-5" />
-            <span>{t('nav.settings')}</span>
-          </button>
+            <Settings className="mr-3 h-4 w-4" />
+            {t('nav.settings')}
+          </Button>
         </ProtectedNavItem>
 
-        <button
+        <Separator className="my-2" />
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
           onClick={onThemeToggle}
-          className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
         >
-          {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          <span>{isDarkMode ? t('app.lightMode') : t('app.darkMode')}</span>
-        </button>
+          {isDarkMode ? <Sun className="mr-3 h-4 w-4" /> : <Moon className="mr-3 h-4 w-4" />}
+          {isDarkMode ? t('app.lightMode') : t('app.darkMode')}
+        </Button>
       </div>
       </div>
     </>

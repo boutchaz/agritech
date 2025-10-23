@@ -52,7 +52,7 @@ const defaultDashboardSettings: DashboardSettings = {
   showTaskAlerts: true,
   layout: {
     topRow: ['parcels', 'workers', 'stock', 'harvests'],
-    middleRow: ['tasks', 'soil'],
+    middleRow: [], // tasks and soil are hardcoded, additional widgets can be added here
     bottomRow: ['climate', 'irrigation']
   }
 };

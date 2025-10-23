@@ -275,23 +275,13 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           </div>
         );
 
-      case 'tasks':
-        return settings.showTaskAlerts && <UpcomingTasksWidget />;
-
-      case 'parcels':
-        return <ParcelsOverviewWidget />;
-
-      case 'stock':
-        return settings.showStockAlerts && <StockAlertsWidget />;
-
-      case 'workers':
-        return <WorkersActivityWidget />;
-
-      case 'soil':
-        return settings.showSoilData && <SoilAnalysisWidget />;
-
-      case 'harvests':
-        return <HarvestSummaryWidget />;
+      // The following widgets are hardcoded in the render section and should not be in the switch
+      // case 'tasks': handled by hardcoded UpcomingTasksWidget
+      // case 'parcels': handled by hardcoded ParcelsOverviewWidget
+      // case 'stock': handled by hardcoded StockAlertsWidget
+      // case 'workers': handled by hardcoded WorkersActivityWidget
+      // case 'soil': handled by hardcoded SoilAnalysisWidget (also has duplicate case above)
+      // case 'harvests': handled by hardcoded HarvestSummaryWidget
 
       default:
         return null;
