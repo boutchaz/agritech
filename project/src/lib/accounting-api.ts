@@ -198,6 +198,7 @@ export const accountingApi = {
     const { id, items, ...updates } = invoiceUpdate;
 
     // Update invoice
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoiceUpdates: any = { ...updates };
     if (updates.invoice_date) {
       invoiceUpdates.invoice_date = updates.invoice_date.toISOString().split('T')[0];
@@ -206,14 +207,14 @@ export const accountingApi = {
       invoiceUpdates.due_date = updates.due_date.toISOString().split('T')[0];
     }
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('invoices')
       .update(invoiceUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (updateError) throw updateError;
 
     // Update items if provided
     if (items) {
@@ -365,19 +366,20 @@ export const accountingApi = {
     const { id, allocations, ...updates } = paymentUpdate;
 
     // Update payment
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const paymentUpdates: any = { ...updates };
     if (updates.payment_date) {
       paymentUpdates.payment_date = updates.payment_date.toISOString().split('T')[0];
     }
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('accounting_payments')
       .update(paymentUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (updateError) throw updateError;
 
     // Update allocations if provided
     if (allocations) {
@@ -526,6 +528,7 @@ export const accountingApi = {
     const { id, items, ...updates } = entryUpdate;
 
     // Update entry
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entryUpdates: any = { ...updates };
     if (updates.entry_date) {
       entryUpdates.entry_date = updates.entry_date.toISOString().split('T')[0];
@@ -534,14 +537,14 @@ export const accountingApi = {
       entryUpdates.posting_date = updates.posting_date.toISOString().split('T')[0];
     }
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('journal_entries')
       .update(entryUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (updateError) throw updateError;
 
     // Update items if provided
     if (items) {
@@ -733,8 +736,8 @@ export const accountingApi = {
   // REPORTING QUERIES
   // =====================================================
 
-  async getAccountBalances(organizationId: string, asOfDate?: Date) {
-    let query = supabase
+  async getAccountBalances(organizationId: string, _asOfDate?: Date) {
+    const query = supabase
       .from('vw_account_balances')
       .select('*')
       .eq('organization_id', organizationId);
