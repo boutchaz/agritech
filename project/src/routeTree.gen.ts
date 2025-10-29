@@ -33,6 +33,12 @@ import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout-success'
 import { Route as AnalysesRouteImport } from './routes/analyses'
+import { Route as AccountingReportsRouteImport } from './routes/accounting-reports'
+import { Route as AccountingPaymentsRouteImport } from './routes/accounting-payments'
+import { Route as AccountingJournalRouteImport } from './routes/accounting-journal'
+import { Route as AccountingInvoicesRouteImport } from './routes/accounting-invoices'
+import { Route as AccountingAccountsRouteImport } from './routes/accounting-accounts'
+import { Route as AccountingRouteImport } from './routes/accounting'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
@@ -168,6 +174,36 @@ const AnalysesRoute = AnalysesRouteImport.update({
   path: '/analyses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountingReportsRoute = AccountingReportsRouteImport.update({
+  id: '/accounting-reports',
+  path: '/accounting-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingPaymentsRoute = AccountingPaymentsRouteImport.update({
+  id: '/accounting-payments',
+  path: '/accounting-payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingJournalRoute = AccountingJournalRouteImport.update({
+  id: '/accounting-journal',
+  path: '/accounting-journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingInvoicesRoute = AccountingInvoicesRouteImport.update({
+  id: '/accounting-invoices',
+  path: '/accounting-invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingAccountsRoute = AccountingAccountsRouteImport.update({
+  id: '/accounting-accounts',
+  path: '/accounting-accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingRoute = AccountingRouteImport.update({
+  id: '/accounting',
+  path: '/accounting',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -241,6 +277,12 @@ const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
+  '/accounting': typeof AccountingRoute
+  '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-invoices': typeof AccountingInvoicesRoute
+  '/accounting-journal': typeof AccountingJournalRoute
+  '/accounting-payments': typeof AccountingPaymentsRoute
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
@@ -280,6 +322,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
+  '/accounting': typeof AccountingRoute
+  '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-invoices': typeof AccountingInvoicesRoute
+  '/accounting-journal': typeof AccountingJournalRoute
+  '/accounting-payments': typeof AccountingPaymentsRoute
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
@@ -318,6 +366,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$moduleId': typeof ModuleIdRoute
   '/_authenticated': typeof AuthenticatedRoute
+  '/accounting': typeof AccountingRoute
+  '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-invoices': typeof AccountingInvoicesRoute
+  '/accounting-journal': typeof AccountingJournalRoute
+  '/accounting-payments': typeof AccountingPaymentsRoute
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
@@ -359,6 +413,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$moduleId'
+    | '/accounting'
+    | '/accounting-accounts'
+    | '/accounting-invoices'
+    | '/accounting-journal'
+    | '/accounting-payments'
+    | '/accounting-reports'
     | '/analyses'
     | '/checkout-success'
     | '/dashboard'
@@ -398,6 +458,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$moduleId'
+    | '/accounting'
+    | '/accounting-accounts'
+    | '/accounting-invoices'
+    | '/accounting-journal'
+    | '/accounting-payments'
+    | '/accounting-reports'
     | '/analyses'
     | '/checkout-success'
     | '/dashboard'
@@ -435,6 +501,12 @@ export interface FileRouteTypes {
     | '/'
     | '/$moduleId'
     | '/_authenticated'
+    | '/accounting'
+    | '/accounting-accounts'
+    | '/accounting-invoices'
+    | '/accounting-journal'
+    | '/accounting-payments'
+    | '/accounting-reports'
     | '/analyses'
     | '/checkout-success'
     | '/dashboard'
@@ -476,6 +548,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModuleIdRoute: typeof ModuleIdRoute
   AuthenticatedRoute: typeof AuthenticatedRoute
+  AccountingRoute: typeof AccountingRoute
+  AccountingAccountsRoute: typeof AccountingAccountsRoute
+  AccountingInvoicesRoute: typeof AccountingInvoicesRoute
+  AccountingJournalRoute: typeof AccountingJournalRoute
+  AccountingPaymentsRoute: typeof AccountingPaymentsRoute
+  AccountingReportsRoute: typeof AccountingReportsRoute
   AnalysesRoute: typeof AnalysesRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DashboardRoute: typeof DashboardRoute
@@ -672,6 +750,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalysesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accounting-reports': {
+      id: '/accounting-reports'
+      path: '/accounting-reports'
+      fullPath: '/accounting-reports'
+      preLoaderRoute: typeof AccountingReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting-payments': {
+      id: '/accounting-payments'
+      path: '/accounting-payments'
+      fullPath: '/accounting-payments'
+      preLoaderRoute: typeof AccountingPaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting-journal': {
+      id: '/accounting-journal'
+      path: '/accounting-journal'
+      fullPath: '/accounting-journal'
+      preLoaderRoute: typeof AccountingJournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting-invoices': {
+      id: '/accounting-invoices'
+      path: '/accounting-invoices'
+      fullPath: '/accounting-invoices'
+      preLoaderRoute: typeof AccountingInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting-accounts': {
+      id: '/accounting-accounts'
+      path: '/accounting-accounts'
+      fullPath: '/accounting-accounts'
+      preLoaderRoute: typeof AccountingAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting': {
+      id: '/accounting'
+      path: '/accounting'
+      fullPath: '/accounting'
+      preLoaderRoute: typeof AccountingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -827,6 +947,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModuleIdRoute: ModuleIdRoute,
   AuthenticatedRoute: AuthenticatedRoute,
+  AccountingRoute: AccountingRoute,
+  AccountingAccountsRoute: AccountingAccountsRoute,
+  AccountingInvoicesRoute: AccountingInvoicesRoute,
+  AccountingJournalRoute: AccountingJournalRoute,
+  AccountingPaymentsRoute: AccountingPaymentsRoute,
+  AccountingReportsRoute: AccountingReportsRoute,
   AnalysesRoute: AnalysesRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DashboardRoute: DashboardRoute,

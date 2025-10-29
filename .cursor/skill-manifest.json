@@ -1,0 +1,179 @@
+{
+  "$schema": "https://schema.cursor.com/skill-v1.json",
+  "version": "1.0.0",
+  "name": "agritech-platform",
+  "displayName": "AgriTech Platform Builder",
+  "description": "A comprehensive skill for building agricultural technology platforms with multi-tenant architecture, satellite data analysis, and full accounting systems. Perfect for building SaaS platforms in the agriculture sector.",
+  "author": {
+    "name": "AgriTech Platform Team",
+    "email": "team@agritech.com",
+    "url": "https://github.com/your-org/agritech"
+  },
+  "category": "full-stack",
+  "tags": [
+    "agriculture",
+    "farm-management",
+    "satellite-analysis",
+    "multi-tenant",
+    "saas",
+    "accounting",
+    "gis",
+    "react",
+    "typescript",
+    "supabase",
+    "fastapi",
+    "python"
+  ],
+  "icon": "🌾",
+  "repository": {
+    "url": "https://github.com/your-org/agritech",
+    "branch": "main"
+  },
+  "requirements": {
+    "node": ">=18.0.0",
+    "python": ">=3.9",
+    "supabase": "latest"
+  },
+  "features": [
+    {
+      "name": "Multi-Tenant Farm Management",
+      "description": "Complete organization hierarchy with farms, parcels, and sub-parcels",
+      "capabilities": [
+        "Organization management with role-based access",
+        "Farm and parcel tracking with GeoJSON boundaries",
+        "Crop lifecycle management",
+        "Divergent sub-parcel tracking for varied crop areas"
+      ]
+    },
+    {
+      "name": "Satellite Vegetation Analysis",
+      "description": "Advanced satellite data processing with Google Earth Engine",
+      "capabilities": [
+        "Calculate 12+ vegetation indices (NDVI, NDRE, NDMI, etc.)",
+        "Interactive heatmap visualizations with ECharts",
+        "Time series analysis and trend tracking",
+        "Cloud coverage filtering and quality assurance",
+        "Batch processing for multiple parcels",
+        "GeoTIFF export for GIS software"
+      ]
+    },
+    {
+      "name": "Double-Entry Accounting System",
+      "description": "Complete financial management with GL, invoices, and payments",
+      "capabilities": [
+        "Chart of Accounts with hierarchical structure",
+        "General Ledger with automated journal entries",
+        "Sales and purchase invoice management",
+        "Payment allocation and matching",
+        "Cost center tracking by farm/parcel",
+        "Financial reports (Balance Sheet, P&L, Trial Balance)",
+        "Multi-currency support"
+      ]
+    },
+    {
+      "name": "Worker and Task Management",
+      "description": "Comprehensive worker management with AI-powered task assignment",
+      "capabilities": [
+        "Worker types: permanent employees, day laborers, metayage workers",
+        "Task management with cost tracking",
+        "Automated optimal worker assignment",
+        "Work records and time tracking",
+        "Advance payment management",
+        "Payment calculation by worker type"
+      ]
+    },
+    {
+      "name": "Subscription Management",
+      "description": "Complete subscription system with Polar.sh integration",
+      "capabilities": [
+        "Multiple subscription tiers",
+        "Feature-based access control",
+        "Usage limits enforcement",
+        "Webhook-based subscription updates",
+        "Checkout flow integration"
+      ]
+    }
+  ],
+  "projectStructure": {
+    "frontend": {
+      "path": "project/",
+      "framework": "React 19 + TypeScript",
+      "tools": ["Vite", "TanStack Router", "TanStack Query", "React Hook Form"]
+    },
+    "backend": {
+      "path": "satellite-indices-service/",
+      "framework": "FastAPI + Python",
+      "integrations": ["Google Earth Engine", "Supabase"]
+    },
+    "database": {
+      "path": "project/supabase/",
+      "type": "PostgreSQL",
+      "features": ["Row Level Security", "Edge Functions", "Real-time subscriptions"]
+    }
+  },
+  "keyFiles": {
+    "entryPoints": [
+      "project/src/main.tsx",
+      "satellite-indices-service/app/main.py"
+    ],
+    "configuration": [
+      "project/package.json",
+      "satellite-indices-service/requirements.txt",
+      "docker-compose.yml",
+      ".cursor/skill.json"
+    ],
+    "documentation": [
+      "CLAUDE.md",
+      "AGENTS.md",
+      "README.md",
+      "project/QUICK_START.md"
+    ]
+  },
+  "commonCommands": {
+    "development": {
+      "frontend": "cd project && npm run dev",
+      "backend": "cd satellite-indices-service && uvicorn app.main:app --reload",
+      "database": "cd project && supabase start"
+    },
+    "testing": {
+      "frontend": "cd project && npm test",
+      "backend": "cd satellite-indices-service && pytest",
+      "e2e": "cd project && npm run test:e2e"
+    },
+    "deployment": {
+      "frontend": "cd project && npm run build",
+      "database": "cd project && npm run db:push"
+    }
+  },
+  "intellectualProperty": {
+    "license": "MIT",
+    "copyright": "Copyright (c) 2024 AgriTech Platform Team"
+  },
+  "contribution": {
+    "guidelines": "See CONTRIBUTING.md",
+    "codeOfConduct": "See CODE_OF_CONDUCT.md"
+  },
+  "examples": [
+    {
+      "title": "Create a new farm in the system",
+      "description": "Demonstrates multi-tenant farm creation with proper access control",
+      "file": "project/src/routes/_authenticated.farms.new.tsx"
+    },
+    {
+      "title": "Calculate vegetation indices for a parcel",
+      "description": "Shows satellite data processing and heatmap visualization",
+      "file": "project/src/components/SatelliteAnalysis/IndicesCalculator.tsx"
+    },
+    {
+      "title": "Create and post an invoice",
+      "description": "Demonstrates accounting workflow with automatic GL posting",
+      "file": "project/supabase/functions/create-invoice/index.ts"
+    },
+    {
+      "title": "AI-powered task assignment",
+      "description": "Shows intelligent worker assignment based on skills and availability",
+      "file": "project/supabase/functions/task-assignment/index.ts"
+    }
+  ]
+}
+

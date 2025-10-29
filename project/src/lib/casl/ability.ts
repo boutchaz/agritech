@@ -5,7 +5,8 @@ import type { Subscription } from '../../hooks/useSubscription';
 export type Action =
   | 'create' | 'read' | 'update' | 'delete' | 'manage'
   | 'invite' | 'remove' | 'activate' | 'deactivate'
-  | 'export' | 'import' | 'view_analytics' | 'access_api';
+  | 'export' | 'import' | 'view_analytics' | 'access_api'
+  | 'approve' | 'post' | 'close'; // Accounting-specific actions
 
 // Define all possible subjects (resources)
 export type Subject =
@@ -15,6 +16,9 @@ export type Subject =
   | 'SatelliteReport' | 'Sensor' | 'Analytics' | 'API'
   | 'Stock' | 'Infrastructure' | 'FarmHierarchy' | 'Task' | 'Report' | 'Settings'
   | 'Dashboard'
+  // Accounting subjects
+  | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
+  | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport'
   | 'all';
 
 // Define ability type
@@ -81,6 +85,20 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('update', 'Organization');
     can('read', 'Subscription');
     can('update', 'Subscription');
+
+    // Accounting - Full access for organization admins
+    can('manage', 'Account');
+    can('manage', 'JournalEntry');
+    can('manage', 'Invoice');
+    can('manage', 'Payment');
+    can('manage', 'CostCenter');
+    can('manage', 'Tax');
+    can('manage', 'BankAccount');
+    can('post', 'JournalEntry'); // Can post journals to GL
+    can('approve', 'JournalEntry'); // Can approve journals
+    can('close', 'Period'); // Can close accounting periods
+    can('read', 'AccountingReport');
+    can('export', 'AccountingReport');
   }
 
   // Farm Manager - Manage assigned farms
@@ -106,6 +124,18 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'User');
     can('read', 'Settings');
     can('update', 'Settings'); // Allow updating their profile
+
+    // Accounting - Farm managers can manage invoices, payments, and view reports
+    can('read', 'Account');
+    can('manage', 'Invoice');
+    can('manage', 'Payment');
+    can('create', 'JournalEntry');
+    can('read', 'JournalEntry');
+    can('update', 'JournalEntry'); // Only draft entries
+    can('read', 'CostCenter');
+    can('read', 'Tax');
+    can('read', 'BankAccount');
+    can('read', 'AccountingReport');
   }
 
   // Farm Worker - Basic operations
@@ -125,6 +155,15 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('update', 'Task'); // Can update their assigned tasks
     can('read', 'Settings');
     can('update', 'Settings'); // Can update their profile
+
+    // Accounting - Farm workers can create invoices and view reports
+    can('read', 'Account');
+    can('create', 'Invoice');
+    can('read', 'Invoice');
+    can('create', 'Payment');
+    can('read', 'Payment');
+    can('read', 'JournalEntry');
+    can('read', 'AccountingReport');
   }
 
   // Day Laborer - Very limited access (only tasks and profile)
@@ -148,6 +187,16 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Task');
     can('read', 'Report');
     can('read', 'Settings');
+
+    // Accounting - Viewers can only read accounting data
+    can('read', 'Account');
+    can('read', 'Invoice');
+    can('read', 'Payment');
+    can('read', 'JournalEntry');
+    can('read', 'CostCenter');
+    can('read', 'Tax');
+    can('read', 'BankAccount');
+    can('read', 'AccountingReport');
   }
 
   // ============================================

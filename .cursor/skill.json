@@ -1,0 +1,218 @@
+{
+  "version": "1.0.0",
+  "name": "agritech-platform",
+  "description": "Complete agricultural technology platform with multi-tenant architecture, satellite data analysis via Google Earth Engine, and full double-entry accounting system.",
+  "author": "AgriTech Platform Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/agritech"
+  },
+  "techStack": {
+    "frontend": {
+      "framework": "React 19 with TypeScript",
+      "bundler": "Vite",
+      "routing": "TanStack Router v1",
+      "stateManagement": "TanStack Query (React Query) + Jotai",
+      "forms": "React Hook Form v7 + Zod",
+      "ui": "shadcn/ui + Radix UI primitives",
+      "styling": "Tailwind CSS",
+      "i18n": "react-i18next (English, French, Arabic)",
+      "maps": "Leaflet + React Leaflet, OpenLayers",
+      "charts": "ECharts (heatmaps), Recharts (analytics)"
+    },
+    "backend": {
+      "database": "Supabase (PostgreSQL) with Row Level Security",
+      "satelliteService": "FastAPI (Python) + Google Earth Engine",
+      "storage": "Supabase Storage",
+      "payments": "Polar.sh integration",
+      "backgroundJobs": "Celery + Redis",
+      "edgeFunctions": "Supabase Edge Functions (Deno)"
+    },
+    "integrations": {
+      "authentication": "Supabase Auth (multi-tenant)",
+      "authorization": "CASL-based permissions",
+      "satelliteData": "Google Earth Engine API",
+      "subscriptions": "Polar.sh webhooks",
+      "ai": "Cursor MCP integration"
+    }
+  },
+  "projectStructure": {
+    "frontend": "project/",
+    "backend": "satellite-indices-service/",
+    "database": "project/supabase/",
+    "docs": "docs/",
+    "migrations": "project/supabase/migrations/",
+    "edgeFunctions": "project/supabase/functions/"
+  },
+  "keyFeatures": {
+    "agriculturalManagement": [
+      "Multi-tenant organization hierarchy",
+      "Farm and parcel management with GeoJSON boundaries",
+      "Crop tracking (planting, growth, harvest)",
+      "Worker management (permanent, day laborers, metayage)",
+      "Task management with cost tracking",
+      "Harvest tracking and profitability analysis",
+      "Inventory and stock management",
+      "Supplier and warehouse management"
+    ],
+    "satelliteAnalysis": [
+      "12+ vegetation indices (NDVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, PRI, MSI, MCARI, TCARI)",
+      "Interactive heatmaps with ECharts",
+      "Time series analysis",
+      "Statistical analysis and period comparison",
+      "GeoTIFF export",
+      "Cloud coverage filtering",
+      "Batch processing for multiple parcels",
+      "Real-time pixel-level data"
+    ],
+    "accountingSystem": [
+      "Full double-entry bookkeeping",
+      "Chart of Accounts (hierarchical)",
+      "General Ledger with journal entries",
+      "Sales and purchase invoices",
+      "Payment allocation and matching",
+      "Cost centers (farm/parcel tracking)",
+      "Tax definitions and calculations",
+      "Bank account management",
+      "Multi-currency support",
+      "Financial reports (Balance Sheet, P&L, Trial Balance)",
+      "Aged receivables/payables"
+    ],
+    "subscriptions": [
+      "Free, Basic, Pro, Enterprise plans",
+      "Feature gating with CASL",
+      "Usage limits enforcement",
+      "Polar.sh checkout integration",
+      "Webhook-based subscription updates"
+    ],
+    "edgeFunctions": [
+      "allocate-payment - Payment to invoice allocation with GL posting",
+      "create-invoice - Invoice creation with automatic calculations",
+      "post-invoice - Invoice GL posting workflow",
+      "generate-financial-report - Balance Sheet, P&L, Trial Balance",
+      "task-assignment - AI-powered optimal worker assignment",
+      "irrigation-scheduling - Irrigation recommendations",
+      "yield-prediction - Yield forecasting",
+      "crop-planning - Optimal crop selection",
+      "farm-analytics - Performance analytics",
+      "polar-webhook - Subscription management webhooks"
+    ]
+  },
+  "commonTasks": {
+    "frontend": {
+      "dev": "cd project && npm run dev",
+      "build": "cd project && npm run build",
+      "test": "cd project && npm test",
+      "lint": "cd project && npm run lint",
+      "typecheck": "cd project && npm run type-check"
+    },
+    "backend": {
+      "dev": "cd satellite-indices-service && uvicorn app.main:app --reload --port 8001",
+      "test": "cd satellite-indices-service && pytest"
+    },
+    "database": {
+      "migrate": "cd project && npm run db:migrate",
+      "generateTypes": "cd project && npm run db:generate-types",
+      "deploy": "cd project && npm run db:deploy",
+      "push": "cd project && npm run db:push",
+      "pull": "cd project && npm run db:pull",
+      "dump": "cd project && npm run db:dump"
+    },
+    "docker": {
+      "up": "docker-compose up -d",
+      "down": "docker-compose down",
+      "logs": "docker-compose logs -f"
+    }
+  },
+  "importantFiles": {
+    "configuration": [
+      "project/package.json - Frontend dependencies and scripts",
+      "satellite-indices-service/requirements.txt - Backend dependencies",
+      "docker-compose.yml - Container orchestration",
+      "project/eslint.config.js - Linting rules",
+      "project/tailwind.config.js - Tailwind configuration",
+      "project/vite.config.ts - Vite bundler config",
+      "project/tsconfig.json - TypeScript configuration"
+    ],
+    "architecture": [
+      "CLAUDE.md - Complete architecture documentation",
+      "AGENTS.md - Repository guidelines",
+      "project/QUICK_START.md - Quick start guide",
+      "project/DEPLOYMENT_GUIDE.md - Deployment instructions"
+    ],
+    "schema": [
+      "project/supabase/remote_schema.sql - Complete database schema",
+      "project/supabase/migrations/*.sql - Migration files",
+      "project/src/types/database.types.ts - Generated TypeScript types"
+    ],
+    "keyComponents": [
+      "project/src/components/MultiTenantAuthProvider.tsx - Auth context",
+      "project/src/lib/casl/defineAbilityFor.ts - Permission definitions",
+      "project/src/lib/satellite-api.ts - Satellite API client",
+      "project/src/lib/accounting-api.ts - Accounting API client",
+      "satellite-indices-service/app/services/earth_engine.py - GEE integration",
+      "satellite-indices-service/app/services/automated_processing.py - Batch processing"
+    ]
+  },
+  "developmentGuidelines": {
+    "typeSafety": "Always generate types after schema changes: npm run db:generate-types-remote",
+    "pathAliases": "Use @/ prefix for imports: import { supabase } from '@/lib/supabase'",
+    "internationalization": "Add translations to src/locales/{en,fr,ar}/translation.json",
+    "codeStyle": "ESLint enforced with pre-commit hooks (Husky + lint-staged)",
+    "testing": "Vitest for unit tests, Playwright for E2E tests",
+    "performance": "React Query caching, lazy route loading, debounced search, virtual scrolling"
+  },
+  "multiTenantArchitecture": {
+    "hierarchy": "Organizations → Farms → Parcels → Sub-parcels (AOI-based)",
+    "roles": [
+      "system_admin (level 1)",
+      "organization_admin (level 2)",
+      "farm_manager (level 3)",
+      "farm_worker (level 4)",
+      "day_laborer (level 5)",
+      "viewer (level 6)"
+    ],
+    "accessControl": "Two-layer: CASL (fine-grained) + RoleBasedAccess (DB-backed)"
+  },
+  "environmentVariables": {
+    "frontend": {
+      "VITE_SUPABASE_URL": "Required",
+      "VITE_SUPABASE_ANON_KEY": "Required",
+      "VITE_SATELLITE_SERVICE_URL": "Optional (default: http://localhost:8001)",
+      "VITE_POLAR_ACCESS_TOKEN": "Optional"
+    },
+    "backend": {
+      "GEE_SERVICE_ACCOUNT": "Required for satellite service",
+      "GEE_PRIVATE_KEY": "Required for satellite service",
+      "GEE_PROJECT_ID": "Required for satellite service",
+      "SUPABASE_URL": "Required",
+      "SUPABASE_KEY": "Required (service role key)"
+    }
+  },
+  "complexLogic": {
+    "paymentCalculations": "project/supabase/migrations/20250121000001_payment_system.sql",
+    "accountingAutomation": "project/supabase/migrations/20251029203204_create_accounting_module.sql",
+    "taskAssignment": "project/supabase/functions/task-assignment/index.ts",
+    "irrigationScheduling": "project/supabase/functions/irrigation-scheduling/index.ts",
+    "yieldPrediction": "project/supabase/functions/yield-prediction/index.ts",
+    "satelliteIndices": "satellite-indices-service/app/services/earth_engine.py",
+    "vegetationCalculations": "project/src/components/SatelliteAnalysis/StatisticsCalculator.tsx"
+  },
+  "troubleshooting": {
+    "moduleNotFound": "Run npm install and check @/ path configuration",
+    "typeErrors": "Run npm run db:generate-types-remote and restart TypeScript server",
+    "supabaseErrors": "Ensure project is linked: npx supabase link --project-ref YOUR_REF",
+    "satelliteTimeout": "Check GEE credentials, reduce AOI size, increase cloud coverage threshold",
+    "rlsPolicyBlocks": "Verify user is in correct organization and has required role",
+    "polarWebhookFails": "Check webhook URL is publicly accessible and secret configured"
+  },
+  "documentation": {
+    "database": "https://supabase.com/docs",
+    "routing": "https://tanstack.com/router/latest",
+    "query": "https://tanstack.com/query/latest",
+    "forms": "https://react-hook-form.com",
+    "gee": "https://earthengine.google.com",
+    "polar": "https://api.polar.sh/docs"
+  }
+}
+

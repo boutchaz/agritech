@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, DollarSign, CreditCard, BookOpen } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -277,6 +277,78 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Wallet className="mr-3 h-4 w-4" />
                 {t('nav.utilities')}
               </Button>
+            </div>
+          </ProtectedNavItem>
+
+          {/* Accounting Section */}
+          <ProtectedNavItem action="read" subject="Invoice">
+            <Separator className="my-3" />
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Accounting
+              </h3>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/accounting')}
+              >
+                <BookOpen className="mr-3 h-4 w-4" />
+                Dashboard
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting-invoices' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/accounting-invoices')}
+              >
+                <Receipt className="mr-3 h-4 w-4" />
+                Invoices
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting-payments' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/accounting-payments')}
+              >
+                <CreditCard className="mr-3 h-4 w-4" />
+                Payments
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting-journal' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={() => handleNavigation('/accounting-journal')}
+              >
+                <BookOpen className="mr-3 h-4 w-4" />
+                Journal
+              </Button>
+
+              <ProtectedNavItem action="read" subject="AccountingReport">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start text-gray-600 dark:text-gray-400",
+                    currentPath === '/accounting-reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                  )}
+                  onClick={() => handleNavigation('/accounting-reports')}
+                >
+                  <FileSpreadsheet className="mr-3 h-4 w-4" />
+                  Reports
+                </Button>
+              </ProtectedNavItem>
             </div>
           </ProtectedNavItem>
 
