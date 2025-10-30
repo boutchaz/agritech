@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useCreateHarvestForecast } from '@/hooks/useProductionIntelligence';
 import { useFarms, useParcelsByFarm } from '@/hooks/useParcelsQuery';
@@ -83,8 +83,6 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
   const { data: parcels = [] } = useParcelsByFarm(selectedFarmId || null);
 
   const predictedYield = watch('predicted_yield_quantity');
-  const minYield = watch('min_yield_quantity');
-  const maxYield = watch('max_yield_quantity');
   const estimatedPrice = watch('estimated_price_per_unit');
   const estimatedCost = watch('estimated_cost');
 
@@ -125,7 +123,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
       if (data.adjustment_factors) {
         try {
           adjustmentFactors = JSON.parse(data.adjustment_factors);
-        } catch (e) {
+        } catch (_error) {
           toast.error('Invalid JSON format for adjustment factors');
           return;
         }
@@ -136,7 +134,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
         currency_code: currentOrganization?.currency || 'MAD',
         status: 'pending',
         adjustment_factors: adjustmentFactors,
-      } as any);
+      });
 
       toast.success('Harvest forecast created successfully');
       reset();

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useCreateYieldBenchmark } from '@/hooks/useProductionIntelligence';
 import { toast } from 'sonner';

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useCreateYieldHistory } from '@/hooks/useProductionIntelligence';
 import { useFarms, useParcelsByFarm } from '@/hooks/useParcelsQuery';
@@ -58,7 +58,6 @@ export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
     formState: { errors },
     reset,
     watch,
-    setValue,
   } = useForm<YieldFormData>({
     resolver: zodResolver(yieldSchema),
     defaultValues: {
