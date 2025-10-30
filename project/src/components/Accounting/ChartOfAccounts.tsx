@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
