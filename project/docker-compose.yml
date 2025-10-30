@@ -1,17 +1,23 @@
-version: '3.8'
-
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=https://mvegjdkkbhlhbjpbhpou.supabase.co
+        - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12ZWdqZGtrYmhsaGJqcGJocG91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Njc4NzEsImV4cCI6MjA3NDI0Mzg3MX0.t5RMzdumbehxq5DRtHEbiNOAW4KstcysOFx2xg4Z67E
+        - VITE_SATELLITE_SERVICE_URL=http://agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me
+        - VITE_POLAR_ACCESS_TOKEN=polar_oat_LgY7ir6RvwuoKkWGbuioGAX8GM6uyb5oCzk1L4bnaOj
+        - VITE_POLAR_ORGANIZATION_ID=747f4915-3ab5-4419-980a-ada18203226e
+        - VITE_POLAR_SERVER=sandbox
+        - VITE_POLAR_CHECKOUT_URL=https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_jd7coexYrSk6mKuKxYAJQwZe523tvHYKyKZDl1X717P/redirect
+        - VITE_POLAR_ESSENTIAL_PRODUCT_ID=3b03769f-9a47-47bc-8f07-bd1f3a580dee
+        - VITE_POLAR_PROFESSIONAL_PRODUCT_ID=db925c1e-d64d-4d95-9907-dc90da5bcbe6
+        - VITE_POLAR_ENTERPRISE_PRODUCT_ID=d53c78fb-5833-43da-a4f0-2a0bd2ff32c9
+        - VITE_APP_URL=http://agritech-dashboard-g6sumg-3002-5-75-154-125.traefik.me
     container_name: agritech-frontend
     ports:
       - "3002:80"
-    environment:
-      - NODE_ENV=production
-      - VITE_SUPABASE_URL=http://agritech-supabase-652186-5-75-154-125.traefik.me
-      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ
     restart: unless-stopped
     networks:
       - agritech-network
