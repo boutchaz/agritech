@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User } from 'lucide-react';
+import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 
 interface SettingsLayoutProps {
@@ -69,6 +69,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       path: '/settings/dashboard',
       description: 'Configuration du tableau de bord',
       roles: ['system_admin', 'organization_admin', 'farm_manager'] // Admin and managers
+    },
+    {
+      id: 'documents',
+      name: 'Modèles de documents',
+      icon: FileText,
+      path: '/settings/documents',
+      description: 'Personnaliser les en-têtes et pieds de page',
+      roles: ['system_admin', 'organization_admin'] // Admin only
     }
   ], []);
 

@@ -85,37 +85,39 @@ function AuthenticatedLayout() {
   console.log('✅ ACCESS GRANTED')
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar
-        modules={modules}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={() => setIsDarkMode(!isDarkMode)}
-      />
-      <div className="flex-1 overflow-auto flex flex-col">
-        <LegacyUserBanner />
-        <SubscriptionBanner />
-        <header className="bg-white border-b">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <OrganizationSwitcher />
-              <FarmSwitcher />
+    <div className={isDarkMode ? 'dark' : ''}>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+        <Sidebar
+          modules={modules}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+        />
+        <div className="flex-1 flex flex-col min-h-0">
+          <LegacyUserBanner />
+          <SubscriptionBanner />
+          <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <OrganizationSwitcher />
+                <FarmSwitcher />
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</span>
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
-              <button
-                onClick={() => signOut()}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </header>
-        <main className="p-6 flex-1">
-          <Outlet />
-        </main>
+          </header>
+          <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   )

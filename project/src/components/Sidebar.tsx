@@ -143,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
@@ -171,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="flex-1 min-h-0 px-3">
         <nav
           className="space-y-1 py-4"
           ref={(node) => {
@@ -552,7 +552,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </ScrollArea>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+      <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1">
         <ProtectedNavItem action="read" subject="Dashboard">
           <Button
             variant="ghost"

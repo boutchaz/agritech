@@ -1,4 +1,3 @@
-Initialising login role...
 export type Json =
   | string
   | number
@@ -1401,6 +1400,145 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          document_type: string
+          footer_background_color: string | null
+          footer_border_color: string | null
+          footer_border_top: boolean | null
+          footer_custom_text: string | null
+          footer_enabled: boolean | null
+          footer_font_size: number | null
+          footer_height: number | null
+          footer_include_company_info: boolean | null
+          footer_position: string | null
+          footer_text: string | null
+          footer_text_color: string | null
+          header_background_color: string | null
+          header_border_bottom: boolean | null
+          header_border_color: string | null
+          header_company_info: boolean | null
+          header_company_name: boolean | null
+          header_custom_text: string | null
+          header_enabled: boolean | null
+          header_height: number | null
+          header_logo_height: number | null
+          header_logo_position: string | null
+          header_logo_url: string | null
+          header_logo_width: number | null
+          header_text_color: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          organization_id: string
+          page_margin_bottom: number | null
+          page_margin_left: number | null
+          page_margin_right: number | null
+          page_margin_top: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          document_type: string
+          footer_background_color?: string | null
+          footer_border_color?: string | null
+          footer_border_top?: boolean | null
+          footer_custom_text?: string | null
+          footer_enabled?: boolean | null
+          footer_font_size?: number | null
+          footer_height?: number | null
+          footer_include_company_info?: boolean | null
+          footer_position?: string | null
+          footer_text?: string | null
+          footer_text_color?: string | null
+          header_background_color?: string | null
+          header_border_bottom?: boolean | null
+          header_border_color?: string | null
+          header_company_info?: boolean | null
+          header_company_name?: boolean | null
+          header_custom_text?: string | null
+          header_enabled?: boolean | null
+          header_height?: number | null
+          header_logo_height?: number | null
+          header_logo_position?: string | null
+          header_logo_url?: string | null
+          header_logo_width?: number | null
+          header_text_color?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          organization_id: string
+          page_margin_bottom?: number | null
+          page_margin_left?: number | null
+          page_margin_right?: number | null
+          page_margin_top?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          document_type?: string
+          footer_background_color?: string | null
+          footer_border_color?: string | null
+          footer_border_top?: boolean | null
+          footer_custom_text?: string | null
+          footer_enabled?: boolean | null
+          footer_font_size?: number | null
+          footer_height?: number | null
+          footer_include_company_info?: boolean | null
+          footer_position?: string | null
+          footer_text?: string | null
+          footer_text_color?: string | null
+          header_background_color?: string | null
+          header_border_bottom?: boolean | null
+          header_border_color?: string | null
+          header_company_info?: boolean | null
+          header_company_name?: boolean | null
+          header_custom_text?: string | null
+          header_enabled?: boolean | null
+          header_height?: number | null
+          header_logo_height?: number | null
+          header_logo_position?: string | null
+          header_logo_url?: string | null
+          header_logo_width?: number | null
+          header_text_color?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          organization_id?: string
+          page_margin_bottom?: number | null
+          page_margin_left?: number | null
+          page_margin_right?: number | null
+          page_margin_top?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "current_session_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string | null
@@ -2679,6 +2817,415 @@ export type Database = {
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_result_parameters: {
+        Row: {
+          created_at: string | null
+          id: string
+          interpretation: string | null
+          order_id: string
+          parameter_code: string | null
+          parameter_name: string
+          recommendation: string | null
+          reference_range_max: number | null
+          reference_range_min: number | null
+          unit: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interpretation?: string | null
+          order_id: string
+          parameter_code?: string | null
+          parameter_name: string
+          recommendation?: string | null
+          reference_range_max?: number | null
+          reference_range_min?: number | null
+          unit?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interpretation?: string | null
+          order_id?: string
+          parameter_code?: string | null
+          parameter_name?: string
+          recommendation?: string | null
+          reference_range_max?: number | null
+          reference_range_min?: number | null
+          unit?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_result_parameters_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_service_orders: {
+        Row: {
+          actual_completion_date: string | null
+          actual_price: number | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          expected_completion_date: string | null
+          farm_id: string | null
+          id: string
+          lab_reference_number: string | null
+          notes: string | null
+          order_date: string | null
+          order_number: string | null
+          organization_id: string
+          paid: boolean | null
+          parcel_id: string | null
+          payment_date: string | null
+          provider_id: string
+          quoted_price: number | null
+          results_data: Json | null
+          results_document_url: string | null
+          results_received_date: string | null
+          sample_collected_by: string | null
+          sample_collection_date: string | null
+          sample_collection_notes: string | null
+          sample_depth_cm: number | null
+          sample_location_coordinates: Json | null
+          sample_photos: string[] | null
+          sent_to_lab_date: string | null
+          service_type_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          actual_price?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          expected_completion_date?: string | null
+          farm_id?: string | null
+          id?: string
+          lab_reference_number?: string | null
+          notes?: string | null
+          order_date?: string | null
+          order_number?: string | null
+          organization_id: string
+          paid?: boolean | null
+          parcel_id?: string | null
+          payment_date?: string | null
+          provider_id: string
+          quoted_price?: number | null
+          results_data?: Json | null
+          results_document_url?: string | null
+          results_received_date?: string | null
+          sample_collected_by?: string | null
+          sample_collection_date?: string | null
+          sample_collection_notes?: string | null
+          sample_depth_cm?: number | null
+          sample_location_coordinates?: Json | null
+          sample_photos?: string[] | null
+          sent_to_lab_date?: string | null
+          service_type_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_completion_date?: string | null
+          actual_price?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          expected_completion_date?: string | null
+          farm_id?: string | null
+          id?: string
+          lab_reference_number?: string | null
+          notes?: string | null
+          order_date?: string | null
+          order_number?: string | null
+          organization_id?: string
+          paid?: boolean | null
+          parcel_id?: string | null
+          payment_date?: string | null
+          provider_id?: string
+          quoted_price?: number | null
+          results_data?: Json | null
+          results_document_url?: string | null
+          results_received_date?: string | null
+          sample_collected_by?: string | null
+          sample_collection_date?: string | null
+          sample_collection_notes?: string | null
+          sample_depth_cm?: number | null
+          sample_location_coordinates?: Json | null
+          sample_photos?: string[] | null
+          sent_to_lab_date?: string | null
+          service_type_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_service_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "current_session_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_sample_collected_by_fkey"
+            columns: ["sample_collected_by"]
+            isOneToOne: false
+            referencedRelation: "current_session_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_sample_collected_by_fkey"
+            columns: ["sample_collected_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_orders_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_service_providers: {
+        Row: {
+          accreditations: Json | null
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          turnaround_days: number | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          accreditations?: Json | null
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          turnaround_days?: number | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          accreditations?: Json | null
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          turnaround_days?: number | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      lab_service_recommendations: {
+        Row: {
+          application_method: string | null
+          created_at: string | null
+          description: string
+          id: string
+          implemented_by: string | null
+          implemented_date: string | null
+          notes: string | null
+          order_id: string
+          parcel_id: string | null
+          priority: string | null
+          recommendation_type: string
+          status: string | null
+          suggested_products: Json | null
+          suggested_quantities: Json | null
+          timing: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          application_method?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          implemented_by?: string | null
+          implemented_date?: string | null
+          notes?: string | null
+          order_id: string
+          parcel_id?: string | null
+          priority?: string | null
+          recommendation_type: string
+          status?: string | null
+          suggested_products?: Json | null
+          suggested_quantities?: Json | null
+          timing?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          application_method?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          implemented_by?: string | null
+          implemented_date?: string | null
+          notes?: string | null
+          order_id?: string
+          parcel_id?: string | null
+          priority?: string | null
+          recommendation_type?: string
+          status?: string | null
+          suggested_products?: Json | null
+          suggested_quantities?: Json | null
+          timing?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_service_recommendations_implemented_by_fkey"
+            columns: ["implemented_by"]
+            isOneToOne: false
+            referencedRelation: "current_session_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_recommendations_implemented_by_fkey"
+            columns: ["implemented_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_recommendations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_service_recommendations_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_service_types: {
+        Row: {
+          category: string
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parameters_tested: Json | null
+          price: number | null
+          provider_id: string | null
+          sample_requirements: string | null
+          turnaround_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parameters_tested?: Json | null
+          price?: number | null
+          provider_id?: string | null
+          sample_requirements?: string | null
+          turnaround_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parameters_tested?: Json | null
+          price?: number | null
+          provider_id?: string | null
+          sample_requirements?: string | null
+          turnaround_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_service_types_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -4948,6 +5495,103 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_collection_schedules: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          custom_interval_days: number | null
+          farm_id: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          last_collection_date: string | null
+          next_collection_date: string
+          notification_emails: string[] | null
+          notify_days_before: number | null
+          organization_id: string
+          parcel_id: string | null
+          service_type_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          custom_interval_days?: number | null
+          farm_id?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          last_collection_date?: string | null
+          next_collection_date: string
+          notification_emails?: string[] | null
+          notify_days_before?: number | null
+          organization_id: string
+          parcel_id?: string | null
+          service_type_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          custom_interval_days?: number | null
+          farm_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_collection_date?: string | null
+          next_collection_date?: string
+          notification_emails?: string[] | null
+          notify_days_before?: number | null
+          organization_id?: string
+          parcel_id?: string | null
+          service_type_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_collection_schedules_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "current_session_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_collection_schedules_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_collection_schedules_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_collection_schedules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_collection_schedules_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_collection_schedules_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_service_types"
             referencedColumns: ["id"]
           },
         ]
@@ -7858,6 +8502,7 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      generate_lab_order_number: { Args: never; Returns: string }
       generate_payment_number: {
         Args: {
           p_organization_id: string
@@ -8434,5 +9079,3 @@ export const Constants = {
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.54.11 (currently installed v2.47.2)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
