@@ -68,7 +68,7 @@ export const BenchmarkForm: React.FC<BenchmarkFormProps> = ({
 
   const onSubmit = async (data: BenchmarkFormData) => {
     try {
-      await createBenchmark.mutateAsync(data as any);
+      await createBenchmark.mutateAsync(data);
       toast.success('Yield benchmark created successfully');
       reset();
       onClose();

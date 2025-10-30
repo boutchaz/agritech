@@ -113,7 +113,10 @@ export const ChartOfAccounts: React.FC = () => {
         if (!childMap.has(acc.parent_id)) {
           childMap.set(acc.parent_id, []);
         }
-        childMap.get(acc.parent_id)!.push(acc);
+        const children = childMap.get(acc.parent_id);
+        if (children) {
+          children.push(acc);
+        }
       }
     });
 

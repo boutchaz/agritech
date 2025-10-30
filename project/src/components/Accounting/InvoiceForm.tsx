@@ -91,7 +91,6 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   });
 
   // Get organization currency (default to MAD if not set)
-  const organizationCurrency = currentOrganization?.currency || 'MAD';
   const currencySymbol = currentOrganization?.currency_symbol || 'MAD';
 
   // Filter accounts for dropdown
