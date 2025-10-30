@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -73,7 +73,7 @@ export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
 
   const onSubmit = async (data: YieldFormData) => {
     try {
-      await createYield.mutateAsync(data as any);
+      await createYield.mutateAsync(data);
       toast.success('Yield history recorded successfully');
       reset();
       onClose();
@@ -102,10 +102,6 @@ export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
               <Select
                 id="farm_id"
                 {...register('farm_id')}
-                onChange={(e) => {
-                  setSelectedFarmId(e.target.value);
-                  register('farm_id').onChange(e);
-                }}
               >
                 <option value="">Select farm</option>
                 {farms?.map((farm) => (
