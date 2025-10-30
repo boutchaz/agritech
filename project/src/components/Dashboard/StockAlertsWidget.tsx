@@ -1,17 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Package, AlertTriangle, ChevronRight, TrendingDown, CheckCircle } from 'lucide-react';
-import { useInventory } from '../../hooks/useMultiTenantData';
-
-interface InventoryItem {
-  id: string;
-  product_name: string;
-  quantity: number;
-  unit: string;
-  min_stock_level?: number;
-  product_categories?: { name: string };
-  product_subcategories?: { name: string };
-}
+import { useInventory, type InventoryItem } from '../../hooks/useInventory';
 
 const StockAlertsWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -110,18 +100,18 @@ const StockAlertsWidget: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-3 w-3 text-amber-600 flex-shrink-0" />
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {item.product_name}
+                      {item.name}
                     </p>
                   </div>
-                  {item.product_categories && (
+                  {item.brand && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {item.product_categories.name}
+                      {item.brand}
                     </p>
                   )}
                 </div>
                 <div className="text-right ml-2">
                   <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                    {item.quantity} {item.unit}
+                    {item.quantity || 0} {item.unit || 'units'}
                   </div>
                   {item.min_stock_level && (
                     <div className="text-xs text-gray-500 dark:text-gray-400">

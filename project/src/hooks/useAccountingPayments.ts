@@ -1,28 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import type { Database } from '../types/database.types';
 
-export interface Payment {
-  id: string;
-  organization_id: string;
-  payment_number: string;
-  payment_type: 'received' | 'paid';
-  party_type: 'Customer' | 'Supplier' | null;
-  party_id: string | null;
-  party_name: string;
-  payment_date: string;
-  amount: number;
-  unallocated_amount: number;
-  payment_method: string;
-  bank_account_id: string | null;
-  reference_number: string | null;
-  status: 'draft' | 'submitted' | 'cancelled';
-  journal_entry_id: string | null;
-  remarks: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
+type AccountingPaymentInsert = Database['public']['Tables']['accounting_payments']['Insert'];
+type AccountingPaymentUpdate = Database['public']['Tables']['accounting_payments']['Update'];
+
+export interface Payment extends AccountingPayment {}
 
 export interface PaymentAllocation {
   id: string;
@@ -33,6 +18,22 @@ export interface PaymentAllocation {
 
 export interface PaymentWithAllocations extends Payment {
   allocations?: PaymentAllocation[];
+}
+
+export interface CreatePaymentInput {
+  payment_type: 'received' | 'paid';
+  party_type?: 'Customer' | 'Supplier' | null;
+  party_id?: string | null;
+  party_name: string;
+  payment_date: string;
+  amount: number;
+  payment_method: 'cash' | 'bank_transfer' | 'check' | 'mobile_money';
+  bank_account_id?: string | null;
+  reference_number?: string | null;
+  status?: 'draft' | 'submitted' | 'cancelled';
+  remarks?: string | null;
+  currency_code?: string;
+  exchange_rate?: number | null;
 }
 
 /**
@@ -49,7 +50,7 @@ export function useAccountingPayments() {
       }
 
       const { data, error } = await supabase
-        .from('payments')
+        .from('accounting_payments')
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .order('payment_date', { ascending: false });
@@ -75,7 +76,7 @@ export function usePaymentsByType(type: 'received' | 'paid') {
       }
 
       const { data, error } = await supabase
-        .from('payments')
+        .from('accounting_payments')
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .eq('payment_type', type)
@@ -110,6 +111,159 @@ export function usePaymentStats() {
   };
 
   return stats;
+}
+
+/**
+ * Hook to create a new payment
+ */
+export function useCreatePayment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (input: CreatePaymentInput) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const { data: user } = await supabase.auth.getUser();
+
+      // Generate payment number
+      const { data: lastPayment } = await supabase
+        .from('accounting_payments')
+        .select('payment_number')
+        .eq('organization_id', currentOrganization.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextNumber = 1;
+      if (lastPayment?.payment_number) {
+        const match = lastPayment.payment_number.match(/PAY-(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1]) + 1;
+        }
+      }
+
+      const payment_number = `PAY-${String(nextNumber).padStart(5, '0')}`;
+
+      const { data, error } = await supabase
+        .from('accounting_payments')
+        .insert({
+          organization_id: currentOrganization.id,
+          payment_number,
+          payment_type: input.payment_type,
+          party_type: input.party_type || null,
+          party_id: input.party_id || null,
+          party_name: input.party_name,
+          payment_date: input.payment_date,
+          amount: input.amount,
+          payment_method: input.payment_method,
+          bank_account_id: input.bank_account_id || null,
+          reference_number: input.reference_number || null,
+          status: input.status || 'draft',
+          remarks: input.remarks || null,
+          currency_code: input.currency_code || currentOrganization.currency || 'MAD',
+          exchange_rate: input.exchange_rate || 1,
+          created_by: user.user?.id || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Payment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to update a payment
+ */
+export function useUpdatePayment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Payment> & { id: string }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const { data, error } = await supabase
+        .from('accounting_payments')
+        .update(updates)
+        .eq('id', id)
+        .eq('organization_id', currentOrganization.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Payment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to delete a payment
+ */
+export function useDeletePayment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const { error } = await supabase
+        .from('accounting_payments')
+        .delete()
+        .eq('id', id)
+        .eq('organization_id', currentOrganization.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to submit a payment (change status from draft to submitted)
+ */
+export function useSubmitPayment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const { data, error } = await supabase
+        .from('accounting_payments')
+        .update({ status: 'submitted' })
+        .eq('id', id)
+        .eq('organization_id', currentOrganization.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Payment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
+    },
+  });
 }
 
 /**

@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, Receipt, Plus, Filter, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Building2, Receipt, Plus, Filter, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useInvoices, useInvoiceStats } from '../hooks/useInvoices';
+import { useInvoices, useInvoiceStats, useDeleteInvoice } from '../hooks/useInvoices';
+import { InvoiceForm } from '../components/Accounting/InvoiceForm';
+import { InvoiceDetailDialog } from '../components/Accounting/InvoiceDetailDialog';
+import { toast } from 'sonner';
 
 const mockModules: Module[] = [
   {
@@ -30,14 +35,54 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
+  const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
+
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'sales' | 'purchase'>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // Real data from database
   const { data: invoices = [], isLoading, error } = useInvoices();
   const stats = useInvoiceStats();
+  const deleteMutation = useDeleteInvoice();
+
+  // Filtered invoices
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      const matchesSearch =
+        invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.party_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || invoice.invoice_type === filterType;
+      const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [invoices, searchTerm, filterType, filterStatus]);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string, status: string) => {
+    if (status !== 'draft') {
+      toast.error('Only draft invoices can be deleted');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete invoice ${invoiceNumber}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(invoiceId);
+      toast.success(`Invoice ${invoiceNumber} deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete invoice');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -113,23 +158,54 @@ const AppContent: React.FC = () => {
         />
 
         <div className="p-6 space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Invoices</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Track and manage your invoices
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-              <Button>
+          {/* Header with Search and Filters */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Invoices</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Track and manage your invoices
+                </p>
+              </div>
+              <Button onClick={() => setIsInvoiceFormOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Invoice
               </Button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search invoices by number or customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as 'all' | 'sales' | 'purchase')}
+                className="w-full sm:w-40"
+              >
+                <option value="all">All Types</option>
+                <option value="sales">Sales</option>
+                <option value="purchase">Purchase</option>
+              </Select>
+              <Select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full sm:w-40"
+              >
+                <option value="all">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="paid">Paid</option>
+                <option value="partially_paid">Partially Paid</option>
+                <option value="overdue">Overdue</option>
+                <option value="cancelled">Cancelled</option>
+              </Select>
             </div>
           </div>
 
@@ -220,7 +296,7 @@ const AppContent: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((invoice) => (
+                    {filteredInvoices.map((invoice) => (
                       <tr key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -231,8 +307,12 @@ const AppContent: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-gray-900 dark:text-white capitalize">
-                            {invoice.invoice_type}
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            invoice.invoice_type === 'sales'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                          }`}>
+                            {invoice.invoice_type === 'sales' ? 'Sales' : 'Purchase'}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">
@@ -251,16 +331,51 @@ const AppContent: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setViewInvoiceId(invoice.id)}
+                              title="View invoice"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (invoice.status !== 'draft') {
+                                  toast.error('Only draft invoices can be edited');
+                                } else {
+                                  toast.info('Edit functionality coming soon');
+                                  // TODO: Implement edit functionality
+                                }
+                              }}
+                              title="Edit invoice (drafts only)"
+                              disabled={invoice.status !== 'draft'}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteInvoice(invoice.id, invoice.invoice_number, invoice.status)}
+                              title="Delete invoice (drafts only)"
+                              className="text-red-600 hover:text-red-700 dark:text-red-400"
+                              disabled={deleteMutation.isPending || invoice.status !== 'draft'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
-                    {invoices.length === 0 && (
+                    {filteredInvoices.length === 0 && (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          Aucune facture trouvée. Créez votre première facture pour commencer.
+                          {searchTerm || filterType !== 'all' || filterStatus !== 'all'
+                            ? 'No invoices match your filters.'
+                            : 'No invoices found. Create your first invoice to get started.'}
                         </td>
                       </tr>
                     )}
@@ -270,6 +385,23 @@ const AppContent: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Invoice Creation Dialog */}
+        <InvoiceForm
+          isOpen={isInvoiceFormOpen}
+          onClose={() => setIsInvoiceFormOpen(false)}
+          onSuccess={() => {
+            setIsInvoiceFormOpen(false);
+            // Invoices will auto-refresh via query invalidation
+          }}
+        />
+
+        {/* Invoice Detail Dialog */}
+        <InvoiceDetailDialog
+          isOpen={viewInvoiceId !== null}
+          onClose={() => setViewInvoiceId(null)}
+          invoiceId={viewInvoiceId}
+        />
       </main>
     </div>
   );

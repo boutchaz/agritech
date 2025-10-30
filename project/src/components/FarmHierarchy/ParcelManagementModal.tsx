@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
-import { X, Plus, Leaf, Edit, Trash2, MapPin } from 'lucide-react';
+import { X, Plus, Leaf, Edit, Trash2, MapPin, Sprout } from 'lucide-react';
+import {
+  getPlantingSystemsByCategory,
+  getCropTypesByCategory,
+  getVarietiesByCropType,
+  calculatePlantCount,
+  type CropCategory,
+} from '../../lib/plantingSystemData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +37,16 @@ interface Parcel {
   description?: string;
   area: number;
   area_unit: string;
+  crop_category?: string;
   crop_type?: string;
+  variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
+  planting_date?: string;
+  planting_year?: number;
+  rootstock?: string;
   soil_type?: string;
   irrigation_type?: string;
 }
@@ -46,7 +62,16 @@ const parcelSchema = z.object({
   description: z.string().optional(),
   area: z.number().positive('La surface doit être positive'),
   area_unit: z.string().default('hectares'),
+  crop_category: z.string().optional(),
   crop_type: z.string().optional(),
+  variety: z.string().optional(),
+  planting_system: z.string().optional(),
+  spacing: z.string().optional(),
+  density_per_hectare: z.number().optional(),
+  plant_count: z.number().int().optional(),
+  planting_date: z.string().optional(),
+  planting_year: z.number().int().optional(),
+  rootstock: z.string().optional(),
   soil_type: z.string().optional(),
   irrigation_type: z.string().optional(),
 });
@@ -69,6 +94,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors }
   } = useForm<ParcelFormValues>({
     resolver: zodResolver(parcelSchema),
@@ -76,6 +102,44 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       area_unit: 'hectares'
     }
   });
+
+  // Watch form values for dynamic updates
+  const selectedCategory = watch('crop_category') as CropCategory | undefined;
+  const selectedCropType = watch('crop_type');
+  const selectedPlantingSystem = watch('planting_system');
+  const selectedArea = watch('area');
+  const selectedDensity = watch('density_per_hectare');
+
+  // Get available crop types based on category
+  const availableCropTypes = selectedCategory ? getCropTypesByCategory(selectedCategory) : [];
+
+  // Get available varieties based on crop type
+  const availableVarieties = selectedCropType ? getVarietiesByCropType(selectedCropType) : [];
+
+  // Get available planting systems based on category
+  const availablePlantingSystems = selectedCategory ? getPlantingSystemsByCategory(selectedCategory) : [];
+
+  // Auto-update density when planting system changes
+  useEffect(() => {
+    if (selectedPlantingSystem) {
+      const system = availablePlantingSystems.find(s => s.type === selectedPlantingSystem || `${s.type} (${s.spacing})` === selectedPlantingSystem);
+      if (system) {
+        const density = 'treesPerHectare' in system ? system.treesPerHectare :
+                       'plantsPerHectare' in system ? system.plantsPerHectare :
+                       'seedsPerHectare' in system ? system.seedsPerHectare : 0;
+        setValue('density_per_hectare', density);
+        setValue('spacing', system.spacing);
+      }
+    }
+  }, [selectedPlantingSystem, availablePlantingSystems, setValue]);
+
+  // Auto-calculate plant count when area or density changes
+  useEffect(() => {
+    if (selectedArea && selectedDensity) {
+      const count = calculatePlantCount(selectedArea, selectedDensity);
+      setValue('plant_count', count);
+    }
+  }, [selectedArea, selectedDensity, setValue]);
 
   // Fetch parcels for this farm
   const { data: parcels = [], isLoading } = useQuery({
@@ -95,19 +159,30 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   // Create/Update parcel mutation
   const saveParcelMutation = useMutation({
     mutationFn: async (formData: ParcelFormValues) => {
+      const parcelData = {
+        name: formData.name,
+        description: formData.description,
+        area: formData.area,
+        area_unit: formData.area_unit,
+        crop_category: formData.crop_category,
+        crop_type: formData.crop_type,
+        variety: formData.variety,
+        planting_system: formData.planting_system,
+        spacing: formData.spacing,
+        density_per_hectare: formData.density_per_hectare,
+        plant_count: formData.plant_count,
+        planting_date: formData.planting_date,
+        planting_year: formData.planting_year,
+        rootstock: formData.rootstock,
+        soil_type: formData.soil_type,
+        irrigation_type: formData.irrigation_type,
+      };
+
       if (editingParcel) {
         // Update existing parcel
         const { data, error } = await supabase
           .from('parcels')
-          .update({
-            name: formData.name,
-            description: formData.description,
-            area: formData.area,
-            area_unit: formData.area_unit,
-            crop_type: formData.crop_type,
-            soil_type: formData.soil_type,
-            irrigation_type: formData.irrigation_type,
-          })
+          .update(parcelData)
           .eq('id', editingParcel.id)
           .select()
           .single();
@@ -120,13 +195,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
           .from('parcels')
           .insert({
             farm_id: farmId,
-            name: formData.name,
-            description: formData.description,
-            area: formData.area,
-            area_unit: formData.area_unit,
-            crop_type: formData.crop_type,
-            soil_type: formData.soil_type,
-            irrigation_type: formData.irrigation_type,
+            ...parcelData,
           })
           .select()
           .single();
@@ -174,7 +243,16 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     setValue('description', parcel.description || '');
     setValue('area', parcel.area);
     setValue('area_unit', parcel.area_unit);
+    setValue('crop_category', parcel.crop_category || '');
     setValue('crop_type', parcel.crop_type || '');
+    setValue('variety', parcel.variety || '');
+    setValue('planting_system', parcel.planting_system || '');
+    setValue('spacing', parcel.spacing || '');
+    setValue('density_per_hectare', parcel.density_per_hectare);
+    setValue('plant_count', parcel.plant_count);
+    setValue('planting_date', parcel.planting_date || '');
+    setValue('planting_year', parcel.planting_year);
+    setValue('rootstock', parcel.rootstock || '');
     setValue('soil_type', parcel.soil_type || '');
     setValue('irrigation_type', parcel.irrigation_type || '');
     setShowForm(true);
@@ -241,73 +319,263 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 {editingParcel ? 'Modifier la parcelle' : 'Nouvelle parcelle'}
               </h3>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Nom de la parcelle *
-                    </label>
-                    <input
-                      {...register('name')}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Ex: Parcelle Nord"
-                    />
-                    {errors.name && (
-                      <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Sprout className="w-4 h-4" />
+                    Informations de base
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nom de la parcelle *
+                      </label>
+                      <input
+                        {...register('name')}
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Ex: Parcelle Nord"
+                      />
+                      {errors.name && (
+                        <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Surface (ha) *
+                      </label>
+                      <input
+                        {...register('area', { valueAsNumber: true })}
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="0.00"
+                      />
+                      {errors.area && (
+                        <p className="text-red-600 text-sm mt-1">{errors.area.message}</p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        {...register('description')}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Description de la parcelle..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Crop Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Leaf className="w-4 h-4" />
+                    Culture et plantation
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Catégorie de culture
+                      </label>
+                      <select
+                        {...register('crop_category')}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="trees">Arbres fruitiers</option>
+                        <option value="cereals">Céréales</option>
+                        <option value="vegetables">Légumes</option>
+                        <option value="other">Autre</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de culture
+                      </label>
+                      {availableCropTypes.length > 0 ? (
+                        <select
+                          {...register('crop_type')}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {availableCropTypes.map(crop => (
+                            <option key={crop} value={crop}>{crop}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          {...register('crop_type')}
+                          type="text"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Ex: Tomates"
+                        />
+                      )}
+                    </div>
+
+                    {availableVarieties.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Variété
+                        </label>
+                        <select
+                          {...register('variety')}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {availableVarieties.map(variety => (
+                            <option key={variety} value={variety}>{variety}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {selectedCategory === 'trees' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Porte-greffe
+                        </label>
+                        <input
+                          {...register('rootstock')}
+                          type="text"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Ex: GF677"
+                        />
+                      </div>
                     )}
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Surface (ha) *
-                    </label>
-                    <input
-                      {...register('area', { valueAsNumber: true })}
-                      type="number"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="0.00"
-                    />
-                    {errors.area && (
-                      <p className="text-red-600 text-sm mt-1">{errors.area.message}</p>
-                    )}
+                {/* Planting System */}
+                {availablePlantingSystems.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Système de plantation
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Type de système
+                        </label>
+                        <select
+                          {...register('planting_system')}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {availablePlantingSystems.map((system, idx) => (
+                            <option key={idx} value={system.type}>
+                              {system.type} ({system.spacing})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Espacement
+                        </label>
+                        <input
+                          {...register('spacing')}
+                          type="text"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
+                          placeholder="Ex: 4x1.5"
+                          readOnly
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Densité (plants/ha)
+                        </label>
+                        <input
+                          {...register('density_per_hectare', { valueAsNumber: true })}
+                          type="number"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
+                          placeholder="0"
+                          readOnly
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Nombre total de plants
+                        </label>
+                        <input
+                          {...register('plant_count', { valueAsNumber: true })}
+                          type="number"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
+                          placeholder="0"
+                          readOnly
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Date de plantation
+                        </label>
+                        <input
+                          {...register('planting_date')}
+                          type="date"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Année de plantation
+                        </label>
+                        <input
+                          {...register('planting_year', { valueAsNumber: true })}
+                          type="number"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="2024"
+                        />
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type de culture
-                    </label>
-                    <input
-                      {...register('crop_type')}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Ex: Tomates"
-                    />
-                  </div>
+                {/* Additional Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Informations complémentaires
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de sol
+                      </label>
+                      <input
+                        {...register('soil_type')}
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Ex: Argileux"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type de sol
-                    </label>
-                    <input
-                      {...register('soil_type')}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Ex: Argileux"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      {...register('description')}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Description de la parcelle..."
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type d'irrigation
+                      </label>
+                      <select
+                        {...register('irrigation_type')}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="Goutte à goutte">Goutte à goutte</option>
+                        <option value="Aspersion">Aspersion</option>
+                        <option value="Gravitaire">Gravitaire</option>
+                        <option value="Pivot">Pivot</option>
+                        <option value="Submersion">Submersion</option>
+                        <option value="Pluvial">Pluvial (bour)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 

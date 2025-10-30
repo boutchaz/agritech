@@ -44,7 +44,7 @@ const EmployeeManagement: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const farmId = currentFarm?.id;
-  const currency = currentOrganization?.currency || 'EUR';
+  const currency = currentOrganization?.currency || 'MAD';
 
   const emptyDefaults: EmployeeFormValues = {
     first_name: '',

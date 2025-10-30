@@ -2,37 +2,41 @@ import type {Config} from '@docusaurus/types';
 import {themes as prismThemes} from 'prism-react-renderer';
 
 const config: Config = {
-  title: 'Agritech Docs',
-  tagline: 'Frontend, backend, database, and ops docs',
-  url: 'https://docs.example.com',
+  title: 'AgriTech Platform Documentation',
+  tagline: 'Comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights',
+  url: 'https://docs.agritech.example.com',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
   organizationName: 'agritech',
-  projectName: 'docs',
+  projectName: 'agritech-platform',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
-  markdown: { mermaid: true },
-  themes: ['@docusaurus/theme-mermaid', 'redocusaurus'],
+  markdown: { 
+    mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
+  themes: ['@docusaurus/theme-mermaid'],
   presets: [
     [
       'classic',
       {
         docs: {
-          sidebarPath: require.resolve('./sidebars.ts'),
+          sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           editCurrentVersion: false,
         },
         blog: false,
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: './src/css/custom.css',
         },
       },
     ],
   ],
   plugins: [
     [
-      require.resolve('@easyops-cn/docusaurus-search-local'),
+      '@easyops-cn/docusaurus-search-local',
       {
         hashed: true,
         indexDocs: true,
@@ -43,27 +47,47 @@ const config: Config = {
   ],
   themeConfig: {
     navbar: {
-      title: 'Agritech',
+      title: 'AgriTech Platform',
+      logo: {
+        alt: 'AgriTech Platform',
+        src: 'img/logo.svg',
+      },
       items: [
-        { to: '/', label: 'Docs', position: 'left' },
-        { to: '/api', label: 'API', position: 'left' },
+        {
+          type: 'docSidebar',
+          sidebarId: 'docs',
+          position: 'left',
+          label: 'Docs',
+        },
+        {
+          href: 'https://github.com/agritech/platform',
+          label: 'GitHub',
+          position: 'right',
+        },
       ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Documentation',
+          items: [
+            { label: 'Getting Started', to: '/' },
+            { label: 'Architecture', to: '/architecture/overview' },
+          ],
+        },
+        {
+          title: 'Community',
+          items: [
+            { label: 'GitHub', href: 'https://github.com/agritech/platform' },
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} AgriTech Platform. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-    },
-    redocusaurus: {
-      specs: [
-        {
-          id: 'api',
-          spec: 'openapi/openapi.json',
-          route: '/api/',
-        },
-      ],
-      theme: {
-        primaryColor: '#0ea5e9',
-      },
     },
   },
 };

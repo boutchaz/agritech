@@ -45,5 +45,5 @@ const AccountsContent = () => {
 };
 
 export const Route = createFileRoute('/accounting-accounts')({
-  component: withRouteProtection(AccountsContent, 'read', 'all'),
+  component: withRouteProtection(AccountsContent, 'read', 'Invoice'),
 });

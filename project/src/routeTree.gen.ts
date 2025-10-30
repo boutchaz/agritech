@@ -21,6 +21,7 @@ import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analys
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfitabilityRouteImport } from './routes/profitability'
+import { Route as ProductionIntelligenceRouteImport } from './routes/production-intelligence'
 import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
@@ -32,11 +33,15 @@ import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout-success'
+import { Route as BillingSalesOrdersRouteImport } from './routes/billing-sales-orders'
+import { Route as BillingQuotesRouteImport } from './routes/billing-quotes'
+import { Route as BillingPurchaseOrdersRouteImport } from './routes/billing-purchase-orders'
 import { Route as AnalysesRouteImport } from './routes/analyses'
 import { Route as AccountingReportsRouteImport } from './routes/accounting-reports'
 import { Route as AccountingPaymentsRouteImport } from './routes/accounting-payments'
 import { Route as AccountingJournalRouteImport } from './routes/accounting-journal'
 import { Route as AccountingInvoicesRouteImport } from './routes/accounting-invoices'
+import { Route as AccountingCustomersRouteImport } from './routes/accounting-customers'
 import { Route as AccountingAccountsRouteImport } from './routes/accounting-accounts'
 import { Route as AccountingRouteImport } from './routes/accounting'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -114,6 +119,11 @@ const ProfitabilityRoute = ProfitabilityRouteImport.update({
   path: '/profitability',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductionIntelligenceRoute = ProductionIntelligenceRouteImport.update({
+  id: '/production-intelligence',
+  path: '/production-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ParcelsRoute = ParcelsRouteImport.update({
   id: '/parcels',
   path: '/parcels',
@@ -169,6 +179,21 @@ const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   path: '/checkout-success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingSalesOrdersRoute = BillingSalesOrdersRouteImport.update({
+  id: '/billing-sales-orders',
+  path: '/billing-sales-orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingQuotesRoute = BillingQuotesRouteImport.update({
+  id: '/billing-quotes',
+  path: '/billing-quotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingPurchaseOrdersRoute = BillingPurchaseOrdersRouteImport.update({
+  id: '/billing-purchase-orders',
+  path: '/billing-purchase-orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalysesRoute = AnalysesRouteImport.update({
   id: '/analyses',
   path: '/analyses',
@@ -192,6 +217,11 @@ const AccountingJournalRoute = AccountingJournalRouteImport.update({
 const AccountingInvoicesRoute = AccountingInvoicesRouteImport.update({
   id: '/accounting-invoices',
   path: '/accounting-invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountingCustomersRoute = AccountingCustomersRouteImport.update({
+  id: '/accounting-customers',
+  path: '/accounting-customers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountingAccountsRoute = AccountingAccountsRouteImport.update({
@@ -279,11 +309,15 @@ export interface FileRoutesByFullPath {
   '/$moduleId': typeof ModuleIdRoute
   '/accounting': typeof AccountingRoute
   '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-customers': typeof AccountingCustomersRoute
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
   '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
+  '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
+  '/billing-quotes': typeof BillingQuotesRoute
+  '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -295,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRoute
+  '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -324,11 +359,15 @@ export interface FileRoutesByTo {
   '/$moduleId': typeof ModuleIdRoute
   '/accounting': typeof AccountingRoute
   '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-customers': typeof AccountingCustomersRoute
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
   '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
+  '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
+  '/billing-quotes': typeof BillingQuotesRoute
+  '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -339,6 +378,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof InfrastructureRoute
   '/login': typeof LoginRoute
   '/parcels': typeof ParcelsRoute
+  '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -368,11 +408,15 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRoute
   '/accounting': typeof AccountingRoute
   '/accounting-accounts': typeof AccountingAccountsRoute
+  '/accounting-customers': typeof AccountingCustomersRoute
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
   '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
+  '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
+  '/billing-quotes': typeof BillingQuotesRoute
+  '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -384,6 +428,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRoute
+  '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -415,11 +460,15 @@ export interface FileRouteTypes {
     | '/$moduleId'
     | '/accounting'
     | '/accounting-accounts'
+    | '/accounting-customers'
     | '/accounting-invoices'
     | '/accounting-journal'
     | '/accounting-payments'
     | '/accounting-reports'
     | '/analyses'
+    | '/billing-purchase-orders'
+    | '/billing-quotes'
+    | '/billing-sales-orders'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -431,6 +480,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/parcels'
+    | '/production-intelligence'
     | '/profitability'
     | '/register'
     | '/reports'
@@ -460,11 +510,15 @@ export interface FileRouteTypes {
     | '/$moduleId'
     | '/accounting'
     | '/accounting-accounts'
+    | '/accounting-customers'
     | '/accounting-invoices'
     | '/accounting-journal'
     | '/accounting-payments'
     | '/accounting-reports'
     | '/analyses'
+    | '/billing-purchase-orders'
+    | '/billing-quotes'
+    | '/billing-sales-orders'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -475,6 +529,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/login'
     | '/parcels'
+    | '/production-intelligence'
     | '/profitability'
     | '/register'
     | '/reports'
@@ -503,11 +558,15 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/accounting'
     | '/accounting-accounts'
+    | '/accounting-customers'
     | '/accounting-invoices'
     | '/accounting-journal'
     | '/accounting-payments'
     | '/accounting-reports'
     | '/analyses'
+    | '/billing-purchase-orders'
+    | '/billing-quotes'
+    | '/billing-sales-orders'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -519,6 +578,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/parcels'
+    | '/production-intelligence'
     | '/profitability'
     | '/register'
     | '/reports'
@@ -550,11 +610,15 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRoute
   AccountingRoute: typeof AccountingRoute
   AccountingAccountsRoute: typeof AccountingAccountsRoute
+  AccountingCustomersRoute: typeof AccountingCustomersRoute
   AccountingInvoicesRoute: typeof AccountingInvoicesRoute
   AccountingJournalRoute: typeof AccountingJournalRoute
   AccountingPaymentsRoute: typeof AccountingPaymentsRoute
   AccountingReportsRoute: typeof AccountingReportsRoute
   AnalysesRoute: typeof AnalysesRoute
+  BillingPurchaseOrdersRoute: typeof BillingPurchaseOrdersRoute
+  BillingQuotesRoute: typeof BillingQuotesRoute
+  BillingSalesOrdersRoute: typeof BillingSalesOrdersRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
@@ -566,6 +630,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
   ParcelsRoute: typeof ParcelsRoute
+  ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
   ProfitabilityRoute: typeof ProfitabilityRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
@@ -666,6 +731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfitabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/production-intelligence': {
+      id: '/production-intelligence'
+      path: '/production-intelligence'
+      fullPath: '/production-intelligence'
+      preLoaderRoute: typeof ProductionIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/parcels': {
       id: '/parcels'
       path: '/parcels'
@@ -743,6 +815,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing-sales-orders': {
+      id: '/billing-sales-orders'
+      path: '/billing-sales-orders'
+      fullPath: '/billing-sales-orders'
+      preLoaderRoute: typeof BillingSalesOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing-quotes': {
+      id: '/billing-quotes'
+      path: '/billing-quotes'
+      fullPath: '/billing-quotes'
+      preLoaderRoute: typeof BillingQuotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing-purchase-orders': {
+      id: '/billing-purchase-orders'
+      path: '/billing-purchase-orders'
+      fullPath: '/billing-purchase-orders'
+      preLoaderRoute: typeof BillingPurchaseOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analyses': {
       id: '/analyses'
       path: '/analyses'
@@ -776,6 +869,13 @@ declare module '@tanstack/react-router' {
       path: '/accounting-invoices'
       fullPath: '/accounting-invoices'
       preLoaderRoute: typeof AccountingInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounting-customers': {
+      id: '/accounting-customers'
+      path: '/accounting-customers'
+      fullPath: '/accounting-customers'
+      preLoaderRoute: typeof AccountingCustomersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accounting-accounts': {
@@ -949,11 +1049,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRoute,
   AccountingRoute: AccountingRoute,
   AccountingAccountsRoute: AccountingAccountsRoute,
+  AccountingCustomersRoute: AccountingCustomersRoute,
   AccountingInvoicesRoute: AccountingInvoicesRoute,
   AccountingJournalRoute: AccountingJournalRoute,
   AccountingPaymentsRoute: AccountingPaymentsRoute,
   AccountingReportsRoute: AccountingReportsRoute,
   AnalysesRoute: AnalysesRoute,
+  BillingPurchaseOrdersRoute: BillingPurchaseOrdersRoute,
+  BillingQuotesRoute: BillingQuotesRoute,
+  BillingSalesOrdersRoute: BillingSalesOrdersRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
@@ -965,6 +1069,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
   ParcelsRoute: ParcelsRoute,
+  ProductionIntelligenceRoute: ProductionIntelligenceRoute,
   ProfitabilityRoute: ProfitabilityRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,

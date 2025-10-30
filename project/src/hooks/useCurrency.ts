@@ -9,8 +9,8 @@ import { formatCurrency, getCurrency } from '../utils/currencies';
 export function useCurrency() {
   const { currentOrganization } = useAuth();
 
-  // Get organization currency or default to EUR
-  const currencyCode = currentOrganization?.currency || 'EUR';
+  // Get organization currency or default to MAD (Moroccan Dirham)
+  const currencyCode = currentOrganization?.currency || 'MAD';
   const currency = getCurrency(currencyCode);
 
   // Memoized formatter function

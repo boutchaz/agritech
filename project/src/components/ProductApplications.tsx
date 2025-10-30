@@ -40,7 +40,7 @@ const ProductApplications: React.FC = () => {
   const [_selectedProduct, setSelectedProduct] = useState<string>('');
   const [farmId, setFarmId] = useState<string | null>(null);
 
-  const currency = currentOrganization?.currency || 'EUR';
+  const currency = currentOrganization?.currency || 'MAD';
 
   const [newApplication, setNewApplication] = useState({
     product_id: '',

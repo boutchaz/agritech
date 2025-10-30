@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
@@ -30,6 +30,10 @@ export function useMultiTenantData<T extends { id: string }>(
 
   const { table, columns = '*', filters = {}, orderBy, realtime = false } = options;
 
+  // Memoize filters to prevent infinite loops
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+  const stableOrderBy = useMemo(() => orderBy, [JSON.stringify(orderBy)]);
+
   const buildQuery = useCallback(() => {
     let query = authSupabase.from(table).select(columns);
 
@@ -39,24 +43,24 @@ export function useMultiTenantData<T extends { id: string }>(
     }
 
     // Apply farm filter if specified
-    if (currentFarm && filters.include_farm) {
+    if (currentFarm && stableFilters.include_farm) {
       query = query.eq('farm_id', currentFarm.id);
     }
 
     // Apply custom filters
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(stableFilters).forEach(([key, value]) => {
       if (key !== 'include_farm' && value !== undefined) {
         query = query.eq(key, value);
       }
     });
 
     // Apply ordering
-    if (orderBy) {
-      query = query.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+    if (stableOrderBy) {
+      query = query.order(stableOrderBy.column, { ascending: stableOrderBy.ascending ?? true });
     }
 
     return query;
-  }, [table, columns, filters, orderBy, currentOrganization, currentFarm]);
+  }, [table, columns, stableFilters, stableOrderBy, currentOrganization, currentFarm]);
 
   const fetchData = useCallback(async () => {
     if (!currentOrganization) {

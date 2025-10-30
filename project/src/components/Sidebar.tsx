@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List, BarChart3 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -32,6 +32,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAgricultureModules, setShowAgricultureModules] = useState(false);
   const [showElevageModules, setShowElevageModules] = useState(false);
+  const scrollViewportRef = React.useRef<HTMLDivElement>(null);
+  const scrollPositionRef = React.useRef(0);
+  const SCROLL_STORAGE_KEY = 'sidebarScrollTop';
 
   const currentPath = location.pathname;
 
@@ -66,11 +69,47 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleNavigation = (path: string) => {
+  const handleNavigation = (path: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
+    // Save current scroll position
+    if (scrollViewportRef.current) {
+      scrollPositionRef.current = scrollViewportRef.current.scrollTop;
+    }
+
     onModuleChange(path.replace('/', ''));
     navigate({ to: path });
     setIsMobileMenuOpen(false); // Close mobile menu on navigation
+
+    // Restore scroll position after navigation
+    requestAnimationFrame(() => {
+      if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop = scrollPositionRef.current;
+      }
+    });
   };
+
+  // Restore sidebar scroll position after route changes
+  useLayoutEffect(() => {
+    const saved = Number(sessionStorage.getItem(SCROLL_STORAGE_KEY) || '0');
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = saved;
+    }
+  }, [currentPath]);
+
+  // Attach scroll listener to persist scroll position
+  useEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport) return;
+
+    const onScroll = () => {
+      sessionStorage.setItem(SCROLL_STORAGE_KEY, String(viewport.scrollTop));
+      scrollPositionRef.current = viewport.scrollTop;
+    };
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [scrollViewportRef.current]);
 
   const agricultureModules = modules.filter(m => m.category === 'agriculture');
   const elevageModules = modules.filter(m => m.category === 'elevage');
@@ -133,7 +172,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3">
-        <nav className="space-y-1 py-4">
+        <nav
+          className="space-y-1 py-4"
+          ref={(node) => {
+            if (node) {
+              // Find the ScrollArea viewport and attach our ref
+              const viewport = node.closest('[data-radix-scroll-area-viewport]');
+              if (viewport) {
+                scrollViewportRef.current = viewport as HTMLDivElement;
+                // Attempt immediate restore from storage when ref attaches
+                const saved = Number(sessionStorage.getItem(SCROLL_STORAGE_KEY) || '0');
+                (viewport as HTMLDivElement).scrollTop = saved;
+              }
+            }
+          }}
+        >
           {/* Main Navigation */}
           <div className="space-y-1">
             <ProtectedNavItem action="read" subject="Dashboard">
@@ -143,7 +196,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/dashboard' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/dashboard')}
+                onClick={(e) => handleNavigation('/dashboard', e)}
               >
                 <Home className="mr-3 h-4 w-4" />
                 {t('nav.dashboard')}
@@ -155,9 +208,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                 variant="ghost"
                 className={cn(
                   "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/production-intelligence' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/production-intelligence', e)}
+              >
+                <BarChart3 className="mr-3 h-4 w-4" />
+                Production Intelligence
+              </Button>
+            </ProtectedNavItem>
+
+            <ProtectedNavItem action="read" subject="Analysis">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/analyses' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/analyses')}
+                onClick={(e) => handleNavigation('/analyses', e)}
               >
                 <FileText className="mr-3 h-4 w-4" />
                 {t('nav.analyses')}
@@ -171,7 +238,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/parcels' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/parcels')}
+                onClick={(e) => handleNavigation('/parcels', e)}
               >
                 <Map className="mr-3 h-4 w-4" />
                 {t('nav.parcels')}
@@ -185,7 +252,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/stock' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/stock')}
+                onClick={(e) => handleNavigation('/stock', e)}
               >
                 <Package className="mr-3 h-4 w-4" />
                 {t('nav.stock')}
@@ -199,7 +266,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/infrastructure' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/infrastructure')}
+                onClick={(e) => handleNavigation('/infrastructure', e)}
               >
                 <Building2 className="mr-3 h-4 w-4" />
                 {t('nav.infrastructure')}
@@ -213,7 +280,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/farm-hierarchy' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/farm-hierarchy')}
+                onClick={(e) => handleNavigation('/farm-hierarchy', e)}
               >
                 <Network className="mr-3 h-4 w-4" />
                 {t('nav.farmHierarchy')}
@@ -236,7 +303,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/workers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/workers')}
+                onClick={(e) => handleNavigation('/workers', e)}
               >
                 <Users className="mr-3 h-4 w-4" />
                 {t('nav.personnel')}
@@ -250,7 +317,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/tasks' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/tasks')}
+                onClick={(e) => handleNavigation('/tasks', e)}
               >
                 <CheckSquare className="mr-3 h-4 w-4" />
                 {t('nav.tasks')}
@@ -272,7 +339,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/utilities' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/utilities')}
+                onClick={(e) => handleNavigation('/utilities', e)}
               >
                 <Wallet className="mr-3 h-4 w-4" />
                 {t('nav.utilities')}
@@ -294,7 +361,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/accounting' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/accounting')}
+                onClick={(e) => handleNavigation('/accounting', e)}
               >
                 <BookOpen className="mr-3 h-4 w-4" />
                 Dashboard
@@ -304,9 +371,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 variant="ghost"
                 className={cn(
                   "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting-accounts' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/accounting-accounts', e)}
+              >
+                <List className="mr-3 h-4 w-4" />
+                Chart of Accounts
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/accounting-invoices' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/accounting-invoices')}
+                onClick={(e) => handleNavigation('/accounting-invoices', e)}
               >
                 <Receipt className="mr-3 h-4 w-4" />
                 Invoices
@@ -316,13 +395,69 @@ const Sidebar: React.FC<SidebarProps> = ({
                 variant="ghost"
                 className={cn(
                   "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/accounting-customers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/accounting-customers', e)}
+              >
+                <UserCheck className="mr-3 h-4 w-4" />
+                Customers
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/accounting-payments' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/accounting-payments')}
+                onClick={(e) => handleNavigation('/accounting-payments', e)}
               >
                 <CreditCard className="mr-3 h-4 w-4" />
                 Payments
               </Button>
+
+              {/* Billing Cycle Section */}
+              <div className="h-2" />
+              <h4 className="px-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                Billing Cycle
+              </h4>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/billing-quotes' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/billing-quotes', e)}
+              >
+                <FileEdit className="mr-3 h-4 w-4" />
+                Quotes
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/billing-sales-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/billing-sales-orders', e)}
+              >
+                <ShoppingCart className="mr-3 h-4 w-4" />
+                Sales Orders
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/billing-purchase-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
+              >
+                <PackageSearch className="mr-3 h-4 w-4" />
+                Purchase Orders
+              </Button>
+
+              <div className="h-2" />
 
               <Button
                 variant="ghost"
@@ -330,7 +465,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   "w-full justify-start text-gray-600 dark:text-gray-400",
                   currentPath === '/accounting-journal' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={() => handleNavigation('/accounting-journal')}
+                onClick={(e) => handleNavigation('/accounting-journal', e)}
               >
                 <BookOpen className="mr-3 h-4 w-4" />
                 Journal
@@ -343,7 +478,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     "w-full justify-start text-gray-600 dark:text-gray-400",
                     currentPath === '/accounting-reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                   )}
-                  onClick={() => handleNavigation('/accounting-reports')}
+                  onClick={(e) => handleNavigation('/accounting-reports', e)}
                 >
                   <FileSpreadsheet className="mr-3 h-4 w-4" />
                   Reports
@@ -373,7 +508,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       "w-full justify-start text-gray-600 dark:text-gray-400",
                       currentPath === `/${module.id}` && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                     )}
-                    onClick={() => handleNavigation(`/${module.id}`)}
+                    onClick={(e) => handleNavigation(`/${module.id}`, e)}
                   >
                     <span className="mr-3">{getModuleIcon(module.icon)}</span>
                     {module.name}
@@ -404,7 +539,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       "w-full justify-start text-gray-600 dark:text-gray-400",
                       currentPath === `/${module.id}` && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                     )}
-                    onClick={() => handleNavigation(`/${module.id}`)}
+                    onClick={(e) => handleNavigation(`/${module.id}`, e)}
                   >
                     <span className="mr-3">{getModuleIcon(module.icon)}</span>
                     {module.name}
@@ -425,7 +560,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               "w-full justify-start text-gray-600 dark:text-gray-400",
               currentPath === '/alerts' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
             )}
-            onClick={() => handleNavigation('/alerts')}
+            onClick={(e) => handleNavigation('/alerts', e)}
           >
             <AlertCircle className="mr-3 h-4 w-4" />
             Alertes
@@ -439,7 +574,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               "w-full justify-start text-gray-600 dark:text-gray-400",
               currentPath === '/reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
             )}
-            onClick={() => handleNavigation('/reports')}
+            onClick={(e) => handleNavigation('/reports', e)}
           >
             <FileSpreadsheet className="mr-3 h-4 w-4" />
             {t('nav.reports')}
@@ -453,7 +588,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               "w-full justify-start text-gray-600 dark:text-gray-400",
               currentPath.startsWith('/settings') && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
             )}
-            onClick={() => handleNavigation('/settings/profile')}
+            onClick={(e) => handleNavigation('/settings/profile', e)}
           >
             <Settings className="mr-3 h-4 w-4" />
             {t('nav.settings')}

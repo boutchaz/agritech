@@ -385,7 +385,7 @@ const OrganizationSettings: React.FC = () => {
             Paramètres régionaux
           </h3>
           <CurrencySelector
-            value={orgData.currency || 'EUR'}
+            value={orgData.currency || 'MAD'}
             onChange={handleCurrencyChange}
             disabled={saving}
           />

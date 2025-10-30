@@ -1,0 +1,379 @@
+{
+  "treeCategories": {
+    "Arbres fruitiers à noyau": [
+      "Olivier",
+      "Pêcher",
+      "Abricotier",
+      "Prunier",
+      "Cerisier",
+      "Amandier",
+      "Nectarine",
+      "Arganier"
+    ],
+    "Arbres fruitiers à pépins": [
+      "Pommier",
+      "Poirier",
+      "Cognassier",
+      "Nashi"
+    ],
+    "Agrumes": [
+      "Oranger",
+      "Mandariner",
+      "Citronnier",
+      "Pamplemoussier",
+      "Pomelo",
+      "Combava",
+      "Cédratier"
+    ],
+    "Arbres tropicaux et subtropicaus": [
+      "Avocatier",
+      "Manguier",
+      "Litchi",
+      "Longanier",
+      "Ramboutan",
+      "Garambolier",
+      "Goyavier",
+      "Coroddolier",
+      "Cherimolier",
+      "Sapotillier",
+      "Jacquier",
+      "Durian",
+      "Papayer",
+      "Bananiers"
+    ],
+    "Arbres à fruits secs": [
+      "Noyer",
+      "Châtagnier",
+      "Noisetier",
+      "Pistachier",
+      "Macadamia",
+      "Cacaoyer",
+      "Caféier"
+    ],
+    "Vigne et assimilés": [
+      "Vigne",
+      "Kiwier",
+      "Grenadier",
+      "Figuier",
+      "Murier"
+    ],
+    "Palamcées fruitières": [
+      "Palmier dattier",
+      "Cocotier",
+      "Plamier à huile",
+      "Açai"
+    ]
+  },
+  "plantingSystems": [
+    {
+      "Type de plantation": "Super intensif",
+      "Espacement": "4x1,5",
+      "N° d'arbres/ha": 1666,
+      "Date de plantation": "Date de repiquage"
+    },
+    {
+      "Type de plantation": "Super intensif",
+      "Espacement": "3x1,5",
+      "N° d'arbres/ha": 2222,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Intensif",
+      "Espacement": "4x2",
+      "N° d'arbres/ha": 1250,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Intensif",
+      "Espacement": "3x2",
+      "N° d'arbres/ha": 1666,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Semi-intensif",
+      "Espacement": "6x3",
+      "N° d'arbres/ha": 555,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Traditionnel amélioré",
+      "Espacement": "6x6",
+      "N° d'arbres/ha": 277,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Traditionnel",
+      "Espacement": "8x8",
+      "N° d'arbres/ha": 156,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Traditionnel",
+      "Espacement": "8x7",
+      "N° d'arbres/ha": 179,
+      "Date de plantation": null
+    },
+    {
+      "Type de plantation": "Traditionnel très espacé",
+      "Espacement": "10x10",
+      "N° d'arbres/ha": 100,
+      "Date de plantation": null
+    }
+  ],
+  "oliveVarieties": [
+    {
+      "Variété": "Arbequine",
+      "Origine": "Espagne",
+      "Utilisation principale": "Huile",
+      "0-2ans": "0–2",
+      "3 ans": "2–15",
+      "4 ans": "15-20",
+      "5 ans": "15-20",
+      "6-8 ans": "20-30",
+      "8-15 ans": "30-50",
+      "15 ans +": "30-50"
+    },
+    {
+      "Variété": "Arbosana",
+      "Origine": null,
+      "Utilisation principale": "Huile",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": null,
+      "15 ans +": null
+    },
+    {
+      "Variété": "Menara/Haouzia",
+      "Origine": "Maroc",
+      "Utilisation principale": "Huile et fruit",
+      "0-2ans": 0,
+      "3 ans": "2–10",
+      "4 ans": "15–40",
+      "5 ans": "15–40",
+      "6-8 ans": "15–40",
+      "8-15 ans": "50–70+",
+      "15 ans +": "50–70+"
+    },
+    {
+      "Variété": "Picholine marocaine",
+      "Origine": "Maroc",
+      "Utilisation principale": "Huile et fruit",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": "40–60",
+      "15 ans +": "40–60"
+    },
+    {
+      "Variété": "Picholine languedoc",
+      "Origine": "France",
+      "Utilisation principale": "Huile et fruit",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": null,
+      "15 ans +": null
+    },
+    {
+      "Variété": "Picholine languedoc herbassé",
+      "Origine": "France",
+      "Utilisation principale": "Huile et fruit",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": null,
+      "15 ans +": null
+    },
+    {
+      "Variété": "Konoreiki",
+      "Origine": "Grecques",
+      "Utilisation principale": "Huile et fruit",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": null,
+      "15 ans +": null
+    },
+    {
+      "Variété": "Meslala",
+      "Origine": "Maroc",
+      "Utilisation principale": "Fruit",
+      "0-2ans": null,
+      "3 ans": null,
+      "4 ans": null,
+      "5 ans": null,
+      "6-8 ans": null,
+      "8-15 ans": null,
+      "15 ans +": null
+    }
+  ],
+  "products": [
+    "NPK liquide concentré",
+    "Fongicides",
+    "Acides fulviques",
+    "Herbicides",
+    "Acides aminés avec",
+    "microelements",
+    "Biostimulants",
+    "Larvicides",
+    "Générateurs de défenses",
+    "Gel",
+    "Engrais spécial",
+    "Npk gel",
+    "Acaricides",
+    "Insecticides",
+    "Acides aminés",
+    "Acide humique",
+    "Rodenticides",
+    "Correcteur de carences"
+  ],
+  "workerTasks": [
+    {
+      "Taches": "Irrigation",
+      "Types de salariés": "Salariés fixes"
+    },
+    {
+      "Taches": "Récolte",
+      "Types de salariés": "Salariés à la tache ou à l'unité (journalier)"
+    },
+    {
+      "Taches": "Fertilisation au sol",
+      "Types de salariés": "Salarié avec %  (métayage)"
+    },
+    {
+      "Taches": "Fertigation",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Apport d’amendements",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Plantation",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Entretien",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Taille",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Greffage / surgreffage",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Repiquage ou remplacement de plants morts",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Protection",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Désherbage",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Traitement",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Nettoyage et entretien du réseau d’irrigation",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Pulvérisation de traitements",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Badigeonnage ou enduisage des troncs",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Piégeage d’insectes",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Application de traitements biologiques",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Récolte manuelle",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Récolte mécanisée",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Ramassage et tri des fruits",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Mise en caisse ou en sacs",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Transport interne vers l’aire de stockage",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Séchage, conservation ou préparation",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Construction et entretien de clôtures",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Entretien des pistes et rigoles",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Nettoyage de la ferme, des bassins, hangars et outils",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Réparation simple du matériel (sécateurs, tuyaux, pompes)",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Gestion des déchets (plastiques, sacs, bidons)",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Soins au troupeau (abreuvement, alimentation, nettoyage des abris)",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Surveillance et gardiennage des animaux",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Participation à la tonte, traite ou vaccination (si formé)",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Labourage",
+      "Types de salariés": null
+    },
+    {
+      "Taches": "Nettoyage après récolte",
+      "Types de salariés": null
+    }
+  ]
+}

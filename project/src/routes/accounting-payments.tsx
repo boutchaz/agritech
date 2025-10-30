@@ -3,12 +3,15 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, CreditCard, Plus, Filter, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Building2, CreditCard, Plus, Filter, CheckCircle2, Clock, XCircle, Eye, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useAccountingPayments, usePaymentStats } from '../hooks/useAccountingPayments';
+import { useAccountingPayments, usePaymentStats, type Payment } from '../hooks/useAccountingPayments';
+import { PaymentForm } from '../components/Accounting/PaymentForm';
+import { PaymentDetailDialog } from '../components/Accounting/PaymentDetailDialog';
 
 const mockModules: Module[] = [
   {
@@ -30,6 +33,9 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // Real data from database
   const { data: payments = [], isLoading, error } = useAccountingPayments();
@@ -130,7 +136,7 @@ const AppContent: React.FC = () => {
                 <Filter className="mr-2 h-4 w-4" />
                 Filter
               </Button>
-              <Button>
+              <Button onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Record Payment
               </Button>
@@ -261,9 +267,19 @@ const AppContent: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPayment(payment);
+                                setDetailDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -280,6 +296,34 @@ const AppContent: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Create Payment Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Record New Payment</DialogTitle>
+              <DialogDescription>
+                Record a payment received from a customer or a payment made to a supplier
+              </DialogDescription>
+            </DialogHeader>
+            <PaymentForm
+              onSuccess={() => setCreateDialogOpen(false)}
+              onCancel={() => setCreateDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Payment Detail Dialog */}
+        <PaymentDetailDialog
+          payment={selectedPayment}
+          open={detailDialogOpen}
+          onOpenChange={(open) => {
+            setDetailDialogOpen(open);
+            if (!open) {
+              setSelectedPayment(null);
+            }
+          }}
+        />
       </main>
     </div>
   );

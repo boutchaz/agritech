@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { calculateInvoiceTotals } from '../lib/taxCalculations';
 
 export interface Invoice {
   id: string;
@@ -181,16 +182,16 @@ export function useInvoiceStats() {
 }
 
 /**
- * Hook to create a new invoice using Edge Function
+ * Hook to create a new invoice with direct database insert
  */
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, user } = useAuth();
 
   return useMutation({
     mutationFn: async (invoiceData: {
       invoice_type: 'sales' | 'purchase';
-      party_name: string;
+      party_id: string;
       invoice_date: string;
       due_date: string;
       items: {
@@ -203,35 +204,99 @@ export function useCreateInvoice() {
         cost_center_id?: string;
       }[];
       remarks?: string;
+      farm_id?: string | null;
+      parcel_id?: string | null;
     }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
+      if (!user?.id) {
+        throw new Error('User not authenticated');
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-invoice`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-            'x-organization-id': currentOrganization.id,
-          },
-          body: JSON.stringify(invoiceData),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create invoice');
+      // Fetch party name from suppliers or customers
+      let partyName = '';
+      if (invoiceData.invoice_type === 'purchase') {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('name')
+          .eq('id', invoiceData.party_id)
+          .single();
+        partyName = supplier?.name || '';
+      } else {
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('name')
+          .eq('id', invoiceData.party_id)
+          .single();
+        partyName = customer?.name || '';
       }
 
-      return response.json();
+      // Generate invoice number
+      const { data: invoiceNumber, error: numberError } = await supabase
+        .rpc('generate_invoice_number', {
+          p_organization_id: currentOrganization.id,
+          p_invoice_type: invoiceData.invoice_type,
+        });
+
+      if (numberError) throw numberError;
+
+      // Calculate totals from items with proper tax calculation and rounding
+      const totals = await calculateInvoiceTotals(invoiceData.items, invoiceData.invoice_type);
+      const { subtotal, tax_total, grand_total, items_with_tax } = totals;
+
+      // Create invoice with calculated totals
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          organization_id: currentOrganization.id,
+          invoice_number: invoiceNumber,
+          invoice_type: invoiceData.invoice_type,
+          party_type: invoiceData.invoice_type === 'sales' ? 'Customer' : 'Supplier',
+          party_id: invoiceData.party_id,
+          party_name: partyName,
+          invoice_date: invoiceData.invoice_date,
+          due_date: invoiceData.due_date,
+          subtotal,
+          tax_total,
+          grand_total,
+          outstanding_amount: grand_total,
+          currency_code: currentOrganization.currency || 'MAD',
+          status: 'draft',
+          remarks: invoiceData.remarks,
+          farm_id: invoiceData.farm_id || null,
+          parcel_id: invoiceData.parcel_id || null,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Create invoice items with properly calculated and rounded tax amounts
+      // Use the items_with_tax from calculateInvoiceTotals which has accurate per-line tax
+      const itemsToInsert = items_with_tax.map(item => ({
+        invoice_id: invoice.id,
+        item_name: item.item_name,
+        description: item.description || null,
+        quantity: item.quantity,
+        unit_price: item.rate,
+        amount: item.amount, // Already rounded
+        tax_amount: item.tax_amount, // Already rounded per line
+        income_account_id: invoiceData.invoice_type === 'sales' ? item.account_id : null,
+        expense_account_id: invoiceData.invoice_type === 'purchase' ? item.account_id : null,
+        tax_id: item.tax_id || null,
+        cost_center_id: item.cost_center_id || null,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      return invoice;
     },
     onSuccess: () => {
       // Invalidate and refetch invoices

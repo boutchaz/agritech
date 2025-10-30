@@ -50,6 +50,9 @@ const AppContent: React.FC = () => {
     navigate({ to: path });
   };
 
+  // Get organization currency
+  const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
+
   // Calculate real metrics from stats
   const metrics = [
     {
@@ -72,7 +75,7 @@ const AppContent: React.FC = () => {
     },
     {
       title: 'Cash Received',
-      value: `MAD ${paymentStats.totalReceived.toLocaleString('fr-FR')}`,
+      value: `${currencySymbol} ${paymentStats.totalReceived.toLocaleString('fr-FR')}`,
       change: `${paymentStats.received} payments`,
       trend: 'up',
       icon: TrendingUp,
@@ -105,7 +108,7 @@ const AppContent: React.FC = () => {
       id: pay.id,
       type: pay.payment_type,
       description: `Payment ${pay.payment_type === 'received' ? 'received from' : 'paid to'} ${pay.party_name}`,
-      amount: `MAD ${Number(pay.amount).toLocaleString('fr-FR')}`,
+      amount: `${currencySymbol} ${Number(pay.amount).toLocaleString('fr-FR')}`,
       time: new Date(pay.created_at).toLocaleDateString('fr-FR'),
       date: new Date(pay.created_at),
     }));

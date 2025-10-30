@@ -2,6 +2,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { Toaster } from 'sonner'
 import { MultiTenantAuthProvider } from '../components/MultiTenantAuthProvider'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
@@ -24,6 +25,7 @@ export const Route = createRootRoute({
           <GlobalCommandPalette>
             <div className="min-h-screen bg-gray-50">
               <Outlet />
+              <Toaster richColors position="top-right" />
               <TanStackRouterDevtools />
               <ReactQueryDevtools initialIsOpen={false} />
             </div>

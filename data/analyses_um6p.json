@@ -1,0 +1,2181 @@
+{
+  "units": [
+    "Abonnement (an)",
+    "Abonnement (mois)",
+    "Accès",
+    "An",
+    "Analyse",
+    "Audit",
+    "Billet",
+    "Boite",
+    "Bouteille",
+    "Brochure",
+    "Consultation",
+    "Ensemble",
+    "Etude",
+    "Evènement",
+    "Exemplaire",
+    "Flacon",
+    "Forfait",
+    "g",
+    "Heure",
+    "Installation",
+    "Jour",
+    "Kg",
+    "Kit",
+    "Km",
+    "L",
+    "Licence",
+    "Lot",
+    "M²",
+    "M³",
+    "Mg",
+    "Mission",
+    "ml",
+    "Mois",
+    "Nuitée",
+    "Pack",
+    "Paquet",
+    "Personne",
+    "Prestation",
+    "Repas",
+    "Rouleau",
+    "Sachet",
+    "Semestre",
+    "Service",
+    "Session",
+    "Système",
+    "Test",
+    "Trimestre",
+    "Tube",
+    "Unité",
+    "Vidéo",
+    "Visuel"
+  ],
+  "labServices": [
+    {
+      "Prestation Name": "Horizontal Gel Electrophoresis",
+      "Description": "*Visualization of DNA or PCR product\n*Capacity of samples per cycle: 112 samples/cycle",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/z4wi82h8s1mwe8s4o0shy2cnk2yyj19m3tsl7_f.jpg?version=1689618570742230325",
+      "Equipment Model": "VWR Mini Gel"
+    },
+    {
+      "Prestation Name": "Real Time PCR (qPCR)",
+      "Description": "*Applications: Species abondance quantification, Gene expression analysis, Genotyping, microbe and pathogen detection, allelic discrimination, Single Nucleotide Polymorphism detection\n*Capacity of samples per cycle: 96 samples/cycle\n*Nature of samples:DNA or RNA.",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/6x2s1sad48rgcmrk76xnncmvec8igvujyruik_f.jpg?version=1689621242215213117",
+      "Equipment Model": "CFX96 Touch"
+    },
+    {
+      "Prestation Name": "Thermocycler",
+      "Description": "*PCR amplification\n*Capacity of samples per cycle: 96 samples/cycle.\n*Nature of samples: DNA.",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/57bzz51e7ydcodtc7x8wktcqwaftqfxfhr9tn_f.png?version=1689621527907448638",
+      "Equipment Model": "UNO 96 Thermal cycler"
+    },
+    {
+      "Prestation Name": "BET : 3-FLEX",
+      "Description": "- Low pressure volumetric adsorption analyzer for measuring surface area, pore volume, and pore size\n- N2 adsorption isotherm at 77 K, Surface area, pore volume, pore size, variable temperature gas adsorption. \n- Sample type:solid powder\n- Capacity per day:2 samples\n- Optimum weight :100 mg",
+      "Prix MAD": 870,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/bbvz5dpg2ssfo810gl59n2zgw635cfemyswjq_f.jpg?version=1701448695233720151",
+      "Equipment Model": "3-Flex"
+    },
+    {
+      "Prestation Name": "BET:TRISTAR II",
+      "Description": "- Automated surface area and porosity analyzer \n- Sample type:solid powder\n- Capacity per day:3 samples\n- Optimum weight :200 mg",
+      "Prix MAD": 870,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/umhco8ddc3nqjoxhdhzxxb1gbmrwhtet37zp8_f.jpg?version=1700943186416265241",
+      "Equipment Model": "TRISTAR II PLUS"
+    },
+    {
+      "Prestation Name": "Fluorimeter UV/Vis/NIR FP-8700 single monochromator",
+      "Description": "- Photophysical measurments\n- Luminescent materials, Excitation and Emission, Photolumeniscence quantum yield ( PLQY) \n- Sample type:Solid, powder and film\n- Capacity per day:6 samples\n- Minimum Sample required:3 samples",
+      "Prix MAD": 150,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": null,
+      "Equipment Model": "FP-8700"
+    },
+    {
+      "Prestation Name": "Rubotherm Series IsoSORPSA",
+      "Description": "-High pressure gravimetric gas sorption analyzer\n-Gas (CO2, CH4, O2, ...) adsorptions at high pressures above 1 bar\n- Sample type:Solid powder\n- Capacity per day:1 sample\n- Optimum weight required:500 mg",
+      "Prix MAD": 1530,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/a2009xq9htpu9x0mkzsdm9cvoqrywowmz0mib_f.png?version=1700943115019974897",
+      "Equipment Model": "400-150, S-G"
+    },
+    {
+      "Prestation Name": "Solar Simulator",
+      "Description": "Electrical characterizatons (I-V curves)\nApplication:Solar cells with apparent contacts\nSample type:Solar cells\nCapacity per day:20 samples",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/165cqhl4v7nggv125rj717a8a5mx4wurrn6tyi_f.jpg?version=1741345290771006996",
+      "Equipment Model": "Solixon A-20"
+    },
+    {
+      "Prestation Name": "VStar 2 Turbo",
+      "Description": "- Low pressure volumetric gas or vapor sorption analyzer.\n- Gas (CO2, CH4, hydrocarbons) and vapor (water, alcohol, liquid hydrocarbons) sorption analysis \n- Sample type:solid powder\n- Capacity per day:1 samples\n- Optimum weight :50 mg",
+      "Prix MAD": 1080,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/wnu7x5he5hflclm7sbc2wiq613hnixzan4jb4_f.png?version=1700943044276513282",
+      "Equipment Model": "VSTAR 2 station Turbo"
+    },
+    {
+      "Prestation Name": "XRD",
+      "Description": null,
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/117tiy4jrxv03eyr56d3vrqzehyersyjs8tv7p_f.jpg?version=1715621417849170422",
+      "Equipment Model": "Dynamic 500"
+    },
+    {
+      "Prestation Name": "BET",
+      "Description": "Automated surface area and porosity analyzer\nSample type:solid powder\nCapacity per day:3 samples\nOptimum weight :200 mg",
+      "Prix MAD": 800,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/k522lnbxuiwib1op8npt7mlr0c290raltl0ta_f.jpg?version=1727431634958746613",
+      "Equipment Model": "V-sorber 2800P"
+    },
+    {
+      "Prestation Name": "Combi-Flash 810",
+      "Description": "Capacity of samples per days:10\nNature of sample :Liquid/solid",
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/qy67wtnd6wdg82ovunvhl543hylu18y2v8vt4_f.png?version=1703088899615040025",
+      "Equipment Model": 810
+    },
+    {
+      "Prestation Name": "Gaz chromatography TQ 8900",
+      "Description": "Application:Essential oil : 10 ul of EO in 1mL Hexan\nHexanic extract and dichloromethan extract : Concentration of samples: 10 mg of samples in in their solvent (hexan for hexan extract and dichloromethan for dichloromethan extract) dichloromethan extract)\nFatty acid : Need to do the transesterification reaction.\nCapacity of samples per days/hour:5\nNature of sample:Liquid/Solid",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/153ouoipfk70kqiesuwb7z2ggf7zsl6i94e79v_f.jpg?version=1727429981967814196",
+      "Equipment Model": "8900 TQ"
+    },
+    {
+      "Prestation Name": "High Performance Liquid Chromatography",
+      "Description": null,
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/zcyfcn0a66hkrrpvjefhyvnpgd3fgn1n2yirw_f.png?version=1689192757546513066",
+      "Equipment Model": "LC-NETII/ADC"
+    },
+    {
+      "Prestation Name": "Liquid Chromatography-Mass Spectrometry",
+      "Description": null,
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/nwbfpuy13pd7own6u2kp2z1khj3fx6zkwu57b_f.png?version=1689192770504951907",
+      "Equipment Model": "1260 INFINITY II"
+    },
+    {
+      "Prestation Name": "Microscope a force atomique",
+      "Description": "Capacity of samples per days/hour:10\nNature of sample:Solid/Powder",
+      "Prix MAD": 800,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1abtkfxww8a5x8y3061oqbnx249rlu18379u9g_f.png?version=1727430532061889392",
+      "Equipment Model": "alpha 300R"
+    },
+    {
+      "Prestation Name": "Microwave",
+      "Description": "Nature of sample:Liquid\nCapacity of samples per day:3",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/714fzl6jk2fiep94woev3f1qvbnvjjcfdddus_f.jpg?version=1698947512202023205",
+      "Equipment Model": "Initiator+"
+    },
+    {
+      "Prestation Name": "Optical contact angle",
+      "Description": "Nature of sample:Liquid/Film/solide\nCapacity of samples per day:10",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1casvl6luavseyexqds8x4ovfgmkld9zl6mx44_f.jpg?version=1698946835185886068",
+      "Equipment Model": "OCA 50 EC"
+    },
+    {
+      "Prestation Name": "Press XRF and FTIR",
+      "Description": null,
+      "Prix MAD": 10,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1k07s058sob0wen4ph6vwhffkp4fbsjlw153r_f.jpg?version=1689344878423518807",
+      "Equipment Model": "PP25"
+    },
+    {
+      "Prestation Name": "Raman",
+      "Description": "Capacity of samples per days/hour:10\nNature of sample:Solid/Powder/Liquid",
+      "Prix MAD": 150,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/aho9b6gq1ym7z4t6p1bq6pdndl9qbqugaltxe_f.png?version=1727430674961101027",
+      "Equipment Model": "alpha 300R"
+    },
+    {
+      "Prestation Name": "Scanning Electron Microscope",
+      "Description": "Sample type:solid\n\nCapacity per day:5 samples",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/h3hv8fh9nm0swm7f2ayvtp9084yh9x4uhshy6_f.jpg?version=1728379801135836022",
+      "Equipment Model": "CLARA 2023- (S8000)_GMU"
+    },
+    {
+      "Prestation Name": "Spectrometre FT/IR",
+      "Description": null,
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/3fgdihplnt4o60nh8dgkw1t5osesqvi02f98r_f.png?version=1689192806279407559",
+      "Equipment Model": "IR-4600 LE"
+    },
+    {
+      "Prestation Name": "Spectrometre UV-VIS",
+      "Description": null,
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1jza9oz4991e7z27eszn6dr8haqg0wbyvp1csi_f.png?version=1689192808115100368",
+      "Equipment Model": "V-770"
+    },
+    {
+      "Prestation Name": "Speed Wave",
+      "Description": null,
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/9xmq064o88wpknrnz9nb58hdh0l8yjo6sm8wo_f.png?version=1689192809963619152",
+      "Equipment Model": "SW-E"
+    },
+    {
+      "Prestation Name": "TG-ATD/DSC",
+      "Description": "Application:The equipment allows a real simultaneous measurement, from ambient temperature up to 1500 ° C and on the same sample of : Heat flux (DSC), mass loss (ATG) and differential thermal analysis (DTA).\n\nTG/ATD 1400°C maximum\nTG/DSC 1100 °C Maximum\n\nCapacity of samples per days:5\nNature of samples:Fine to medium grinded sample",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1atvkc1n1kevjukk74g8h95lpu3bfnvfw8dec6_f.jpg?version=1727430996463378492",
+      "Equipment Model": "TGA PT 1600"
+    },
+    {
+      "Prestation Name": "Ultrason À Sonde",
+      "Description": null,
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/12fd1a4iawbuiibmfbbzf0z3ecabaa661zq1lp_f.png?version=1689439428123673653",
+      "Equipment Model": "VCX750"
+    },
+    {
+      "Prestation Name": "Water purification System",
+      "Description": null,
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/16kya9sus0h83lb5gzd8gudrppkih5abjwl2e0_f.png?version=1698947967909642336",
+      "Equipment Model": "HX7080"
+    },
+    {
+      "Prestation Name": "Zetasizer",
+      "Description": "Nature of sample:Liquid\nCapacity of samples per day:10",
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1emgcghvkw8s0nenlphtol0thr3yfco7ka6797_f.png?version=1698946036651579521",
+      "Equipment Model": "Blue pro"
+    },
+    {
+      "Prestation Name": "Microscope Axioscan 7",
+      "Description": "ZEISS Axioscan 7 Your high-performance slide scanner for fluorescence, brightfield and polarization, Digitize your samples with Axioscan 7 and create high-quality virtual slides reliably and reproducibly. Axioscan 7 combines outstanding features for a slide scanner: ultra-fast scanning, excellent image quality and an unrivalled range of imaging modes, all in a fully automated, easy-to-use system.                                                                                                                           Fast, automated scanning for up to 100 slides in a single pass.\nRobust, high-performance scanner for 24/7 continuous operation.\nEasy-to-create scan profiles thanks to intuitive software wizards.\nFast switching between fluorescence, bright field and polarization.\nSophisticated filter concept for demanding fluorescence imaging.\n\nApplication:Biology (fluorescently labeled or naturally fluorescent samples)\n\n\nSample type:microscope slides, biological samples (histology, cytology, biological tissue) prepared between slide and coverslip.\n\nMinimum Sample required:10",
+      "Prix MAD": 35,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/bb3otvhjv6wig596riso3qc9cv3iop50enu5i_f.jpg?version=1703688036072787724",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Microscope Axioscope 5",
+      "Description": "ZEISS Axioscope 5 Your intelligent microscope for routine tasks and medical biology research Four multichannel fluorescence channels at the click of a button Fluorescence microscopy image acquisition has never been easier. Combine the Axioscope 5 microscope with the Colibri 3 LED illumination source and the ultra-sensitive stand-alone microscope camera. The result is a perfect configuration that simplifies the documentation of multiple fluorescence channels. Switch effortlessly between channels for UV, blue, green and red excitation.\n\nApplication:Biology (fluorescently labeled or naturally fluorescent samples), thin-film mineralogy \n\nSample type:microscope slides, biological samples (histology, cytology, biological tissue) prepared between slide and coverslip.\n\nMinimum Sample required:2",
+      "Prix MAD": 60,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1dgwk35d8arba0iz082alsa493u5m5vm6yvx48_f.jpg?version=1703512836368047616",
+      "Equipment Model": "Axioscope 5"
+    },
+    {
+      "Prestation Name": "Microscope Discovery V8",
+      "Description": "Application:Biology (fluorescently labeled or naturally fluorescent samples), thin-film mineralogy \n\nSample type:microscope slides (transmitted light observation), biological samples biological or mineralogical samples and materials (reflected light observation).",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1lo3jg1ec4jcjq55g8d6e1auqpxi0pga342ab1_f.jpg?version=1703512777710940676",
+      "Equipment Model": "Discovery D8"
+    },
+    {
+      "Prestation Name": "Microscope LSM 900 Confocale",
+      "Description": "ZEISS LSM 900 with Airyscan 2, Your compact confocal microscope for non-invasive Multiplex imaging and intelligent analysis. The Airyscan 2 takes you further than any conventional LSM detector. Each of its 32 detectors gathers additional information, while jointly collecting even more light, for quantitative, super-resolution results. ZEN microscopy software offers a host of features for reproducible results in the shortest possible time. AI Sample Finder helps you quickly detect regions of interest, saving you valuable time that you can devote to your experiments. Smart Setup lets you apply the optimum imaging parameters for your fluorescent markers. Direct processing handles image acquisition and data processing in parallel.\n \n\nApplication:Biology (fluorescently labeled or naturally fluorescent samples), thin-film mineralogy \n\nSample type:microscope slides, biological samples (histology, cytology, biological tissue) prepared between slide and coverslip.\n\nMinimum Sample required:1",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/fh2daiw26r276faxbdjez1dglrhtzz1yv7sde_f.jpg?version=1703334005848259055",
+      "Equipment Model": "LSM 900/axio observer 7"
+    },
+    {
+      "Prestation Name": "Microscope Primostar 3",
+      "Description": "Sample type:microscope slides, biological samples (histology, cytology, biological tissue) prepared between slide and coverslip",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/49nkbc009pu8au0jk15flflnsgvaq4e1avf8e_f.jpg?version=1703333908667343316",
+      "Equipment Model": "Axiocam 208"
+    },
+    {
+      "Prestation Name": "Liquid Chromatography-Mass Spectrometry",
+      "Description": "Thermo Fisher orbitrap Fusion Lumos ETD coupled to UtliMate 3000 RSLC nanoLC\n\nApplication: Mass Spec proteomics.",
+      "Prix MAD": 1000,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/pfa3toq057bmuhg2nzz0q1nnpam0tojwue6cb_f.jpg?version=1716201386597341276",
+      "Equipment Model": "Orbitrap Fusion Lumos"
+    },
+    {
+      "Prestation Name": "Scanning Electron Microscope",
+      "Description": "-The FEI FEG 450 (Field Emission Gun) electron microscope is equipped with several detectors, in particular the EDS BRUKER XFlash 6/30 detector, and accessories allowing a structural and chemical morphological study of all types of solid and powder samples.\nThis equipment gives the possibility of carrying out quality controls for different industries in the field of materials (automotive industry, metallurgical industry, microelectronics, photovoltaic cell ...), this system also lends itself to the observation of micro-organisms.\n\n-Samples type: Epoxy Blocks (25mm or 30 mm); Thin sections (27x47mm);\n SOLID samples (powder, Blocks, cross sections); Thin layer (27x47mm)\n\n-Capacity per day: 2 booking",
+      "Prix MAD": 307,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/bzeqrasr2rgz51905gj4wxvmdq02q6wqbhqrt_f.png?version=1705488386685676730",
+      "Equipment Model": "Quanta FEG 450"
+    },
+    {
+      "Prestation Name": "Proton (1H) and/or 31P",
+      "Description": null,
+      "Prix MAD": 122,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1idmbmvwwoggtvvd4u2mvzkgknsp624y122zsa_f.jpg?version=1707132989964104407",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "Proton (1H),13C,13C-DEPT, 19F or 29Si",
+      "Description": "min Required Weight 25 mg\nSample nature:Fine powder",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1ewyj9hx8bgstqevfytx3vwiuaabgxuj6orh1i_f.jpg?version=1710501688472306751",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "Proton (1H),13C,13C-DEPT, COSY, HSQC, HMBC, NOESY",
+      "Description": "min Required Weight 25 mg\nSample nature:Fine powder",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/siv4uea73mjo6inet9ry10db98dbvc9sjp7tr_f.jpg?version=1707132906414106116",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "Proton (1H),13C,13C-DEPT, COSY, HSQC, HMBC, NOESY, 19F or 29Si",
+      "Description": "min Required Weight 25 mg\nSample nature:Fine powder",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/4hmitd8v9zrc6s2uxaj4gdl5b2g2kjiw6bevk_f.jpg?version=1710503583156662366",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "NMR Analysis per Hour",
+      "Description": "min Requiered Weight 90 mg\n\nSample nature:Fine powder",
+      "Prix MAD": 122,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/uic9lw5roumbslnco0iaaoxvwngiwwyathds_f.jpg?version=1706800444612924790",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "1H + Xi solid state",
+      "Description": "min Required Weight 90 mg\n\nSample nature:Fine powder",
+      "Prix MAD": 550,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/7rq44wf6loifmo9k6fm0cmbfb3825wddq4zbp_f.jpg?version=1731356256639897183",
+      "Equipment Model": "Avance III 600 MHz"
+    },
+    {
+      "Prestation Name": "Flash chromatography",
+      "Description": "Substance separation\n Capacity of samples per day: 1.\n Nature of sample:Liquid or solide.",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/17vqou23xev7wiu13is81li0s7foce70mivyzq_f.png?version=1689192746453978951",
+      "Equipment Model": "Teledyne ISCO"
+    },
+    {
+      "Prestation Name": "Gaz Chromatographie Mass Spectroscopy",
+      "Description": "* Volatile substances analysis (non polar compounds).\n* Applications:Essential oil/ hexanic extract/ dichloromethan extract/ fatty acid.\n* Capacity of samples per day:5\n* Nature of sample:Liquid\n* Sample preparation:\nEssential oil : 10 ul of EO in 1mL Hexan\nHexanic extract and dichloromethan extract : Concentration of samples: 10 mg of samples in in their solvent (hexan for hexan extract and dichloromethan for dichloromethan extract) dichloromethan extract)\nFatty acid : Need to do the transesterification reaction.",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ub3lxs1unsdwqk0udteiznkdui7gf80f71pco_f.png?version=1689192751568599911",
+      "Equipment Model": "GC-2030"
+    },
+    {
+      "Prestation Name": "Hight Performance Liquid Chromatography",
+      "Description": "Molecule quantification.\nCapacity per day : 5 Samples.\nPS: Standard of the molecule to be provided.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1lv27unn8bj0m6bdx9bsjw1ikqdg64hy7mhxw5_f.png?version=1689192758357242496",
+      "Equipment Model": "Chromester CM ORG"
+    },
+    {
+      "Prestation Name": "Liquid chromatography mass spectroscopy",
+      "Description": "* Applications:secondary methabolite from plant : water extract /ethanalic extract/ methanolic extract/Chloroform extract.\n* Capacity of samples per day: 8\n* Nature of sample:Liquid\n* Sample preparation : \nConcentration of samples:10 mg of samples in their solvent (water for water extract,  ethanol for ethanolic extract, methonol for methanolic extract and chloroform for chloroformic extract).",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1h9l6x5pzt2lay0lrmww8l6tk2248cl53zhjk2_f.png?version=1689436552038109499",
+      "Equipment Model": "LC-8050"
+    },
+    {
+      "Prestation Name": "Bioreactor",
+      "Description": "Applications:Anaerobic digestion / Biogas production / Microorganism multiplication.\n\nNature of samples:cells, bacteria, yeasts, specific microorganisms,bacteria, algae, fungi, yeasts.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/jmmvjwkvtztqxu8apfqbwm1hxayz8c2btas1t_f.png?version=1689939077561938174",
+      "Equipment Model": "BCU F1"
+    },
+    {
+      "Prestation Name": "Bioreactor",
+      "Description": "Applications:Cell culture, microorganism culture, aeorobic anaerobic digestion fermentation.\n\nNature of samples:cells, bacteria, yeasts or specific microorganisms;bBacteria, algae, fungi, yeast.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1b63yez39zan22nb1mnssemkj1eekxe2xhn2kf_f.png?version=1689192722082782160",
+      "Equipment Model": "BB-8821051"
+    },
+    {
+      "Prestation Name": "Coaters",
+      "Description": "Coating fertilizers with a biopolymer.\n\nCapacity of samples per hour: 1",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/df2gwxxv2eoqrsxn5njryas9cilncwkaufqc6_f.png?version=1689192728692138204",
+      "Equipment Model": "Twirlo"
+    },
+    {
+      "Prestation Name": "Encapsulator",
+      "Description": "*Encapsulation of chemical substances, biomolecules and microorganisms.\n\n*Applications:Formulation of biopolymer-based beads, encapsulation of oils encapsulation of microorganisms and biofertilizers.\n\n*Capacity of samples per hour:1\n\n*Nature of samples: Essential oils ,biological samples such as cells, tissues, microorganisms ,biofertilizers.",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1dk8513eulftwcqkf2yarqnn5tsxknx1fwxmni_f.png?version=1689508962425090110",
+      "Equipment Model": "B390"
+    },
+    {
+      "Prestation Name": "Granulateur",
+      "Description": "*Powder shaping, pellet production from biomass.\n\n*Application:Transformation of biomass into pellets.\n\n*Nature of samples:Biochare , algae , fertilizer, compost; biomass pellets :Wood straw , Rock phosphate.\n\n*Capacity of samples per day:4",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1dtv9csem7c6bq0qlnwrfjywutno0c2g2283a2_f.png?version=1689618284793512572",
+      "Equipment Model": "S4 WE 320"
+    },
+    {
+      "Prestation Name": "Sonificator",
+      "Description": "*Homogenization, degassing, emulsification, DNA extraction, bacterial lysis, oil nanoemulsions.\n*Applications:Bacterial lysis ,Homogenization ,Solubilization ,Preparation of emulsions ,Extraction.\n*Natures of samples:Biological cells, liquid samples such as solutions, emulsions or suspensions, Solid samples: In certain cases.\n*Capacity of samples per days:8",
+      "Prix MAD": 10,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/f90m8z23r7gdxdgzrpogqontg69l174yh05cb_f.png?version=1689192802802868967",
+      "Equipment Model": "VCX1500"
+    },
+    {
+      "Prestation Name": "Tensiometer",
+      "Description": "*Measurement of surface tension between liquid and air or liq/liq-measurement of contact angle.\n\n*Nature of samples:Water, aqueous solutions, organic liquids, oils, organic solvents.\n\n*Capacity of samples per day: 24 Samples.",
+      "Prix MAD": 10,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/9073p24gsrk0tybeehhg2l75ze5c01itk7o0_f.png?version=1689192814679643959",
+      "Equipment Model": "OCA 15EC"
+    },
+    {
+      "Prestation Name": "Bioreactor",
+      "Description": "Development and multiplication of microalgae culture.\n\nNature of sample:Liquid microalgae culture\n\nCapacity of sample:1 sample per 20 to 30 days",
+      "Prix MAD": 120,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/h2rfqlkdx5j2r0tkxci5b2uhdpiu3zf1e4ueg_f.png?version=1689863062844008811",
+      "Equipment Model": "Jupiter 2"
+    },
+    {
+      "Prestation Name": "Incubator Shaker",
+      "Description": "Harvesting large microalgae biomasses from small quantities\n\nNature of samples:Liquid microalgae culture\n\ncapacity of samples:1 sample per 20 to 30 days",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/tpno7idzq8rd346ndxnkmsc7gdrs2ilmbbkop_f.png?version=1689192762131062265",
+      "Equipment Model": "INNOVA 44R-44"
+    },
+    {
+      "Prestation Name": "Inverted Microscopes Nikon",
+      "Description": "Studing the evolution of microalgae cells (Number, size and morphology..)\n\nCapacity of samples:20 per day\n\nNature of samples:Cells",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ha3q4crxuuovmqf1e1llm6o09ilggawwt08ak_f.png?version=1689192764745567052",
+      "Equipment Model": "TS2-S-FL"
+    },
+    {
+      "Prestation Name": "Microscope",
+      "Description": "Observation of the cellular morphology of microorganisms\n\nCapacity of samples:20 per day\n\nNature of samples:Cells",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/cfebqljui1vedy749mip3g3nvm6lzy4h93u20_f.png?version=1689192775845311278",
+      "Equipment Model": "Eclipse CiL trinoculair"
+    },
+    {
+      "Prestation Name": "Photobioreactor",
+      "Description": "Microalgae culture.\n\nNature of sample:Microalgae and cyanobacteria\n\nCapacity of sample:1 to 2 sample per 30 days",
+      "Prix MAD": 900,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1b3d4qwqcnshfgrc0ziabjfbjvind4boztg6el_f.png?version=1704883187057723574",
+      "Equipment Model": "ELARA ST 4.0"
+    },
+    {
+      "Prestation Name": "Spectrometre UV-VIS",
+      "Description": "Optical density and absorbance measurement \n\nDetermine the absorbance of a sample and the concentration of cells or specific molecules in a microorganism  \n\nCapacity of samples per day:50\n\nNature of samples:Liquid solution",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/10d1xmmaibf43qzxtf4ws0kfrlj22z80q31ybj_f.png?version=1689192807195092662",
+      "Equipment Model": "UV-1900 I"
+    },
+    {
+      "Prestation Name": "Sterilizer",
+      "Description": "Sterilization of coves  \n\nCapacity of samples per day:70\n\nNature of samples:Coves - Anses",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/t3v6sdku6r152815nyfja61xuafbw3d8yfaxb_f.png?version=1689874574393507146",
+      "Equipment Model": "BA6101"
+    },
+    {
+      "Prestation Name": "Gel Electrophoresis",
+      "Description": "Electrophoresis gel migration",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13jx4gnho6mm1168fmh6lnb9jw47vmqr6cwv1f_f.jpg?version=1689882621310678425",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Grinder-homogenizer",
+      "Description": "Sample grinding for DNA extraction or assay (leaves, roots, microorganisms, soil)",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": null,
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Growth Chamber 1",
+      "Description": "Plant growth chamber",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1cr35jlie8jocxansu5g10sdkokrpgsu0wo87c_f.png?version=1689192754997614327",
+      "Equipment Model": "ECP01"
+    },
+    {
+      "Prestation Name": "Growth Chamber 2",
+      "Description": "Plant growth chamber",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/bnj9jrbmmcu1ni47konmikss0sqk1j46ay6k0_f.png?version=1689854672480444572",
+      "Equipment Model": "Labs premium-snijders"
+    },
+    {
+      "Prestation Name": "Horizontal autoclave",
+      "Description": "Sample Sterilization",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/14k40ctcf37bcohuicd274980rtfxx71hfwsnc_f.png?version=1689880431066504234",
+      "Equipment Model": "Systec DX45"
+    },
+    {
+      "Prestation Name": "Incubator shaker 1",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:30",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/68xyyr6csqo6nk456bzrbiedrxj0rrxmu2e80_f.png?version=1689869869936165617",
+      "Equipment Model": "KS 4000 IC C S000"
+    },
+    {
+      "Prestation Name": "Incubator shaker 2",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:30",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/mn3iwnflnjgyvvq0tgxgc8cnt2yrp7n5nnc8q_f.png?version=1689869897701817974",
+      "Equipment Model": "KS 4000 IC C S000"
+    },
+    {
+      "Prestation Name": "Incubator shaker 3",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:30",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1027wwhwp686kztaqkpddrwecq3t6ofigzp9c_f.png?version=1689869928251414894",
+      "Equipment Model": "KS 4000 IC C S000"
+    },
+    {
+      "Prestation Name": "Incubator shaker 4",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:30",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1fdkhfsctn4m93b55cln2jrlg8sswyauzu5bhr_f.png?version=1689869946697866425",
+      "Equipment Model": "KS 4000 IC C S000"
+    },
+    {
+      "Prestation Name": "Incubator shaker 5",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:20",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/5bhsz93a9wvuhnfxerjaj3a9l5q99fcvcykqd_f.png?version=1689870391293888446",
+      "Equipment Model": "ES-20/60"
+    },
+    {
+      "Prestation Name": "Incubator shaker 6",
+      "Description": "Agitation-Incubation of liquid samples\nCapacity of samples per day:20",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/dmi33dp6hgtdbuc9qolf581k6kvmtoepeaurh_f.png?version=1689870641655462548",
+      "Equipment Model": "ES-20/60"
+    },
+    {
+      "Prestation Name": "Inverted Microscope",
+      "Description": "Microscopic observation of microorganisms (bacteria - fungi, ...)",
+      "Prix MAD": 120,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11glxx1uv7hbfu0hwzecvn8pg2kr3yk6tyfwd3_f.png?version=1690303371688319349",
+      "Equipment Model": "ECLIPSE TS2-FL"
+    },
+    {
+      "Prestation Name": "Laminar flow hood Bacteria",
+      "Description": "Asceptical work (bacteria)",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1l29b2hsyfvb8cen76rky2c256u7ul7c8eqqro_f.png?version=1689872864800965165",
+      "Equipment Model": "Herasafe 2030i 1.5"
+    },
+    {
+      "Prestation Name": "Laminar flow hood for pathogens",
+      "Description": "Asceptical work (pathogens)",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/q4ek1j8qgsw5rcyr3ocazsnujjybpf4r66bnz_f.png?version=1689873182279327789",
+      "Equipment Model": "Herasafe 2030i 1.5"
+    },
+    {
+      "Prestation Name": "Laminar flow hood Fungi",
+      "Description": "Asceptical work (fungi)",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ggvuc56ogi8ftdyo4wr8b1zmpn1eo93i6gdoi_f.png?version=1689872907542609410",
+      "Equipment Model": "Herasafe 2030i 1.5"
+    },
+    {
+      "Prestation Name": "Microbial Cell Counter",
+      "Description": "Cell counter\n\nCapacity of sample per day:30\n\nNature of samples:Liquid",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1chu4hpypkeivv9a9vu3qykdgbieqsdbvj1g74_f.png?version=1689192773908053386",
+      "Equipment Model": "Quantom Tx"
+    },
+    {
+      "Prestation Name": "Optical microscope",
+      "Description": "Microscopic observation of microorganisms (bacteria - fungi, ...)",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1kt9077qvw325nxypwyyiquwpj4j428d9i7kqn_f.png?version=1689868382465833739",
+      "Equipment Model": "Optech-Optical"
+    },
+    {
+      "Prestation Name": "Stereo-Microscope with Camera",
+      "Description": "Observation and images of roots/leaves/microorganismes",
+      "Prix MAD": 150,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1a18icrqw159h6uop1310tu397dnmmadqls7ug_f.png?version=1689192811246105492",
+      "Equipment Model": "Nikon SMZ25"
+    },
+    {
+      "Prestation Name": "Vertical Autoclave 1",
+      "Description": "For sample sterilization",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/yjc0gtwgu4jsdm5u5twi4j2lr07bpag7c5twd_f.png?version=1689192821503359403",
+      "Equipment Model": "Vapor Line 135-B"
+    },
+    {
+      "Prestation Name": "Vertical Autoclave 2",
+      "Description": "Sample Sterilization",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/7u7xlzthckmoy5r0lg8dyi6c3sbtp5ianwkce_f.png?version=1689192822408188351",
+      "Equipment Model": "AE 150 Dry"
+    },
+    {
+      "Prestation Name": "Vertical Autoclave 3",
+      "Description": "Sample Sterilization",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/3f51ro9p7hd48tiepb0mtr8zr5rfcvlyyk1n4_f.png?version=1689866883189113186",
+      "Equipment Model": "Systec 3870 ELV"
+    },
+    {
+      "Prestation Name": "Fluorimeter",
+      "Description": "Application:Measurement and analysis of chlorophyll fluorescence\nCapacity of samples per hour: 30.\nNature of sample:Plant leaves",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/159j9yc7yw6hn2318qaolf79w9i0kslx3oumj3_f.jpg?version=1716477272744537770",
+      "Equipment Model": "Handy PEA+"
+    },
+    {
+      "Prestation Name": "WinRHIZO",
+      "Description": "Root sccanner\nApplication:Analyze the morphology and architecture of the root system\nCapacity of samples per hour: 12.\nNature of sample:Plants roots",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": null,
+      "Equipment Model": "EU-235"
+    },
+    {
+      "Prestation Name": "Ceptometer",
+      "Description": "Photosynthetically, active radiation\nCapacity of samples per hour : 60.\nNature of samples : Plant.",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/19f7nnk448de2tngn90tc92jwbid4qddwjumw5_f.png?version=1689192723912854737",
+      "Equipment Model": "ACCUPAR LP-80"
+    },
+    {
+      "Prestation Name": "Chlorophyl-Meter",
+      "Description": "Measurement of the chlorophyll content.\n\nCapacity of samples per hour: 270.",
+      "Prix MAD": 30,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/524erdmkkgu5rt71dtfb8jd6ybswwpchcq0ip_f.png?version=1689192727692379603",
+      "Equipment Model": "CCM-200"
+    },
+    {
+      "Prestation Name": "Colorimeter Minolta CM-5",
+      "Description": "*Measurement and quantification of color using the Lab* color space. L*, a*, and b* are colorimetric values that represent different aspects of color.\n*Nature of samples:Solid materials: Seeds and flour.\n*Capacity of samples per hour : 30.",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11iwpos2yrzqeu0hvw4fgdie8jjunop2zb12u5_f.png?version=1689192729752276161",
+      "Equipment Model": "CM 5"
+    },
+    {
+      "Prestation Name": "Cyclone Mill Twister",
+      "Description": "Grinding and homogenizing samples prior to analysis\nNature of sample : Seeds (cereals and legumes).\nCapacity per hour : 20.",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/nvytdfc0ct4h4j774u7gd8eoz841zptb5tqjw_f.jpg?version=1689379254139118833",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Farinograph-AT",
+      "Description": "Measurement of rheological properties of dough during mixing such as water absorption, mixing time, dough development time, stability, Degree of softness, quality score.\nCapacity of samples per hour: 1.\nNature of samples : Flour.",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/bjn818rsk1ixw9v7zfcseb51atpoeijkbu68y_f.png?version=1689192745400621273",
+      "Equipment Model": 821010.02
+    },
+    {
+      "Prestation Name": "GrainScan",
+      "Description": "Measurement of various parameters of individual grains or grain samples, such as Length, Width, Area, PErimeter, Thickness, shape, Circularity, thousand kernel weight.\nCapacity of samples per day : 200.\nNature of samples:Cereals (Durum wheat, Bread wheat, Barley, Quinoa) and legumes seeds (Chickpea, lentils and Vigna).",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/qiy5fc7rfg8wbuuaj653b8yk1fhf996s6amwz_f.png?version=1689192753902936145",
+      "Equipment Model": "OPTOAGR PMG 101"
+    },
+    {
+      "Prestation Name": "Infrared Thermometer",
+      "Description": "Canopy T°.",
+      "Prix MAD": 10,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/uahwngyjawjnm1mbz4j96epz7tuia5zpcjmrm_f.png?version=1689192763820980621",
+      "Equipment Model": "835-H1"
+    },
+    {
+      "Prestation Name": "Leaf Area Meter",
+      "Description": "Measurement of the total leaf area..\n\nCapacity of samples per day : 200.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/yx5b89kv09h3v9ogz6p8tzk1r3m4nco8yqzx8_f.jpg?version=1689525821814785563",
+      "Equipment Model": "LI- 3100C"
+    },
+    {
+      "Prestation Name": "Near-Infrared Spectroscopy",
+      "Description": "Analysis of the interaction between near-infrared light and matter to determine the composition and properties of materials (Seeds and Flour).\n\nAvailable Calibration : Cereals and Legumes.\n\nAvailable Traits : Protein, Fiber, Moisture, Fat, Ash, Starch.\n\nMinimum required Weight : 10g.\n\nNature of samples : Seeds and flour of cereals and pulses.\n\nCapacity of samples per day : 200.",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/rhxtk10aedk9e6dcr199z8dbchhp9p1zbehzs_f.png?version=1689192778378668855",
+      "Equipment Model": "NISRS DS2500"
+    },
+    {
+      "Prestation Name": "Porometre",
+      "Description": "Stomatal conductance.\nMeasurement of air or water vapor flow through stomatal pores, to provide information on plant water status, photosynthetic activity and general plant health.\nCapacity of samples per hour:160\nNature of sample :Plant leaves",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/17f5cnruc5jr3fel2heiwa6qb7kp40ncfu7g02_f.png?version=1689192791417068536",
+      "Equipment Model": "AP4 POROMETR"
+    },
+    {
+      "Prestation Name": "Quadrumat Junior",
+      "Description": "Refined Flour yield\nGrinding or milling small grain samples to obtain representative flour samples",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1fzrp7u10x0m5lbuatcd4891v44yks3o0jkgl6_f.png?version=1689192793305204828",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Seed Counter",
+      "Description": "Automatic Counting of large quantities of seeds accurately and efficiently.\nCapacity of samples per day: 200\nNature of samples: Seeds",
+      "Prix MAD": 10,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/hr0em8bk8knkfcsgqk7nyv1jtpm6jmoc0x1gx_f.png?version=1689192798353381725",
+      "Equipment Model": "Data count S25 PLUS"
+    },
+    {
+      "Prestation Name": "Spectrophotometer",
+      "Description": null,
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1chpgyaaj0otiyq4fys9feluxz6tnaxuly249w_f.jpg?version=1689439003058613715",
+      "Equipment Model": "Ultraspec 7000"
+    },
+    {
+      "Prestation Name": "Chemical  Analysis of Soil - Pack analysis",
+      "Description": "Soil chemical Analysis - Pack analysis",
+      "Prix MAD": 300,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/ms9st7nncq082krdqjj8h15azvtx2agspd655_f.jpg?version=1689592596697487274",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Chemical Analysis of Plant - Element analysis",
+      "Description": "Chemical Analysis of Plant - Element analysis",
+      "Prix MAD": 50,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/agy07ifgg5zwnaul3r8jd6x6v10i11n9x50uo_f.jpg?version=1689686562869796954",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Chemical Analysis of Plant - Element analysis",
+      "Description": "Chemical Analysis of Plant - Element analysis\n\nSamplePreparation  skalar Method\n total Nitrogen     Kjeldhal Method\n Phosphore P       skalar Method  \n Calcium Ca        SAA /ICP \n Potassium K       SAA /ICP \n Magnesium Mg      SAA /ICP \n Sodium Na         SAA /ICP \n Chlorure Cl       skalar Method\n Soufre S          ICP-OES \n Trace element    (Cu, Fe, Mn, Zn) SAA /ICP \n Boron B            ICP-OES \n Cadmium Cd        ICP-OES \n Plomb Pb          ICP-OES \n Arsenic As        ICP-OES \n Cobalt Co          ICP-OES \n Slives Ag         ICP-OES \n Baryum Ba         ICP-OES \n Vanadium V        ICP-OES \n Nickel Ni         ICP-OES \n Chrome Cr         ICP-OES \n Molybdene Mo      ICP-OES \n Mercury Hg        ICP-OES",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/e8hed4a50ouqozezvhy2wm7bvvs7y85d384s0_f.jpg?version=1710757208482123526",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Chemical Analysis of Plant - Pack analysis",
+      "Description": "Chemical Analysis of Plant - Pack analysis\n\nPack 1 : Preparation and digestion + (N, P, K, Ca, Mg)\nPack 2 : Pack1 + (Cu, Mn, Fe, Zn, B)\nPack 3 : Pack 2 + Heavy Metals (Pb, Cd, Ni, As, Co, Cr, Mo, Ag, Ba, Be, Ti, V, Se, Sr, Sb, Hg)",
+      "Prix MAD": 300,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/1io1s2hdg2xbk8mgpccw9drj8jgtxz9auxk2g7_f.jpg?version=1710757341608403239",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Chemical Analysis of Plant - Pack analysis",
+      "Description": "Chemical Analysis of Plant - Pack analysis",
+      "Prix MAD": 300,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/1hanwmza6m6tx3f7kz5eh3vkg5jhft1koumtww_f.jpg?version=1689686631081399071",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Other Analysis (Fertilizer, Compost...) - Element analysis",
+      "Description": "Other Analysis (Fertilizer, Compost...) - Element analysis",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/nceyvirj9ofww4pgdj6uxpmaob1hz3ifiwbn_f.jpg?version=1689695276070823700",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Other Analysis (Fertilizer, Compost...) - Element analysis",
+      "Description": "Other Analysis (Fertilizer, Compost...) - Element analysis\n\nPreparation             skalar Method\n total Nitrogen NTK    Kjeldhal Method\n Phosphore P         skalar Method \nCalcium Ca          SAA /ICP \nPotassium K        SAA /ICP \nMagnesium Mg SAA /ICP \nSodium Na         SAA /ICP \nChlorure Cl      skalar Method\nAmmonia Nitrogen N-NH4 (Extract 1/5) - Skalar Method \n Soufre S ICP-OES \nTraces element (Cu, Fe, Mn, Zn) SAA /ICP \nCadmium Cd ICP-OES \nPlomb Pb ICP-OES \nNickel Ni ICP-OES \nChrome Cr ICP-OES \nArsenic As ICP-OES \nMercury Hg ICP-OES \n Aluminium (Al) ICP-OES \n Baryum (Ba) ICP-OES \nBoron (B) ICP-OES \nChrome (Cr) ICP-OES \nCobalt (Co) ICP-OES \n plomb (Pb) ICP-OES \nlithium (Li) ICP-OES \n magnesium (Mg) ICP-OES \nmolybdene (Mo) ICP-OES \nphosphore (P) ICP-OES \npotassium (K) ICP-OES \nselenium (Se) ICP-OES \nsliver (Ag) ICP-OES  \nsodium (Na) ICP-OES \nthallium (Tl) ICP-OES \n titane (Ti) ICP-OES \nvanadium (V) ICP-OES",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/5ele0qil4gmf5supurzhm7ckghjnqd9wpk8os_f.jpg?version=1710757392162393829",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physical Analysis of Soil - Element analysis",
+      "Description": "Physical Analysis of Soil - Element analysis",
+      "Prix MAD": 100,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/nl9rn8c6x6w13r37bn8ddryktgjer5ywbjnha_f.jpg?version=1689593166381086107",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physical Analysis of Soil - Element analysis",
+      "Description": "Physical Analysis of Soil - Element analysis\nAnalysis:\nAggregates stability\nBluk Density\nField Capacity\nGranulometry - Particle size 3 Fraction\nGranulometry - Particle size 5 Fraction\nInfiltration rate & Ks (in situ)\nParticle's density\nPermanent Wilting Point",
+      "Prix MAD": 100,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/k2tnvbb2qkypdna68hhktqy8hu2n6klrkycio_f.jpg?version=1710757462207924070",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physico-chemical analysis of water - Element analysis",
+      "Description": "Physico-chemical analysis of water - Element analysis",
+      "Prix MAD": 20,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/xaa66kjwkwk9alv6g8pt0aizag9q2v9ve0o1n_f.jpg?version=1689601641875387341",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physico-chemical analysis of water - Element analysis",
+      "Description": "Physico-chemical analysis of water - Element analysis\n\nAmmonium NH4 - Skalar Method\nArsenic As - ISO11885\nBarium Ba - ISO11885\nBoron B - ISO11885\nCadmium Cd - ISO11885\nCalcium Ca - Skalar Method\nCarbonates and bicarbonates - Skalar Method\nChloride Cl - Skalar Method\nChromium Cr - ISO11885\nCobalt Co - ISO11885\nComplete alkalimetric titration TAC - ISO9963\nCopper Cu - ISO11885\nDBO5 - NM5815-1\nDCO - MA315DCO1.1\nDihydrogen phosphates H2PO4 - Skalar Method\nElectric Conductivity - ISO7888\nIron Fe - ISO11885\nMagnesium Mg - - Skalar Method\nManganese Mn - - ISO11885\nMercery Hg - ICP or SAA\nMolybdene Mo - ISO11885\nNickel Ni - ISO11885\nNitrate NO3 - Skalar Method\nNitrite NO2 - Skalar Method\npH determination - NFISO10523\nPlomb Pb - ISO11885\nPotassium K - Skalar Method\nSilver Ag - ISO11885\nSodium Na - Skalar Method\nSulfates SO4 - Skalar Method\nSuspended matter MES - NM872\nTH hardness - NM037020\nTotal Nitrogen - Kjeldhal Method\nTrace element (Cu, Fe, Mn, Zn) ICP or SAA - ISO11885\nTurbidity - Internal Method\nVanadium V - ISO11885\nZinc Zn - ISO11885",
+      "Prix MAD": 20,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/13oswhdr7ztxfasxigh5hgqzmesg13uuk7udkw_f.jpg?version=1710757530745980792",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physico-chemical Analysis of Water - Pack analysis",
+      "Description": "Physico-chemicall Analysis of Water - Pack analysis",
+      "Prix MAD": 40,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/6rghp0l128w0jn3np0j2tihq84hq6x1i1ylxy_f.jpg?version=1689686602313621386",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Physico-chemical Analysis of Water - Pack analysis",
+      "Description": "Physico-chemicall Analysis of Water - Pack analysis\n\nPack1 : Electrical conductivity, pH\nPack 2 : Pack1 + Ion balance (K, Na, Ca, Mg, NH4, Cl, SO4, HCO3, PO4, NO3)\nPack 3 : Pack 2 + Trace element ( Cu, Fe, Mn, Zn, B)\nPack 4 : Pack 3 + Heavy metals (Pb, Cd, Ni, As, Co, Cr, Mo, Ag, Ba, Be, Ti, V, Se, Sr, Sb, Hg)\npH, Conductivity, TSS, COD, BOD5, Ammoniacal nitrogen, Nitric nitrogen, Total phosphorus",
+      "Prix MAD": 40,
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/ta7hhkb0ls85a7nsd2w4wtuw6o0l6wkqbvslh_f.jpg?version=1710757730706371155",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Alpha II - FTIR",
+      "Description": "MIR Spectral Analysis measurements (Qualitative analyze).\nCapacity of samples per days : 48 sample.\nCapacity of analysis per Hour : 2 samples / Hour.\nMinimum samples for analysis: 5 samples.\nNature of sample : Dried Powder.\nOptimum required weight : \n - Soil : 5g - 10g\n - Plant : 2g - 5g\n - Fertilizer : 5g - 10g.",
+      "Prix MAD": 30,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/15aatb976748nra0l9woios5k4cv17mpyzq5mv_f.png?version=1689192714713086446",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Elemental Analyser : Dumas",
+      "Description": "Elemental Analyzer : Dumas. \nCapacity of analysis per day : 48 sample / Day.\nCapacity of analysis per hour : 2 samples / Hour.\nMinimum Sample to analyze : 5 samples.\nMinimium sample amount : 5g.\nNature of sample : Dried Powder.\nElement : \n- Total Carbon (TC)\n- Total Nitrogen (TN)\n- Total Hydrogen (TH)\n- Total Oxygen (TO)\n- Total Sulfur (TS)\n- Total Organic Carbon (TOC).",
+      "Prix MAD": 90,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/r108kafwyya5sew4w7ns921bl4ns1t506jc3j_f.png?version=1689192744361347094",
+      "Equipment Model": "Flash smart"
+    },
+    {
+      "Prestation Name": "Medium Infrared Spectroscopy - FTIR",
+      "Description": "MIR Spectral Analysis measurements (Qualitative analyze).\ncapacity per day : 100 samples.\nMinimum samples for analysis: 50 samples ( for less than 50 samples better to use Alpha).\nNature of sample : Dried Powder.\nOptimum weight required : \n - Soil : 5g - 10g\n - Plant : 2g - 5g\n - Fertilizer : 5g - 10g.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/5rw6d46shaiuih5kxwpxu0jfs1eghz8kisttc_f.png?version=1689192773032880605",
+      "Equipment Model": "TENSOR II  HTS-XT"
+    },
+    {
+      "Prestation Name": "Mortar Grinder",
+      "Description": "Soil grinding.\nCapacity of samples per days : 40 sample.\nMinimum samples for analysis: 1 samples.\nNature of sample : Solid.",
+      "Prix MAD": 30,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/4qgrxsebmyu2iz8sy63wgdibhrrpflk2wm9gw_f.png?version=1702564062995090349",
+      "Equipment Model": "RM 201"
+    },
+    {
+      "Prestation Name": "XRF Spectrometer",
+      "Description": "X-ray Fluorescence : Qualitative and quantitative identification of major element (Fe, K, Ca, Zn, Mn).\nCapacity of analysis per day : 20 samples / day.\nMinimum Sample weight : 20g.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1k81rtr0ryomu80fniiasf410fbe8pafosu5ou_f.png?version=1689505064191959444",
+      "Equipment Model": "Tracer 5I"
+    },
+    {
+      "Prestation Name": "Growth Chamber",
+      "Description": "High Specification Plant Growth Chamber\nApplication:Arabidopsis, Plant Growth, Tissue Culture, Seed Germination, Storage Insect breeding, Simulated Growing Environments\nMinimum Sample required:5 pots/1 tray\nCapacity per day:45 pots/10 trays",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/n9hm229v64paolg0n6crudabn7s35sk3gfihh_f.png?version=1741701847118548218",
+      "Equipment Model": "MC1750VHO-EVD"
+    },
+    {
+      "Prestation Name": "Total Organic Carbon analyzer",
+      "Description": "Chemical analysis of organic carbon content in water or liquid solutions\nsample type:Liquid\nCapacity per day:50 samples per day\nMinimum sample required:10 samples",
+      "Prix MAD": 25,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/qweioj4vb1obkff2l0x9pbxx4xcqjy7rbf7sj_f.png?version=1741702959085641905",
+      "Equipment Model": "TOCL-CPH"
+    },
+    {
+      "Prestation Name": "Calcimétrie de bernard",
+      "Description": "carbonate mesurement\n\nNature of samples:Roche and sol",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/6k32g2drphoe62ngps809ey9jlhrkhcnf1wmi_f.png?version=1738055290138177947",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Conductivimetre:Fluor & Chlore mesurement",
+      "Description": "Fluor mesurement",
+      "Prix MAD": 170,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11ikij9h31hax80we043z73urkww1nopjyzpds_f.jpg?version=1734975378811580602",
+      "Equipment Model": "Orion™ Versa Star Pro™ pH/ISE/Conductivity/Dissolved"
+    },
+    {
+      "Prestation Name": "Confection de lame mince",
+      "Description": "This lame confection service utilizes the following equipment:\n\nHeating Bonding Press\nLapping machine\nGrinding Machine \nMultiplate grinder\nMulti Turnable Polishing Machine",
+      "Prix MAD": 220,
+      "Reservable Type": "reservable",
+      "Class": "service",
+      "ImageURL": null,
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Cutting Machine",
+      "Description": "Rock cutting",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1klzw78x8k244tuetsmwe0i6v93f0o0g6vi55j_f.png?version=1689192734327443500",
+      "Equipment Model": "1 02 04"
+    },
+    {
+      "Prestation Name": "Cutting Machine",
+      "Description": "Rock cutting",
+      "Prix MAD": 20,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/c397siw0xqlvjnumgm91qfuzsf6c9yu5jn9hw_f.png?version=1689673791225601817",
+      "Equipment Model": 10204
+    },
+    {
+      "Prestation Name": "Electromagnetic Soil Conductivity Measurement System",
+      "Description": null,
+      "Prix MAD": 1600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1m3j0nds1va7om5l8ii6qfczythlgvr6miedwj_f.jpg?version=1689379487050797568",
+      "Equipment Model": "EM38"
+    },
+    {
+      "Prestation Name": "Gamma Probe",
+      "Description": "* Mesurement of the amount of gamma radiation  produced by isotopes of potassium, thorium, and uranium.\n* Insitu measurement of natural gamma dose with determination of concentrations of radioisotope K, U, Th in borehole\n* Exploration drilling",
+      "Prix MAD": 575,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": null,
+      "Equipment Model": "MW-2035-305"
+    },
+    {
+      "Prestation Name": "Handheld Gamma Ray Analyzer",
+      "Description": "Measuring natural gamma radioactivity",
+      "Prix MAD": 255,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/64ved8ikoorp88b01vzispw42yqvyxjkz6xfr_f.png?version=1689380572945554187",
+      "Equipment Model": "GAMMA SURVEYOR VARIO"
+    },
+    {
+      "Prestation Name": "Handheld XRF Analyzer",
+      "Description": "Elementary semi-quantitative analyzes of soils and rocks",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/an8lib4papcvzg86nsfpsdns35d5va62pz9zr_f.jpg?version=1689192755728011634",
+      "Equipment Model": "Niton XL5"
+    },
+    {
+      "Prestation Name": "ICP-OES",
+      "Description": "Chemical characterisation, Mono element analysis.",
+      "Prix MAD": 110,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/qlttwkm4d7dy8f2zk1t1hpzsoy52sf9k6aua6_f.png?version=1689192761156827180",
+      "Equipment Model": "Avio 550 max"
+    },
+    {
+      "Prestation Name": "Jaw Crusher",
+      "Description": "Pre-crushing",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/145uff2vfolh7eq5tt0ivl7lapidthqb2jelw3_f.png?version=1689192766313809692",
+      "Equipment Model": "BB 100"
+    },
+    {
+      "Prestation Name": "Light Optical Microscope",
+      "Description": "*An optical facility used to view, identify, and microphotography rocks, minerals, and metal/non-metal or solid objects. This microscope is used in optical mineralogy, petrography, and metallography which focus on detailed descriptions of geological samples.\n\n*Nature of sample:Thin sections; Epoxy Blocks (25mm or 30 mm).",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1hcfysmdh725ykm5wtpp6mzs6ms8pdf25e3dki_f.png?version=1689459574510996041",
+      "Equipment Model": "DM2700 P"
+    },
+    {
+      "Prestation Name": "Mortar Grinder",
+      "Description": "Grinding",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/314coszgt2vq7tvevqget4spb54vxnhxmf9p7_f.png?version=1689192777569259664",
+      "Equipment Model": "PULVERISETTE 2"
+    },
+    {
+      "Prestation Name": "Particle Size Analyser",
+      "Description": "Particles size distrubution mesurment",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1drzbtf9k6rvjsxz64btuyv5jwlm7307xl3a9d_f.jpg?version=1689192781500499388",
+      "Equipment Model": "Masterizer3000"
+    },
+    {
+      "Prestation Name": "Planetary Mill",
+      "Description": "Grinding",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1ln3a67p4ujpzx2664li1d2we837lbukr3w1va_f.png?version=1689192784356982177",
+      "Equipment Model": "PULVERISETTE 5"
+    },
+    {
+      "Prestation Name": "Planetary Mill",
+      "Description": "Grinding",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/rnc8y487vbr49um9s58loe90t0fwholx8ztfh_f.png?version=1689192782357222457",
+      "Equipment Model": "PULVERISETTE 5"
+    },
+    {
+      "Prestation Name": "Polissage de lames et de sections",
+      "Description": "Thin section polishing",
+      "Prix MAD": 165,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11p60v2n2wwfe2ylilt2pl2yrptw4k0kcc9wfp_f.png?version=1689192788482494596",
+      "Equipment Model": "1 03 17"
+    },
+    {
+      "Prestation Name": "Proton Magnetic Resonance Probing System",
+      "Description": null,
+      "Prix MAD": 6000,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/b9ws8zuhzif8tmwb1meysg1liif8gznho6ja0_f.jpg?version=1689459959086595884",
+      "Equipment Model": "NUMIS POLY"
+    },
+    {
+      "Prestation Name": "Resistivity Meter",
+      "Description": "* Exploration and mine reconnaissance of the phosphate series,hydrogeophysical study of phosphate,deposits Substances prospecting.\n* Application:Electrical Resistivity Tomography (HRT).\n* On-site measurement.",
+      "Prix MAD": 1600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/14qion4qmzbiiegijem8mvd4i42p80xa1nyclj_f.png?version=1689437489410373074",
+      "Equipment Model": "SYSCAL Switch Pro"
+    },
+    {
+      "Prestation Name": "Stereo Microscope",
+      "Description": "An optical microscope variant designed for low-magnification observation of materials, typically using light reflected and transmited of a sample.\n\nMicrophotography; optical mineralogy; petrography; metallography, metallurgy; micropaleontology\n\nNature of samples:Solid samples; Powders; Thin sections; Epoxy Blocks.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1eu55gl2h15o4s63twtpspxk93v3pl02f2ak2c_f.png?version=1689192812249165441",
+      "Equipment Model": "M165 C"
+    },
+    {
+      "Prestation Name": "Vacuum Embedding Set",
+      "Description": "Embedding of porous and brittle samples.\n\nNature of sample: Powder.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/jck36yudjk71ik7q1o8s4iiq3a9rn9f4785ki_f.png?version=1689460512451614789",
+      "Equipment Model": "1 04 05"
+    },
+    {
+      "Prestation Name": "Vibrating Cup Mill",
+      "Description": "Grinding",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/mwps8pm43vwpkxpzi8vf4cu5fbw9963inlga_f.jpg?version=1689621685345440216",
+      "Equipment Model": "PULVERISETTE 9"
+    },
+    {
+      "Prestation Name": "XRF Spectrometer",
+      "Description": "Chemical characterisation.\n\nNature of samples:Rock and soil powder",
+      "Prix MAD": 270,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1dr49uomey0eacygs5w5v0hur8wwkqzxmsll7z_f.png?version=1689508788898016203",
+      "Equipment Model": "ZSX Primus IV"
+    },
+    {
+      "Prestation Name": "Abrams Cone",
+      "Description": null,
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11uihvq3h00prfnm2w6i2nopjx0ywjmtfhysaw_f.jpg?version=1689192713753874450",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Automatic Prisometer/Plunger for Consistency Test",
+      "Description": "Determine the cement setting time",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/b0qmkd2l7ha9nhpg859i1d3bmq07kwid7wstc_f.jpg?version=1689379026835690410",
+      "Equipment Model": "LO722"
+    },
+    {
+      "Prestation Name": "Chatelier Mold",
+      "Description": "Determine cement stability",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/sc147ukl8hikuan60q63n4qyrpmlrj06l8rwj_f.jpg?version=1689379151010964968",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Concrete Mixer",
+      "Description": "Preparation of concrete formulations",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/18eioqsny7tpay3ng9lst0s76rnamuhzbgzfi6_f.jpg?version=1689192731306833443",
+      "Equipment Model": "55-C0199/9A"
+    },
+    {
+      "Prestation Name": "Cubic Steel Mold",
+      "Description": "Standardized mortar making",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1fss8crv5lo6cy3ifu8sq8faw52fyod7czf8w5_f.jpg?version=1689192732224448887",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Cylindrical Mould",
+      "Description": "Standardized concrete making",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1eavu6726bjuocmf4ymclibjm887hrpxmbobcd_f.png?version=1689617294683477289",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Disc Mill",
+      "Description": "Grinding of samples.\nNature of samples:Rock & soils\nOptimim mass required:1600g",
+      "Prix MAD": 80,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/hr0z9pi3g4t1c5etfyub5gsdi1gofbbf5zt3k_f.png?version=1689192738473874609",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Diver for cement consistency test",
+      "Description": "Cement consistency test.\nNature of samples:Ciment",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/aalscidyoh7rdh0nrajw2c9qj6s9b4e7y2znw_f.png?version=1689580593047837520",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Electrical Sewer Table + 2 Brass Moulds + Stitching Rod",
+      "Description": "Determine the mortar consistency\n\nNature of sample:Cement & mortar",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1bt0g4l7uoa0zqzb8axf4d7953cr0neijj8dvu_f.jpg?version=1689544463878913063",
+      "Equipment Model": "E0087/EN"
+    },
+    {
+      "Prestation Name": "Galvanized mold  10 cm * 10 cm",
+      "Description": "Preparation of samples for thermal conductivity testing.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/187d5y0sm35qufyzn0get98qud5oc9j1bugwyq_f.png?version=1689617763464594569",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Galvanized mold  30 cm * 30 cm",
+      "Description": "Preparation of samples for thermal conductivity testing.",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/zbxajytgiybpviswlqzwltjjno0th5sgr8bvx_f.png?version=1689617850278862105",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Grinding machine for concrete test",
+      "Description": "Surface coating of concrete test pieces\nNature of samples:concrete",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/e6mxftd155rgwp4q1y8hnjxdrun855dxienqr_f.png?version=1690276077775066704",
+      "Equipment Model": "55-C0201/B"
+    },
+    {
+      "Prestation Name": "hydrostatic weighing frame",
+      "Description": null,
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/j8r897k8daj65ilwdsg800pce8l47tmbt98nm_f.jpg?version=1704708053727444129",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Impact table + Moulds 4*4*16",
+      "Description": "Standardized mortar making\nNature of samples:Cement & mortar",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/p4x1cyif85x3qhc8vu091b6n3jzred8xryqht_f.jpg?version=1689532843588496583",
+      "Equipment Model": "YGM12166"
+    },
+    {
+      "Prestation Name": "Los Angles",
+      "Description": "Shock resistance",
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1dw81u7272kjc4ghoi4eru719gya335up8k728_f.png?version=1689437203888878438",
+      "Equipment Model": "48-D0500/G"
+    },
+    {
+      "Prestation Name": "Mechanical Concrete Press",
+      "Description": "Mechanical crushing test on concrete test pieces..",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/168r5qo5v05ekc478hjf803ls45il4qb3v5mcx_f.png?version=1689619017012904012",
+      "Equipment Model": "C57F02/M"
+    },
+    {
+      "Prestation Name": "Mechanical Press",
+      "Description": "Determine compressive strength and bending strength",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/55tsogvvw6n7by86l3ygc4y0ka96ap99ke55z_f.jpg?version=1689458885678482577",
+      "Equipment Model": "E0160"
+    },
+    {
+      "Prestation Name": "Micro-Deval",
+      "Description": "Wear resistance\n\nNature of sample:aggregate",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/m0pdb59g28wk9uwlvgjgnx2avd9x7xiltfgfo_f.png?version=1689459260887949310",
+      "Equipment Model": "48-D5242/A"
+    },
+    {
+      "Prestation Name": "Mixer (Electric Concrete Mixer)",
+      "Description": "Standardized concrete making",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1bd6wnqkenf142kmq9zuzx26hl81tbzxcnooph_f.png?version=1689542007026111200",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Mixer for VB and VBS",
+      "Description": "Test for VB and VBS",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/xw1zcl888bz7689i6hd117zipflw2i6r0am4t_f.jpg?version=1689619235805698350",
+      "Equipment Model": "R18"
+    },
+    {
+      "Prestation Name": "Modified Proctor",
+      "Description": "Modified Proctor test.\nNature of samples: Soils",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/vg71jgs2s6zmr2mxvx8icoo0ktv4rbtpzn2h_f.png?version=1689619707528657371",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Mortar Mixer",
+      "Description": "Preparation of mortar formulations",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/24muhzxq5iked7cxzcd6mkw3rh84nt8ydg8ie_f.png?version=1689532389879587507",
+      "Equipment Model": "E095"
+    },
+    {
+      "Prestation Name": "Normal Proctor",
+      "Description": "Proctor test  normal.\nNature of samples: Soils",
+      "Prix MAD": 350,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1l06flgi9yx0sjz9u6o4oonset9w4sdkxuig41_f.png?version=1689620326390548083",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Oedometer",
+      "Description": "Oedometer Test",
+      "Prix MAD": 800,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/8jq249t6gt2abj9tju6nqw8t9st2lxt41938j_f.jpg?version=1689192780608414769",
+      "Equipment Model": "WF0302"
+    },
+    {
+      "Prestation Name": "Oxygen permeometer",
+      "Description": "Determination of the permeability of beton has oxygen by the cembureau method.\nNature of samples:concrete",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ni848cb5u3j5z7bnyn5mam2c69a1oeunyuusr_f.png?version=1690276339605024297",
+      "Equipment Model": "58-E0031"
+    },
+    {
+      "Prestation Name": "Penetrometer",
+      "Description": "Test the plasticity index.",
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ykzh0iwxu1p9zi0eyp4xewbfm9jyvrbbffj0q_f.png?version=1689456019009864684",
+      "Equipment Model": "22-T0029/D"
+    },
+    {
+      "Prestation Name": "Piezometric Probe",
+      "Description": null,
+      "Prix MAD": 150,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/f8clv1fyuh9qw33eyfcpbotekkw1xc96ymuji_f.jpg?version=1689785341752400720",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Planetary Mill",
+      "Description": "Crushing of samples for chemical analysis.\nOptimum weight required: 200g",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/154krw6r48euprdpkdz2f6ara97wucma2emgf6_f.png?version=1689192783564438294",
+      "Equipment Model": "Pulverisite5"
+    },
+    {
+      "Prestation Name": "Prismatic Steel Mold",
+      "Description": "Standardized mortar making",
+      "Prix MAD": 40,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/kkj33b0cszx7ut12civ8ck3gnvzvibj2461b1_f.png?version=1689620638261432844",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Pycnometer",
+      "Description": "Soil density and aggregates.\nNature of samples: Soils",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/shkwskxzzvl89aks55ec06icgycq2ytkp2ho7_f.png?version=1689619423779376775",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Rock and Masony Saw",
+      "Description": "Cutting of rocks and concrete cylinders",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1b8bxe0c7yo7a6ql3aesb6ofh66jqco6126z0_f.png?version=1689437721377938353",
+      "Equipment Model": "C210/D"
+    },
+    {
+      "Prestation Name": "Rotary Sample Divider",
+      "Description": "Reduction of samples.\nOptimum weight required: 1600g.",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/nqpex48audflajwl7gydgpehqnk1vsp54eci_f.png?version=1689438078120960253",
+      "Equipment Model": "8 1Lt"
+    },
+    {
+      "Prestation Name": "Sand equivalent apparatus",
+      "Description": "Sand equivalent is an indicator, used in geotechnical engineering, characterizing the cleanliness of a sand or grave.\n\nNature of samples: sand or grave",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1iaeo7brfcb7o1rwqi8skr1d7knwabbewavqex_f.png?version=1689579571760953862",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Schmidt’s Sclerometer",
+      "Description": "is an instrument used to measure the compressive strength of a material, such as concrete.\nNature of samples: Concrete.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13559qwlkruk26ax2e061edpaarx6a8bphw3c3_f.png?version=1689580904379711048",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Sieves",
+      "Description": "Particle size test.\nNature of samples: Aggregates & soils",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13s218gx5jerssyzr54wwxg6a67ik5dg81dw94_f.png?version=1689583157739708838",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Slot Grids",
+      "Description": "Flattening coefficient test.\nNature of samples: Aggregate",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/15vbg7hny21o23l2wud6skacsmen250o53hzgt_f.jpg?version=1689579196674854956",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Vibrating Cup Mill",
+      "Description": "Crushing of samples for chemical analysis\nOptimum weight required: 200g",
+      "Prix MAD": 50,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13yriw50fc0m0dqcl1yxevqpa2myh441oxo6cz_f.jpg?version=1689621635988614350",
+      "Equipment Model": "Pulverisite 9"
+    },
+    {
+      "Prestation Name": "Volumenometer Le Chatelier",
+      "Description": "Determine cement density.\nNature of samples: Cement.",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1fsj1ew1cynbo8sqw6nfpp8jf3ackrikcqwtbn_f.jpg?version=1689621786497044993",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "BET",
+      "Description": "* BET is an analytical technique utilized for determining specific surface areas and pore size distributions of solid materials.\n* Nature of samples: Fine to very coarse grinded sample.",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1lbnu147dqn5vhlfjyga3gp3dbh8rk71mqx12z_f.png?version=1689593145091885410",
+      "Equipment Model": "GeminisVII"
+    },
+    {
+      "Prestation Name": "Centrifuge",
+      "Description": "A high-performance benchtop centrifuge for large sample volumes",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/9g0fxuqozg3z6x7bf0jqc04qh12lctev4gtey_f.png?version=1690279557221426122",
+      "Equipment Model": "ROTINA 420"
+    },
+    {
+      "Prestation Name": "Flocculation Tester",
+      "Description": "* Flocculation Jar Tester is designed to stimulate the process of adding reagents, precipitation, coagulation reaction which occurs in water traitement procedures.\n* Nature of samples:Fine to medium grinded sample",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/dvu92skthzcx0mipglh8e6buhhgchtbz5z1c1_f.jpg?version=1689603396882698541",
+      "Equipment Model": "JLT6"
+    },
+    {
+      "Prestation Name": "Flotation machine 2",
+      "Description": "* Flotation machines are commonly used to evaluate a materials amenability to froth flotation processing.\n* Nature of samples:Fine to medium grinded sample",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11ocw08hmfpvm56mmcskx928aws9evesbmna4r_f.png?version=1689602596061701768",
+      "Equipment Model": "XFD-12"
+    },
+    {
+      "Prestation Name": "Fridge 1",
+      "Description": "Samples Storage",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1kx67956404br1b139bvrgevijcnjplct2vmzv_f.png?version=1690278030222580060",
+      "Equipment Model": "RDNE55X"
+    },
+    {
+      "Prestation Name": "Fridge 2",
+      "Description": "Samples Storage",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1e6swojyyi5gtpe606asgave9gd9oj7e85rc1l_f.png?version=1690278164910049998",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Gaz Pycnometer",
+      "Description": "*The AccuPyc II Series of Pycnometers (Gas pycnometer) provides high-speed, high-precision measurements for determining the true density of powders, solids, and slurries.\n* Nature of samples: Fine to Granule grinded sample",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/129unzg97l1100szbybnn2efnd1otvkqqvyxi1_f.jpg?version=1689593400563847360",
+      "Equipment Model": "AccuPyc II 1345"
+    },
+    {
+      "Prestation Name": "Inverted Optical Microscope",
+      "Description": "*An optical facility used to view, identify, and microphotography rocks, minerals, and metal/non-metal or solid objects. This microscope is used in optical mineralogy, petrography, metallography, metallurgy and micropaleontology. The instrument focuses on microphotography and detailed descriptions of objects.\n*Applications:Automated microphotography; optical mineralogy; petrography; metallography; metallurgy; micropaleontology.\n*Nature of samples:Thin sections; Epoxy Blocks; Solid samples.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/16wpw6eccgfoi5a3c5sn8euflv3559swyityhq_f.png?version=1689618716679856406",
+      "Equipment Model": "DMi8"
+    },
+    {
+      "Prestation Name": "Isothermal calorimeter",
+      "Description": "*Isothermal calormetry is a high resolution, real-time method for monitoring chemical, biological, and physical reaction process(es) occurring in a sample. The monitoring of heat flow over time allows for determination of the various reaction processes that may occur in a sample over minutes, hours, days, weeks, or years.\n\nNature of samples:Cement and concrete hydration, food degradation, microbial activity",
+      "Prix MAD": 700,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/zeltp6k0lghs9prq3s00k8hwqa8d7a62el1r1_f.png?version=1689594012340415278",
+      "Equipment Model": "TAM AIR"
+    },
+    {
+      "Prestation Name": "LIBS-Material Analysis Optical Microscope",
+      "Description": "*A Laser-Induced Breakdown Spectroscopy (LIBS) coupled with an Upright Polarized-Light Optical Microscope. This LIBS microscope combines visual and qualitative chemical inspection in a single work step. The facility delivers the exact chemical fingerprint of the material’s structure that you see in the microscope image – within seconds..\n*Applications:Mineral-material chemistry; Microphotography; Petrography.\n*Nature of samples:Thin sections; Epoxy Blocks (25mm or 30 mm), Solid samples.",
+      "Prix MAD": 166.67,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1085zpaljug8g5wp6om6kmaeebd4terxpathf7_f.png?version=1689618856667007582",
+      "Equipment Model": "DM6 M LIBS"
+    },
+    {
+      "Prestation Name": "Oven",
+      "Description": "A laboratory oven is used for high-volume thermal convection applications. It provides uniform temperature throughout the chamber necessary for annealing, drying, sterilizing, and other lab functions",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/u6u0whv4fguq3y03kyrf398a4uccsa51biu0y_f.png?version=1690278404616450954",
+      "Equipment Model": "UN260"
+    },
+    {
+      "Prestation Name": "RotaVapor",
+      "Description": "A rotary evaporator is a laboratory instrument commonly used for the distillation, extraction, and purification of samples.\nSolvant separation under reduced pressure",
+      "Prix MAD": "Internal Use only",
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/wp8c76ar48kixttou1ajd6syy4bgh48rvanpw_f.png?version=1690279148386976337",
+      "Equipment Model": "RS 100-PRO"
+    },
+    {
+      "Prestation Name": "Scanning Electron Microscope",
+      "Description": "- Integrated and automated Mineral Analyser.\n- Nature of samples: Epoxy Blocks (25mm or 30 mm); Thin sections (27x47mm); SOLID samples.",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1hlceppgclh1tw8yhfn7ncxac4gerhbhsmkays_f.png?version=1689621328530467624",
+      "Equipment Model": "TESCAN TIMA"
+    },
+    {
+      "Prestation Name": "Thermogravimetric Analysis",
+      "Description": "* The equipment allows a real simultaneous measurement, from ambient temperature up to 1500 ° C and on the same sample of : Heat flux (DSC), mass loss (ATG) and differential thermal analysis (DTA).\n* Nature of samples:Fine to medium grinded sample    \n* TG/ATD 1400°C maximum                    \n* TG/DSC 1100 °C Maximum",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/wfssud42y43h1y6btqbvpbmz6xyd5asuh3sbm_f.png?version=1689592291541334503",
+      "Equipment Model": "Themys one +"
+    },
+    {
+      "Prestation Name": "XRD",
+      "Description": "* Nature of samples: Solid powder (-30 µm).",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/e28s92wcz8pgkgmiibmkfku9l2octqzzsjz4h_f.jpg?version=1708335900993546124",
+      "Equipment Model": "MiniFlex 600"
+    },
+    {
+      "Prestation Name": "XRD Micronizing Mill",
+      "Description": "* Micronizer mill for preparation of samples for XRD analysis.\n* Nature of sample : Geological sample.",
+      "Prix MAD": 100,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1stdwp6fraxeri68k8ml8nis83hg44rtuym86_f.jpg?version=1708337951706196395",
+      "Equipment Model": "XRD-MILL MCCRONE"
+    },
+    {
+      "Prestation Name": "Zetasizer",
+      "Description": "*The Zetasizer Nano Zen3600 is a high performing two-angle particle and molecular size analyzer, used for improved detection and measurement of small and dilute samples. This instrument measures size, zeta potential, molecular weight and mobility of dispersed particles and molecules in solution, applying dual angle Dynamic Light Scattering (DLS), Non-Invasive Back-Scatter (NIBS), Static Light Scattering (SLS), and Electrophorectic Light Scattering (ELS).\n*Nature of samples:\n* Micronized grinded powder sample under 20 µm  For Zeta potential naturel mesurment.\n* Micronized grinded powder sample range of 0.3 nm to 1 μm for Zeta potential titration and Particle size mesurment.\n* Liquid for Development of the method (analytical conditions).",
+      "Prix MAD": 400,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1jpivi2lfboahpjiimmd1mmmpt62zmnd2o83t7_f.png?version=1710717780740181090",
+      "Equipment Model": "ZEN3600"
+    },
+    {
+      "Prestation Name": "Chemical Vapor Deposition",
+      "Description": "Deposit thin layers onto a sustrate. \nTemperature range : 0 - 1700°C.\nGaz available : \n- CH4\n- Argon\n- Nitrogen",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/79c87lx4kk55tknzh76wgdlu4nxuvxeq6z399_f.png?version=1689192725867616232",
+      "Equipment Model": "PT-1700-80*220*3-F4"
+    },
+    {
+      "Prestation Name": "Tubular Furnace",
+      "Description": "Growth of crystals.\nTemperature range : 0 - 1500°C.",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/w95melnzo89a406fwvou4jv0zcd0xoegvl5sb_f.png?version=1689439267523669730",
+      "Equipment Model": "R120/500/12"
+    },
+    {
+      "Prestation Name": "Simultaneous Thermal Analysis",
+      "Description": "The simultaneous thermal analyzer allows the measurement of mass changes and thermal effects between 30°C and 1500°C.\nSample matrix : Inorganic Material\nOptimum Sample weight : 15 mg.\nParameters : \n- Thermal Gravimetic Analysis (TGA)\n- Differential Scanning Colorimetry (DSC)\n- Differential Thermal Analysis (DTA)\n- Heat Flow Analysis (HFA)",
+      "Prix MAD": 250,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/fshl3onjbmbkhlkjbyiw9twnp5drhvmgx94np_f.png?version=1689438600716829940",
+      "Equipment Model": "STA449 F3"
+    },
+    {
+      "Prestation Name": "Atomic Force Microscope",
+      "Description": "The topography, and  the profiles of almost any  surface (thin film), can be \nmeasured with nanometric resolution. .\n\n-Samples type: Thin film;\n- Capacity per day :3 samples\n- Minimum Sample required:1",
+      "Prix MAD": 564,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1k4iaq1yi7bwt3igfr7npgakzg4czf9xf7k620_f.png?version=1719695797683872134",
+      "Equipment Model": "Dimension Icon"
+    },
+    {
+      "Prestation Name": "Contact angle",
+      "Description": "Contact angle, surface and interfacial tensions measurements system \n\n -Samples type: Substrate\n -Minimum sample required = 1\n- Capacity per day :3 samples\n- Minimum weight required: 1 Gr",
+      "Prix MAD": 127,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/12t8ixc6eb2m509s3ykj20byovuoygzqaq1eie_f.jpg?version=1719695925876631770",
+      "Equipment Model": "OCA 40"
+    },
+    {
+      "Prestation Name": "DSC",
+      "Description": "Differential Scanning Calorimeter measure temperatures and heat flows associated with thermal transition in a material such as glass transitions, phase change, melting, crystallization, product stability, cure and oxidative stability. \nThe TA Instruments Q100 DSC is a high-throughput, versatile instrument and is capable of temperature ranges from -90°C to 550°C and running up to 50 automated samples using up to 5 reference pans.\n\n-Samples type: Solid;\n- Minimum Sample required :1 - 2 gr",
+      "Prix MAD": 144,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/x2ym99yvgs0qiak2ojs5c1bkvyzkmyx6mdn7f_f.png?version=1719696046822744841",
+      "Equipment Model": "DSC Q100"
+    },
+    {
+      "Prestation Name": "GC-MS",
+      "Description": "Agilent 7890A GC  System.\nDetector: Mass spectrometry 5975C Agilent.\n16 Tray liquid injecteur.\nHeadspace\nA range of columns of different polarity and affinity\n*Analysis of essential oils.\n*Analysis of plant extracts.\n*Lipidomics.\n*Analysis of any matter dissolved in a solvent.\n*Analysis of ethanol production and nitrogen fixation capacity.\n*Analysis of semiochemicals from plants and insects.\n*volatile compound analysis.\n\n-Samples type: Liquid;\n- Capacity per day :8 samples\n- Sample type:Liquid",
+      "Prix MAD": 173,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/5ijh6v8nt0csr6gslitot9973xu2ogoqo60na_f.png?version=1719696478327434887",
+      "Equipment Model": "Agilent 7890A GC  System.\nDetector: Mass spectrometry 5975C Agilent."
+    },
+    {
+      "Prestation Name": "LN2 - Liquid Nitrogen",
+      "Description": null,
+      "Prix MAD": 38.14,
+      "Reservable Type": "reservablerequestable",
+      "Class": "consumable",
+      "ImageURL": "https://public.qreserve.com/1hd3rgni40gye2ypdea1yomfd3zayuuqp4cti7_f.png?version=1732269910492758076",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Profilometer",
+      "Description": "Surface characterisation, topography, thikness and roughness measurement.\n\n-Samples type: Thin film;\n- Capacity per day :3 samples\n- Minimum Sample required:1",
+      "Prix MAD": 74,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/6c5rwzgea1y2hoydd89nauz20zgtrkglxc660_f.jpg?version=1719697077560180010",
+      "Equipment Model": "DEKTAKT XT"
+    },
+    {
+      "Prestation Name": "PSA",
+      "Description": "Particle size distrubution.\n\n-Samples type: Particle (10 nm-  3 mm);\n- Capacity per day :3 samples\n- Minimum Sample required:5Gr",
+      "Prix MAD": 215,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/19q8m4jlhfwmsgyycei13el8f5yykqlqn16ryv_f.png?version=1719696655451793035",
+      "Equipment Model": "MASTERSIZER 3000"
+    },
+    {
+      "Prestation Name": "Skalar SAN++",
+      "Description": "The Skalar San++ Flow Continuous Analyzer is a sophisticated and automated instrument designed for the analysis of various chemical parameters in liquid and solide samples (soils, fertilizers,waters, plant digests, nutrients, pharmaceuticals, etc.) It is commonly utilized in environmental, industrial, and laboratory settings to measure concentrations of specific compounds or elements including N,P,K,Ca,Fe,Na,Mg, etc. The San++ provides flexibility and the possibility to extend the system according to any analytical needs.\nSpesifications:\n-3 chemistry manifolds;\n-High-resolution digital photometric detectors;\n-Segmented Flow Analyzer;\nThe Flow Continuous Analyzer streamlines the analytical process, improves productivity, and delivers precise and consistent results, making it a valuable tool in various scientific and industrial fields.\n\n-Samples type: Liquid,Solid;\n- Capacity per day :20 samples\n- Minimum Sample required:3",
+      "Prix MAD": 114,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/15164a4zaaz2u70moxk8d181l7xopkqg6wdtaq_f.jpg?version=1719697180850492377",
+      "Equipment Model": "SAN++ SA3000"
+    },
+    {
+      "Prestation Name": "Superspeed Centrifuge",
+      "Description": "Superspeed Centrifuge:Sample with density lower than 1.2g/cm3, liquid except solvant and inflamable products\n- Capacity:4 x 1000 mL,\n- Refrigerated:Yes\n- Temperature Range:-10°C to +40°C\n- Max. Speed:8000 rpm;\n- Max. RCF:11950g",
+      "Prix MAD": 35,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11ufz0ywjwob35qdtypqokx755so3phwtks2vw_f.jpg?version=1736170004334801975",
+      "Equipment Model": "Sorvall LYNX 4000"
+    },
+    {
+      "Prestation Name": "TGA",
+      "Description": "Thermal degradation characterization;\nTechnical specifications :\n- Thermal stability, degradation temperature, speed and\nranges;\n- Powder, solid, liquid and complex samples;\n- Autosampler and 16 samples carousel;\n- Ambiant to 1000°C temperature control ;\n- Kinetic studies\n\n-Samples type: Solid;\n- Minimum Sample required :1 - 2 gr",
+      "Prix MAD": 183,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/16zken7go6qwehgv2a6tf57i0wajjlqu4cva38_f.jpg?version=1719696119652171667",
+      "Equipment Model": "TGA Q500"
+    },
+    {
+      "Prestation Name": "UV-Vis-NIR",
+      "Description": "Spectroscopic analysis of absorption in the spectral range between ultraviolet and near infrared (190 nm to 3300 nm). The liquid or solid sample can be analyzed in transmission mode or by surface reflection. UV/Visible/NIR spectroscopy is of limited use for sample identification but ideal for quantitative measurements. It is usually applied to inorganic molecules or complexes.\n-Samples type: Solid and liquid;\n- Capacity per day :3 samples\n- Minimum Sample required:1",
+      "Prix MAD": 128,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/q3utkhrv3t9tnq0kcamx4hjba304aarmsf236_f.png?version=1719696991255114617",
+      "Equipment Model": "LAMBDA 1050"
+    },
+    {
+      "Prestation Name": "XRD",
+      "Description": "SmartLab SE multipurpose X-ray diffractometer is a general purpose X-ray diffraction\nsystem equipped with a thetha-thetha goniometer featuring a horizontal sample mount. It can measure and evaluate powders and thin films.\n\n-Samples type: Powders & Thin Films;",
+      "Prix MAD": 396,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/jswdkpxvaieq29y932byureoyvi4ndoypjope_f.jpg?version=1719697310065902817",
+      "Equipment Model": "SmartLab SE"
+    },
+    {
+      "Prestation Name": "Zetasizer",
+      "Description": "-The Zetasizer Nano ZS incorporates many techniques in a single compact unit: \n\nDynamic Light Scattering (DLS) is used to measure particle and molecule size. This technique measures the diffusion of particles moving under Brownian motion, and converts this to size and a size distribution using the Stokes-Einstein relationship. Measurement of size as a function of concentration enables the calculation of kD, the DLS interaction parameter.\n\nLaser Doppler Micro-electrophoresis is used to measure zeta potential. An electric field is applied to a solution of molecules or a dispersion of particles, which then move with a velocity related to their zeta potential. An available surface zeta potential accessory uses tracer particles to measure electro-osmosis close to a sample surface to calculate the zeta potential of the surface.       SPECIFICATIONS:\n* Particle size and molecular size\nMeasurement range: 0.3 nm – 10.0 µm (diameter)\nMinimum sample volume: 12 µL\nSensitivity: 0.1 mg/mL \n*Zeta potential\nMeasurement range: 3.8 nm – 100 µm (diameter)\nMinimum sample volume: 150 µL (20 µL using diffusion barrier method)\nSensitivity: 10 mg/mL (BSA)\n\n-Samples type: Liquid;\n- Minimum Sample required :10 - 20 ml",
+      "Prix MAD": 109,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/q07eyp5efllrc3kjx0hma08xozxybzxlhhtw1_f.jpg?version=1719697445487747048",
+      "Equipment Model": "ZETASIZER NANO SERIES 3600"
+    },
+    {
+      "Prestation Name": "Cutting Machine",
+      "Description": "Cutting metals and rockes",
+      "Prix MAD": 150,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1jngjtqyhubna8nkf7m4d9nvmewlqnp2k4ma2t_f.png?version=1689673878953610819",
+      "Equipment Model": "Mecatome T210"
+    },
+    {
+      "Prestation Name": "Drum Mill",
+      "Description": "Grinding",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1w8mgu1mrqerc8xmfccjzvtr8z3icagontn2o_f.png?version=1689192739994251453",
+      "Equipment Model": "TM 300"
+    },
+    {
+      "Prestation Name": "Dynamic Mechanical Analyzer",
+      "Description": "Generates magnified images of small objects",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/16ytaupauenpa70cb8lc4bgny70io1be4eudrd_f.png?version=1689192741607607033",
+      "Equipment Model": "DMA 8000"
+    },
+    {
+      "Prestation Name": "Fourier Transform InfraRed spectroscopy",
+      "Description": "Infrared spectrum of absorption or emission",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/16twextb4rjd059msyfpn491qytkyhmi1slhhl_f.png?version=1689192748405782227",
+      "Equipment Model": "Frontier"
+    },
+    {
+      "Prestation Name": "Hot Mounting Press",
+      "Description": "Encapsulate specimens with a mounting compound",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/csurx4041p4nmemy3fmc1d4h96t3ms977hx1t_f.png?version=1689192759318456173",
+      "Equipment Model": "Opal 410"
+    },
+    {
+      "Prestation Name": "Jaw Crusher",
+      "Description": "Grinding",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13hyjlt9dutecdi4m5hdh2cna2iubztwjos8nw_f.png?version=1689192767503807654",
+      "Equipment Model": "PULVERISETTE 1"
+    },
+    {
+      "Prestation Name": "Mechanical Testing Machine 1-5KN",
+      "Description": "Test of mechanical characteristics",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11v3uh6h0g4p7fen2q7nn049u7o1lstct38r8u_f.png?version=1689192771336963865",
+      "Equipment Model": "EZ-LX"
+    },
+    {
+      "Prestation Name": "Mechanical Testing Machine for Uniaxial/Triaxial Testing",
+      "Description": "Test of mechanical characteristics",
+      "Prix MAD": 600,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1jtzr11qu5zlip99j658764pijb6hcl6w3w08l_f.png?version=1689192772199678199",
+      "Equipment Model": "Syntax"
+    },
+    {
+      "Prestation Name": "Microcalorimeter",
+      "Description": "Measures the heat developed during reactions",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/2h12yhz4wfjkjq1p3p7qwrcmgj7jkd444n0st_f.png?version=1689192774828749730",
+      "Equipment Model": "FTTC001/11311"
+    },
+    {
+      "Prestation Name": "Planetary Mono Mill",
+      "Description": "Grinding",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/14kdd0rzc7pyr6ckk9p25ejjpym9lxcloxzfto_f.png?version=1689192785223080895",
+      "Equipment Model": "PULVERISETTE 6"
+    },
+    {
+      "Prestation Name": "Polishing Machine",
+      "Description": "Polishing solid samples",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/172gs4pmnnrwm6sn1flb1cqzqywagoj62w15lk_f.png?version=1689192786270174410",
+      "Equipment Model": "Saphir 530"
+    },
+    {
+      "Prestation Name": "PSA",
+      "Description": "Partciles size measurement",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/gmic2f3njf7wcjou4clg4adrzhd0c3z2ke60h_f.png?version=1689438454869099685",
+      "Equipment Model": "Mastersizer 2000"
+    },
+    {
+      "Prestation Name": "Pycnometer",
+      "Description": "Characterizez a material's properties as a function of temperature, time, frequency,\n stress, atmosphere or a combination of these parameters",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1fau0y4nledqp2ss1eretqjrq5tq2w9h4ev8tw_f.png?version=1689192792356506020",
+      "Equipment Model": "AccuPyc II 1340"
+    },
+    {
+      "Prestation Name": "Rheometer",
+      "Description": "Study of the flow and deformation of matter",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1g06i6ytv151ce6y4myhgjehe575yfgkfzc7qu_f.png?version=1689192795374379821",
+      "Equipment Model": "Discovery HR-3"
+    },
+    {
+      "Prestation Name": "Sand Blasting Machine",
+      "Description": "Removing rust, corrosion and paint from various surfaces",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13t1ifber59udo3j0hqr62ancywykl23zz2mhx_f.png?version=1689192796436436620",
+      "Equipment Model": "T-REX 100"
+    },
+    {
+      "Prestation Name": "UV-Vis-NIR Spectrophotometer",
+      "Description": "Calculation of the transmittance, reflectance and absorbance",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/11zqfi50oewcuf9q6zdvgt89ijsm1pkd8gqtpj_f.png?version=1689192820551992946",
+      "Equipment Model": "Lambda 1050"
+    },
+    {
+      "Prestation Name": "Vibratory Sieve Shaker",
+      "Description": "sieving, and particle size distribution of solids",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/y8wbfvoj9egy9ykufyplpo5zfhb70jkyx2c4v_f.png?version=1689192823288105769",
+      "Equipment Model": "ANALYSETTE 3 PRO"
+    },
+    {
+      "Prestation Name": "XRD",
+      "Description": "Phases analysis",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/13wv091pey8myw7ounl4o8d405zw0urcilg9y5_f.png?version=1689192824289255058",
+      "Equipment Model": "D8 ADVANCE"
+    },
+    {
+      "Prestation Name": "XRF Spectrometer",
+      "Description": "Elemental composition of materials",
+      "Prix MAD": 500,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/cg515val063t7ta8p8sx2abhh6jll5pm4zv34_f.png?version=1689192825186346603",
+      "Equipment Model": "EPSILON 4"
+    },
+    {
+      "Prestation Name": "ball mill",
+      "Description": "The TM 300 drum mill is used to prepare granules and powders by dry or wet grinding. This mill uses balls for grinding (ball mill). The TM 300 can process sample volumes of up to 20 liters.Capacities range from 3 kg/h to 10 kg/h.\n\nNature of samples:The sample can consist of solid particles, granules, etc.",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ejse7gnky2racz4hiyh8ynd5k662n2vmqepge_f.jpg?version=1710929836159968253",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Climatic measuring instrument",
+      "Description": "A climate meter is a device that measures various climatic parameters, such as temperature, humidity, atmospheric pressure, rain and wind. It can also measure other variables, such as light, UV radiation and air quality. The climate meter's various sensors are connected to a control unit, which converts the measurements into digital data and records them. Data can be displayed in real time on the unit, stored for later analysis, or transmitted to a computer for further analysis.",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/x2hxpyymsu8u1wj0wstse5d57zo9v7gpu5lzr_f.jpg?version=1710930262882104512",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Closed, stirred and insulated reactor",
+      "Description": "This closed, stirred and insulated reactor has a capacity of 150 liters, and can be heated up to 200°C. It is equipped with a 7 bar safety valve, pressure gauge and thermometer. The reactor is also equipped with an exchanger for liquefying off-gases, if required.",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/fk78l6uq08dj72yk2tcxg12ks315w97569qgb_f.jpg?version=1710497047915881435",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Combustion analyzer",
+      "Description": "Un analyseur de combustion mesure les gaz produits par la combustion d'un combustible, tels que le monoxyde de carbone (CO), l'azote (N2), l'oxygène (O2), le dioxyde de carbone (CO2) et le dioxyde de soufre, etc. Les mesures sont utilisées pour déterminer la qualité de la combustion et l'efficacité du système. Le principe de fonctionnement d'un analyseur de combustion consiste à aspirer un échantillon de gaz de combustion et à mesurer sa composition à l'aide de capteurs sensibles.",
+      "Prix MAD": 300,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/1mjt8xo3dkv1sssoo3rn1phlyhh6viiiul6d5b_f.png?version=1710930139136797921",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Combustion calorimeter",
+      "Description": "The CAL3K-A bomb calorimeter uses isothermal, adiabatic or dynamic calorimetry methods to measure temperature readings and calculate the result in MJ, BTU or Calories.\n\nCapacity of samples per hour: 2 samples",
+      "Prix MAD": 800,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/117muq3w6lgoqwt9m4tvo2mib7pu0i1a0lzgch_f.png?version=1710930353905436413",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "Decantor pilot",
+      "Description": "The settling pilot plant consists of the following components: a feed tank, a coagulant or flocculant tank, a coagulation or flocculation tank, and a settling column, comprising a cylindrical and a conical section. It features an automatic control system and a pumping system. The objective of this equipment is the separation of solid and liquid phases.\n\nApplication:Water and industrial waste treatment (coagulation, flocculation, settling)\n\nCapacity of operations per days: 2\n\nNature of sample:  Pulp , effluent",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/fhu1lv18plhbkm2r58ii3mki7t6cvf0xxmwdx_f.jpg?version=1709293861619122065",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "double jacket reactor",
+      "Description": "The reactor is equipped with a stirring shaft and can operate at temperatures up to 200°C.",
+      "Prix MAD": "Quotation",
+      "Reservable Type": "reservablerequestable",
+      "Class": "service",
+      "ImageURL": "https://public.qreserve.com/y0ks6y7s0nnnftcra6o0actowiuzffd5qswns_f.jpg?version=1710886534894847428",
+      "Equipment Model": null
+    },
+    {
+      "Prestation Name": "sieve shaker",
+      "Description": "The Ro-Tap® sieve shaker from W.S. Tyler™, has a unique two-dimensional operating mode: a horizontal circular motion and a vertical tapping motion. \n\nNature of samples:The sample can consist of solid particles, granules, etc.",
+      "Prix MAD": 200,
+      "Reservable Type": "reservable",
+      "Class": "equipment",
+      "ImageURL": "https://public.qreserve.com/ccm4gcw4xl3pyzl6kkxo2cp2wvm6qjay0eyt_f.png?version=1709294706189457431",
+      "Equipment Model": "RX-29-10"
+    }
+  ]
+}

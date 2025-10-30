@@ -38,6 +38,10 @@ dist/
 build/
 out/
 
+# Docusaurus
+docs/.docusaurus/
+docs/build/
+
 # Large files and binaries
 *.dmg
 *.exe

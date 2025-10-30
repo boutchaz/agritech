@@ -17,9 +17,16 @@ import Draw from 'ol/interaction/Draw';
 import type { SensorData } from '../types';
 import { useAddParcel } from '../hooks/useParcelsQuery';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
-import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Maximize2, Minimize2 } from 'lucide-react';
+import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Maximize2, Minimize2, Leaf, Sprout } from 'lucide-react';
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
+import {
+  getPlantingSystemsByCategory,
+  getCropTypesByCategory,
+  getVarietiesByCropType,
+  calculatePlantCount,
+  type CropCategory,
+} from '../lib/plantingSystemData';
 import {
   Dialog,
   DialogContent,
@@ -60,10 +67,18 @@ interface ParcelDetails {
   boundary?: number[][];
   calculated_area?: number;
   perimeter?: number;
-  // New parcel fields
+  // Enhanced planting system fields
+  crop_category?: string;
+  crop_type?: string;
   variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
   planting_date?: string;
+  planting_year?: number;
   planting_type?: string;
+  rootstock?: string;
 }
 
 interface SatelliteIndicesResult {
@@ -109,10 +124,31 @@ const MapComponent: React.FC<MapProps> = ({
     area: 0,
     planting_density: 0,
     irrigation_type: '',
+    crop_category: '',
+    crop_type: '',
     variety: '',
+    planting_system: '',
+    spacing: '',
+    density_per_hectare: 0,
+    plant_count: 0,
     planting_date: '',
-    planting_type: ''
+    planting_year: undefined as number | undefined,
+    planting_type: '',
+    rootstock: ''
   });
+
+  // Get available options based on selected crop category
+  const availableCropTypes = parcelDetails.crop_category
+    ? getCropTypesByCategory(parcelDetails.crop_category as CropCategory)
+    : [];
+
+  const availableVarieties = parcelDetails.crop_type
+    ? getVarietiesByCropType(parcelDetails.crop_type)
+    : [];
+
+  const availablePlantingSystems = parcelDetails.crop_category
+    ? getPlantingSystemsByCategory(parcelDetails.crop_category as CropCategory)
+    : [];
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
@@ -175,15 +211,46 @@ const MapComponent: React.FC<MapProps> = ({
 
   // Use prop parcels if provided, otherwise empty array
   const parcels = Array.isArray(propParcels) ? propParcels : [];
-  const { 
-    calculateIndices, 
-    getTimeSeries, 
-    exportIndexMap, 
-    loading: indicesLoading, 
+  const {
+    calculateIndices,
+    getTimeSeries,
+    exportIndexMap,
+    loading: indicesLoading,
     error: indicesError,
     availableIndices,
-    loadAvailableIndices 
+    loadAvailableIndices
   } = useSatelliteIndices();
+
+  // Auto-update density when planting system changes
+  useEffect(() => {
+    if (parcelDetails.planting_system) {
+      const system = availablePlantingSystems.find(
+        s => s.type === parcelDetails.planting_system ||
+             `${s.type} (${s.spacing})` === parcelDetails.planting_system
+      );
+      if (system) {
+        const density = 'treesPerHectare' in system ? system.treesPerHectare :
+                       'plantsPerHectare' in system ? system.plantsPerHectare :
+                       'seedsPerHectare' in system ? system.seedsPerHectare : 0;
+        setParcelDetails(prev => ({
+          ...prev,
+          density_per_hectare: density,
+          spacing: system.spacing
+        }));
+      }
+    }
+  }, [parcelDetails.planting_system, availablePlantingSystems]);
+
+  // Auto-calculate plant count when area or density changes
+  useEffect(() => {
+    if (parcelDetails.area && parcelDetails.density_per_hectare) {
+      const count = calculatePlantCount(parcelDetails.area, parcelDetails.density_per_hectare);
+      setParcelDetails(prev => ({
+        ...prev,
+        plant_count: count
+      }));
+    }
+  }, [parcelDetails.area, parcelDetails.density_per_hectare]);
 
   // Load available indices on component mount
   useEffect(() => {
@@ -1026,6 +1093,44 @@ const MapComponent: React.FC<MapProps> = ({
     }
   }, [center, zones, sensors, parcels, farmId, enableDrawing, mapType, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect]);
 
+  // Helper function to clean up drawing state
+  const cleanupDrawingState = () => {
+    // Remove temporary drawn features from the map
+    if (vectorSourceRef.current) {
+      const features = vectorSourceRef.current.getFeatures();
+      const tempFeatures = features.filter(f =>
+        !f.get('parcelId') && // Not a saved parcel
+        f.getGeometry() instanceof Polygon // Is a polygon (drawn parcel)
+      );
+      tempFeatures.forEach(f => vectorSourceRef.current?.removeFeature(f));
+    }
+
+    // Reset state
+    setShowNameDialog(false);
+    setShowParcelForm(false);
+    setParcelName('');
+    setTempBoundary([]);
+    setParcelDetails({
+      soil_type: '',
+      area: 0,
+      planting_density: 0,
+      irrigation_type: '',
+      crop_category: '',
+      crop_type: '',
+      variety: '',
+      planting_system: '',
+      spacing: '',
+      density_per_hectare: 0,
+      plant_count: 0,
+      planting_date: '',
+      planting_year: undefined,
+      planting_type: '',
+      rootstock: ''
+    });
+    setCalculatedArea(0);
+    setCalculatedPerimeter(0);
+  };
+
   const handleSaveParcel = async () => {
     if (!farmId || !parcelName || tempBoundary.length === 0) return;
 
@@ -1042,31 +1147,26 @@ const MapComponent: React.FC<MapProps> = ({
         area_unit: 'hectares',
         soil_type: parcelDetails.soil_type || undefined,
         irrigation_type: normalizedIrrigation || undefined,
-        tree_type: parcelDetails.variety || undefined,
+        // Enhanced planting system fields
+        crop_category: parcelDetails.crop_category || undefined,
+        crop_type: parcelDetails.crop_type || undefined,
         variety: parcelDetails.variety || undefined,
+        planting_system: parcelDetails.planting_system || undefined,
+        spacing: parcelDetails.spacing || undefined,
+        density_per_hectare: parcelDetails.density_per_hectare || undefined,
+        plant_count: parcelDetails.plant_count || undefined,
         planting_date: parcelDetails.planting_date || undefined,
+        planting_year: parcelDetails.planting_year || undefined,
         planting_type: parcelDetails.planting_type || undefined,
+        rootstock: parcelDetails.rootstock || undefined,
         calculated_area: calculatedArea,
         perimeter: calculatedPerimeter
       };
 
       const newParcel = await addParcelMutation.mutateAsync(parcelData);
-      
-      setShowNameDialog(false);
-      setShowParcelForm(false);
-      setParcelName('');
-      setTempBoundary([]);
-      setParcelDetails({
-        soil_type: '',
-        area: 0,
-        planting_density: 0,
-        irrigation_type: '',
-        variety: '',
-        planting_date: '',
-        planting_type: ''
-      });
-      setCalculatedArea(0);
-      setCalculatedPerimeter(0);
+
+      // Clean up drawing state
+      cleanupDrawingState();
 
       // Call the callback if provided, passing the new parcel
       if (onParcelAdded) {
@@ -1170,11 +1270,7 @@ const MapComponent: React.FC<MapProps> = ({
               />
               <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => {
-                    setShowNameDialog(false);
-                    setParcelName('');
-                    setTempBoundary([]);
-                  }}
+                  onClick={cleanupDrawingState}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Annuler
@@ -1193,198 +1289,307 @@ const MapComponent: React.FC<MapProps> = ({
 
         <Dialog open={farmId && enableDrawing && showParcelForm} onOpenChange={(open) => {
           if (!open) {
-            setShowParcelForm(false);
-            setShowNameDialog(false);
-            setParcelName('');
-            setTempBoundary([]);
-            setParcelDetails({
-              soil_type: '',
-              area: 0,
-              planting_density: 0,
-              irrigation_type: '',
-              variety: '',
-              planting_date: '',
-              planting_type: ''
-            });
+            cleanupDrawingState();
           }
         }}>
-          <DialogContent className="max-w-[500px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+          <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-white">Détails de la parcelle: {parcelName}</DialogTitle>
             </DialogHeader>
 
-              <div className="space-y-4 py-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type de sol
-                  </label>
-                  <select
-                    value={parcelDetails.soil_type}
-                    onChange={(e) => setParcelDetails(prev => ({
-                      ...prev,
-                      soil_type: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Argileux">Argileux</option>
-                    <option value="Limoneux">Limoneux</option>
-                    <option value="Sableux">Sableux</option>
-                    <option value="Argilo-limoneux">Argilo-limoneux</option>
-                    <option value="Limono-sableux">Limono-sableux</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Surface (hectares)
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      value={parcelDetails.area}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        area: Number(e.target.value)
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                      min="0"
-                      step="0.1"
-                      readOnly
-                    />
-                    <span className="text-sm text-green-600 font-medium">Auto-calculée</span>
-                  </div>
-                  {calculatedPerimeter > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Périmètre: {calculatedPerimeter} m
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Densité de plantation (arbres/ha)
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      value={parcelDetails.planting_density}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        planting_density: Number(e.target.value)
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      min="0"
-                    />
-                    {parcelDetails.planting_type && parcelDetails.planting_density === getStandardDensity(parcelDetails.planting_type) && (
-                      <span className="text-sm text-green-600 font-medium whitespace-nowrap">Auto-calculé</span>
+              <div className="space-y-6 py-4">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Sprout className="w-4 h-4" />
+                    Informations de base
+                  </h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Surface (hectares)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        value={parcelDetails.area}
+                        onChange={(e) => setParcelDetails(prev => ({
+                          ...prev,
+                          area: Number(e.target.value)
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-white"
+                        min="0"
+                        step="0.1"
+                        readOnly
+                      />
+                      <span className="text-sm text-green-600 font-medium">Auto-calculée</span>
+                    </div>
+                    {calculatedPerimeter > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Périmètre: {calculatedPerimeter} m
+                      </p>
                     )}
                   </div>
-                  {parcelDetails.planting_type && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Densité standard pour {parcelDetails.planting_type === 'traditional' ? 'traditionnelle' :
-                                            parcelDetails.planting_type === 'intensive' ? 'intensive' :
-                                            parcelDetails.planting_type === 'super_intensive' ? 'super-intensive' : 'biologique'}: {getStandardDensity(parcelDetails.planting_type)} arbres/ha
-                    </p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Type de sol
+                    </label>
+                    <select
+                      value={parcelDetails.soil_type}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        soil_type: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="Argileux">Argileux</option>
+                      <option value="Limoneux">Limoneux</option>
+                      <option value="Sableux">Sableux</option>
+                      <option value="Argilo-limoneux">Argilo-limoneux</option>
+                      <option value="Limono-sableux">Limono-sableux</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Type d'irrigation
+                    </label>
+                    <select
+                      value={parcelDetails.irrigation_type}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        irrigation_type: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="drip">Goutte-à-goutte</option>
+                      <option value="sprinkler">Aspersion</option>
+                      <option value="flood">Gravitaire</option>
+                      <option value="none">Aucune</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Crop Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Leaf className="w-4 h-4" />
+                    Culture et plantation
+                  </h4>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Catégorie de culture
+                    </label>
+                    <select
+                      value={parcelDetails.crop_category}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        crop_category: e.target.value,
+                        crop_type: '', // Reset dependent fields
+                        variety: '',
+                        planting_system: ''
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="trees">Arbres fruitiers</option>
+                      <option value="cereals">Céréales</option>
+                      <option value="vegetables">Légumes</option>
+                      <option value="other">Autre</option>
+                    </select>
+                  </div>
+
+                  {parcelDetails.crop_category && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de culture
+                      </label>
+                      {availableCropTypes.length > 0 ? (
+                        <select
+                          value={parcelDetails.crop_type}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            crop_type: e.target.value,
+                            variety: '' // Reset variety when crop changes
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {availableCropTypes.map(crop => (
+                            <option key={crop} value={crop}>{crop}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={parcelDetails.crop_type}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            crop_type: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                          placeholder="Ex: Tomates"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {availableVarieties.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Variété
+                      </label>
+                      <select
+                        value={parcelDetails.variety}
+                        onChange={(e) => setParcelDetails(prev => ({
+                          ...prev,
+                          variety: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {availableVarieties.map(variety => (
+                          <option key={variety} value={variety}>{variety}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {parcelDetails.crop_category === 'trees' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Porte-greffe
+                      </label>
+                      <input
+                        type="text"
+                        value={parcelDetails.rootstock}
+                        onChange={(e) => setParcelDetails(prev => ({
+                          ...prev,
+                          rootstock: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        placeholder="Ex: GF677"
+                      />
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type d'irrigation
-                  </label>
-                  <select
-                    value={parcelDetails.irrigation_type}
-                    onChange={(e) => setParcelDetails(prev => ({
-                      ...prev,
-                      irrigation_type: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="drip">Goutte-à-goutte</option>
-                    <option value="sprinkler">Aspersion</option>
-                    <option value="sprinkler">Micro-aspersion</option>
-                    <option value="flood">Gravitaire</option>
-                    <option value="none">Aucune</option>
-                  </select>
-                </div>
+                {/* Planting System */}
+                {availablePlantingSystems.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Système de plantation
+                    </h4>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Variété
-                  </label>
-                  <input
-                    type="text"
-                    value={parcelDetails.variety}
-                    onChange={(e) => setParcelDetails(prev => ({
-                      ...prev,
-                      variety: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="ex: Picholine, Lucques, Arbequina..."
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Type de système
+                      </label>
+                      <select
+                        value={parcelDetails.planting_system}
+                        onChange={(e) => setParcelDetails(prev => ({
+                          ...prev,
+                          planting_system: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {availablePlantingSystems.map((system, idx) => (
+                          <option key={idx} value={system.type}>
+                            {system.type} ({system.spacing})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de plantation
-                  </label>
-                  <input
-                    type="date"
-                    value={parcelDetails.planting_date}
-                    onChange={(e) => setParcelDetails(prev => ({
-                      ...prev,
-                      planting_date: e.target.value
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
+                    {parcelDetails.planting_system && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Espacement
+                            </label>
+                            <input
+                              type="text"
+                              value={parcelDetails.spacing}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                              readOnly
+                            />
+                          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type de plantation
-                  </label>
-                  <select
-                    value={parcelDetails.planting_type}
-                    onChange={(e) => {
-                      const plantingType = e.target.value;
-                      const standardDensity = getStandardDensity(plantingType);
-                      setParcelDetails(prev => ({
-                        ...prev,
-                        planting_type: plantingType,
-                        planting_density: standardDensity
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="traditional">Traditionnelle</option>
-                    <option value="intensive">Intensive</option>
-                    <option value="super_intensive">Super-intensive</option>
-                    <option value="organic">Biologique</option>
-                  </select>
-                </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Densité (plants/ha)
+                            </label>
+                            <input
+                              type="number"
+                              value={parcelDetails.density_per_hectare}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                              readOnly
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Nombre total de plants
+                          </label>
+                          <input
+                            type="number"
+                            value={parcelDetails.plant_count}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                            readOnly
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Auto-calculé: {parcelDetails.area} ha × {parcelDetails.density_per_hectare} plants/ha
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Date de plantation
+                        </label>
+                        <input
+                          type="date"
+                          value={parcelDetails.planting_date}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            planting_date: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Année de plantation
+                        </label>
+                        <input
+                          type="number"
+                          value={parcelDetails.planting_year || ''}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            planting_year: e.target.value ? Number(e.target.value) : undefined
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                          placeholder="2024"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => {
-                  setShowParcelForm(false);
-                  setShowNameDialog(false);
-                  setParcelName('');
-                  setTempBoundary([]);
-                  setParcelDetails({
-                    soil_type: '',
-                    area: 0,
-                    planting_density: 0,
-                    irrigation_type: '',
-                    variety: '',
-                    planting_date: '',
-                    planting_type: ''
-                  });
-                }}
+                onClick={cleanupDrawingState}
               >
                 Annuler
               </Button>

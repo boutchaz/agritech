@@ -26,7 +26,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/radix-select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAccounts } from '@/hooks/useAccounts';
@@ -49,7 +49,7 @@ interface AccountFormData {
   description?: string;
 }
 
-const initialFormData: AccountFormData = {
+const getInitialFormData = (orgCurrency: string = 'MAD'): AccountFormData => ({
   code: '',
   name: '',
   account_type: 'Asset',
@@ -57,10 +57,10 @@ const initialFormData: AccountFormData = {
   parent_id: null,
   is_group: false,
   is_active: true,
-  currency_code: 'MAD',
+  currency_code: orgCurrency,
   allow_cost_center: true,
   description: '',
-};
+});
 
 const accountTypeColors: Record<AccountType, string> = {
   Asset: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -90,7 +90,9 @@ export const ChartOfAccounts: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
-  const [formData, setFormData] = useState<AccountFormData>(initialFormData);
+  const [formData, setFormData] = useState<AccountFormData>(
+    getInitialFormData(currentOrganization?.currency || 'MAD')
+  );
 
   // Build account hierarchy
   const accountHierarchy = useMemo(() => {
@@ -132,7 +134,7 @@ export const ChartOfAccounts: React.FC = () => {
 
   const handleCreateAccount = () => {
     setEditingAccount(null);
-    setFormData(initialFormData);
+    setFormData(getInitialFormData(currentOrganization?.currency || 'MAD'));
     setIsDialogOpen(true);
   };
 
@@ -146,7 +148,7 @@ export const ChartOfAccounts: React.FC = () => {
       parent_id: account.parent_id,
       is_group: account.is_group,
       is_active: account.is_active,
-      currency_code: account.currency_code || 'MAD',
+      currency_code: currentOrganization?.currency || account.currency_code || 'MAD',
       allow_cost_center: account.allow_cost_center,
       description: account.description || '',
     });
@@ -172,7 +174,7 @@ export const ChartOfAccounts: React.FC = () => {
         await createAccount.mutateAsync(formData);
       }
       setIsDialogOpen(false);
-      setFormData(initialFormData);
+      setFormData(getInitialFormData(currentOrganization?.currency || 'MAD'));
       setEditingAccount(null);
     } catch (error) {
       console.error('Failed to save account:', error);
@@ -236,7 +238,7 @@ export const ChartOfAccounts: React.FC = () => {
             </Badge>
           </TableCell>
           <TableCell className="text-center">
-            {account.currency_code || 'MAD'}
+            {currentOrganization?.currency || account.currency_code || 'MAD'}
           </TableCell>
           <TableCell className="text-center">
             {account.is_active ? (
@@ -463,6 +465,7 @@ export const ChartOfAccounts: React.FC = () => {
                 <Select
                   value={formData.currency_code}
                   onValueChange={(val) => setFormData({ ...formData, currency_code: val })}
+                  disabled={true}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -474,6 +477,10 @@ export const ChartOfAccounts: React.FC = () => {
                     <SelectItem value="GBP">GBP - British Pound</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Currency is set at organization level and cannot be changed per account.
+                  To change currency, go to Organization Settings.
+                </p>
               </div>
             </div>
 
