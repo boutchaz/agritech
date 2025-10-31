@@ -14,7 +14,26 @@ def get_supabase_client():
     """Get Supabase client"""
     from supabase import create_client
     supabase_url = os.getenv("SUPABASE_URL", settings.SUPABASE_URL)
-    supabase_key = os.getenv("SUPABASE_SERVICE_KEY", settings.SUPABASE_KEY)
+    # Try multiple environment variable names for service key
+    supabase_key = (
+        os.getenv("SUPABASE_SERVICE_KEY") or 
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY") or
+        settings.SUPABASE_SERVICE_KEY or 
+        settings.SUPABASE_KEY
+    )
+    
+    if not supabase_url:
+        raise HTTPException(
+            status_code=500, 
+            detail="SUPABASE_URL environment variable is not configured"
+        )
+    
+    if not supabase_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="SUPABASE_SERVICE_KEY environment variable is not configured. Please set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY."
+        )
+    
     return create_client(supabase_url, supabase_key)
 
 

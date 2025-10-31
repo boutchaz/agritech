@@ -39,6 +39,8 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI}
       - SUPABASE_URL=${SUPABASE_URL:-http://agritech-supabase-652186-5-75-154-125.traefik.me}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_KEY}}
     volumes:
       - satellite-data:/tmp/satellite-data
     restart: unless-stopped
