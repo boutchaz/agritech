@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
-import { Send, CheckCircle2, XCircle, FileText, ArrowRight } from 'lucide-react';
+import { Send, CheckCircle2, XCircle, FileText, ArrowRight, Download, Edit } from 'lucide-react';
 import type { Quote } from '@/hooks/useQuotes';
 import { useConvertQuoteToOrder } from '@/hooks/useQuotes';
 import { formatCurrency } from '@/lib/taxCalculations';
@@ -23,12 +23,16 @@ interface QuoteDetailDialogProps {
   quote: Quote | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (quote: Quote) => void;
+  onDownloadPDF?: (quote: Quote) => void;
 }
 
 export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   quote,
   open,
   onOpenChange,
+  onEdit,
+  onDownloadPDF,
 }) => {
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -285,49 +289,74 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-4 border-t">
-            {canSend && (
-              <Button
-                onClick={handleSendToCustomer}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Send to Customer
+          <div className="flex items-center justify-between gap-2 pt-4 border-t">
+            {/* Left side - Edit and Download */}
+            <div className="flex items-center gap-2">
+              {onDownloadPDF && (
+                <Button
+                  onClick={() => onDownloadPDF(quote)}
+                  variant="outline"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </Button>
+              )}
+              {onEdit && quote.status !== 'converted' && quote.status !== 'cancelled' && (
+                <Button
+                  onClick={() => onEdit(quote)}
+                  variant="outline"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Quote
+                </Button>
+              )}
+            </div>
+
+            {/* Right side - Status actions and Close */}
+            <div className="flex items-center gap-2">
+              {canSend && (
+                <Button
+                  onClick={handleSendToCustomer}
+                  disabled={updateStatus.isPending}
+                  variant="outline"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send to Customer
+                </Button>
+              )}
+              {canReject && (
+                <Button
+                  onClick={handleMarkAsRejected}
+                  disabled={updateStatus.isPending}
+                  variant="outline"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Mark as Rejected
+                </Button>
+              )}
+              {canAccept && (
+                <Button
+                  onClick={handleMarkAsAccepted}
+                  disabled={updateStatus.isPending}
+                  variant="outline"
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Mark as Accepted
+                </Button>
+              )}
+              {canConvert && (
+                <Button
+                  onClick={handleConvertToOrder}
+                  disabled={convertToOrder.isPending}
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  Convert to Sales Order
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
               </Button>
-            )}
-            {canReject && (
-              <Button
-                onClick={handleMarkAsRejected}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                Mark as Rejected
-              </Button>
-            )}
-            {canAccept && (
-              <Button
-                onClick={handleMarkAsAccepted}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Mark as Accepted
-              </Button>
-            )}
-            {canConvert && (
-              <Button
-                onClick={handleConvertToOrder}
-                disabled={convertToOrder.isPending}
-              >
-                <ArrowRight className="mr-2 h-4 w-4" />
-                Convert to Sales Order
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

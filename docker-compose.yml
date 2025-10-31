@@ -18,17 +18,17 @@ services:
       - "traefik.http.routers.agritech-frontend.rule=Host(`agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)"
       - "traefik.http.services.agritech-frontend.loadbalancer.server.port=80"
     depends_on:
-      - satellite-service
+      - backend-service
     restart: unless-stopped
     networks:
       - agritech-network
 
-  # Satellite Indices Service
-  satellite-service:
+  # Backend Service (Satellite + PDF + Data Processing)
+  backend-service:
     build:
-      context: ./satellite-indices-service
+      context: ./backend-service
       dockerfile: Dockerfile
-    container_name: satellite-indices-service
+    container_name: agritech-backend-service
     ports:
       - "8000:8000"
     environment:

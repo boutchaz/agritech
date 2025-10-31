@@ -3,10 +3,18 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send } from 'lucide-react';
+import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useQuotes, type Quote } from '../hooks/useQuotes';
@@ -31,11 +39,71 @@ const AppContent: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
+
+  const handleDownloadPDF = async (quote: Quote) => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please sign in to download PDF');
+        return;
+      }
+
+      // Call backend service
+      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+      const response = await fetch(`${backendUrl}/api/billing/quotes/${quote.id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
+
+      // Check if we got HTML (fallback) or PDF
+      const contentType = response.headers.get('Content-Type');
+
+      if (contentType?.includes('text/html')) {
+        // Fallback: Open HTML in new tab (user can print to PDF)
+        const html = await response.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+
+        alert('PDF service not configured. Opening printable HTML version. Use browser\'s Print to PDF feature.');
+      } else {
+        // Got PDF directly
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `quote-${quote.quote_number}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleEditQuote = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setEditDialogOpen(true);
+  };
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -311,18 +379,96 @@ const AppContent: React.FC = () => {
                             {quote.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedQuote(quote);
-                              setDetailDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedQuote(quote);
+                                setDetailDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadPDF(quote)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditQuote(quote)}
+                              disabled={quote.status === 'converted' || quote.status === 'cancelled'}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {quote.status === 'draft' && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedQuote(quote);
+                                    setDetailDialogOpen(true);
+                                  }}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Send to Customer
+                                  </DropdownMenuItem>
+                                )}
+                                {quote.status === 'sent' && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedQuote(quote);
+                                      setDetailDialogOpen(true);
+                                    }}>
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      Mark as Accepted
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedQuote(quote);
+                                      setDetailDialogOpen(true);
+                                    }}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Mark as Rejected
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {quote.status === 'accepted' && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedQuote(quote);
+                                    setDetailDialogOpen(true);
+                                  }}>
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Convert to Sales Order
+                                  </DropdownMenuItem>
+                                )}
+                                {quote.status !== 'cancelled' && quote.status !== 'converted' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedQuote(quote);
+                                        setDetailDialogOpen(true);
+                                      }}
+                                      className="text-red-600 dark:text-red-400"
+                                    >
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Cancel Quote
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -349,6 +495,22 @@ const AppContent: React.FC = () => {
           }}
         />
 
+        {/* Edit Quote Dialog */}
+        <QuoteForm
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              setSelectedQuote(null);
+            }
+          }}
+          quote={selectedQuote}
+          onSuccess={() => {
+            setEditDialogOpen(false);
+            setSelectedQuote(null);
+          }}
+        />
+
         {/* Quote Detail Dialog */}
         <QuoteDetailDialog
           quote={selectedQuote}
@@ -358,6 +520,13 @@ const AppContent: React.FC = () => {
             if (!open) {
               setSelectedQuote(null);
             }
+          }}
+          onEdit={(quote) => {
+            setDetailDialogOpen(false);
+            handleEditQuote(quote);
+          }}
+          onDownloadPDF={(quote) => {
+            handleDownloadPDF(quote);
           }}
         />
       </main>

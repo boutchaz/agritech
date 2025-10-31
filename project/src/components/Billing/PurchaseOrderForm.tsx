@@ -161,22 +161,16 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     try {
       // Use calculated totals with tax
       const purchaseOrderData = {
-        organization_id: currentOrganization.id,
         supplier_id: data.supplier_id,
-        order_date: data.order_date,
+        po_date: data.order_date,
         expected_delivery_date: data.expected_delivery_date,
-        currency_code: currentOrganization.currency,
         payment_terms: data.payment_terms || null,
-        shipping_address: data.shipping_address || null,
         notes: data.notes || null,
         items: totals.items_with_tax.map((item, index) => ({
           ...data.items[index],
           amount: item.amount,
           tax_amount: item.tax_amount,
         })),
-        subtotal: totals.subtotal,
-        tax_total: totals.tax_total,
-        grand_total: totals.grand_total,
       };
 
       await createPurchaseOrder.mutateAsync(purchaseOrderData);
@@ -190,7 +184,10 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   };
 
   const expenseAccounts = accounts.filter(
-    (acc) => acc.account_type === 'expense' && acc.is_active
+    (acc) =>
+      acc.is_active &&
+      !acc.is_group &&
+      acc.account_type?.toLowerCase() === 'expense'
   );
 
   return (
