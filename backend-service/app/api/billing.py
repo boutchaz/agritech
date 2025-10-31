@@ -4,6 +4,9 @@ from typing import Optional
 from app.services.pdf import PDFGeneratorFactory
 from app.core.config import settings
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -84,6 +87,34 @@ async def generate_quote_pdf_endpoint(
 
         quote = quote_response.data[0]
 
+        # Transform quote data to match PDF generator expectations
+        # Map database fields to PDF generator expected fields
+        pdf_quote = {
+            **quote,
+            'expiry_date': quote.get('valid_until'),  # Map valid_until to expiry_date
+            'issue_date': quote.get('quote_date'),   # Map quote_date to issue_date
+        }
+        
+        # Transform items to match PDF generator format
+        items = quote.get('items', [])
+        pdf_quote['items'] = [
+            {
+                **item,
+                'rate': item.get('unit_price', 0),  # Map unit_price to rate
+                'tax_amount': item.get('tax_amount') or 0,  # Ensure tax_amount is not None
+                # amount, item_name, quantity should already exist
+            }
+            for item in items
+        ]
+        
+        # Ensure customer contact fields are available (from quote or separate)
+        if not pdf_quote.get('customer_email') and quote.get('contact_email'):
+            pdf_quote['customer_email'] = quote.get('contact_email')
+        if not pdf_quote.get('customer_phone') and quote.get('contact_phone'):
+            pdf_quote['customer_phone'] = quote.get('contact_phone')
+        if not pdf_quote.get('customer_address'):
+            pdf_quote['customer_address'] = None  # Can be None
+
         # Fetch organization
         organization = await fetch_organization(supabase, quote["organization_id"])
 
@@ -93,7 +124,7 @@ async def generate_quote_pdf_endpoint(
         # Generate PDF using factory
         pdf_bytes = PDFGeneratorFactory.generate_pdf(
             document_type="quote",
-            document_data=quote,
+            document_data=pdf_quote,
             organization=organization,
             template=template
         )
@@ -110,6 +141,7 @@ async def generate_quote_pdf_endpoint(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"PDF generation failed for quote {quote_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 
 
