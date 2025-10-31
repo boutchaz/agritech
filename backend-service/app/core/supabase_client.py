@@ -164,6 +164,8 @@ async def verify_auth_and_get_client(
     if not use_service_key:
         try:
             client = get_supabase_client(use_service_key=False, user_token=token)
+            # Verify the user token with anon key
+            # Note: Python client requires passing Authorization header - we verify separately
             user_response = client.auth.get_user(token)
             if not user_response.user:
                 raise HTTPException(status_code=401, detail="Invalid token")
@@ -171,32 +173,14 @@ async def verify_auth_and_get_client(
         except HTTPException:
             raise
         except ValueError as e:
-            # If anon key is not configured, try service key as fallback
-            logger.warning(f"Anon key not available: {str(e)}. Trying service key as fallback...")
-            try:
-                client = get_supabase_client(use_service_key=True)
-                user_response = client.auth.get_user(token)
-                if not user_response.user:
-                    raise HTTPException(status_code=401, detail="Invalid token")
-                return user_response.user, client
-            except ValueError:
-                # Both keys failed - return original error
-                raise HTTPException(status_code=500, detail=str(e))
-            except Exception as service_error:
-                logger.error(f"Authentication failed with service key: {str(service_error)}")
-                raise HTTPException(status_code=401, detail=f"Authentication failed: {str(service_error)}")
+            # Anon key not configured - don't fall back if user explicitly wants anon key
+            # This allows relying solely on anon key
+            logger.error(f"Anon key not available: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
         except Exception as e:
-            # Other errors with anon key - try service key as fallback
-            logger.warning(f"Failed to authenticate with anon key: {str(e)}. Trying service key...")
-            try:
-                client = get_supabase_client(use_service_key=True)
-                user_response = client.auth.get_user(token)
-                if not user_response.user:
-                    raise HTTPException(status_code=401, detail="Invalid token")
-                return user_response.user, client
-            except Exception as service_error:
-                logger.error(f"Authentication failed with both anon and service key: {str(service_error)}")
-                raise HTTPException(status_code=401, detail=f"Authentication failed: {str(service_error)}")
+            # Authentication error with anon key
+            logger.error(f"Authentication failed with anon key: {str(e)}")
+            raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
     else:
         # Force use service key (admin operations)
         try:
