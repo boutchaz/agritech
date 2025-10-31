@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
 import { Plus, Trash2 } from 'lucide-react';
-import { useCreatePurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { useCreatePurchaseOrder, useUpdatePurchaseOrder, type PurchaseOrderWithItems, type PurchaseOrderItem } from '@/hooks/usePurchaseOrders';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { usePurchaseTaxes } from '@/hooks/useTaxes';
@@ -64,15 +64,19 @@ interface PurchaseOrderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  purchaseOrder?: PurchaseOrderWithItems | null;
 }
 
 export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   open,
   onOpenChange,
   onSuccess,
+  purchaseOrder,
 }) => {
   const { currentOrganization, user } = useAuth();
   const createPurchaseOrder = useCreatePurchaseOrder();
+  const updatePurchaseOrder = useUpdatePurchaseOrder();
+  const isEditMode = !!purchaseOrder;
   const { data: suppliers = [] } = useSuppliers();
   const { data: accounts = [] } = useAccounts();
   const { data: taxes = [] } = usePurchaseTaxes();
@@ -94,7 +98,33 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     reset,
   } = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
-    defaultValues: {
+    defaultValues: purchaseOrder ? {
+      supplier_id: purchaseOrder.supplier_id || '',
+      order_date: purchaseOrder.po_date || new Date().toISOString().split('T')[0],
+      expected_delivery_date: purchaseOrder.expected_delivery_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      payment_terms: purchaseOrder.payment_terms || '',
+      shipping_address: purchaseOrder.delivery_address || '',
+      notes: purchaseOrder.notes || '',
+      items: purchaseOrder.items && purchaseOrder.items.length > 0
+        ? purchaseOrder.items.map((item: PurchaseOrderItem) => ({
+            item_name: item.item_name,
+            description: item.description || '',
+            quantity: item.quantity,
+            rate: item.unit_price,
+            account_id: item.account_id || '',
+            tax_id: item.tax_id || null,
+          }))
+        : [
+            {
+              item_name: '',
+              description: '',
+              quantity: 1,
+              rate: 0,
+              account_id: '',
+              tax_id: null,
+            },
+          ],
+    } : {
       supplier_id: '',
       order_date: new Date().toISOString().split('T')[0],
       expected_delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -115,6 +145,58 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       ],
     },
   });
+
+  // Reset form when purchaseOrder changes
+  React.useEffect(() => {
+    if (purchaseOrder) {
+      reset({
+        supplier_id: purchaseOrder.supplier_id || '',
+        order_date: purchaseOrder.po_date || new Date().toISOString().split('T')[0],
+        expected_delivery_date: purchaseOrder.expected_delivery_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        payment_terms: purchaseOrder.payment_terms || '',
+        shipping_address: purchaseOrder.delivery_address || '',
+        notes: purchaseOrder.notes || '',
+        items: purchaseOrder.items && purchaseOrder.items.length > 0
+          ? purchaseOrder.items.map((item: PurchaseOrderItem) => ({
+              item_name: item.item_name,
+              description: item.description || '',
+              quantity: item.quantity,
+              rate: item.unit_price,
+              account_id: item.account_id || '',
+              tax_id: item.tax_id || null,
+            }))
+          : [
+              {
+                item_name: '',
+                description: '',
+                quantity: 1,
+                rate: 0,
+                account_id: '',
+                tax_id: null,
+              },
+            ],
+      });
+    } else {
+      reset({
+        supplier_id: '',
+        order_date: new Date().toISOString().split('T')[0],
+        expected_delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        payment_terms: '',
+        shipping_address: '',
+        notes: '',
+        items: [
+          {
+            item_name: '',
+            description: '',
+            quantity: 1,
+            rate: 0,
+            account_id: '',
+            tax_id: null,
+          },
+        ],
+      });
+    }
+  }, [purchaseOrder?.id, reset]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -159,27 +241,49 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     }
 
     try {
-      // Use calculated totals with tax
-      const purchaseOrderData = {
-        supplier_id: data.supplier_id,
-        po_date: data.order_date,
-        expected_delivery_date: data.expected_delivery_date,
-        payment_terms: data.payment_terms || null,
-        notes: data.notes || null,
-        items: totals.items_with_tax.map((item, index) => ({
-          ...data.items[index],
-          amount: item.amount,
-          tax_amount: item.tax_amount,
-        })),
-      };
+      if (isEditMode && purchaseOrder) {
+        // Update existing purchase order
+        const updateData = {
+          poId: purchaseOrder.id,
+          po_date: data.order_date,
+          expected_delivery_date: data.expected_delivery_date,
+          payment_terms: data.payment_terms || null,
+          delivery_address: data.shipping_address || null,
+          notes: data.notes || null,
+          items: totals.items_with_tax.map((item, index) => ({
+            ...data.items[index],
+            amount: item.amount,
+            tax_amount: item.tax_amount,
+          })),
+        };
 
-      await createPurchaseOrder.mutateAsync(purchaseOrderData);
-      toast.success('Purchase order created successfully');
-      reset();
-      onOpenChange(false);
-      onSuccess?.();
+        await updatePurchaseOrder.mutateAsync(updateData);
+        toast.success('Purchase order updated successfully');
+        onOpenChange(false);
+        onSuccess?.();
+      } else {
+        // Create new purchase order
+        const purchaseOrderData = {
+          supplier_id: data.supplier_id,
+          po_date: data.order_date,
+          expected_delivery_date: data.expected_delivery_date,
+          payment_terms: data.payment_terms || null,
+          notes: data.notes || null,
+          items: totals.items_with_tax.map((item, index) => ({
+            ...data.items[index],
+            amount: item.amount,
+            tax_amount: item.tax_amount,
+          })),
+        };
+
+        await createPurchaseOrder.mutateAsync(purchaseOrderData);
+        toast.success('Purchase order created successfully');
+        reset();
+        onOpenChange(false);
+        onSuccess?.();
+      }
     } catch (error) {
-      toast.error('Failed to create purchase order: ' + (error as Error).message);
+      toast.error(`Failed to ${isEditMode ? 'update' : 'create'} purchase order: ` + (error as Error).message);
     }
   };
 
@@ -194,9 +298,9 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Purchase Order</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</DialogTitle>
           <DialogDescription>
-            Create a new purchase order for supplier
+            {isEditMode ? 'Update purchase order details and line items' : 'Create a new purchase order for supplier'}
           </DialogDescription>
         </DialogHeader>
 
@@ -396,8 +500,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createPurchaseOrder.isPending}>
-              {createPurchaseOrder.isPending ? 'Creating...' : 'Create Purchase Order'}
+            <Button type="submit" disabled={isEditMode ? updatePurchaseOrder.isPending : createPurchaseOrder.isPending}>
+              {isEditMode 
+                ? (updatePurchaseOrder.isPending ? 'Updating...' : 'Update Purchase Order')
+                : (createPurchaseOrder.isPending ? 'Creating...' : 'Create Purchase Order')
+              }
             </Button>
           </div>
         </form>

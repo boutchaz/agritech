@@ -276,19 +276,38 @@ export function useCreateInvoice() {
 
       // Create invoice items with properly calculated and rounded tax amounts
       // Use the items_with_tax from calculateInvoiceTotals which has accurate per-line tax
-      const itemsToInsert = items_with_tax.map(item => ({
-        invoice_id: invoice.id,
-        item_name: item.item_name,
-        description: item.description || null,
-        quantity: item.quantity,
-        unit_price: item.rate,
-        amount: item.amount, // Already rounded
-        tax_amount: item.tax_amount, // Already rounded per line
-        income_account_id: invoiceData.invoice_type === 'sales' ? item.account_id : null,
-        expense_account_id: invoiceData.invoice_type === 'purchase' ? item.account_id : null,
-        tax_id: item.tax_id || null,
-        cost_center_id: item.cost_center_id || null,
-      }));
+      const itemsToInsert = items_with_tax
+        .filter(item => {
+          // Ensure quantity is greater than 0 (database constraint)
+          if (!item.quantity || item.quantity <= 0) {
+            console.error(`Invalid quantity for item "${item.item_name}": ${item.quantity}`);
+            return false;
+          }
+          return true;
+        })
+        .map(item => ({
+          invoice_id: invoice.id,
+          item_name: item.item_name,
+          description: item.description || null,
+          quantity: Number(item.quantity), // Ensure it's a number
+          unit_price: Number(item.rate), // Ensure it's a number
+          amount: Number(item.amount), // Already rounded, ensure it's a number
+          tax_amount: Number(item.tax_amount) || 0, // Already rounded per line, ensure it's a number
+          income_account_id: invoiceData.invoice_type === 'sales' ? item.account_id : null,
+          expense_account_id: invoiceData.invoice_type === 'purchase' ? item.account_id : null,
+          tax_id: item.tax_id || null,
+          cost_center_id: item.cost_center_id || null,
+        }));
+      
+      // Validate all items have quantity > 0
+      if (itemsToInsert.length === 0) {
+        throw new Error('At least one item with quantity > 0 is required');
+      }
+      
+      const invalidItems = itemsToInsert.filter(item => item.quantity <= 0);
+      if (invalidItems.length > 0) {
+        throw new Error(`Invalid quantities found. All items must have quantity > 0. Invalid items: ${invalidItems.map(i => i.item_name).join(', ')}`);
+      }
 
       const { error: itemsError } = await supabase
         .from('invoice_items')

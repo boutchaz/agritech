@@ -84,7 +84,7 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
 
       let query = supabase
         .from('purchase_orders')
-        .select('*')
+        .select('*, items:purchase_order_items(*)')
         .eq('organization_id', currentOrganization.id)
         .order('po_date', { ascending: false });
 
@@ -94,7 +94,7 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as PurchaseOrder[];
+      return (data || []) as PurchaseOrderWithItems[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -334,6 +334,113 @@ export function useConvertPOToBill() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to update purchase order (details and items)
+ */
+export function useUpdatePurchaseOrder() {
+  const queryClient = useQueryClient();
+  const { currentOrganization, user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (poData: {
+      poId: string;
+      po_date?: string;
+      expected_delivery_date?: string;
+      payment_terms?: string;
+      delivery_address?: string;
+      notes?: string;
+      items?: InvoiceItemInput[];
+    }) => {
+      if (!currentOrganization?.id || !user?.id) {
+        throw new Error('No organization or user');
+      }
+
+      const { poId, items, ...updates } = poData;
+
+      // If items are provided, calculate new totals
+      if (items && items.length > 0) {
+        const totals = await calculateInvoiceTotals(items, 'purchase');
+        
+        // Get current billed amount
+        const { data: currentPO } = await supabase
+          .from('purchase_orders')
+          .select('billed_amount')
+          .eq('id', poId)
+          .single();
+        
+        const currentBilledAmount = currentPO?.billed_amount || 0;
+
+        // Update purchase order with new totals
+        const { error: updateError } = await supabase
+          .from('purchase_orders')
+          .update({
+            ...updates,
+            subtotal: totals.subtotal,
+            tax_total: totals.tax_total,
+            grand_total: totals.grand_total,
+            outstanding_amount: totals.grand_total - currentBilledAmount,
+          })
+          .eq('id', poId)
+          .eq('organization_id', currentOrganization.id);
+
+        if (updateError) throw updateError;
+
+        // Delete existing items
+        const { error: deleteError } = await supabase
+          .from('purchase_order_items')
+          .delete()
+          .eq('purchase_order_id', poId);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new items
+        const poItems = totals.items_with_tax.map((item, index) => ({
+          purchase_order_id: poId,
+          line_number: index + 1,
+          item_name: item.item_name,
+          description: item.description || null,
+          quantity: item.quantity,
+          unit_price: item.rate,
+          amount: item.amount,
+          tax_id: item.tax_id || null,
+          tax_rate: item.tax_rate || 0,
+          tax_amount: item.tax_amount,
+          line_total: item.total_amount,
+          account_id: item.account_id,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('purchase_order_items')
+          .insert(poItems);
+
+        if (insertError) throw insertError;
+      } else {
+        // Just update details without items
+        const { error: updateError } = await supabase
+          .from('purchase_orders')
+          .update(updates)
+          .eq('id', poId)
+          .eq('organization_id', currentOrganization.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Fetch updated purchase order
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .select('*')
+        .eq('id', poId)
+        .single();
+
+      if (error) throw error;
+      return data as PurchaseOrder;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
     },
   });
 }

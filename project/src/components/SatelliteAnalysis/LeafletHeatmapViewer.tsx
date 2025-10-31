@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet.heat';
 import 'leaflet/dist/leaflet.css';
 import {
   satelliteApi,
@@ -14,13 +13,18 @@ import {
 } from '../../lib/satellite-api';
 import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 
-// Fix Leaflet default icon issue with Webpack
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Fix Leaflet default icon issue - only in browser
+if (typeof window !== 'undefined') {
+  // Dynamically import leaflet.heat only on client-side
+  import('leaflet.heat');
+
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+}
 
 interface LeafletHeatmapViewerProps {
   parcelId: string;

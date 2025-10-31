@@ -12,8 +12,12 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react-day-picker', 'date-fns'],
+    include: ['react-day-picker', 'date-fns', 'leaflet'],
     exclude: ['lucide-react'],
+  },
+  // Fix Leaflet SSR issues
+  ssr: {
+    noExternal: ['leaflet', 'react-leaflet'],
   },
   build: {
     rollupOptions: {

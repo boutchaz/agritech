@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { usePurchaseOrders, type PurchaseOrder } from '../hooks/usePurchaseOrders';
+import { usePurchaseOrders, type PurchaseOrder, type PurchaseOrderWithItems } from '../hooks/usePurchaseOrders';
 import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
 import { supabase } from '@/lib/supabase';
@@ -43,6 +43,8 @@ const AppContent: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editOrder, setEditOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [statusFilter, _setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = usePurchaseOrders(statusFilter);
@@ -383,7 +385,7 @@ const AppContent: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
-                              {order.order_number}
+                              {order.po_number}
                             </span>
                           </div>
                         </td>
@@ -391,10 +393,10 @@ const AppContent: React.FC = () => {
                           {order.supplier_name}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(order.order_date).toLocaleDateString('fr-FR')}
+                          {order.po_date ? new Date(order.po_date).toLocaleDateString('fr-FR') : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(order.expected_delivery_date).toLocaleDateString('fr-FR')}
+                          {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR') : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-right font-medium">
                           {order.currency_code} {Number(order.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
@@ -505,6 +507,25 @@ const AppContent: React.FC = () => {
           onOpenChange={setCreateDialogOpen}
           onSuccess={() => {
             // Purchase orders will be automatically refetched due to query invalidation
+            setCreateDialogOpen(false);
+          }}
+        />
+
+        {/* Edit Purchase Order Dialog */}
+        <PurchaseOrderForm
+          purchaseOrder={editOrder}
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              setEditOrder(null);
+            }
+          }}
+          onSuccess={() => {
+            // Purchase orders will be automatically refetched due to query invalidation
+            setEditDialogOpen(false);
+            setEditOrder(null);
+            setDetailDialogOpen(false);
           }}
         />
 
@@ -517,6 +538,22 @@ const AppContent: React.FC = () => {
             if (!open) {
               setSelectedOrder(null);
             }
+          }}
+          onEdit={async (order) => {
+            // Fetch full order with items for editing
+            // First try to find in orders list (which includes items)
+            let orderWithItems = orders.find(o => o.id === order.id) as PurchaseOrderWithItems | undefined;
+            
+            // If not found or items missing, fetch from detail dialog data
+            if (!orderWithItems || !orderWithItems.items) {
+              // Use the purchaseOrderWithItems from the detail dialog hook if available
+              // Otherwise, we'll need to fetch it separately
+              orderWithItems = { ...order, items: [] } as PurchaseOrderWithItems;
+            }
+            
+            setEditOrder(orderWithItems || null);
+            setDetailDialogOpen(false);
+            setEditDialogOpen(true);
           }}
           onDownloadPDF={(order) => {
             handleDownloadPDF(order);

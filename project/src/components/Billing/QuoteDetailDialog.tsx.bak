@@ -171,7 +171,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       validUntil: toInputDate(resolvedQuote.valid_until),
       paymentTerms: resolvedQuote.payment_terms ?? '',
       deliveryTerms: resolvedQuote.delivery_terms ?? '',
-      termsConditions: resolvedQuote.terms_and_conditions ?? '',
+      termsConditions: resolvedQuote.terms_conditions ?? '',
     });
     setIsEditingDetails(false);
   }, [resolvedQuote?.id]);
@@ -207,7 +207,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           valid_until: editFormData.validUntil || null,
           payment_terms: editFormData.paymentTerms || null,
           delivery_terms: editFormData.deliveryTerms || null,
-          terms_and_conditions: editFormData.termsConditions || null,
+          terms_conditions: editFormData.termsConditions || null,
         })
         .eq('id', resolvedQuote.id);
 
@@ -317,7 +317,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       validUntil: toInputDate(resolvedQuote.valid_until),
       paymentTerms: resolvedQuote.payment_terms ?? '',
       deliveryTerms: resolvedQuote.delivery_terms ?? '',
-      termsConditions: resolvedQuote.terms_and_conditions ?? '',
+      termsConditions: resolvedQuote.terms_conditions ?? '',
     });
     setIsEditingDetails(false);
   };
@@ -669,37 +669,37 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
               <div className="grid gap-4 text-sm md:grid-cols-2">
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Customer:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{q.customer_name}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{quote.customer_name}</p>
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Quote Date:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(q.quote_date).toLocaleDateString('fr-FR')}
+                    {new Date(quote.quote_date).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Valid Until:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(q.valid_until).toLocaleDateString('fr-FR')}
+                    {new Date(quote.valid_until).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Currency:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">{q.currency_code}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{quote.currency_code}</p>
                 </div>
-                {q.payment_terms && (
+                {quote.payment_terms && (
                   <div className="md:col-span-2">
                     <span className="text-gray-600 dark:text-gray-400">Payment Terms:</span>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {q.payment_terms}
+                      {quote.payment_terms}
                     </p>
                   </div>
                 )}
-                {q.delivery_terms && (
+                {quote.delivery_terms && (
                   <div className="md:col-span-2">
                     <span className="text-gray-600 dark:text-gray-400">Delivery Terms:</span>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {q.delivery_terms}
+                      {quote.delivery_terms}
                     </p>
                   </div>
                 )}
@@ -784,7 +784,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
                   Line Items
                 </CardTitle>
-                {canEditDetails && (!q.items || q.items.length === 0) && (
+                {canEditDetails && (!quote.items || quote.items.length === 0) && (
                   <Button variant="outline" size="sm" onClick={() => onEdit?.(quote)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Add Items
@@ -821,8 +821,8 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {q.items && q.items.length > 0 ? (
-                      q.items.map((item: any, index: number) => (
+                    {quote.items && quote.items.length > 0 ? (
+                      quote.items.map((item: any, index: number) => (
                         <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}
@@ -834,18 +834,18 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                             {item.quantity}
                           </td>
                           <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                            {formatCurrency(Number(item.rate), q.currency_code)}
+                            {formatCurrency(Number(item.rate), quote.currency_code)}
                           </td>
                           <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                            {formatCurrency(Number(item.amount), q.currency_code)}
+                            {formatCurrency(Number(item.amount), quote.currency_code)}
                           </td>
                           <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                            {formatCurrency(Number(item.tax_amount ?? 0), q.currency_code)}
+                            {formatCurrency(Number(item.tax_amount ?? 0), quote.currency_code)}
                           </td>
                           <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
                             {formatCurrency(
                               Number(item.amount) + Number(item.tax_amount ?? 0),
-                              q.currency_code
+                              quote.currency_code
                             )}
                           </td>
                         </tr>
@@ -872,15 +872,15 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             </CardHeader>
             <CardContent>
               <InvoiceTotalsDisplay
-                subtotal={Number(q.subtotal)}
-                taxTotal={Number(q.tax_total)}
-                grandTotal={Number(q.grand_total)}
-                currency={q.currency_code}
+                subtotal={Number(quote.subtotal)}
+                taxTotal={Number(quote.tax_total)}
+                grandTotal={Number(quote.grand_total)}
+                currency={quote.currency_code}
               />
             </CardContent>
           </Card>
 
-          {q.terms_and_conditions && !isEditingDetails && (
+          {quote.terms_conditions && !isEditingDetails && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -889,7 +889,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                  {q.terms_and_conditions}
+                  {quote.terms_conditions}
                 </p>
               </CardContent>
             </Card>

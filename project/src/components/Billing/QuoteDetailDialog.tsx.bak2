@@ -171,7 +171,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       validUntil: toInputDate(resolvedQuote.valid_until),
       paymentTerms: resolvedQuote.payment_terms ?? '',
       deliveryTerms: resolvedQuote.delivery_terms ?? '',
-      termsConditions: resolvedQuote.terms_and_conditions ?? '',
+      termsConditions: resolvedQuote.terms_conditions ?? '',
     });
     setIsEditingDetails(false);
   }, [resolvedQuote?.id]);
@@ -207,7 +207,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           valid_until: editFormData.validUntil || null,
           payment_terms: editFormData.paymentTerms || null,
           delivery_terms: editFormData.deliveryTerms || null,
-          terms_and_conditions: editFormData.termsConditions || null,
+          terms_conditions: editFormData.termsConditions || null,
         })
         .eq('id', resolvedQuote.id);
 
@@ -317,7 +317,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       validUntil: toInputDate(resolvedQuote.valid_until),
       paymentTerms: resolvedQuote.payment_terms ?? '',
       deliveryTerms: resolvedQuote.delivery_terms ?? '',
-      termsConditions: resolvedQuote.terms_and_conditions ?? '',
+      termsConditions: resolvedQuote.terms_conditions ?? '',
     });
     setIsEditingDetails(false);
   };
@@ -880,7 +880,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             </CardContent>
           </Card>
 
-          {q.terms_and_conditions && !isEditingDetails && (
+          {q.terms_conditions && !isEditingDetails && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -889,7 +889,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                  {q.terms_and_conditions}
+                  {q.terms_conditions}
                 </p>
               </CardContent>
             </Card>

@@ -1,0 +1,127 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+.nuxt/
+.output/
+.vercel/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+.hypothesis/
+.pytest_cache/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Database migrations (large SQL files)
+supabase/migrations/*.sql
+project/supabase/migrations/*.sql
+
+# Jupyter notebooks (can be large)
+research/
+*.ipynb
+.ipynb_checkpoints/
+
+# Minified files
+*.min.js
+*.min.css
+*.bundle.js
+
+# Lock files (large and auto-generated)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+
+# Generated types (auto-generated, can be read when needed)
+**/database.types.ts
+**/supabase.types.ts
+
+# Route tree (auto-generated)
+**/routeTree.gen.ts
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Media and binary files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.pdf
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Large data files
+*.csv
+*.geojson
+*.tif
+*.tiff
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Documentation that's not code-related
+docs/
+documentation/
+*.docx

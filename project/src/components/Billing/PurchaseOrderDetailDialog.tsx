@@ -25,8 +25,9 @@ import {
   AlertCircle,
   XCircle,
 } from 'lucide-react';
-import type { PurchaseOrder, PurchaseOrderItem } from '@/hooks/usePurchaseOrders';
+import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderWithItems } from '@/hooks/usePurchaseOrders';
 import { useConvertPOToBill, usePurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { usePostInvoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import {
@@ -151,7 +152,8 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   } = usePurchaseOrder(open ? purchaseOrderId : null);
   const queryClient = useQueryClient();
   const convertToBill = useConvertPOToBill();
-  const resolvedPurchaseOrder = purchaseOrderWithItems ?? purchaseOrder ?? null;
+  const postInvoice = usePostInvoice();
+  const resolvedPurchaseOrder: PurchaseOrderWithItems | null = (purchaseOrderWithItems ?? purchaseOrder ?? null) as PurchaseOrderWithItems | null;
 
   const [isEditingDetails, setIsEditingDetails] = React.useState(false);
   const [pendingStatus, setPendingStatus] = React.useState<StatusActionKey | null>(null);
@@ -183,8 +185,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
     setEditFormData({
       expectedDeliveryDate: toInputDate(resolvedPurchaseOrder.expected_delivery_date),
       paymentTerms: resolvedPurchaseOrder.payment_terms ?? '',
-      deliveryAddress:
-        resolvedPurchaseOrder.delivery_address ?? resolvedPurchaseOrder.shipping_address ?? '',
+      deliveryAddress: resolvedPurchaseOrder.delivery_address ?? '',
       notes: resolvedPurchaseOrder.notes ?? '',
     });
     setIsEditingDetails(false);
@@ -194,9 +195,18 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
     mutationFn: async (status: ExtendedStatus) => {
       if (!resolvedPurchaseOrder) throw new Error('No purchase order selected');
 
+      // Normalize extended status to valid PurchaseOrder status
+      const normalizedStatus: PurchaseOrder['status'] = 
+        status === 'approved' ? 'confirmed' :
+        status === 'in_transit' ? 'confirmed' :
+        status === 'completed' ? 'billed' :
+        status === 'partially_received' ? 'received' :
+        status === 'partially_billed' ? 'billed' :
+        status as PurchaseOrder['status'];
+
       const { error } = await supabase
         .from('purchase_orders')
-        .update({ status })
+        .update({ status: normalizedStatus })
         .eq('id', resolvedPurchaseOrder.id);
 
       if (error) throw error;
@@ -421,7 +431,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
     setEditFormData({
       expectedDeliveryDate: toInputDate(po.expected_delivery_date),
       paymentTerms: po.payment_terms ?? '',
-      deliveryAddress: po.delivery_address ?? po.shipping_address ?? '',
+      deliveryAddress: po.delivery_address ?? '',
       notes: po.notes ?? '',
     });
     setIsEditingDetails(false);
@@ -431,6 +441,8 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
     event.preventDefault();
     updatePurchaseOrderDetails.mutate();
   };
+
+  const isPostingBill = convertToBill.isPending || postInvoice.isPending;
 
   const handleCreateBill = () => {
     if (!po) return;
@@ -448,8 +460,22 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       },
       {
         onSuccess: (bill) => {
-          toast.success(`Bill #${bill.invoice_number} created from Purchase Order`);
-          onOpenChange(false);
+          postInvoice.mutate(
+            { invoice_id: bill.id, posting_date: today },
+            {
+              onSuccess: () => {
+                toast.success(
+                  `Bill #${bill.invoice_number} created and posted to the ledger`,
+                );
+                onOpenChange(false);
+              },
+              onError: (error) => {
+                toast.error(
+                  'Bill created but failed to post to ledger: ' + error.message,
+                );
+              },
+            },
+          );
         },
         onError: (error) => {
           toast.error('Failed to create bill: ' + error.message);
@@ -494,7 +520,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Purchase Order #{po.po_number ?? po.order_number ?? ''}
+                Purchase Order #{po.po_number ?? ''}
               </DialogTitle>
               <DialogDescription>
                 View purchase order details and manage status
@@ -655,11 +681,11 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                 <div className="flex flex-col gap-1">
                   <Button
                     onClick={handleCreateBill}
-                    disabled={!canCreateBill || remainingToBill <= 0 || convertToBill.isPending}
+                    disabled={!canCreateBill || remainingToBill <= 0 || isPostingBill}
                     variant="outline"
                     className="justify-start"
                   >
-                    {convertToBill.isPending ? (
+                    {isPostingBill ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <FileText className="mr-2 h-4 w-4" />
@@ -693,7 +719,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Order Date:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(po.po_date ?? po.order_date).toLocaleDateString('fr-FR')}
+                    {po.po_date ? new Date(po.po_date).toLocaleDateString('fr-FR') : '-'}
                   </p>
                 </div>
                 <div>
@@ -718,11 +744,11 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                     </p>
                   </div>
                 )}
-                {po.delivery_address || po.shipping_address ? (
+                {po.delivery_address ? (
                   <div className="md:col-span-2">
                     <span className="text-gray-600 dark:text-gray-400">Delivery Address:</span>
                     <p className="whitespace-pre-wrap font-medium text-gray-900 dark:text-white">
-                      {po.delivery_address || po.shipping_address}
+                      {po.delivery_address}
                     </p>
                   </div>
                 ) : null}
@@ -828,9 +854,21 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Line Items
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Line Items
+                </CardTitle>
+                {canEditDetails && (!po.items || po.items.length === 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit?.(po)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Add Items
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -867,40 +905,48 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                     </tr>
                   </thead>
                   <tbody>
-                    {po.items?.map((item: PurchaseOrderItem, index: number) => (
-                      <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
-                          {item.item_name}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
-                          {item.description || '-'}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                          {item.quantity}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                          {item.received_quantity || 0}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                          {item.billed_quantity || 0}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                          {formatCurrency(Number(item.unit_price ?? item.rate), po.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                          {formatCurrency(Number(item.amount), po.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                          {formatCurrency(Number(item.tax_amount ?? 0), po.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            Number(item.amount) + Number(item.tax_amount ?? 0),
-                            po.currency_code,
-                          )}
+                    {po.items && po.items.length > 0 ? (
+                      po.items.map((item: PurchaseOrderItem, index: number) => (
+                        <tr key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
+                            {item.item_name}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
+                            {item.description || '-'}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                            {item.quantity}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {item.received_quantity || 0}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {item.billed_quantity || 0}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                            {formatCurrency(Number(item.unit_price), po.currency_code)}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                            {formatCurrency(Number(item.amount), po.currency_code)}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {formatCurrency(Number(item.tax_amount ?? 0), po.currency_code)}
+                          </td>
+                          <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(
+                              Number(item.amount) + Number(item.tax_amount ?? 0),
+                              po.currency_code,
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                          No line items found.{canEditDetails ? ' Use the "Add Items" button above to add line items.' : ' This purchase order has no line items.'}
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

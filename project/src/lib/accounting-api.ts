@@ -179,14 +179,32 @@ export const accountingApi = {
     if (invoiceError) throw invoiceError;
 
     // Create invoice items
+    // Validate and filter items to ensure quantity > 0 (database constraint)
+    const validItems = items
+      .filter(item => {
+        const quantity = Number(item.quantity);
+        if (!quantity || quantity <= 0) {
+          console.error(`Invalid quantity for item "${item.item_name}": ${item.quantity}`);
+          return false;
+        }
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        invoice_id: createdInvoice.id,
+        quantity: Number(item.quantity), // Ensure it's a number
+        unit_price: Number(item.unit_price), // Ensure it's a number
+        amount: Number(item.amount), // Ensure it's a number
+        tax_amount: Number(item.tax_amount) || 0, // Ensure it's a number
+      }));
+    
+    if (validItems.length === 0) {
+      throw new Error('At least one item with quantity > 0 is required');
+    }
+    
     const { error: itemsError } = await supabase
       .from('invoice_items')
-      .insert(
-        items.map((item) => ({
-          ...item,
-          invoice_id: createdInvoice.id,
-        }))
-      );
+      .insert(validItems);
 
     if (itemsError) throw itemsError;
 
