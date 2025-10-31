@@ -241,7 +241,7 @@ const AppContent: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <Button variant="outline">
-                <Filter className="mr-2 h-4 w-4" />
+                {/* <Filter className="mr-2 h-4 w-4" /> */}
                 Filter
               </Button>
               <Button onClick={() => setCreateDialogOpen(true)}>

@@ -4,7 +4,7 @@ import { Calendar, Filter, Package } from 'lucide-react';
 import { PieceWorkEntry, PieceWorkList } from '@/components/Workers/PieceWorkEntry';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
