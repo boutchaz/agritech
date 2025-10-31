@@ -289,24 +289,15 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
   };
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {!currentFarm && (
-        <div className="p-3 sm:p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs sm:text-sm text-amber-800 dark:text-amber-300">
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">
           Sélectionnez une ferme pour afficher les parcelles et données associées.
         </div>
       )}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          Tableau de bord
-        </h2>
-        <div className={`flex items-center ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
-          <span className="h-2 w-2 rounded-full bg-current mr-2"></span>
-          <span className="text-xs sm:text-sm">{isConnected ? 'Connecté' : 'Déconnecté'}</span>
-        </div>
-      </div>
 
       {/* Main Widgets Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <ParcelsOverviewWidget />
         <WorkersActivityWidget />
         {settings.showStockAlerts && <StockAlertsWidget />}
@@ -314,14 +305,14 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       </div>
 
       {/* Tasks and Soil Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {settings.showTaskAlerts && <UpcomingTasksWidget />}
         {settings.showSoilData && <SoilAnalysisWidget />}
       </div>
 
       {/* Additional Widgets from Settings */}
       {settings.layout?.middleRow && settings.layout.middleRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {settings.layout.middleRow
             .filter(w => !['tasks', 'soil'].includes(w))
             .map((widgetType, index) => (
@@ -333,7 +324,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       )}
 
       {settings.layout?.bottomRow && settings.layout.bottomRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {settings.layout.bottomRow.map((widgetType, index) => (
             <div key={`bottom-${widgetType}-${index}`}>
               {renderWidget(widgetType)}

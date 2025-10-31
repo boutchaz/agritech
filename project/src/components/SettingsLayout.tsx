@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText } from 'lucide-react';
+import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 
 interface SettingsLayoutProps {
@@ -60,6 +60,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       icon: Users,
       path: '/settings/users',
       description: 'Gérer les utilisateurs',
+      roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'work-units',
+      name: 'Unités de travail',
+      icon: Package,
+      path: '/settings/work-units',
+      description: 'Gérer les unités pour le paiement à la tâche',
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {

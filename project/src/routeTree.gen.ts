@@ -51,7 +51,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
+import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-work'
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
+import { Route as SettingsWorkUnitsRouteImport } from './routes/settings.work-units'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
 import { Route as SettingsSubscriptionRouteImport } from './routes/settings.subscription'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
@@ -270,10 +272,20 @@ const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => OnboardingRoute,
 } as any)
+const WorkersPieceWorkRoute = WorkersPieceWorkRouteImport.update({
+  id: '/piece-work',
+  path: '/piece-work',
+  getParentRoute: () => WorkersRoute,
+} as any)
 const TasksCalendarRoute = TasksCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => TasksRoute,
+} as any)
+const SettingsWorkUnitsRoute = SettingsWorkUnitsRouteImport.update({
+  id: '/work-units',
+  path: '/work-units',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsUsersRoute = SettingsUsersRouteImport.update({
   id: '/users',
@@ -354,7 +366,7 @@ export interface FileRoutesByFullPath {
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -363,7 +375,9 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/tasks/': typeof TasksIndexRoute
@@ -403,7 +417,7 @@ export interface FileRoutesByTo {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -412,7 +426,9 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/tasks': typeof TasksIndexRoute
@@ -457,7 +473,7 @@ export interface FileRoutesById {
   '/stock': typeof StockRoute
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -466,7 +482,9 @@ export interface FileRoutesById {
   '/settings/profile': typeof SettingsProfileRoute
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
+  '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/tasks/': typeof TasksIndexRoute
@@ -520,7 +538,9 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/settings/work-units'
     | '/tasks/calendar'
+    | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
     | '/tasks/'
@@ -569,7 +589,9 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/settings/work-units'
     | '/tasks/calendar'
+    | '/workers/piece-work'
     | '/onboarding'
     | '/settings'
     | '/tasks'
@@ -622,7 +644,9 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/subscription'
     | '/settings/users'
+    | '/settings/work-units'
     | '/tasks/calendar'
+    | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
     | '/tasks/'
@@ -667,7 +691,7 @@ export interface RootRouteChildren {
   StockRoute: typeof StockRoute
   TasksRoute: typeof TasksRouteWithChildren
   UtilitiesRoute: typeof UtilitiesRoute
-  WorkersRoute: typeof WorkersRoute
+  WorkersRoute: typeof WorkersRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -966,12 +990,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingIndexRouteImport
       parentRoute: typeof OnboardingRoute
     }
+    '/workers/piece-work': {
+      id: '/workers/piece-work'
+      path: '/piece-work'
+      fullPath: '/workers/piece-work'
+      preLoaderRoute: typeof WorkersPieceWorkRouteImport
+      parentRoute: typeof WorkersRoute
+    }
     '/tasks/calendar': {
       id: '/tasks/calendar'
       path: '/calendar'
       fullPath: '/tasks/calendar'
       preLoaderRoute: typeof TasksCalendarRouteImport
       parentRoute: typeof TasksRoute
+    }
+    '/settings/work-units': {
+      id: '/settings/work-units'
+      path: '/work-units'
+      fullPath: '/settings/work-units'
+      preLoaderRoute: typeof SettingsWorkUnitsRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/settings/users': {
       id: '/settings/users'
@@ -1053,6 +1091,7 @@ interface SettingsRouteChildren {
   SettingsProfileRoute: typeof SettingsProfileRoute
   SettingsSubscriptionRoute: typeof SettingsSubscriptionRoute
   SettingsUsersRoute: typeof SettingsUsersRoute
+  SettingsWorkUnitsRoute: typeof SettingsWorkUnitsRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -1065,6 +1104,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsProfileRoute: SettingsProfileRoute,
   SettingsSubscriptionRoute: SettingsSubscriptionRoute,
   SettingsUsersRoute: SettingsUsersRoute,
+  SettingsWorkUnitsRoute: SettingsWorkUnitsRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
@@ -1083,6 +1123,17 @@ const TasksRouteChildren: TasksRouteChildren = {
 }
 
 const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
+
+interface WorkersRouteChildren {
+  WorkersPieceWorkRoute: typeof WorkersPieceWorkRoute
+}
+
+const WorkersRouteChildren: WorkersRouteChildren = {
+  WorkersPieceWorkRoute: WorkersPieceWorkRoute,
+}
+
+const WorkersRouteWithChildren =
+  WorkersRoute._addFileChildren(WorkersRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1123,7 +1174,7 @@ const rootRouteChildren: RootRouteChildren = {
   StockRoute: StockRoute,
   TasksRoute: TasksRouteWithChildren,
   UtilitiesRoute: UtilitiesRoute,
-  WorkersRoute: WorkersRoute,
+  WorkersRoute: WorkersRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

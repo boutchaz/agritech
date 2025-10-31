@@ -1,14 +1,36 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { ProfitabilityData, Cost, Revenue } from '../types/cost-tracking';
 import { useCurrency } from '../hooks/useCurrency';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { Input } from './ui/Input';
+import { NativeSelect } from './ui/NativeSelect';
+import { Label } from './ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelContext';
+import { AdaptiveSection } from './adaptive/AdaptiveSection';
+import { Badge } from './ui/badge';
 
 const ProfitabilityDashboard: React.FC = () => {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
+
+  // Experience level hooks
+  const { level, config } = useExperienceLevel();
+  const showExport = useFeatureFlag('showDataExport');
+  const showAnalytics = useFeatureFlag('showAnalytics');
+  const showAdvancedFilters = useFeatureFlag('showAdvancedFilters');
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 3);
@@ -171,60 +193,65 @@ const ProfitabilityDashboard: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Analyse de Rentabilité
           </h2>
+          {/* Experience level indicator */}
+          <Badge variant={level === 'expert' ? 'default' : level === 'medium' ? 'secondary' : 'outline'}>
+            <Sparkles className="h-3 w-3 mr-1" />
+            {config.label}
+          </Badge>
         </div>
-        <button
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-        >
-          <Download className="h-4 w-4" />
-          <span>Exporter</span>
-        </button>
+        {/* Only show export button for medium/expert */}
+        {showExport && (
+          <Button className="bg-green-600 hover:bg-green-700">
+            <Download className="h-4 w-4 mr-2" />
+            Exporter
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Calendar className="inline h-4 w-4 mr-1" />
-              Date de début
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-            />
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="mb-2 flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Date de début
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                Date de fin
+              </Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 flex items-center">
+                <Filter className="h-4 w-4 mr-1" />
+                Parcelle
+              </Label>
+              <NativeSelect
+                value={selectedParcel}
+                onChange={(e) => setSelectedParcel(e.target.value)}
+              >
+                <option value="all">Toutes les parcelles</option>
+                {parcels.map(parcel => (
+                  <option key={parcel.id} value={parcel.id}>{parcel.name}</option>
+                ))}
+              </NativeSelect>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Calendar className="inline h-4 w-4 mr-1" />
-              Date de fin
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <Filter className="inline h-4 w-4 mr-1" />
-              Parcelle
-            </label>
-            <select
-              value={selectedParcel}
-              onChange={(e) => setSelectedParcel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-            >
-              <option value="all">Toutes les parcelles</option>
-              {parcels.map(parcel => (
-                <option key={parcel.id} value={parcel.id}>{parcel.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
@@ -234,192 +261,225 @@ const ProfitabilityDashboard: React.FC = () => {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Coûts Totaux
-                </span>
-                <DollarSign className="h-5 w-5 text-red-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(profitabilityData.totalCosts)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {costs.length} entrées
-              </div>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Coûts Totaux
+                  </span>
+                  <DollarSign className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(profitabilityData.totalCosts)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {costs.length} entrées
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Revenus Totaux
-                </span>
-                <DollarSign className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(profitabilityData.totalRevenue)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {revenues.length} entrées
-              </div>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Revenus Totaux
+                  </span>
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(profitabilityData.totalRevenue)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {revenues.length} entrées
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Bénéfice Net
-                </span>
-                {profitabilityData.netProfit >= 0 ? (
-                  <TrendingUp className="h-5 w-5 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-5 w-5 text-red-500" />
-                )}
-              </div>
-              <div className={`text-2xl font-bold ${
-                profitabilityData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {formatCurrency(profitabilityData.netProfit)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {profitabilityData.netProfit >= 0 ? 'Profitable' : 'En perte'}
-              </div>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Bénéfice Net
+                  </span>
+                  {profitabilityData.netProfit >= 0 ? (
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+                <div className={`text-2xl font-bold ${
+                  profitabilityData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {formatCurrency(profitabilityData.netProfit)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {profitabilityData.netProfit >= 0 ? 'Profitable' : 'En perte'}
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Marge Bénéficiaire
-                </span>
-                <PieChart className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {profitabilityData.profitMargin.toFixed(1)}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {profitabilityData.profitMargin > 20 ? 'Excellente' :
-                 profitabilityData.profitMargin > 10 ? 'Bonne' :
-                 profitabilityData.profitMargin > 0 ? 'Moyenne' : 'Faible'}
-              </div>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Marge Bénéficiaire
+                  </span>
+                  <PieChart className="h-5 w-5 text-blue-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {profitabilityData.profitMargin.toFixed(1)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {profitabilityData.profitMargin > 20 ? 'Excellente' :
+                   profitabilityData.profitMargin > 10 ? 'Bonne' :
+                   profitabilityData.profitMargin > 0 ? 'Moyenne' : 'Faible'}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Breakdown Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cost Breakdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Répartition des Coûts
-              </h3>
-              <div className="space-y-3">
-                {Object.entries(profitabilityData.costBreakdown).map(([type, amount]) => {
-                  const percentage = (amount / profitabilityData.totalCosts) * 100;
-                  return (
-                    <div key={type}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400 capitalize">
-                          {type.replace('_', ' ')}
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(amount)} ({percentage.toFixed(1)}%)
-                        </span>
+          {/* Breakdown Charts - Only for Medium/Expert */}
+          {showAnalytics && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Cost Breakdown */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Répartition des Coûts
+                    </h3>
+                    <Badge variant="secondary" className="text-xs">
+                      Analyse avancée
+                    </Badge>
+                  </div>
+                <div className="space-y-3">
+                  {Object.entries(profitabilityData.costBreakdown).map(([type, amount]) => {
+                    const percentage = (amount / profitabilityData.totalCosts) * 100;
+                    return (
+                      <div key={type}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 dark:text-gray-400 capitalize">
+                            {type.replace('_', ' ')}
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(amount)} ({percentage.toFixed(1)}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-red-500 h-2 rounded-full"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-red-500 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Revenue Breakdown */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Répartition des Revenus
-              </h3>
-              <div className="space-y-3">
-                {Object.entries(profitabilityData.revenueBreakdown).map(([type, amount]) => {
-                  const percentage = (amount / profitabilityData.totalRevenue) * 100;
-                  return (
-                    <div key={type}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400 capitalize">
-                          {type.replace('_', ' ')}
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(amount)} ({percentage.toFixed(1)}%)
-                        </span>
+              {/* Revenue Breakdown */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Répartition des Revenus
+                    </h3>
+                    <Badge variant="secondary" className="text-xs">
+                      Analyse avancée
+                    </Badge>
+                  </div>
+                <div className="space-y-3">
+                  {Object.entries(profitabilityData.revenueBreakdown).map(([type, amount]) => {
+                    const percentage = (amount / profitabilityData.totalRevenue) * 100;
+                    return (
+                      <div key={type}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 dark:text-gray-400 capitalize">
+                            {type.replace('_', ' ')}
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(amount)} ({percentage.toFixed(1)}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-green-500 h-2 rounded-full"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-green-500 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
             </div>
-          </div>
+          )}
+
+          {/* Upgrade prompt for Basic users */}
+          {!showAnalytics && (
+            <Card className="border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <CardContent className="p-8 text-center">
+                <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Analyses avancées disponibles
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Passez au niveau <strong>Intermédiaire</strong> pour débloquer les graphiques de répartition détaillés et l'export de données.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/settings/preferences'}
+                >
+                  Changer de niveau
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* By Parcel Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Rentabilité par Parcelle
               </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Parcelle
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Coûts
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Revenus
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Bénéfice Net
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Marge
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {profitabilityData.byParcel.map((parcel, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {parcel.parcel_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400">
-                        {formatCurrency(parcel.total_costs)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400">
-                        {formatCurrency(parcel.total_revenue)}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
-                        parcel.net_profit >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatCurrency(parcel.net_profit)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
-                        {parcel.profit_margin !== undefined ? `${parcel.profit_margin.toFixed(1)}%` : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-left">Parcelle</TableHead>
+                      <TableHead className="text-right">Coûts</TableHead>
+                      <TableHead className="text-right">Revenus</TableHead>
+                      <TableHead className="text-right">Bénéfice Net</TableHead>
+                      <TableHead className="text-right">Marge</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {profitabilityData.byParcel.map((parcel, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{parcel.parcel_name}</TableCell>
+                        <TableCell className="text-right text-red-600 dark:text-red-400">
+                          {formatCurrency(parcel.total_costs)}
+                        </TableCell>
+                        <TableCell className="text-right text-green-600 dark:text-green-400">
+                          {formatCurrency(parcel.total_revenue)}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${
+                          parcel.net_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatCurrency(parcel.net_profit)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {parcel.profit_margin !== undefined ? `${parcel.profit_margin.toFixed(1)}%` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

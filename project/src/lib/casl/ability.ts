@@ -19,6 +19,8 @@ export type Subject =
   // Accounting subjects
   | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
   | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport'
+  // Work units (piece-work payment)
+  | 'WorkUnit' | 'PieceWork'
   | 'all';
 
 // Define ability type
@@ -99,6 +101,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('close', 'Period'); // Can close accounting periods
     can('read', 'AccountingReport');
     can('export', 'AccountingReport');
+
+    // Work Units & Piece-Work - Full access for organization admins
+    can('manage', 'WorkUnit'); // Can manage work units (Arbre, Caisse, Kg, Litre, etc.)
+    can('manage', 'PieceWork'); // Can manage piece-work records
   }
 
   // Farm Manager - Manage assigned farms
@@ -136,6 +142,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Tax');
     can('read', 'BankAccount');
     can('read', 'AccountingReport');
+
+    // Work Units & Piece-Work - Farm managers can record piece-work but not manage units
+    can('read', 'WorkUnit'); // Can view work units
+    can('manage', 'PieceWork'); // Can manage piece-work records for their farm
   }
 
   // Farm Worker - Basic operations
@@ -164,6 +174,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Payment');
     can('read', 'JournalEntry');
     can('read', 'AccountingReport');
+
+    // Work Units & Piece-Work - Farm workers can view their own piece-work
+    can('read', 'WorkUnit'); // Can view work units
+    can('read', 'PieceWork'); // Can view piece-work records (their own)
   }
 
   // Day Laborer - Very limited access (only tasks and profile)
@@ -172,6 +186,9 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('update', 'Task'); // Can update their assigned tasks (clock in/out, progress)
     can('read', 'Settings'); // Can view their profile settings
     can('update', 'Settings'); // Can update their profile
+
+    // Work Units & Piece-Work - Day laborers can view their own piece-work
+    can('read', 'PieceWork'); // Can view their own piece-work records only
   }
 
   // Viewer - Read-only access
@@ -197,6 +214,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Tax');
     can('read', 'BankAccount');
     can('read', 'AccountingReport');
+
+    // Work Units & Piece-Work - Viewers can only read
+    can('read', 'WorkUnit'); // Can view work units
+    can('read', 'PieceWork'); // Can view piece-work records
   }
 
   // ============================================

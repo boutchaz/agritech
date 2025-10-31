@@ -2,9 +2,10 @@ import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { type Payment, useSubmitPayment, useDeletePayment } from '@/hooks/useAccountingPayments';
+import { type Payment, useDeletePayment } from '@/hooks/useAccountingPayments';
 import { CreditCard, Calendar, Building2, FileText, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
 import { PaymentForm } from './PaymentForm';
+import { PaymentAllocationDialog } from './PaymentAllocationDialog';
 
 interface PaymentDetailDialogProps {
   payment: Payment | null;
@@ -20,26 +21,20 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
   mode: initialMode = 'view',
 }) => {
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);
-  const submitPayment = useSubmitPayment();
   const deletePayment = useDeletePayment();
+  const [allocationOpen, setAllocationOpen] = React.useState(false);
 
   React.useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
-  if (!payment) return null;
-
-  const handleSubmit = async () => {
-    if (window.confirm('Are you sure you want to submit this payment? This action cannot be undone.')) {
-      try {
-        await submitPayment.mutateAsync(payment.id);
-        onOpenChange(false);
-      } catch (error) {
-        console.error('Failed to submit payment:', error);
-        alert('Failed to submit payment. Please try again.');
-      }
+  React.useEffect(() => {
+    if (!open) {
+      setAllocationOpen(false);
     }
-  };
+  }, [open]);
+
+  if (!payment) return null;
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
@@ -202,10 +197,9 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={handleSubmit}
-                      disabled={submitPayment.isPending}
+                      onClick={() => setAllocationOpen(true)}
                     >
-                      {submitPayment.isPending ? 'Submitting...' : 'Submit Payment'}
+                      Allouer &amp; comptabiliser
                     </Button>
                   </>
                 )}
@@ -231,6 +225,12 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
           </div>
         )}
       </DialogContent>
+      <PaymentAllocationDialog
+        payment={payment}
+        open={allocationOpen}
+        onOpenChange={setAllocationOpen}
+        onAllocated={() => onOpenChange(false)}
+      />
     </Dialog>
   );
 };

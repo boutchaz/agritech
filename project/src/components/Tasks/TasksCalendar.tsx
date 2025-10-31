@@ -64,7 +64,9 @@ const CalendarContent: React.FC<{
   tasks: Task[];
   onTaskSelect: (task: Task) => void;
   onCreateTask: () => void;
-}> = ({ tasks, onTaskSelect, onCreateTask }) => {
+  currentMonth: number;
+  currentYear: number;
+}> = ({ tasks, onTaskSelect, onCreateTask, currentMonth, currentYear }) => {
   const [month] = useCalendarMonth();
   const [year] = useCalendarYear();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -147,11 +149,9 @@ const CalendarContent: React.FC<{
                 }}
               />
               <CalendarYearPicker
-                labels={{
-                  button: "Année",
-                  empty: "Aucune année trouvée",
-                  search: "Rechercher une année...",
-                }}
+                start={2020}
+                end={2030}
+                className="min-w-[120px]"
               />
             </div>
 
@@ -254,15 +254,23 @@ const CalendarContent: React.FC<{
   );
 };
 
-// Main component
-const TasksCalendar: React.FC<TasksCalendarProps> = ({ organizationId, farms }) => {
+// Wrapper to track calendar month/year changes
+const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farms }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Get current month range for fetching tasks
-  const now = new Date();
-  const startDate = format(startOfMonth(now), 'yyyy-MM-dd');
-  const endDate = format(endOfMonth(now), 'yyyy-MM-dd');
+  // Read current month/year from calendar context
+  const [month] = useCalendarMonth();
+  const [year] = useCalendarYear();
+
+  // Calculate date range based on current calendar month/year
+  const { startDate, endDate } = useMemo(() => {
+    const currentDate = new Date(year, month);
+    return {
+      startDate: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+    };
+  }, [month, year]);
 
   const { data: tasks = [], isLoading } = useTasks(organizationId, {
     date_from: startDate,
@@ -290,13 +298,13 @@ const TasksCalendar: React.FC<TasksCalendarProps> = ({ organizationId, farms }) 
 
   return (
     <>
-      <CalendarProvider locale="fr-FR" startDay={1}>
-        <CalendarContent
-          tasks={tasks}
-          onTaskSelect={handleTaskSelect}
-          onCreateTask={handleCreateTask}
-        />
-      </CalendarProvider>
+      <CalendarContent
+        tasks={tasks}
+        onTaskSelect={handleTaskSelect}
+        onCreateTask={handleCreateTask}
+        currentMonth={month}
+        currentYear={year}
+      />
 
       {/* Task Form Modal */}
       {showTaskForm && (
@@ -315,6 +323,15 @@ const TasksCalendar: React.FC<TasksCalendarProps> = ({ organizationId, farms }) 
         />
       )}
     </>
+  );
+};
+
+// Main component wraps with CalendarProvider
+const TasksCalendar: React.FC<TasksCalendarProps> = (props) => {
+  return (
+    <CalendarProvider locale="fr-FR" startDay={1}>
+      <TasksCalendarInner {...props} />
+    </CalendarProvider>
   );
 };
 

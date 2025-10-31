@@ -75,7 +75,14 @@ export interface Task {
   // Cost
   cost_estimate?: number;
   actual_cost?: number;
-  
+
+  // Work Unit Payment (NEW - for piece-work tracking)
+  work_unit_id?: string; // Reference to work_units table
+  units_required?: number; // How many units to complete
+  units_completed?: number; // Progress in units
+  rate_per_unit?: number; // Payment per unit
+  payment_type?: 'daily' | 'per_unit' | 'monthly' | 'metayage';
+
   // Approval
   approved_by?: string;
   approved_at?: string;
@@ -180,6 +187,50 @@ export interface TaskTimeLog {
 }
 
 // =====================================================
+// TASK COST (NEW)
+// =====================================================
+export interface TaskCost {
+  id: string;
+  task_id: string;
+  organization_id: string;
+
+  // Cost Details
+  cost_type: 'labor' | 'material' | 'equipment' | 'utility' | 'other';
+  description?: string;
+  quantity?: number;
+  unit_price?: number;
+  total_amount: number;
+
+  // Payment Status
+  payment_status: 'pending' | 'approved' | 'paid' | 'cancelled';
+  payment_date?: string;
+  payment_reference?: string;
+
+  // Accounting
+  journal_entry_id?: string;
+  account_id?: string;
+
+  // Work Unit Reference (for piece-work)
+  work_unit_id?: string;
+  units_completed?: number;
+  rate_per_unit?: number;
+
+  // Worker Reference (for labor)
+  worker_id?: string;
+  piece_work_record_id?: string;
+
+  // Audit
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+
+  // Joined data
+  worker_name?: string;
+  work_unit_code?: string;
+  work_unit_name?: string;
+}
+
+// =====================================================
 // TASK DEPENDENCY
 // =====================================================
 export interface TaskDependency {
@@ -189,7 +240,7 @@ export interface TaskDependency {
   dependency_type: DependencyType;
   lag_days: number;
   created_at: string;
-  
+
   // Joined data
   depends_on_task_title?: string;
   depends_on_task_status?: TaskStatus;

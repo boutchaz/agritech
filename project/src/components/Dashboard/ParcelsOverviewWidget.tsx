@@ -40,47 +40,57 @@ const ParcelsOverviewWidget: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7 hover:shadow-md hover:border-green-200 dark:hover:border-green-700 transition-all duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-green-600" />
-          Parcelles
-        </h3>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/40 dark:to-green-900/20 rounded-xl">
+            <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Parcelles
+          </h3>
+        </div>
         <button
           onClick={handleViewParcels}
-          className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
           Voir tout
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Total</span>
-            <Layers className="h-4 w-4 text-green-600" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {parcels.length}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            parcelles
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="relative bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/10 rounded-xl p-4 overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Total</span>
+              <Layers className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+              {parcels.length}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              parcelles
+            </div>
           </div>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Surface</span>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {totalArea.toFixed(1)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            hectares
+        <div className="relative bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-900/10 rounded-xl p-4 overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-2xl"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Surface</span>
+              <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+              {totalArea.toFixed(1)}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              hectares
+            </div>
           </div>
         </div>
       </div>
@@ -88,17 +98,18 @@ const ParcelsOverviewWidget: React.FC = () => {
       {/* Top Crops */}
       {topCrops.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
             Principales cultures
           </h4>
           <div className="space-y-2">
             {topCrops.map(([crop, count]) => (
-              <div key={crop} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+              <div key={crop} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900/70 transition-colors">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                   {crop}
                 </span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-bold text-green-600 dark:text-green-400 ml-2 flex items-center gap-1">
                   {count}
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">parcelles</span>
                 </span>
               </div>
             ))}
@@ -107,15 +118,18 @@ const ParcelsOverviewWidget: React.FC = () => {
       )}
 
       {parcels.length === 0 && (
-        <div className="text-center py-6">
-          <MapPin className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl flex items-center justify-center">
+            <MapPin className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+          </div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
             Aucune parcelle créée
           </p>
           <button
             onClick={handleViewParcels}
-            className="mt-2 text-sm text-green-600 hover:text-green-700 dark:text-green-400"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-lg transition-colors"
           >
+            <MapPin className="h-4 w-4" />
             Créer une parcelle
           </button>
         </div>

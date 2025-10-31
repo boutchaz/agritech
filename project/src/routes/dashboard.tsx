@@ -7,7 +7,7 @@ import SubscriptionBanner from '../components/SubscriptionBanner'
 import { Home, Building2, Search } from 'lucide-react'
 import type { Module, SensorData, DashboardSettings } from '../types'
 import { CommandPalette } from '../components/CommandPalette'
-import { useNavigate, createFileRoute } from '@tanstack/react-router'
+import { useNavigate, createFileRoute, Link } from '@tanstack/react-router'
 import type { Action } from 'kbar'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
@@ -63,6 +63,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
 
   // Fetch dashboard settings from database
   const { data: dashboardSettings = defaultDashboardSettings } = useQuery({
@@ -109,6 +110,91 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const farmName = currentFarm?.name ? ` · ${currentFarm.name}` : '';
+    const title = `${organizationName}${farmName} | Tableau de bord`;
+    const description = 'Pilotez vos fermes : visualisez parcelles, tâches, analyses et comptabilité dans une seule interface.';
+
+    document.title = title;
+
+    let metaDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', description);
+  }, [currentOrganization, currentFarm]);
+
+  const structuredData = useMemo(() => {
+    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: `${organizationName} – plateforme de gestion agricole`,
+      description: 'Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.',
+      url: `${siteOrigin}/dashboard`,
+      brand: {
+        '@type': 'Organization',
+        name: organizationName,
+      },
+      provider: {
+        '@type': 'Organization',
+        name: organizationName,
+      },
+      hasPart: [
+        {
+          '@type': 'Service',
+          name: 'Gestion des parcelles',
+          url: `${siteOrigin}/parcels`,
+        },
+        {
+          '@type': 'Service',
+          name: 'Planification des tâches',
+          url: `${siteOrigin}/tasks`,
+        },
+        {
+          '@type': 'Service',
+          name: 'Comptabilité agricole',
+          url: `${siteOrigin}/accounting`,
+        },
+        {
+          '@type': 'Service',
+          name: 'Analyses de laboratoire',
+          url: `${siteOrigin}/analyses`,
+        },
+      ],
+    };
+  }, [currentOrganization, siteOrigin]);
+
+  const featureHighlights = useMemo(() => [
+    {
+      id: 'farm-ops',
+      title: 'Opérations agricoles pilotées',
+      description: 'Visualisez vos fermes, parcelles et suivis culturaux en temps réel pour déclencher les bonnes actions.',
+      cta: { label: 'Ouvrir la gestion des parcelles', to: '/parcels' }
+    },
+    {
+      id: 'task-execution',
+      title: 'Tâches et main-d’œuvre coordonnés',
+      description: 'Planifiez les travaux, assignez vos équipes et suivez l’avancement et le temps passé depuis un seul écran.',
+      cta: { label: 'Planifier une tâche', to: '/tasks' }
+    },
+    {
+      id: 'financial-health',
+      title: 'Santé financière consolidée',
+      description: 'Reliez factures, paiements et coûts par ferme pour anticiper trésorerie et marges.',
+      cta: { label: 'Consulter la comptabilité', to: '/accounting' }
+    },
+    {
+      id: 'lab-services',
+      title: 'Analyses & services intégrés',
+      description: 'Commandez vos analyses de sol et laboratoire depuis la plateforme et intégrez les résultats à vos décisions.',
+      cta: { label: 'Explorer les analyses', to: '/analyses' }
+    },
+  ], []);
 
   const commandActions = useMemo<Action[]>(() => {
     const navigationActions: Action[] = [
@@ -211,19 +297,85 @@ const AppContent: React.FC = () => {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-          <SubscriptionBanner />
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
-              { icon: Home, label: 'Tableau de bord', isActive: true }
-            ]}
-            title="Tableau de bord"
-            subtitle="Vue d'ensemble de votre exploitation agricole"
-            actions={<QuickActionsButton />}
-          />
-          <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
+        <main
+          className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto"
+          role="main"
+          aria-labelledby="dashboard-hero-title"
+        >
+          <h1 id="dashboard-hero-title" className="sr-only">
+            Pilotage de l'exploitation agricole
+          </h1>
+          <header className="border-b border-transparent" role="presentation">
+            <SubscriptionBanner />
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+                { icon: Home, label: 'Tableau de bord', isActive: true }
+              ]}
+              title="Pilotage de l'exploitation"
+              subtitle="Analysez vos fermes, vos équipes et votre performance financière en un seul endroit."
+              actions={<QuickActionsButton />}
+            />
+          </header>
+
+          <div className="p-6 max-w-7xl mx-auto space-y-6">
+            {/* Feature Highlights */}
+            <div className="flex flex-col gap-6 rounded-xl bg-white dark:bg-gray-800 shadow-sm p-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Points clés de la plateforme
+                </h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Activez les modules qui soutiennent vos objectifs quotidiens et accédez rapidement aux actions stratégiques.
+                </p>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                {featureHighlights.map((feature) => (
+                  <article
+                    key={feature.id}
+                    className="flex h-full flex-col justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-5"
+                  >
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                        {feature.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        {feature.description}
+                      </p>
+                    </div>
+                    <nav className="mt-4">
+                      <Link
+                        to={feature.cta.to}
+                        className="inline-flex items-center text-sm font-medium text-green-700 dark:text-green-300 hover:underline"
+                      >
+                        {feature.cta.label}
+                      </Link>
+                    </nav>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            {/* Dashboard Widgets */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Vue opérationnelle unifiée
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Surveillez en direct vos indicateurs clés : taches prioritaires, données météo et performances financières.
+                </p>
+              </div>
+              <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
+            </div>
+          </div>
+          <section aria-hidden="true" className="sr-only">
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+            />
+          </section>
         </main>
       </div>
     </CommandPalette>

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from '@tanstack/react-router'
+import { ArrowLeft } from 'lucide-react'
 
 interface AuthLayoutProps {
   title: string
@@ -9,6 +10,8 @@ interface AuthLayoutProps {
   switchHref: string
   switchCta: string
   children: React.ReactNode
+  backHref?: string
+  backLabel?: string
 }
 
 const highlights = [
@@ -34,6 +37,8 @@ export function AuthLayout({
   switchHref,
   switchCta,
   children,
+  backHref,
+  backLabel,
 }: AuthLayoutProps) {
   return (
     <div className="relative min-h-screen bg-slate-950">
@@ -92,6 +97,17 @@ export function AuthLayout({
           <div className="relative">
             <div className="absolute inset-0 -m-6 rounded-[32px] bg-gradient-to-br from-emerald-500/20 via-transparent to-lime-400/10 blur-3xl" aria-hidden="true" />
             <div className="relative rounded-[28px] border border-white/40 bg-white/95 p-8 shadow-2xl shadow-emerald-500/10 backdrop-blur">
+              {backHref && (
+                <div className="mb-6">
+                  <Link
+                    to={backHref}
+                    className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 transition hover:text-emerald-500"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    {backLabel ?? 'Retour à l’accueil'}
+                  </Link>
+                </div>
+              )}
               <div className="flex flex-col gap-10">
                 <div className="space-y-4 text-center lg:text-left">
                   <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">

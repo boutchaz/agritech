@@ -63,6 +63,8 @@ function LoginPage() {
       switchLabel="Don't have an account yet?"
       switchHref="/register"
       switchCta="Create one"
+      backHref="/"
+      backLabel="Back to landing"
     >
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">

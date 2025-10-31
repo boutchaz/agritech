@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
-import { Sliders, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sliders, Save, Loader2 } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
+import { ExperienceLevelSelector } from './settings/ExperienceLevelSelector';
+import { Button } from './ui/button';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from './MultiTenantAuthProvider';
+import { supabase } from '../lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 type DifficultyLevel = 'basic' | 'intermediate' | 'expert';
 
 const PreferencesSettings: React.FC = () => {
+  const { i18n } = useTranslation();
+  const { user, profile } = useAuth();
+  const queryClient = useQueryClient();
+
   const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>('basic');
   const [language, setLanguage] = useState('fr');
   const [timezone, setTimezone] = useState('Africa/Casablanca');
@@ -15,16 +26,89 @@ const PreferencesSettings: React.FC = () => {
     alerts: true,
     reports: false
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
 
-  const handleSave = () => {
-    // Save preferences logic here
-    console.log('Saving preferences:', {
-      difficultyLevel,
-      language,
-      timezone,
-      notifications
-    });
+  // Load user preferences from profile
+  useEffect(() => {
+    if (profile) {
+      // @ts-expect-error - language field exists in user_profiles
+      const userLanguage = profile.language || 'fr';
+      // @ts-expect-error - timezone field exists in user_profiles
+      const userTimezone = profile.timezone || 'Africa/Casablanca';
+
+      setLanguage(userLanguage);
+      setTimezone(userTimezone);
+
+      // Update i18n language to match user preference
+      if (i18n.language !== userLanguage) {
+        i18n.changeLanguage(userLanguage);
+      }
+
+      setIsLoadingPreferences(false);
+    } else if (!user) {
+      setIsLoadingPreferences(false);
+    }
+  }, [profile, user, i18n]);
+
+  const handleSave = async () => {
+    if (!user) {
+      toast.error('Erreur', {
+        description: 'Vous devez être connecté pour sauvegarder vos préférences.',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Update user profile in database
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          language,
+          timezone,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update i18n language immediately
+      if (i18n.language !== language) {
+        await i18n.changeLanguage(language);
+      }
+
+      // Invalidate auth profile query to refresh data
+      queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
+
+      // Show success toast
+      toast.success('Préférences enregistrées', {
+        description: 'Vos préférences ont été mises à jour avec succès.',
+        duration: 3000,
+      });
+    } catch (error) {
+      // Show error toast
+      toast.error('Erreur lors de la sauvegarde', {
+        description: 'Impossible de sauvegarder vos préférences. Veuillez réessayer.',
+        duration: 4000,
+      });
+      console.error('Failed to save preferences:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  // Show loading state while fetching preferences
+  if (isLoadingPreferences) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-2" />
+          <p className="text-gray-600 dark:text-gray-400">Chargement des préférences...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -35,18 +119,22 @@ const PreferencesSettings: React.FC = () => {
             Préférences
           </h2>
         </div>
-        <button
+        <Button
           onClick={handleSave}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          disabled={isSaving}
+          className="bg-green-600 hover:bg-green-700"
         >
-          <Save className="h-4 w-4" />
-          <span>Sauvegarder</span>
-        </button>
+          <Save className="h-4 w-4 mr-2" />
+          {isSaving ? 'Enregistrement...' : 'Sauvegarder'}
+        </Button>
       </div>
 
       <p className="text-gray-600 dark:text-gray-400">
         Personnalisez votre expérience avec l'application selon vos préférences.
       </p>
+
+      {/* Experience Level Selector - Full Width */}
+      <ExperienceLevelSelector />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Interface Preferences */}
@@ -56,54 +144,6 @@ const PreferencesSettings: React.FC = () => {
           </h3>
 
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Niveau de difficulté
-              </label>
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={() => setDifficultyLevel('basic')}
-                  className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                    difficultyLevel === 'basic'
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <h4 className="font-medium text-gray-900 dark:text-white">Basique</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Interface simplifiée avec fonctionnalités essentielles
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setDifficultyLevel('intermediate')}
-                  className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                    difficultyLevel === 'intermediate'
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <h4 className="font-medium text-gray-900 dark:text-white">Moyen</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Fonctionnalités avancées avec aide contextuelle
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setDifficultyLevel('expert')}
-                  className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                    difficultyLevel === 'expert'
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <h4 className="font-medium text-gray-900 dark:text-white">Expert</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Toutes les fonctionnalités sans assistance
-                  </p>
-                </button>
-              </div>
-            </div>
 
             <FormField label="Langue" htmlFor="pref_language">
               <Select

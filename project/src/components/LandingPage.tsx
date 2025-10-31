@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,9 +23,86 @@ import {
 import { SUBSCRIPTION_PLANS } from '../lib/polar';
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/hero-bg.avif';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
+  const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
+
+  useEffect(() => {
+    const pageTitle = t('landing.seo.title', {
+      defaultValue: 'Agritech Suite — Pilotez vos fermes de la parcelle à la comptabilité',
+    });
+    const description = t('landing.seo.description', {
+      defaultValue:
+        'Centralisez la gestion agricole : parcelles, main-d’œuvre, analyses satellite, comptabilité et ventes dans une même plateforme.',
+    });
+
+    document.title = pageTitle;
+
+    const ensureMeta = (name: string, content: string) => {
+      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', content);
+    };
+
+    ensureMeta('description', description);
+    ensureMeta('og:title', pageTitle);
+    ensureMeta('og:description', description);
+    ensureMeta('twitter:title', pageTitle);
+    ensureMeta('twitter:description', description);
+  }, [t]);
+
+  const structuredData = useMemo(() => {
+    const name = t('app.name', { defaultValue: 'Agritech Suite' });
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name,
+      url: `${siteOrigin}/`,
+      description: t('landing.seo.description', {
+        defaultValue:
+          'Centralisez la gestion agricole : parcelles, main-d’œuvre, analyses satellite, comptabilité et ventes dans une même plateforme.',
+      }),
+      sameAs: [],
+      hasPart: [
+        {
+          '@type': 'Service',
+          name: t('landing.features.parcelManagement', { defaultValue: 'Gestion des parcelles' }),
+          url: `${siteOrigin}/parcels`,
+        },
+        {
+          '@type': 'Service',
+          name: t('landing.features.teamManagement', { defaultValue: 'Gestion des équipes' }),
+          url: `${siteOrigin}/tasks`,
+        },
+        {
+          '@type': 'Service',
+          name: t('landing.features.profitability', { defaultValue: 'Suivi de la rentabilité' }),
+          url: `${siteOrigin}/accounting`,
+        },
+        {
+          '@type': 'Service',
+          name: t('landing.features.satelliteAnalysis', { defaultValue: 'Analyses satellite' }),
+          url: `${siteOrigin}/satellite-analysis`,
+        },
+      ],
+    };
+  }, [siteOrigin, t]);
   const features = [
     {
       icon: MapPin,
@@ -136,6 +213,52 @@ const LandingPage: React.FC = () => {
     },
   ];
 
+  const trustedSectors = [
+    t('landing.trusted.agronomists', { defaultValue: 'Agronomes' }),
+    t('landing.trusted.coops', { defaultValue: 'Coopératives' }),
+    t('landing.trusted.exporters', { defaultValue: 'Exportateurs' }),
+    t('landing.trusted.labs', { defaultValue: 'Laboratoires' }),
+  ];
+
+  const solutionModules = [
+    {
+      icon: MapPin,
+      title: t('landing.modules.parcels.title', { defaultValue: 'Gestion des parcelles' }),
+      description: t('landing.modules.parcels.desc', {
+        defaultValue: 'Cartographiez vos parcelles, suivez les cultures et reliez-les aux analyses de sol.',
+      }),
+      to: '/parcels',
+      color: 'text-green-600',
+    },
+    {
+      icon: CheckCircle,
+      title: t('landing.modules.tasks.title', { defaultValue: 'Planification des tâches' }),
+      description: t('landing.modules.tasks.desc', {
+        defaultValue: 'Assignez vos équipes, mesurez le temps passé et suivez la progression en direct.',
+      }),
+      to: '/tasks',
+      color: 'text-blue-600',
+    },
+    {
+      icon: DollarSign,
+      title: t('landing.modules.accounting.title', { defaultValue: 'Comptabilité intégrée' }),
+      description: t('landing.modules.accounting.desc', {
+        defaultValue: 'Automatisez factures, paiements et suivi des coûts par ferme ou parcelle.',
+      }),
+      to: '/accounting',
+      color: 'text-emerald-600',
+    },
+    {
+      icon: Satellite,
+      title: t('landing.modules.analytics.title', { defaultValue: 'Analyses & services' }),
+      description: t('landing.modules.analytics.desc', {
+        defaultValue: 'Exploitez les images satellite et commandez vos analyses laboratoire en quelques clics.',
+      }),
+      to: '/analyses',
+      color: 'text-purple-600',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Navigation */}
@@ -165,8 +288,12 @@ const LandingPage: React.FC = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] flex items-center justify-center overflow-hidden">
+      <main role="main" aria-labelledby="landing-hero-title">
+        {/* Hero Section */}
+        <section
+          className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] flex items-center justify-center overflow-hidden"
+          aria-labelledby="landing-hero-title"
+        >
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <div
@@ -182,7 +309,10 @@ const LandingPage: React.FC = () => {
         {/* Content */}
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 text-center">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 animate-fade-in-up leading-tight">
+              <h1
+                id="landing-hero-title"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 animate-fade-in-up leading-tight"
+              >
               {t('landing.hero.title')}{' '}
               <span className="text-green-400 animate-pulse-slow">{t('landing.hero.titleHighlight')}</span>
             </h1>
@@ -190,19 +320,26 @@ const LandingPage: React.FC = () => {
               {t('landing.hero.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0 animate-fade-in-up animation-delay-400">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:scale-105 transition-all duration-300 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl"
+              <Button
+                asChild
+                size="lg"
+                className="bg-green-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:bg-green-700 hover:shadow-xl text-lg font-semibold"
               >
-                {t('landing.hero.ctaPrimary')}
-                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </Link>
-              <a
-                href="#features"
-                className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 border-2 border-white text-white rounded-lg hover:bg-white hover:text-green-600 transition-all duration-300 text-base sm:text-lg font-semibold backdrop-blur-sm"
+                <Link to="/register">
+                  {t('landing.hero.ctaPrimary')}
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white hover:text-green-600 transition-colors duration-300 text-lg font-semibold"
               >
-                {t('landing.hero.ctaSecondary')}
-              </a>
+                <a href="#features">
+                  {t('landing.hero.ctaSecondary')}
+                </a>
+              </Button>
             </div>
             <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-200 animate-fade-in-up animation-delay-600 px-4">
               <div className="flex items-center">
@@ -228,68 +365,168 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-        <div className="text-center mb-10 sm:mb-12 lg:mb-16">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-4">
-            {t('landing.features.title')}
-          </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400 px-4">
-            {t('landing.features.subtitle')}
-          </p>
-        </div>
+        {/* Trusted By */}
+        <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p className="text-sm uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-6 sm:mb-8">
+              {t('landing.trustedBy')}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+              {trustedSectors.map((label) => (
+                <Badge
+                  key={label}
+                  variant="secondary"
+                  className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-200 sm:text-base"
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={index}
-                className="bg-white dark:bg-gray-800 rounded-xl p-5 sm:p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
+        {/* Modules */}
+        <section
+          className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-900"
+          aria-labelledby="landing-modules-title"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <h2
+                id="landing-modules-title"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
               >
-                <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 ${feature.bgColor} rounded-lg mb-3 sm:mb-4`}>
-                  <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${feature.color}`} />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{feature.description}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="bg-gray-100 dark:bg-gray-800 py-12 sm:py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-4">
-              {t('landing.benefits.title')}
-            </h2>
+                {t('landing.modules.title', { defaultValue: 'Les modules qui orchestrent vos opérations' })}
+              </h2>
+              <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                {t('landing.modules.subtitle', {
+                  defaultValue:
+                    'Une suite intégrée reliant la planification des parcelles, le travail des équipes, la comptabilité et l’analyse agronomique.',
+                })}
+              </p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {solutionModules.map((module) => {
+                const Icon = module.icon;
+                return (
+                  <Card
+                    key={module.title}
+                    className="flex h-full flex-col transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <CardHeader className="flex flex-row items-center gap-3 pb-4">
+                      <span className={cn('rounded-full bg-gray-100 p-3 dark:bg-gray-700', module.color)}>
+                        <Icon className="h-6 w-6" />
+                      </span>
+                      <CardTitle className="text-lg font-semibold">{module.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 pt-0">
+                      <p className="text-sm text-muted-foreground">{module.description}</p>
+                    </CardContent>
+                    <CardFooter className="pt-0">
+                      <Button
+                        asChild
+                        variant="link"
+                        className="px-0 text-green-700 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200"
+                      >
+                        <Link to={module.to}>
+                          {t('landing.modules.cta', { defaultValue: 'Découvrir le module' })}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {benefits.map((benefit, index) => {
-              const Icon = benefit.icon;
-              return (
-                <div key={index} className="text-center px-4">
-                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-green-100 dark:bg-green-900 rounded-full mb-3 sm:mb-4">
-                    <Icon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600 dark:text-green-400" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {benefit.title}
-                  </h3>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{benefit.description}</p>
-                </div>
-              );
-            })}
+        {/* Features */}
+        <section
+          id="features"
+          className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900"
+          aria-labelledby="landing-features-title"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <h2
+                id="landing-features-title"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+              >
+                {t('landing.features.title')}
+              </h2>
+              <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                {t('landing.features.subtitle')}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+              {features.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <Card key={index} className="h-full shadow-lg transition-shadow hover:shadow-xl">
+                    <CardHeader className="space-y-3 pb-4">
+                      <span
+                        className={cn(
+                          'inline-flex h-12 w-12 items-center justify-center rounded-lg',
+                          feature.bgColor
+                        )}
+                      >
+                        <Icon className={cn('h-6 w-6', feature.color)} />
+                      </span>
+                      <CardTitle className="text-lg sm:text-xl font-semibold">
+                        {feature.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        {/* Benefits */}
+        <section
+          className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-900"
+          aria-labelledby="landing-benefits-title"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <h2
+                id="landing-benefits-title"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+              >
+                {t('landing.benefits.title')}
+              </h2>
+              <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                {t('landing.benefits.subtitle')}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {benefits.map((benefit, index) => {
+                const Icon = benefit.icon;
+                return (
+                  <Card key={index} className="h-full text-center">
+                    <CardHeader className="items-center space-y-4 pb-4">
+                      <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                        <Icon className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      </span>
+                      <CardTitle className="text-lg sm:text-xl font-semibold">{benefit.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-sm sm:text-base text-muted-foreground">{benefit.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         <div className="text-center mb-10 sm:mb-12 lg:mb-16">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-4">
             {t('landing.pricing.title')}
@@ -303,52 +540,58 @@ const LandingPage: React.FC = () => {
           {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
             const isPopular = plan.highlighted;
             return (
-              <div
+              <Card
                 key={plan.id}
-                className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${
-                  isPopular ? 'ring-2 ring-green-600 sm:scale-105' : ''
-                }`}
+                className={cn(
+                  'flex h-full flex-col overflow-hidden border',
+                  isPopular ? 'border-green-600 ring-2 ring-green-600 sm:scale-[1.02]' : ''
+                )}
               >
                 {isPopular && (
                   <div className="bg-green-600 text-white text-center py-2 text-xs sm:text-sm font-semibold">
                     {t('landing.pricing.mostPopular')}
                   </div>
                 )}
-                <div className="p-6 sm:p-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    {plan.name}
-                  </h3>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6 min-h-[3rem]">
+                <CardHeader className="space-y-3 pb-4">
+                  <CardTitle className="text-xl sm:text-2xl font-bold">{plan.name}</CardTitle>
+                  <CardDescription className="min-h-[3rem] text-sm sm:text-base">
                     {plan.description}
-                  </p>
-                  <div className="mb-4 sm:mb-6">
-                    <span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-                      {plan.price}
-                    </span>
+                  </CardDescription>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
                     {plan.priceAmount > 0 && (
-                      <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 ml-2">{t('landing.pricing.perMonth')}</span>
+                      <span className="text-sm sm:text-base text-muted-foreground">
+                        {t('landing.pricing.perMonth')}
+                      </span>
                     )}
                   </div>
-                  <Link
-                    to="/register"
-                    className={`block w-full text-center py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Button
+                    asChild
+                    className={cn(
+                      'w-full',
                       isPopular
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
-                    }`}
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-muted text-foreground hover:bg-muted/80'
+                    )}
                   >
-                    {plan.id === 'enterprise' ? t('landing.pricing.contactUs') : t('landing.pricing.getStarted')}
-                  </Link>
+                    <Link to="/register">
+                      {plan.id === 'enterprise'
+                        ? t('landing.pricing.contactUs')
+                        : t('landing.pricing.getStarted')}
+                    </Link>
+                  </Button>
                   <ul className="mt-6 sm:mt-8 space-y-2 sm:space-y-3">
                     {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start">
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{feature}</span>
+                      <li key={index} className="flex items-start text-sm text-muted-foreground">
+                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                        <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
@@ -363,14 +606,26 @@ const LandingPage: React.FC = () => {
           <p className="text-base sm:text-lg lg:text-xl text-green-100 mb-6 sm:mb-8 px-4">
             {t('landing.cta.subtitle')}
           </p>
-          <Link
-            to="/register"
-            className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white text-green-600 rounded-lg hover:bg-gray-100 transition-colors text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl"
+          <Button
+            asChild
+            size="lg"
+            className="bg-white text-green-600 hover:bg-gray-100 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl"
           >
-            {t('landing.cta.button')}
-            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-          </Link>
+            <Link to="/register">
+              {t('landing.cta.button')}
+              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+            </Link>
+          </Button>
         </div>
+      </section>
+
+      </main>
+
+      <section aria-hidden="true" className="sr-only">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </section>
 
       {/* Footer */}

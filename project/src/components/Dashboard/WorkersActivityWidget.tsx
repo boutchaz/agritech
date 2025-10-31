@@ -74,65 +74,77 @@ const WorkersActivityWidget: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7 hover:shadow-md hover:border-purple-200 dark:hover:border-purple-700 transition-all duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Users className="h-5 w-5 text-purple-600" />
-          Activité Travailleurs
-        </h3>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/40 dark:to-purple-900/20 rounded-xl">
+            <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Activité Travailleurs
+          </h3>
+        </div>
         <button
           onClick={handleViewWorkers}
-          className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
           Voir tout
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Actifs</span>
-            <UserCheck className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats.active}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            sur {stats.total} total
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="relative bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-900/10 rounded-xl p-4 overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200/20 dark:bg-purple-400/10 rounded-full blur-2xl"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Actifs</span>
+              <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+              {stats.active}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              sur {stats.total} total
+            </div>
           </div>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Aujourd'hui</span>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats.workingToday}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            en activité
+        <div className="relative bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-900/10 rounded-xl p-4 overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-2xl"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Aujourd'hui</span>
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+              {stats.workingToday}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              en activité
+            </div>
           </div>
         </div>
       </div>
 
       {/* Active Tasks */}
-      <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-        <div className="flex items-center justify-between">
+      <div className="mb-5 p-4 bg-gradient-to-br from-green-50 to-emerald-50/50 dark:from-green-900/30 dark:to-emerald-900/10 rounded-xl border border-green-100 dark:border-green-800">
+        <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="p-1.5 bg-green-100 dark:bg-green-900/50 rounded-lg">
+              <Activity className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">
               Tâches en cours
             </span>
           </div>
-          <span className="text-lg font-bold text-green-600 dark:text-green-400">
+          <span className="text-2xl font-bold text-green-600 dark:text-green-400">
             {stats.activeTasks}
           </span>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-xs text-gray-600 dark:text-gray-400 font-medium ml-9">
           {stats.tasksToday} tâches prévues aujourd'hui
         </div>
       </div>
@@ -140,37 +152,37 @@ const WorkersActivityWidget: React.FC = () => {
       {/* Top Workers */}
       {topWorkers.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
             Plus actifs
           </h4>
           <div className="space-y-2">
             {topWorkers.map((worker, index) => (
               <div
                 key={worker.id}
-                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 dark:from-gray-900/50 dark:to-gray-900/20 rounded-lg hover:from-purple-50 hover:to-purple-50/50 dark:hover:from-purple-900/20 dark:hover:to-purple-900/10 transition-all duration-200"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/40 dark:to-purple-900/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
                       {index + 1}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                       {worker.first_name} {worker.last_name}
                     </p>
                     {worker.position && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate font-medium">
                         {worker.position}
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                <div className="text-right flex-shrink-0 ml-2">
+                  <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                     {worker.taskCount}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                     tâches
                   </div>
                 </div>
@@ -181,15 +193,18 @@ const WorkersActivityWidget: React.FC = () => {
       )}
 
       {workers.length === 0 && (
-        <div className="text-center py-6">
-          <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl flex items-center justify-center">
+            <Users className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+          </div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
             Aucun travailleur enregistré
           </p>
           <button
             onClick={handleViewWorkers}
-            className="mt-2 text-sm text-green-600 hover:text-green-700 dark:text-green-400"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors"
           >
+            <Users className="h-4 w-4" />
             Ajouter des travailleurs
           </button>
         </div>

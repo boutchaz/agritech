@@ -9,6 +9,7 @@ import LegacyUserBanner from '../components/LegacyUserBanner'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
+import { LevelUpSuggestion } from '../components/adaptive'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -119,6 +120,8 @@ function AuthenticatedLayout() {
           </main>
         </div>
       </div>
+      {/* Level-up suggestion toast */}
+      <LevelUpSuggestion />
     </div>
   )
 }
