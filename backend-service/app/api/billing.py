@@ -58,7 +58,7 @@ async def fetch_template(supabase, organization_id: str, template_table: str):
 @router.get("/quotes/{quote_id}/pdf")
 async def generate_quote_pdf_endpoint(
     quote_id: str = Path(..., description="UUID of the quote"),
-    authorization: Optional[str] = Header(None)
+    authorization: Optional[str] = Header(None, alias="Authorization")
 ):
     """
     Generate PDF for a quote
@@ -116,7 +116,7 @@ async def generate_quote_pdf_endpoint(
 @router.get("/invoices/{invoice_id}/pdf")
 async def generate_invoice_pdf_endpoint(
     invoice_id: str = Path(..., description="UUID of the invoice"),
-    authorization: Optional[str] = Header(None)
+    authorization: Optional[str] = Header(None, alias="Authorization")
 ):
     """
     Generate PDF for an invoice
