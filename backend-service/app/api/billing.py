@@ -22,17 +22,31 @@ def get_supabase_client():
         settings.SUPABASE_KEY
     )
     
+    # Debug logging (only log presence, not the actual key value for security)
+    logger.debug(f"SUPABASE_URL from env: {bool(os.getenv('SUPABASE_URL'))}, from settings: {bool(settings.SUPABASE_URL)}")
+    logger.debug(f"SUPABASE_SERVICE_KEY from env: {bool(os.getenv('SUPABASE_SERVICE_KEY'))}")
+    logger.debug(f"SUPABASE_SERVICE_ROLE_KEY from env: {bool(os.getenv('SUPABASE_SERVICE_ROLE_KEY'))}")
+    logger.debug(f"SUPABASE_SERVICE_KEY from settings: {bool(settings.SUPABASE_SERVICE_KEY)}")
+    logger.debug(f"SUPABASE_KEY from settings: {bool(settings.SUPABASE_KEY)}")
+    logger.debug(f"Final supabase_key present: {bool(supabase_key)}")
+    
     if not supabase_url:
+        logger.error("SUPABASE_URL is not configured")
         raise HTTPException(
             status_code=500, 
             detail="SUPABASE_URL environment variable is not configured"
         )
     
     if not supabase_key:
-        raise HTTPException(
-            status_code=500, 
-            detail="SUPABASE_SERVICE_KEY environment variable is not configured. Please set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY."
+        available_supabase_vars = [k for k in os.environ.keys() if k.startswith('SUPABASE_')]
+        error_detail = (
+            "SUPABASE_SERVICE_KEY environment variable is not configured. "
+            f"Please set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY. "
+            f"Available SUPABASE_* env vars: {available_supabase_vars if available_supabase_vars else 'none'}"
         )
+        logger.error(f"SUPABASE_SERVICE_KEY is not configured. Checked env vars: SUPABASE_SERVICE_KEY, SUPABASE_SERVICE_ROLE_KEY")
+        logger.error(f"Available env vars starting with SUPABASE_: {available_supabase_vars}")
+        raise HTTPException(status_code=500, detail=error_detail)
     
     return create_client(supabase_url, supabase_key)
 
