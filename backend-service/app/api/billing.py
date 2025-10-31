@@ -87,6 +87,9 @@ async def generate_quote_pdf_endpoint(
             **quote,
             'expiry_date': quote.get('valid_until'),  # Map valid_until to expiry_date
             'issue_date': quote.get('quote_date'),   # Map quote_date to issue_date
+            'total_tax': quote.get('tax_total', 0),  # Map tax_total to total_tax
+            'subtotal': quote.get('subtotal', 0),  # Ensure subtotal exists
+            'total': quote.get('grand_total', 0),  # Map grand_total to total
         }
         
         # Transform items to match PDF generator format
@@ -168,6 +171,34 @@ async def generate_invoice_pdf_endpoint(
 
         invoice = invoice_response.data[0]
 
+        # Transform invoice data to match PDF generator expectations
+        pdf_invoice = {
+            **invoice,
+            'issue_date': invoice.get('invoice_date'),  # Map invoice_date to issue_date
+            'total_tax': invoice.get('tax_total', 0),  # Map tax_total to total_tax
+            'subtotal': invoice.get('subtotal', 0),  # Ensure subtotal exists
+            'total': invoice.get('grand_total', 0),  # Map grand_total to total
+        }
+        
+        # Transform items to match PDF generator format
+        items = invoice.get('items', [])
+        pdf_invoice['items'] = [
+            {
+                **item,
+                'rate': item.get('unit_price', 0),  # Map unit_price to rate
+                'tax_amount': item.get('tax_amount') or 0,  # Ensure tax_amount is not None
+            }
+            for item in items
+        ]
+        
+        # Ensure customer contact fields are available
+        if not pdf_invoice.get('customer_email') and invoice.get('contact_email'):
+            pdf_invoice['customer_email'] = invoice.get('contact_email')
+        if not pdf_invoice.get('customer_phone') and invoice.get('contact_phone'):
+            pdf_invoice['customer_phone'] = invoice.get('contact_phone')
+        if not pdf_invoice.get('customer_address'):
+            pdf_invoice['customer_address'] = None  # Can be None
+
         # Fetch organization
         organization = await fetch_organization(supabase, invoice["organization_id"])
 
@@ -180,7 +211,7 @@ async def generate_invoice_pdf_endpoint(
         # Generate PDF using factory
         pdf_bytes = PDFGeneratorFactory.generate_pdf(
             document_type="invoice",
-            document_data=invoice,
+            document_data=pdf_invoice,
             organization=organization,
             template=template
         )
@@ -234,6 +265,9 @@ async def generate_purchase_order_pdf_endpoint(
         pdf_po = {
             **po,
             'issue_date': po.get('po_date'),  # Map po_date to issue_date
+            'total_tax': po.get('tax_total', 0),  # Map tax_total to total_tax
+            'subtotal': po.get('subtotal', 0),  # Ensure subtotal exists
+            'total': po.get('grand_total', 0),  # Map grand_total to total
         }
         
         # Transform items to match PDF generator format
