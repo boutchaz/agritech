@@ -13,42 +13,60 @@ router = APIRouter()
 def get_supabase_client():
     """Get Supabase client"""
     from supabase import create_client
-    supabase_url = os.getenv("SUPABASE_URL", settings.SUPABASE_URL)
+    
+    def get_env_value(key: str, fallback: str = "") -> str:
+        """Get environment variable value, treating empty strings as None"""
+        value = os.getenv(key, fallback)
+        return value.strip() if value else ""
+    
+    supabase_url = get_env_value("SUPABASE_URL") or settings.SUPABASE_URL or ""
+    
     # Try multiple environment variable names for service key
+    # Check each one and use the first non-empty value
     supabase_key = (
-        os.getenv("SUPABASE_SERVICE_KEY") or 
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY") or
-        settings.SUPABASE_SERVICE_KEY or 
-        settings.SUPABASE_KEY
+        get_env_value("SUPABASE_SERVICE_KEY") or 
+        get_env_value("SUPABASE_SERVICE_ROLE_KEY") or
+        (settings.SUPABASE_SERVICE_KEY or "").strip() or 
+        (settings.SUPABASE_KEY or "").strip()
     )
     
     # Debug logging (only log presence, not the actual key value for security)
-    logger.debug(f"SUPABASE_URL from env: {bool(os.getenv('SUPABASE_URL'))}, from settings: {bool(settings.SUPABASE_URL)}")
-    logger.debug(f"SUPABASE_SERVICE_KEY from env: {bool(os.getenv('SUPABASE_SERVICE_KEY'))}")
-    logger.debug(f"SUPABASE_SERVICE_ROLE_KEY from env: {bool(os.getenv('SUPABASE_SERVICE_ROLE_KEY'))}")
-    logger.debug(f"SUPABASE_SERVICE_KEY from settings: {bool(settings.SUPABASE_SERVICE_KEY)}")
-    logger.debug(f"SUPABASE_KEY from settings: {bool(settings.SUPABASE_KEY)}")
-    logger.debug(f"Final supabase_key present: {bool(supabase_key)}")
+    service_key_from_env = get_env_value("SUPABASE_SERVICE_KEY")
+    service_role_key_from_env = get_env_value("SUPABASE_SERVICE_ROLE_KEY")
     
-    if not supabase_url:
-        logger.error("SUPABASE_URL is not configured")
+    logger.debug(f"SUPABASE_URL from env: {bool(get_env_value('SUPABASE_URL'))}, from settings: {bool(settings.SUPABASE_URL)}")
+    logger.debug(f"SUPABASE_SERVICE_KEY from env: {bool(service_key_from_env)} (length: {len(service_key_from_env) if service_key_from_env else 0})")
+    logger.debug(f"SUPABASE_SERVICE_ROLE_KEY from env: {bool(service_role_key_from_env)} (length: {len(service_role_key_from_env) if service_role_key_from_env else 0})")
+    logger.debug(f"SUPABASE_SERVICE_KEY from settings: {bool(settings.SUPABASE_SERVICE_KEY)} (length: {len(settings.SUPABASE_SERVICE_KEY) if settings.SUPABASE_SERVICE_KEY else 0})")
+    logger.debug(f"SUPABASE_KEY from settings: {bool(settings.SUPABASE_KEY)} (length: {len(settings.SUPABASE_KEY) if settings.SUPABASE_KEY else 0})")
+    logger.debug(f"Final supabase_key present: {bool(supabase_key)} (length: {len(supabase_key) if supabase_key else 0})")
+    
+    if not supabase_url or not supabase_url.strip():
+        logger.error("SUPABASE_URL is not configured or is empty")
         raise HTTPException(
             status_code=500, 
-            detail="SUPABASE_URL environment variable is not configured"
+            detail="SUPABASE_URL environment variable is not configured or is empty"
         )
     
-    if not supabase_key:
+    if not supabase_key or not supabase_key.strip():
         available_supabase_vars = [k for k in os.environ.keys() if k.startswith('SUPABASE_')]
+        # Log the actual values (first 20 chars only for security)
+        service_key_preview = service_key_from_env[:20] + "..." if service_key_from_env and len(service_key_from_env) > 20 else service_key_from_env or "(empty)"
+        service_role_key_preview = service_role_key_from_env[:20] + "..." if service_role_key_from_env and len(service_role_key_from_env) > 20 else service_role_key_from_env or "(empty)"
+        
         error_detail = (
-            "SUPABASE_SERVICE_KEY environment variable is not configured. "
-            f"Please set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY. "
+            "SUPABASE_SERVICE_KEY environment variable is not configured or is empty. "
+            f"SUPABASE_SERVICE_KEY value: '{service_key_preview}', "
+            f"SUPABASE_SERVICE_ROLE_KEY value: '{service_role_key_preview}'. "
             f"Available SUPABASE_* env vars: {available_supabase_vars if available_supabase_vars else 'none'}"
         )
-        logger.error(f"SUPABASE_SERVICE_KEY is not configured. Checked env vars: SUPABASE_SERVICE_KEY, SUPABASE_SERVICE_ROLE_KEY")
+        logger.error(f"SUPABASE_SERVICE_KEY is not configured or is empty.")
+        logger.error(f"SUPABASE_SERVICE_KEY length: {len(service_key_from_env) if service_key_from_env else 0}")
+        logger.error(f"SUPABASE_SERVICE_ROLE_KEY length: {len(service_role_key_from_env) if service_role_key_from_env else 0}")
         logger.error(f"Available env vars starting with SUPABASE_: {available_supabase_vars}")
         raise HTTPException(status_code=500, detail=error_detail)
     
-    return create_client(supabase_url, supabase_key)
+    return create_client(supabase_url.strip(), supabase_key.strip())
 
 
 async def verify_auth(authorization: Optional[str]):
