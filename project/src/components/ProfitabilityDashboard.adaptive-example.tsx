@@ -37,7 +37,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 // ⭐ NEW: Import adaptive UI components
 import { useExperienceLevel, useFeatureFlag } from '@/contexts/ExperienceLevelContext';
-import { AdaptiveSection, ContextualHelp, LevelUpSuggestion } from '@/components/adaptive';
+import { ContextualHelp, LevelUpSuggestion } from '@/components/adaptive';
 import type { ContextualHint } from '@/types/experience-level';
 
 const ProfitabilityDashboard: React.FC = () => {

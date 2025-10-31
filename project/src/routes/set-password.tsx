@@ -1,3 +1,4 @@
+import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, Leaf, Shield } from 'lucide-react';

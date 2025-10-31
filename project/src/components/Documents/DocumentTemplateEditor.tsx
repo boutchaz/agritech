@@ -24,7 +24,7 @@ import {
   type DocumentType,
 } from '@/hooks/useDocumentTemplates';
 import { toast } from 'sonner';
-import { Loader2, FileText, ImageIcon, Palette, Ruler } from 'lucide-react';
+import { Loader2, FileText, ImageIcon, Ruler } from 'lucide-react';
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),

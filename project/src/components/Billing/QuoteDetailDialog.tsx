@@ -34,7 +34,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   onEdit,
   onDownloadPDF,
 }) => {
-  const { currentOrganization } = useAuth();
+  const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToOrder = useConvertQuoteToOrder();
 

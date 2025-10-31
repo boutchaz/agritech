@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 
 function SettingsIndexRedirect() {
-  const { userRole } = useAuth();
+  const { userRole: _userRole } = useAuth();
 
   // Redirect based on user role
   // All users can access profile, so it's a safe default

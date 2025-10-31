@@ -49,8 +49,8 @@ type FarmFormValues = z.infer<typeof farmSchema>;
 
 const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   organizationId,
-  onFarmSelect,
-  onAddParcel,
+  _onFarmSelect,
+  _onAddParcel,
   onManageFarm
 }) => {
   const queryClient = useQueryClient();

@@ -99,7 +99,7 @@ const AppContent: React.FC = () => {
     }
 
     isSyncingRef.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [search.parcelId, search.tab, search.farmId]);
 
   // Update URL when state changes (state changes trigger URL update)
@@ -142,7 +142,7 @@ const AppContent: React.FC = () => {
         isSyncingRef.current = false;
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [selectedParcelId, activeParcelTab, selectedFarmId]);
 
   // Farms and parcels are loaded automatically via React Query hooks

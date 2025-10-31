@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, DollarSign, User, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface InvoiceDetailDialogProps {

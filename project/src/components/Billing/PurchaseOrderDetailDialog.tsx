@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   Package,
   FileText,
-  Truck,
   Send,
   Download,
   Pencil,

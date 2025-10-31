@@ -30,7 +30,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { currentOrganization } = useAuth();
+  const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
 

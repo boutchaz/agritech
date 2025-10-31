@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -232,7 +232,7 @@ export function PieceWorkEntry({
   });
 
   // Auto-fill rate when worker or unit changes
-  const selectedWorkerId = form.watch('worker_id');
+  const _selectedWorkerId = form.watch('worker_id');
   const selectedUnitId = form.watch('work_unit_id');
 
   const handleWorkerChange = (workerId: string) => {

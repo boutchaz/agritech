@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Package, Plus, Filter, Download, Calendar, TrendingUp, Building2 } from 'lucide-react';
+import { Package, Plus, Filter, Download, Building2 } from 'lucide-react';
 import { useHarvests, useHarvestStatistics, useDeleteHarvest } from '../hooks/useHarvests';
 import { useFarms } from '../hooks/useParcelsQuery';
 import HarvestForm from '../components/Harvests/HarvestForm';
@@ -13,7 +13,7 @@ import HarvestStatistics from '../components/Harvests/HarvestStatistics';
 import type { Module } from '../types';
 import type { HarvestSummary, HarvestFilters } from '../types/harvests';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+// import { fr } from 'date-fns/locale';
 
 const mockModules: Module[] = [
   {

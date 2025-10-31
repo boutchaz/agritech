@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlaskConical, MapPin, Clock, DollarSign, FileText, Plus } from 'lucide-react';
+import { FlaskConical, MapPin, Clock, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

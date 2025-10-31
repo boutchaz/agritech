@@ -4,7 +4,7 @@ import { Users, UserCheck, Clock, ChevronRight, Activity } from 'lucide-react';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useTasks } from '../../hooks/useTasks';
-import { startOfDay, isToday } from 'date-fns';
+import { isToday } from 'date-fns';
 
 const WorkersActivityWidget: React.FC = () => {
   const navigate = useNavigate();

@@ -66,9 +66,9 @@ const CalendarContent: React.FC<{
   onCreateTask: () => void;
   currentMonth: number;
   currentYear: number;
-}> = ({ tasks, onTaskSelect, onCreateTask, currentMonth, currentYear }) => {
-  const [month] = useCalendarMonth();
-  const [year] = useCalendarYear();
+}> = ({ tasks, onTaskSelect, onCreateTask, _currentMonth, _currentYear }) => {
+  const [_month] = useCalendarMonth();
+  const [_year] = useCalendarYear();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Convert tasks to Kibo UI Feature format
@@ -110,7 +110,7 @@ const CalendarContent: React.FC<{
     }
   };
 
-  const handleDateClick = (date: Date) => {
+  const _handleDateClick = (date: Date) => {
     setSelectedDate(date);
   };
 

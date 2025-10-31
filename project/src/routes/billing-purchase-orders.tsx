@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, Package, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Truck, Download, MoreVertical, Send } from 'lucide-react';
+import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +43,7 @@ const AppContent: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
+  const [statusFilter, _setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = usePurchaseOrders(statusFilter);
 

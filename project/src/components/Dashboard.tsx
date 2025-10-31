@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Droplets, Thermometer, Wrench, AlertTriangle, Calendar, MapPin } from 'lucide-react';
+import { Activity, Droplets, Thermometer, Wrench, AlertTriangle, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -19,7 +19,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
-  const { latestReadings, isConnected } = useSensorData();
+  const { latestReadings, _isConnected } = useSensorData();
   const { currentFarm } = useAuth();
   const farmId = currentFarm?.id ?? null;
   const { parcels, loading: parcelsLoading } = useParcels(farmId);

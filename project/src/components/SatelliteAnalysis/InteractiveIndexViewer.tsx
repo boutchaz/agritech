@@ -965,7 +965,7 @@ const MultiIndexOverlayMap: React.FC<{
   overlayOpacity: Map<VegetationIndexType, number>;
   selectedDate: string;
   baseLayer: 'osm' | 'satellite';
-}> = ({ parcelId, parcelName, boundary, multiData, overlayOpacity, selectedDate, baseLayer }) => {
+}> = ({ _parcelId, _parcelName, boundary, multiData, overlayOpacity, _selectedDate, baseLayer }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const indices = Array.from(multiData.keys());
 

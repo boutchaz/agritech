@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useSubscription } from '../hooks/useSubscription';
 import { isSubscriptionValid } from '../lib/polar';
-import Auth from './Auth';
+// import Auth from './Auth';
 import SubscriptionRequired from './SubscriptionRequired';
 
 interface ProtectedRouteProps {

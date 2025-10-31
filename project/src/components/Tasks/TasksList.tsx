@@ -11,7 +11,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useTasks } from '../../hooks/useTasks';
-import type { TaskFilters, TaskStatus, TaskPriority, TaskType } from '../../types/tasks';
+import type { TaskFilters, TaskStatus } from '../../types/tasks';
 import {
   getTaskStatusLabel,
   getTaskPriorityLabel,

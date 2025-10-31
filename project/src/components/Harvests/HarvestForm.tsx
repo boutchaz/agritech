@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useFarms, useParcelsByFarm } from '../../hooks/useParcelsQuery';
 import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
@@ -38,7 +38,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
         await createMutation.mutateAsync({ ...formData, organization_id: currentOrganization.id, workers: [] } as any);
       }
       onClose();
-    } catch (error) {
+    } catch (_error) {
       alert('Erreur');
     }
   };

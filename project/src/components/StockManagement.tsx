@@ -145,7 +145,7 @@ const StockManagement: React.FC = () => {
       fetchSuppliers();
       fetchWarehouses();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentOrganization]);
 
   const fetchProducts = async () => {
