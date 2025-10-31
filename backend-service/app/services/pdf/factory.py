@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 from .base import BasePDFGenerator, DocumentTemplate
 from .quote import QuotePDFGenerator
 from .invoice import InvoicePDFGenerator
+from .purchase_order import PurchaseOrderPDFGenerator
 
 
 class PDFGeneratorFactory:
@@ -19,9 +20,9 @@ class PDFGeneratorFactory:
     _generators = {
         'quote': QuotePDFGenerator,
         'invoice': InvoicePDFGenerator,
+        'purchase_order': PurchaseOrderPDFGenerator,
         # Future additions:
         # 'receipt': ReceiptPDFGenerator,
-        # 'purchase_order': PurchaseOrderPDFGenerator,
         # 'delivery_note': DeliveryNotePDFGenerator,
         # 'credit_note': CreditNotePDFGenerator,
         # 'report': ReportPDFGenerator,

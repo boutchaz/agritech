@@ -3,15 +3,25 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, Package, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
+import { Building2, Package, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Truck, Download, MoreVertical, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { usePurchaseOrders, type PurchaseOrder } from '../hooks/usePurchaseOrders';
 import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const mockModules: Module[] = [
   {
@@ -36,6 +46,62 @@ const AppContent: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = usePurchaseOrders(statusFilter);
+
+  const handleDownloadPDF = async (order: PurchaseOrder) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to download PDF');
+        return;
+      }
+
+      // Call backend service
+      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+      const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${order.id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get('Content-Type');
+        let errorMessage = 'Failed to generate PDF';
+
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('Content-Type');
+
+      if (contentType?.includes('text/html')) {
+        const html = await response.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+
+        toast.info('PDF service not configured. Opening printable HTML version. Use browser\'s Print to PDF feature.');
+      } else {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `purchase-order-${order.po_number}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -342,18 +408,80 @@ const AppContent: React.FC = () => {
                             {order.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setDetailDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setDetailDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadPDF(order)}
+                              disabled={order.status === 'draft'}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {order.status === 'draft' && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedOrder(order);
+                                    setDetailDialogOpen(true);
+                                  }}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Submit for Approval
+                                  </DropdownMenuItem>
+                                )}
+                                {order.status === 'submitted' && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedOrder(order);
+                                    setDetailDialogOpen(true);
+                                  }}>
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Confirm Order
+                                  </DropdownMenuItem>
+                                )}
+                                {['confirmed', 'partially_received'].includes(order.status) && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedOrder(order);
+                                    setDetailDialogOpen(true);
+                                  }}>
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Mark as Received
+                                  </DropdownMenuItem>
+                                )}
+                                {order.status !== 'cancelled' && order.status !== 'billed' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedOrder(order);
+                                        setDetailDialogOpen(true);
+                                      }}
+                                      className="text-red-600 dark:text-red-400"
+                                    >
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Cancel Order
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -389,6 +517,9 @@ const AppContent: React.FC = () => {
             if (!open) {
               setSelectedOrder(null);
             }
+          }}
+          onDownloadPDF={(order) => {
+            handleDownloadPDF(order);
           }}
         />
       </main>

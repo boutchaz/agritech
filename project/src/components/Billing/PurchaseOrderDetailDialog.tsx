@@ -45,8 +45,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 
 type ExtendedStatus = PurchaseOrder['status'] | 'approved' | 'in_transit' | 'completed';
-type StatusActionKey = 'submitted' | 'approved' | 'in_transit' | 'received';
-type TimelineStepKey = 'draft' | 'submitted' | 'approved' | 'in_transit' | 'received' | 'billed';
+type StatusActionKey = 'submitted' | 'confirmed' | 'received';
+type TimelineStepKey = 'draft' | 'submitted' | 'confirmed' | 'received' | 'billed';
 type NormalizedStatus = TimelineStepKey | 'cancelled';
 type StepState = 'completed' | 'current' | 'upcoming' | 'cancelled';
 
@@ -54,13 +54,14 @@ interface PurchaseOrderDetailDialogProps {
   purchaseOrder: PurchaseOrder | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (po: PurchaseOrder) => void;
+  onDownloadPDF?: (po: PurchaseOrder) => void;
 }
 
 const statusOrder: TimelineStepKey[] = [
   'draft',
   'submitted',
-  'approved',
-  'in_transit',
+  'confirmed',
   'received',
   'billed',
 ];
@@ -74,13 +75,9 @@ const timelineStepConfig: Record<TimelineStepKey, { label: string; description: 
     label: 'Submitted',
     description: 'Awaiting supplier confirmation or internal approval.',
   },
-  approved: {
-    label: 'Approved',
-    description: 'Order approved and ready for fulfillment.',
-  },
-  in_transit: {
-    label: 'In Transit',
-    description: 'Supplier dispatched the goods; awaiting receipt.',
+  confirmed: {
+    label: 'Confirmed',
+    description: 'Order confirmed and ready for fulfillment.',
   },
   received: {
     label: 'Received',
@@ -101,15 +98,10 @@ const statusActionCopy: Record<
     body: 'This will notify approvers and lock line items until the purchase order is reviewed.',
     confirmLabel: 'Submit Purchase Order',
   },
-  approved: {
-    title: 'Approve Purchase Order',
-    body: 'Approving confirms supplier agreement and enables goods tracking.',
-    confirmLabel: 'Approve Order',
-  },
-  in_transit: {
-    title: 'Mark as In Transit',
-    body: 'Use this when the supplier has shipped the goods so receiving teams can prepare.',
-    confirmLabel: 'Mark In Transit',
+  confirmed: {
+    title: 'Confirm Purchase Order',
+    body: 'Confirming confirms supplier agreement and enables goods tracking.',
+    confirmLabel: 'Confirm Order',
   },
   received: {
     title: 'Confirm Goods Receipt',
@@ -119,7 +111,11 @@ const statusActionCopy: Record<
 };
 
 const normalizeStatus = (status: ExtendedStatus): NormalizedStatus => {
+  if (status === 'approved') return 'confirmed';
+  if (status === 'in_transit') return 'confirmed';
   if (status === 'completed') return 'billed';
+  if (status === 'partially_received') return 'confirmed';
+  if (status === 'partially_billed') return 'received';
   return status as NormalizedStatus;
 };
 
@@ -145,6 +141,8 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   purchaseOrder,
   open,
   onOpenChange,
+  onEdit,
+  onDownloadPDF,
 }) => {
   const purchaseOrderId = purchaseOrder?.id ?? null;
   const {
@@ -316,10 +314,8 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         return po.created_at;
       case 'submitted':
         return hasReachedStep('submitted') ? po.submitted_at : null;
-      case 'approved':
-        return hasReachedStep('approved') ? po.confirmed_at ?? po.updated_at : null;
-      case 'in_transit':
-        return hasReachedStep('in_transit') ? po.updated_at : null;
+      case 'confirmed':
+        return hasReachedStep('confirmed') ? po.confirmed_at ?? po.updated_at : null;
       case 'received':
         return hasReachedStep('received') ? po.updated_at : null;
       case 'billed':
@@ -337,10 +333,9 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   }));
 
   const canSubmit = po.status === 'draft';
-  const canApprove = po.status === 'submitted';
-  const canMarkInTransit = po.status === 'approved';
-  const canMarkReceived = po.status === 'in_transit';
-  const canCreateBill = ['approved', 'in_transit', 'received'].includes(po.status);
+  const canConfirm = po.status === 'submitted';
+  const canMarkReceived = ['confirmed', 'partially_received'].includes(po.status);
+  const canCreateBill = ['confirmed', 'partially_received', 'received', 'partially_billed'].includes(po.status);
   const canDownload = po.status !== 'draft';
   const canEditDetails = ['draft', 'submitted'].includes(po.status);
 
@@ -362,18 +357,12 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         return;
       }
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        toast.error('Supabase URL missing. Check your environment configuration.');
-        return;
-      }
-
-      const functionUrl = `${supabaseUrl}/functions/v1/generate-purchase-order-pdf`;
-      const response = await fetch(`${functionUrl}?purchaseOrderId=${po.id}`, {
+      // Call backend service
+      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+      const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${po.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
         },
       });
 
@@ -447,8 +436,17 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const handleCreateBill = () => {
     if (!po) return;
 
+    const today = new Date().toISOString().split('T')[0];
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+
     convertToBill.mutate(
-      { purchaseOrderId: po.id },
+      {
+        poId: po.id,
+        invoiceDate: today,
+        dueDate: dueDateStr
+      },
       {
         onSuccess: (bill) => {
           toast.success(`Bill #${bill.invoice_number} created from Purchase Order`);
@@ -474,16 +472,10 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       disabled: !canSubmit,
     },
     {
-      key: 'approved',
-      label: 'Approve Order',
+      key: 'confirmed',
+      label: 'Confirm Order',
       icon: <CheckCircle2 className="mr-2 h-4 w-4" />,
-      disabled: !canApprove,
-    },
-    {
-      key: 'in_transit',
-      label: 'Mark In Transit',
-      icon: <Truck className="mr-2 h-4 w-4" />,
-      disabled: !canMarkInTransit,
+      disabled: !canConfirm,
     },
     {
       key: 'received',
@@ -497,16 +489,16 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Purchase Order #{po.po_number ?? po.order_number ?? ''}
               </DialogTitle>
               <DialogDescription>
-                View purchase order details and manage receipt
+                View purchase order details and manage status
               </DialogDescription>
             </div>
             <Badge className={getStatusColor(po.status)}>
@@ -947,27 +939,75 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             </Card>
           )}
 
-          <div className="flex flex-col gap-3 border-t pt-4">
-            <div className="flex flex-wrap gap-2">
-              {availableStatusActions.length > 0 ? (
-                availableStatusActions.map((action) => (
-                  <Button
-                    key={action.key}
-                    variant="outline"
-                    disabled={updateStatus.isPending}
-                    onClick={() => setPendingStatus(action.key)}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </Button>
-                ))
+          {/* Actions - Matching Quote Dialog Pattern */}
+          <div className="flex items-center justify-between gap-2 pt-4 border-t">
+            {/* Left side - Download, Edit, Convert to Bill */}
+            <div className="flex items-center gap-2">
+              {onDownloadPDF ? (
+                <Button
+                  onClick={() => onDownloadPDF(po)}
+                  variant="outline"
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Download PDF
+                </Button>
               ) : (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  No additional status actions available for the current stage.
-                </span>
+                <Button
+                  onClick={handleDownload}
+                  disabled={!canDownload || isDownloading}
+                  variant="outline"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Download PDF
+                </Button>
+              )}
+              {onEdit && canEditDetails && (
+                <Button
+                  onClick={() => onEdit(po)}
+                  variant="outline"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Order
+                </Button>
+              )}
+              {canCreateBill && remainingToBill > 0 && (
+                <Button
+                  onClick={handleCreateBill}
+                  disabled={convertToBill.isPending}
+                  variant="outline"
+                >
+                  {convertToBill.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="mr-2 h-4 w-4" />
+                  )}
+                  Convert to Bill
+                </Button>
               )}
             </div>
-            <div className="flex justify-end">
+
+            {/* Right side - Status actions and Close */}
+            <div className="flex items-center gap-2">
+              {availableStatusActions.map((action) => (
+                <Button
+                  key={action.key}
+                  variant="outline"
+                  disabled={updateStatus.isPending}
+                  onClick={() => setPendingStatus(action.key)}
+                >
+                  {action.icon}
+                  {action.label}
+                </Button>
+              ))}
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
@@ -1020,18 +1060,19 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   );
 };
 
-const getStatusColor = (status: ExtendedStatus) => {
+const getStatusColor = (status: PurchaseOrder['status']) => {
   switch (status) {
     case 'submitted':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-    case 'approved':
+    case 'confirmed':
       return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-    case 'in_transit':
+    case 'partially_received':
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
     case 'received':
       return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+    case 'partially_billed':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
     case 'billed':
-    case 'completed':
       return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
     case 'cancelled':
       return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';

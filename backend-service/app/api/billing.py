@@ -203,6 +203,89 @@ async def generate_invoice_pdf_endpoint(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"PDF generation failed for invoice {invoice_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
+@router.get("/purchase-orders/{purchase_order_id}/pdf")
+async def generate_purchase_order_pdf_endpoint(
+    purchase_order_id: str = Path(..., description="UUID of the purchase order"),
+    authorization: Optional[str] = Header(None, alias="Authorization")
+):
+    """
+    Generate PDF for a purchase order
+
+    Args:
+        purchase_order_id: UUID of the purchase order
+        authorization: Bearer token from Supabase Auth
+
+    Returns:
+        PDF file as bytes
+    """
+    try:
+        # Verify authorization
+        user, supabase = await verify_auth(authorization)
+
+        # Fetch purchase order with items
+        po_response = supabase.table("purchase_orders").select(
+            "*, items:purchase_order_items(*)"
+        ).eq("id", purchase_order_id).execute()
+
+        if not po_response.data or len(po_response.data) == 0:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
+
+        po = po_response.data[0]
+
+        # Transform purchase order data to match PDF generator expectations
+        pdf_po = {
+            **po,
+            'issue_date': po.get('po_date'),  # Map po_date to issue_date
+        }
+        
+        # Transform items to match PDF generator format
+        items = po.get('items', [])
+        pdf_po['items'] = [
+            {
+                **item,
+                'rate': item.get('unit_price', 0),  # Map unit_price to rate
+                'tax_amount': item.get('tax_amount') or 0,  # Ensure tax_amount is not None
+            }
+            for item in items
+        ]
+        
+        # Ensure contact fields are available
+        if not pdf_po.get('contact_email'):
+            pdf_po['contact_email'] = po.get('contact_email')
+        if not pdf_po.get('contact_phone'):
+            pdf_po['contact_phone'] = po.get('contact_phone')
+
+        # Fetch organization
+        organization = await fetch_organization(supabase, po["organization_id"])
+
+        # Fetch optional template (purchase orders can share quote templates)
+        template = await fetch_template(supabase, po["organization_id"], "quote_templates")
+
+        # Generate PDF using factory
+        pdf_bytes = PDFGeneratorFactory.generate_pdf(
+            document_type="purchase_order",
+            document_data=pdf_po,
+            organization=organization,
+            template=template
+        )
+
+        # Return PDF as response
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="purchase-order-{po["po_number"]}.pdf"'
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PDF generation failed for purchase order {purchase_order_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 
 
