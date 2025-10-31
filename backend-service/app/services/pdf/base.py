@@ -244,6 +244,11 @@ class BasePDFGenerator(ABC):
         for i in range(max_rows):
             left_text = left_data[i] if i < len(left_data) else ""
             right_text = right_data[i] if i < len(right_data) else ""
+            
+            # Ensure values are strings, not None
+            left_text = str(left_text) if left_text is not None else ""
+            right_text = str(right_text) if right_text is not None else ""
+            
             data.append([
                 Paragraph(left_text, self.styles['NormalText']),
                 Paragraph(right_text, self.styles['NormalText'])
@@ -376,17 +381,40 @@ class ItemizedDocumentGenerator(BasePDFGenerator):
 
     def get_organization_info(self) -> List[str]:
         """Return organization information lines"""
-        org_info = [
-            f"<b>{self.organization['name']}</b>",
-            self.organization.get('address', ''),
-            f"{self.organization.get('city', '')} {self.organization.get('postal_code', '')}",
-            self.organization.get('country', ''),
-            f"Email: {self.organization.get('email', '')}",
-            f"Tel: {self.organization.get('phone', '')}",
-        ]
+        # Helper to safely convert to string, handling None
+        def safe_str(value, default=''):
+            return str(value) if value is not None else default
+        
+        name = safe_str(self.organization.get('name'), '')
+        address = safe_str(self.organization.get('address'))
+        city = safe_str(self.organization.get('city'))
+        postal_code = safe_str(self.organization.get('postal_code'))
+        country = safe_str(self.organization.get('country'))
+        email = safe_str(self.organization.get('email'))
+        phone = safe_str(self.organization.get('phone'))
+        
+        org_info = [f"<b>{name}</b>"] if name else []
+        
+        if address:
+            org_info.append(address)
+        
+        city_postal = f"{city} {postal_code}".strip()
+        if city_postal:
+            org_info.append(city_postal)
+        
+        if country:
+            org_info.append(country)
+        
+        if email:
+            org_info.append(f"Email: {email}")
+        
+        if phone:
+            org_info.append(f"Tel: {phone}")
 
-        if self.template.show_tax_id and self.organization.get('tax_id'):
-            org_info.append(f"Tax ID: {self.organization['tax_id']}")
+        if self.template and self.template.get('show_tax_id'):
+            tax_id = safe_str(self.organization.get('tax_id'))
+            if tax_id:
+                org_info.append(f"Tax ID: {tax_id}")
 
         return org_info
 

@@ -26,21 +26,29 @@ class PurchaseOrderPDFGenerator(ItemizedDocumentGenerator):
 
     def get_customer_info(self) -> List[str]:
         """Return supplier information (for purchase orders, supplier is in the 'to' position)"""
-        supplier_info = [
-            f"<b>{self.document['supplier_name']}</b>",
-        ]
+        # Helper to safely convert to string, handling None
+        def safe_str(value, default=''):
+            return str(value) if value is not None else default
+        
+        supplier_name = safe_str(self.document.get('supplier_name'))
+        delivery_address = safe_str(self.document.get('delivery_address'))
+        contact_email = safe_str(self.document.get('contact_email'))
+        contact_phone = safe_str(self.document.get('contact_phone'))
+        supplier_quote_ref = safe_str(self.document.get('supplier_quote_ref'))
+        
+        supplier_info = [f"<b>{supplier_name}</b>"] if supplier_name else []
 
-        if self.document.get('delivery_address'):
-            supplier_info.append(self.document['delivery_address'])
+        if delivery_address:
+            supplier_info.append(delivery_address)
 
-        if self.document.get('contact_email'):
-            supplier_info.append(f"Email: {self.document['contact_email']}")
+        if contact_email:
+            supplier_info.append(f"Email: {contact_email}")
 
-        if self.document.get('contact_phone'):
-            supplier_info.append(f"Tel: {self.document['contact_phone']}")
+        if contact_phone:
+            supplier_info.append(f"Tel: {contact_phone}")
 
-        if self.document.get('supplier_quote_ref'):
-            supplier_info.append(f"Ref: {self.document['supplier_quote_ref']}")
+        if supplier_quote_ref:
+            supplier_info.append(f"Ref: {supplier_quote_ref}")
 
         return supplier_info
 

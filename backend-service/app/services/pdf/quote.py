@@ -25,18 +25,25 @@ class QuotePDFGenerator(ItemizedDocumentGenerator):
 
     def get_customer_info(self) -> List[str]:
         """Return customer information"""
-        customer_info = [
-            f"<b>{self.document['customer_name']}</b>",
-        ]
+        # Helper to safely convert to string, handling None
+        def safe_str(value, default=''):
+            return str(value) if value is not None else default
+        
+        customer_name = safe_str(self.document.get('customer_name'))
+        customer_address = safe_str(self.document.get('customer_address'))
+        customer_email = safe_str(self.document.get('customer_email'))
+        customer_phone = safe_str(self.document.get('customer_phone'))
+        
+        customer_info = [f"<b>{customer_name}</b>"] if customer_name else []
 
-        if self.document.get('customer_address'):
-            customer_info.append(self.document['customer_address'])
+        if customer_address:
+            customer_info.append(customer_address)
 
-        if self.document.get('customer_email'):
-            customer_info.append(f"Email: {self.document['customer_email']}")
+        if customer_email:
+            customer_info.append(f"Email: {customer_email}")
 
-        if self.document.get('customer_phone'):
-            customer_info.append(f"Tel: {self.document['customer_phone']}")
+        if customer_phone:
+            customer_info.append(f"Tel: {customer_phone}")
 
         return customer_info
 
