@@ -22,14 +22,33 @@ async def fetch_organization(supabase, organization_id: str):
     return org_response.data[0]
 
 
-async def fetch_template(supabase, organization_id: str, template_table: str):
-    """Fetch optional custom template"""
-    template_response = supabase.table(template_table).select("*").eq(
+async def fetch_template(supabase, organization_id: str, document_type: str):
+    """
+    Fetch optional custom template from document_templates table
+    
+    Args:
+        supabase: Supabase client
+        organization_id: Organization UUID
+        document_type: Document type ('quote', 'invoice', 'purchase_order', etc.)
+    
+    Returns:
+        Template dict or None if no default template found
+    """
+    template_response = supabase.table("document_templates").select("*").eq(
         "organization_id", organization_id
-    ).eq("is_default", True).execute()
+    ).eq("document_type", document_type).eq("is_default", True).execute()
 
     if template_response.data and len(template_response.data) > 0:
         return template_response.data[0]
+    
+    # Fallback: try 'general' template if no specific template found
+    general_template_response = supabase.table("document_templates").select("*").eq(
+        "organization_id", organization_id
+    ).eq("document_type", "general").eq("is_default", True).execute()
+    
+    if general_template_response.data and len(general_template_response.data) > 0:
+        return general_template_response.data[0]
+    
     return None
 
 
@@ -94,7 +113,7 @@ async def generate_quote_pdf_endpoint(
         organization = await fetch_organization(supabase, quote["organization_id"])
 
         # Fetch optional template
-        template = await fetch_template(supabase, quote["organization_id"], "quote_templates")
+        template = await fetch_template(supabase, quote["organization_id"], "quote")
 
         # Generate PDF using factory
         pdf_bytes = PDFGeneratorFactory.generate_pdf(
@@ -153,10 +172,10 @@ async def generate_invoice_pdf_endpoint(
         organization = await fetch_organization(supabase, invoice["organization_id"])
 
         # Fetch optional template (invoices can share quote templates or have their own)
-        template = await fetch_template(supabase, invoice["organization_id"], "invoice_templates")
+        template = await fetch_template(supabase, invoice["organization_id"], "invoice")
         if not template:
-            # Fallback to quote template if invoice template doesn't exist
-            template = await fetch_template(supabase, invoice["organization_id"], "quote_templates")
+            # Fallback: try quote template if no invoice template found
+            template = await fetch_template(supabase, invoice["organization_id"], "quote")
 
         # Generate PDF using factory
         pdf_bytes = PDFGeneratorFactory.generate_pdf(
@@ -238,7 +257,7 @@ async def generate_purchase_order_pdf_endpoint(
         organization = await fetch_organization(supabase, po["organization_id"])
 
         # Fetch optional template (purchase orders can share quote templates)
-        template = await fetch_template(supabase, po["organization_id"], "quote_templates")
+        template = await fetch_template(supabase, po["organization_id"], "purchase_order")
 
         # Generate PDF using factory
         pdf_bytes = PDFGeneratorFactory.generate_pdf(
