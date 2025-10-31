@@ -50,7 +50,7 @@ async def generate_quote_pdf_endpoint(
     """
     try:
         # Verify authorization
-        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=True)
+        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
         # Fetch quote with items
         quote_response = supabase.table("quotes").select(
@@ -137,7 +137,7 @@ async def generate_invoice_pdf_endpoint(
     """
     try:
         # Verify authorization
-        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=True)
+        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
         # Fetch invoice with items
         invoice_response = supabase.table("invoices").select(
@@ -199,7 +199,7 @@ async def generate_purchase_order_pdf_endpoint(
     """
     try:
         # Verify authorization
-        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=True)
+        user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
         # Fetch purchase order with items
         po_response = supabase.table("purchase_orders").select(

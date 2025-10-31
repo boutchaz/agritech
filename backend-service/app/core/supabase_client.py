@@ -119,7 +119,7 @@ def get_supabase_client(
 
 async def verify_auth_and_get_client(
     authorization: Optional[str],
-    use_service_key: bool = True
+    use_service_key: bool = False
 ) -> tuple:
     """
     Verify authentication and get a Supabase client
@@ -129,9 +129,12 @@ async def verify_auth_and_get_client(
     2. Verifies the token with Supabase
     3. Returns both the user and a properly configured client
     
+    Default behavior: Uses anon key with user token (respects RLS).
+    Falls back to service key if anon key fails (only if service key is available).
+    
     Args:
         authorization: Authorization header value (e.g., "Bearer eyJhbGc...")
-        use_service_key: Whether to use service key (True) or anon key (False)
+        use_service_key: Whether to force use service key (True) or prefer anon key (False)
         
     Returns:
         Tuple of (user, supabase_client)
@@ -142,11 +145,11 @@ async def verify_auth_and_get_client(
         HTTPException: If authentication fails or token is invalid
         
     Examples:
-        # User-scoped client (respects RLS)
+        # User-scoped client (respects RLS) - DEFAULT
         >>> user, client = await verify_auth_and_get_client(authorization_header)
         >>> quotes = client.table("quotes").select("*").eq("organization_id", org_id).execute()
         
-        # Admin client (bypasses RLS)
+        # Force admin client (bypasses RLS)
         >>> user, client = await verify_auth_and_get_client(authorization_header, use_service_key=True)
         >>> all_quotes = client.table("quotes").select("*").execute()
     """
@@ -157,7 +160,7 @@ async def verify_auth_and_get_client(
     
     token = authorization.replace("Bearer ", "").strip()
     
-    # Try with anon key first (respects RLS)
+    # Default: Try anon key first (respects RLS) - PREFERRED for user operations
     if not use_service_key:
         try:
             client = get_supabase_client(use_service_key=False, user_token=token)
@@ -167,8 +170,23 @@ async def verify_auth_and_get_client(
             return user_response.user, client
         except HTTPException:
             raise
+        except ValueError as e:
+            # If anon key is not configured, try service key as fallback
+            logger.warning(f"Anon key not available: {str(e)}. Trying service key as fallback...")
+            try:
+                client = get_supabase_client(use_service_key=True)
+                user_response = client.auth.get_user(token)
+                if not user_response.user:
+                    raise HTTPException(status_code=401, detail="Invalid token")
+                return user_response.user, client
+            except ValueError:
+                # Both keys failed - return original error
+                raise HTTPException(status_code=500, detail=str(e))
+            except Exception as service_error:
+                logger.error(f"Authentication failed with service key: {str(service_error)}")
+                raise HTTPException(status_code=401, detail=f"Authentication failed: {str(service_error)}")
         except Exception as e:
-            # If anon key fails, try service key as fallback
+            # Other errors with anon key - try service key as fallback
             logger.warning(f"Failed to authenticate with anon key: {str(e)}. Trying service key...")
             try:
                 client = get_supabase_client(use_service_key=True)
@@ -180,7 +198,7 @@ async def verify_auth_and_get_client(
                 logger.error(f"Authentication failed with both anon and service key: {str(service_error)}")
                 raise HTTPException(status_code=401, detail=f"Authentication failed: {str(service_error)}")
     else:
-        # Use service key directly
+        # Force use service key (admin operations)
         try:
             client = get_supabase_client(use_service_key=True)
             user_response = client.auth.get_user(token)
