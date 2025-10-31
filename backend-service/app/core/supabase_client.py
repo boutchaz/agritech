@@ -110,9 +110,44 @@ def get_supabase_client(
     # user permissions in application logic rather than relying solely on RLS
     client = create_client(supabase_url.strip(), supabase_key.strip())
     
-    # Store token for reference (can be used for logging/audit)
-    if user_token:
+    # When using anon key with user token, we need to pass Authorization header in requests
+    # The Python Supabase client uses PostgREST which respects the Authorization header
+    # We'll store the token and modify the client's postgrest client to include headers
+    if not use_service_key and user_token:
+        # Store token for reference
         client._user_token = user_token  # type: ignore
+        
+        # Monkey-patch the postgrest client to include Authorization header
+        # This ensures RLS policies are enforced based on the user token
+        try:
+            # Try to patch the session's request method
+            if hasattr(client, 'postgrest') and hasattr(client.postgrest, 'session'):
+                original_request = client.postgrest.session.request
+                
+                def request_with_auth(*args, **kwargs):
+                    # Add Authorization header to all requests
+                    if 'headers' not in kwargs:
+                        kwargs['headers'] = {}
+                    kwargs['headers']['Authorization'] = f'Bearer {user_token}'
+                    kwargs['headers']['apikey'] = supabase_key.strip()
+                    return original_request(*args, **kwargs)
+                
+                # Patch the request method
+                client.postgrest.session.request = request_with_auth  # type: ignore
+            elif hasattr(client, 'rest') and hasattr(client.rest, 'session'):
+                # Alternative path for some client versions
+                original_request = client.rest.session.request  # type: ignore
+                
+                def request_with_auth(*args, **kwargs):
+                    if 'headers' not in kwargs:
+                        kwargs['headers'] = {}
+                    kwargs['headers']['Authorization'] = f'Bearer {user_token}'
+                    kwargs['headers']['apikey'] = supabase_key.strip()
+                    return original_request(*args, **kwargs)
+                
+                client.rest.session.request = request_with_auth  # type: ignore
+        except Exception as e:
+            logger.warning(f"Could not patch client headers: {str(e)}. RLS might not be enforced properly.")
     
     return client
 
