@@ -411,7 +411,7 @@ class ItemizedDocumentGenerator(BasePDFGenerator):
         if phone:
             org_info.append(f"Tel: {phone}")
 
-        if self.template and self.template.get('show_tax_id'):
+        if self.template and hasattr(self.template, 'show_tax_id') and self.template.show_tax_id:
             tax_id = safe_str(self.organization.get('tax_id'))
             if tax_id:
                 org_info.append(f"Tax ID: {tax_id}")
