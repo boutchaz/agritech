@@ -131,6 +131,8 @@ All API calls use TanStack Query. Custom hooks in `src/hooks/`.
 
 **Testing**: Vitest (unit), Playwright (E2E). Test migrations on local Supabase first.
 
+**Build Configuration**: Uses minimal Vite config without manual chunk splitting to avoid React context issues. Single bundle approach (~5MB uncompressed, 1.3MB gzipped) ensures all React-dependent libraries share the same React instance. Leaflet SSR issues handled via `ssr.noExternal` config.
+
 ## Common Workflows
 
 **Add Route**: Create in `src/routes/` → Add to Sidebar → Update CASL permissions if needed

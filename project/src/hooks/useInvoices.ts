@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { calculateInvoiceTotals } from '../lib/taxCalculations';
+import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
 
 export interface Invoice {
   id: string;
@@ -183,6 +183,7 @@ export function useInvoiceStats() {
 
 /**
  * Hook to create a new invoice with direct database insert
+ * Uses shared invoice service to eliminate duplicate logic
  */
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
@@ -216,104 +217,31 @@ export function useCreateInvoice() {
       }
 
       // Fetch party name from suppliers or customers
-      let partyName = '';
-      if (invoiceData.invoice_type === 'purchase') {
-        const { data: supplier } = await supabase
-          .from('suppliers')
-          .select('name')
-          .eq('id', invoiceData.party_id)
-          .single();
-        partyName = supplier?.name || '';
-      } else {
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('name')
-          .eq('id', invoiceData.party_id)
-          .single();
-        partyName = customer?.name || '';
+      const partyName = await fetchPartyName(invoiceData.party_id, invoiceData.invoice_type);
+
+      if (!partyName) {
+        throw new Error(`Party not found for ${invoiceData.invoice_type === 'sales' ? 'customer' : 'supplier'} ID: ${invoiceData.party_id}`);
       }
 
-      // Generate invoice number
-      const { data: invoiceNumber, error: numberError } = await supabase
-        .rpc('generate_invoice_number', {
-          p_organization_id: currentOrganization.id,
-          p_invoice_type: invoiceData.invoice_type,
-        });
-
-      if (numberError) throw numberError;
-
-      // Calculate totals from items with proper tax calculation and rounding
-      const totals = await calculateInvoiceTotals(invoiceData.items, invoiceData.invoice_type);
-      const { subtotal, tax_total, grand_total, items_with_tax } = totals;
-
-      // Create invoice with calculated totals
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          organization_id: currentOrganization.id,
-          invoice_number: invoiceNumber,
-          invoice_type: invoiceData.invoice_type,
-          party_type: invoiceData.invoice_type === 'sales' ? 'Customer' : 'Supplier',
-          party_id: invoiceData.party_id,
-          party_name: partyName,
-          invoice_date: invoiceData.invoice_date,
-          due_date: invoiceData.due_date,
-          subtotal,
-          tax_total,
-          grand_total,
-          outstanding_amount: grand_total,
-          currency_code: currentOrganization.currency || 'MAD',
-          status: 'draft',
-          remarks: invoiceData.remarks,
-          farm_id: invoiceData.farm_id || null,
-          parcel_id: invoiceData.parcel_id || null,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (invoiceError) throw invoiceError;
-
-      // Create invoice items with properly calculated and rounded tax amounts
-      // Use the items_with_tax from calculateInvoiceTotals which has accurate per-line tax
-      const itemsToInsert = items_with_tax
-        .filter(item => {
-          // Ensure quantity is greater than 0 (database constraint)
-          if (!item.quantity || item.quantity <= 0) {
-            console.error(`Invalid quantity for item "${item.item_name}": ${item.quantity}`);
-            return false;
-          }
-          return true;
-        })
-        .map(item => ({
-          invoice_id: invoice.id,
-          item_name: item.item_name,
-          description: item.description || null,
-          quantity: Number(item.quantity), // Ensure it's a number
-          unit_price: Number(item.rate), // Ensure it's a number
-          amount: Number(item.amount), // Already rounded, ensure it's a number
-          tax_amount: Number(item.tax_amount) || 0, // Already rounded per line, ensure it's a number
-          income_account_id: invoiceData.invoice_type === 'sales' ? item.account_id : null,
-          expense_account_id: invoiceData.invoice_type === 'purchase' ? item.account_id : null,
-          tax_id: item.tax_id || null,
-          cost_center_id: item.cost_center_id || null,
-        }));
-      
-      // Validate all items have quantity > 0
-      if (itemsToInsert.length === 0) {
-        throw new Error('At least one item with quantity > 0 is required');
-      }
-      
-      const invalidItems = itemsToInsert.filter(item => item.quantity <= 0);
-      if (invalidItems.length > 0) {
-        throw new Error(`Invalid quantities found. All items must have quantity > 0. Invalid items: ${invalidItems.map(i => i.item_name).join(', ')}`);
-      }
-
-      const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .insert(itemsToInsert);
-
-      if (itemsError) throw itemsError;
+      // Use shared invoice service
+      const invoice = await createInvoiceFromItems({
+        organization_id: currentOrganization.id,
+        user_id: user.id,
+        invoice_type: invoiceData.invoice_type,
+        party_id: invoiceData.party_id,
+        party_name: partyName,
+        invoice_date: invoiceData.invoice_date,
+        due_date: invoiceData.due_date,
+        items: invoiceData.items,
+        currency_code: currentOrganization.currency || 'MAD',
+        exchange_rate: 1.0,
+        status: 'draft',
+        remarks: invoiceData.remarks,
+        farm_id: invoiceData.farm_id || null,
+        parcel_id: invoiceData.parcel_id || null,
+        sales_order_id: null,
+        purchase_order_id: null,
+      });
 
       return invoice;
     },

@@ -32,6 +32,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAgricultureModules, setShowAgricultureModules] = useState(false);
   const [showElevageModules, setShowElevageModules] = useState(false);
+  const [showPersonnel, setShowPersonnel] = useState(true);
+  const [showAccountingBilling, setShowAccountingBilling] = useState(true);
+  const [showSalesProcess, setShowSalesProcess] = useState(true);
+  const [showFinancialRecords, setShowFinancialRecords] = useState(true);
+  const [showSetupReports, setShowSetupReports] = useState(true);
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
   const scrollPositionRef = React.useRef(0);
   const SCROLL_STORAGE_KEY = 'sidebarScrollTop';
@@ -292,69 +297,64 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Personnel Section */}
           <Separator className="my-3" />
           <div className="space-y-1">
-            <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+              onClick={() => setShowPersonnel(!showPersonnel)}
+            >
               Personnel
-            </h3>
+              {showPersonnel ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            </Button>
+            {showPersonnel && (
+              <>
+                <ProtectedNavItem action="read" subject="Worker">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/workers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/workers', e)}
+                  >
+                    <Users className="mr-3 h-4 w-4" />
+                    {t('nav.personnel')}
+                  </Button>
+                </ProtectedNavItem>
 
-            <ProtectedNavItem action="read" subject="Worker">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/workers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/workers', e)}
-              >
-                <Users className="mr-3 h-4 w-4" />
-                {t('nav.personnel')}
-              </Button>
-            </ProtectedNavItem>
-
-            <ProtectedNavItem action="read" subject="Task">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/tasks' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/tasks', e)}
-              >
-                <CheckSquare className="mr-3 h-4 w-4" />
-                {t('nav.tasks')}
-              </Button>
-            </ProtectedNavItem>
+                <ProtectedNavItem action="read" subject="Task">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/tasks' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/tasks', e)}
+                  >
+                    <CheckSquare className="mr-3 h-4 w-4" />
+                    {t('nav.tasks')}
+                  </Button>
+                </ProtectedNavItem>
+              </>
+            )}
           </div>
 
 
-          {/* Expenses Section */}
-          <ProtectedNavItem action="read" subject="Utility">
-            <Separator className="my-3" />
-            <div className="space-y-1">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                {t('nav.expenses')}
-              </h3>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/utilities' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/utilities', e)}
-              >
-                <Wallet className="mr-3 h-4 w-4" />
-                {t('nav.utilities')}
-              </Button>
-            </div>
-          </ProtectedNavItem>
-
-          {/* Accounting Section */}
+          {/* Accounting & Billing Section */}
           <ProtectedNavItem action="read" subject="Invoice">
             <Separator className="my-3" />
             <div className="space-y-1">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Accounting
-              </h3>
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                onClick={() => setShowAccountingBilling(!showAccountingBilling)}
+              >
+                Accounting & Billing
+                {showAccountingBilling ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </Button>
+              {showAccountingBilling && (
+                <>
 
+              {/* Dashboard */}
               <Button
                 variant="ghost"
                 className={cn(
@@ -367,6 +367,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 Dashboard
               </Button>
 
+              {/* Chart of Accounts */}
               <Button
                 variant="ghost"
                 className={cn(
@@ -379,111 +380,161 @@ const Sidebar: React.FC<SidebarProps> = ({
                 Chart of Accounts
               </Button>
 
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/accounting-invoices' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/accounting-invoices', e)}
-              >
-                <Receipt className="mr-3 h-4 w-4" />
-                Invoices
-              </Button>
-
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/accounting-customers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/accounting-customers', e)}
-              >
-                <UserCheck className="mr-3 h-4 w-4" />
-                Customers
-              </Button>
-
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/accounting-payments' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/accounting-payments', e)}
-              >
-                <CreditCard className="mr-3 h-4 w-4" />
-                Payments
-              </Button>
-
-              {/* Billing Cycle Section */}
+              {/* Sales Process Section */}
               <div className="h-2" />
-              <h4 className="px-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-                Billing Cycle
-              </h4>
-
               <Button
                 variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/billing-quotes' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/billing-quotes', e)}
+                className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                onClick={() => setShowSalesProcess(!showSalesProcess)}
               >
-                <FileEdit className="mr-3 h-4 w-4" />
-                Quotes
+                Sales Process
+                {showSalesProcess ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               </Button>
+              {showSalesProcess && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/billing-quotes' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/billing-quotes', e)}
+                  >
+                    <FileEdit className="mr-3 h-4 w-4" />
+                    Quotes
+                  </Button>
 
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/billing-sales-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/billing-sales-orders', e)}
-              >
-                <ShoppingCart className="mr-3 h-4 w-4" />
-                Sales Orders
-              </Button>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/billing-sales-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/billing-sales-orders', e)}
+                  >
+                    <ShoppingCart className="mr-3 h-4 w-4" />
+                    Sales Orders
+                  </Button>
 
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/billing-purchase-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
-              >
-                <PackageSearch className="mr-3 h-4 w-4" />
-                Purchase Orders
-              </Button>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/billing-purchase-orders' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
+                  >
+                    <PackageSearch className="mr-3 h-4 w-4" />
+                    Purchase Orders
+                  </Button>
+                </>
+              )}
 
+              {/* Financial Records Section */}
               <div className="h-2" />
-
               <Button
                 variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/accounting-journal' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/accounting-journal', e)}
+                className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                onClick={() => setShowFinancialRecords(!showFinancialRecords)}
               >
-                <BookOpen className="mr-3 h-4 w-4" />
-                Journal
+                Financial Records
+                {showFinancialRecords ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               </Button>
+              {showFinancialRecords && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/accounting-invoices' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/accounting-invoices', e)}
+                  >
+                    <Receipt className="mr-3 h-4 w-4" />
+                    Invoices
+                  </Button>
 
-              <ProtectedNavItem action="read" subject="AccountingReport">
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start text-gray-600 dark:text-gray-400",
-                    currentPath === '/accounting-reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                  )}
-                  onClick={(e) => handleNavigation('/accounting-reports', e)}
-                >
-                  <FileSpreadsheet className="mr-3 h-4 w-4" />
-                  Reports
-                </Button>
-              </ProtectedNavItem>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/accounting-payments' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/accounting-payments', e)}
+                  >
+                    <CreditCard className="mr-3 h-4 w-4" />
+                    Payments
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/accounting-journal' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/accounting-journal', e)}
+                  >
+                    <BookOpen className="mr-3 h-4 w-4" />
+                    Journal
+                  </Button>
+
+                  <ProtectedNavItem action="read" subject="Utility">
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start text-gray-600 dark:text-gray-400",
+                        currentPath === '/utilities' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                      )}
+                      onClick={(e) => handleNavigation('/utilities', e)}
+                    >
+                      <Wallet className="mr-3 h-4 w-4" />
+                      Expenses
+                    </Button>
+                  </ProtectedNavItem>
+                </>
+              )}
+
+              {/* Setup & Reports Section */}
+              <div className="h-2" />
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent"
+                onClick={() => setShowSetupReports(!showSetupReports)}
+              >
+                Setup & Reports
+                {showSetupReports ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </Button>
+              {showSetupReports && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-400",
+                      currentPath === '/accounting-customers' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    )}
+                    onClick={(e) => handleNavigation('/accounting-customers', e)}
+                  >
+                    <UserCheck className="mr-3 h-4 w-4" />
+                    Customers
+                  </Button>
+
+                  <ProtectedNavItem action="read" subject="AccountingReport">
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start text-gray-600 dark:text-gray-400",
+                        currentPath === '/accounting-reports' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                      )}
+                      onClick={(e) => handleNavigation('/accounting-reports', e)}
+                    >
+                      <FileSpreadsheet className="mr-3 h-4 w-4" />
+                      Reports
+                    </Button>
+                  </ProtectedNavItem>
+                </>
+              )}
+                </>
+              )}
             </div>
           </ProtectedNavItem>
 

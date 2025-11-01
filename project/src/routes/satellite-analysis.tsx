@@ -1,13 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
-import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
-import IndicesCalculator from '../components/SatelliteAnalysis/IndicesCalculator';
-import TimeSeriesChart from '../components/SatelliteAnalysis/TimeSeriesChart';
+import { useState, lazy, Suspense } from 'react';
+import { Satellite, TrendingUp, BarChart3, MapPin, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { useParcels } from '../hooks/useParcels';
 import { IndexCalculationResponse } from '../lib/satellite-api';
 import { useCan } from '../lib/casl';
 import { useNavigate } from '@tanstack/react-router';
+
+// Lazy load heavy satellite components (ECharts + Recharts ~1.6MB)
+const IndicesCalculator = lazy(() => import('../components/SatelliteAnalysis/IndicesCalculator'));
+const TimeSeriesChart = lazy(() => import('../components/SatelliteAnalysis/TimeSeriesChart'));
 
 function SatelliteAnalysisPage() {
   const { currentFarm } = useAuth();
@@ -175,11 +177,18 @@ function SatelliteAnalysisPage() {
               <BarChart3 className="w-5 h-5 text-green-600" />
               <h2 className="text-xl font-semibold">Vegetation Indices Analysis</h2>
             </div>
-            <IndicesCalculator
-              parcelName={selectedParcel.name}
-              boundary={selectedParcel.boundary}
-              onResultsUpdate={handleResultsUpdate}
-            />
+            <Suspense fallback={
+              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-gray-600">Loading analysis tools...</span>
+              </div>
+            }>
+              <IndicesCalculator
+                parcelName={selectedParcel.name}
+                boundary={selectedParcel.boundary}
+                onResultsUpdate={handleResultsUpdate}
+              />
+            </Suspense>
           </div>
 
           {/* Time Series Analysis */}
@@ -188,11 +197,18 @@ function SatelliteAnalysisPage() {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-semibold">Historical Trends</h2>
             </div>
-            <TimeSeriesChart
-              parcelId={selectedParcel.id}
-              parcelName={selectedParcel.name}
-              boundary={selectedParcel.boundary}
-            />
+            <Suspense fallback={
+              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-gray-600">Loading historical data...</span>
+              </div>
+            }>
+              <TimeSeriesChart
+                parcelId={selectedParcel.id}
+                parcelName={selectedParcel.name}
+                boundary={selectedParcel.boundary}
+              />
+            </Suspense>
           </div>
 
           {/* Analysis Summary */}

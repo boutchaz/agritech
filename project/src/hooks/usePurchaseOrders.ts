@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { calculateInvoiceTotals, type InvoiceItemInput } from '../lib/taxCalculations';
+import { createInvoiceFromOrder } from '../lib/invoice-service';
 
 export interface PurchaseOrder {
   id: string;
@@ -227,6 +228,7 @@ export function useCreatePurchaseOrder() {
 
 /**
  * Hook to convert purchase order to bill (purchase invoice)
+ * Uses shared invoice service to eliminate duplicate logic
  */
 export function useConvertPOToBill() {
   const queryClient = useQueryClient();
@@ -251,60 +253,48 @@ export function useConvertPOToBill() {
 
       if (fetchError) throw fetchError;
 
-      // Generate invoice number
-      const { data: invoiceNumber, error: numberError } = await supabase
-        .rpc('generate_invoice_number', {
-          p_organization_id: currentOrganization.id,
-          p_invoice_type: 'purchase',
-        });
-
-      if (numberError) throw numberError;
-
-      // Create bill (purchase invoice)
-      const { data: bill, error: billError } = await supabase
-        .from('invoices')
-        .insert({
-          organization_id: currentOrganization.id,
-          invoice_number: invoiceNumber,
-          invoice_type: 'purchase',
-          party_type: 'Supplier',
-          party_id: po.supplier_id,
-          party_name: po.supplier_name,
-          invoice_date: invoiceDate,
-          due_date: dueDate,
-          subtotal: po.subtotal,
-          tax_total: po.tax_total,
-          grand_total: po.grand_total,
-          outstanding_amount: po.grand_total,
-          currency_code: po.currency_code,
-          exchange_rate: po.exchange_rate,
-          status: 'draft',
-          purchase_order_id: poId,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (billError) throw billError;
-
-      // Copy PO items to invoice items
+      // Calculate remaining quantities for invoice (only unbilled items)
       const billItems = po.items.map((item: any) => ({
-        invoice_id: bill.id,
         item_name: item.item_name,
-        description: item.description,
+        description: item.description || null,
         quantity: item.quantity - item.billed_quantity,
         unit_price: item.unit_price,
         amount: (item.quantity - item.billed_quantity) * item.unit_price,
-        tax_id: item.tax_id,
-        tax_amount: ((item.quantity - item.billed_quantity) * item.unit_price * item.tax_rate) / 100,
-        expense_account_id: item.account_id,
+        tax_id: item.tax_id || null,
+        tax_rate: item.tax_rate || 0,
+        account_id: item.account_id,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .insert(billItems);
+      // Calculate totals from remaining items
+      const remainingSubtotal = billItems.reduce((sum, item) => sum + item.amount, 0);
+      const remainingTaxTotal = billItems.reduce(
+        (sum, item) => sum + (item.amount * item.tax_rate) / 100,
+        0
+      );
+      const remainingGrandTotal = remainingSubtotal + remainingTaxTotal;
 
-      if (itemsError) throw itemsError;
+      // Use shared invoice service
+      const bill = await createInvoiceFromOrder({
+        organization_id: currentOrganization.id,
+        user_id: user.id,
+        invoice_type: 'purchase',
+        party_id: po.supplier_id,
+        party_name: po.supplier_name,
+        invoice_date: invoiceDate,
+        due_date: dueDate,
+        subtotal: remainingSubtotal,
+        tax_total: remainingTaxTotal,
+        grand_total: remainingGrandTotal,
+        items: billItems,
+        currency_code: po.currency_code,
+        exchange_rate: po.exchange_rate,
+        status: 'draft',
+        remarks: null,
+        farm_id: po.farm_id || null,
+        parcel_id: po.parcel_id || null,
+        sales_order_id: null,
+        purchase_order_id: poId,
+      });
 
       // Update PO billed_amount and status
       const newBilledAmount = po.billed_amount + bill.grand_total;

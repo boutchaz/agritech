@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, lazy, Suspense } from 'react';
 import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
@@ -6,15 +6,17 @@ import Recommendations from './Recommendations';
 import { useRecommendations } from '../hooks/useRecommendations';
 import ProductApplications from './ProductApplications';
 import { useNavigate } from '@tanstack/react-router';
-import IndicesCalculator from './SatelliteAnalysis/IndicesCalculator';
-import TimeSeriesChart from './SatelliteAnalysis/TimeSeriesChart';
-import StatisticsCalculator from './SatelliteAnalysis/StatisticsCalculator';
-import IndexImageViewer from './SatelliteAnalysis/IndexImageViewer';
-import ParcelReportGenerator from './ParcelReportGenerator';
-import ParcelProfitability from './ParcelProfitability';
-import WeatherAnalyticsView from './WeatherAnalytics/WeatherAnalyticsView';
 import { useAnalyses } from '../hooks/useAnalyses';
 import AnalysisCard from './Analysis/AnalysisCard';
+
+// Lazy load heavy chart components (ECharts + Recharts ~1.6MB)
+const IndicesCalculator = lazy(() => import('./SatelliteAnalysis/IndicesCalculator'));
+const TimeSeriesChart = lazy(() => import('./SatelliteAnalysis/TimeSeriesChart'));
+const StatisticsCalculator = lazy(() => import('./SatelliteAnalysis/StatisticsCalculator'));
+const IndexImageViewer = lazy(() => import('./SatelliteAnalysis/IndexImageViewer'));
+const ParcelReportGenerator = lazy(() => import('./ParcelReportGenerator'));
+const ParcelProfitability = lazy(() => import('./ParcelProfitability'));
+const WeatherAnalyticsView = lazy(() => import('./WeatherAnalytics/WeatherAnalyticsView'));
 
 interface Parcel {
   id: string;
@@ -366,7 +368,12 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
         return (
           <div className="space-y-6">
             {parcel.boundary ? (
-              <>
+              <Suspense fallback={
+                <div className="flex items-center justify-center p-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  <span className="ml-3 text-gray-600">Chargement de l'analyse satellite...</span>
+                </div>
+              }>
                 <IndexImageViewer
                   parcelId={parcel.id}
                   parcelName={parcel.name}
@@ -387,7 +394,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                   parcelName={parcel.name}
                   boundary={parcel.boundary}
                 />
-              </>
+              </Suspense>
             ) : (
               <div className="text-center py-8">
                 <Satellite className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -654,10 +661,17 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
       case 'weather':
         return parcel.boundary && parcel.boundary.length > 0 ? (
-          <WeatherAnalyticsView
-            parcelBoundary={parcel.boundary}
-            parcelName={parcel.name}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="ml-3 text-gray-600">Chargement des analyses météo...</span>
+            </div>
+          }>
+            <WeatherAnalyticsView
+              parcelBoundary={parcel.boundary}
+              parcelName={parcel.name}
+            />
+          </Suspense>
         ) : (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
             <Cloud className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -672,18 +686,31 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
       case 'profitability':
         return (
-          <ParcelProfitability
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="ml-3 text-gray-600">Chargement de la rentabilité...</span>
+            </div>
+          }>
+            <ParcelProfitability
+              parcelId={parcel.id}
+              parcelName={parcel.name}
+            />
+          </Suspense>
         );
 
       case 'reports':
         return (
-          <ParcelReportGenerator
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-            parcelData={{
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="ml-3 text-gray-600">Chargement du générateur de rapports...</span>
+            </div>
+          }>
+            <ParcelReportGenerator
+              parcelId={parcel.id}
+              parcelName={parcel.name}
+              parcelData={{
               parcel,
               metrics: {
                 ndvi: parseFloat(data.ndvi),
@@ -709,6 +736,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               }
             }}
           />
+          </Suspense>
         );
 
       default:

@@ -1,11 +1,14 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
-import UtilitiesManagement from '../components/UtilitiesManagement'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
 import { useState } from 'react'
 import type { Module } from '../types'
+import { Loader2 } from 'lucide-react'
+
+// Lazy load utilities component (includes Recharts ~600KB)
+const UtilitiesManagement = lazy(() => import('../components/UtilitiesManagement'))
 
 const mockModules: Module[] = [
   {
@@ -68,7 +71,14 @@ const AppContent: React.FC = () => {
           </div>
           <OrganizationSwitcher />
         </div>
-        <UtilitiesManagement />
+        <Suspense fallback={
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600">Loading utilities dashboard...</span>
+          </div>
+        }>
+          <UtilitiesManagement />
+        </Suspense>
       </main>
     </div>
   );
