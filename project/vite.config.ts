@@ -9,10 +9,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Force single React instance for react-leaflet compatibility with React 19
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react-day-picker', 'date-fns', 'leaflet'],
+    include: [
+      'react-day-picker', 
+      'date-fns', 
+      'leaflet', 
+      'react', 
+      'react-dom',
+      'react-leaflet', // Pre-bundle react-leaflet with React 19
+    ],
     exclude: ['lucide-react'],
   },
   // Fix Leaflet SSR issues
@@ -20,6 +31,10 @@ export default defineConfig({
     noExternal: ['leaflet', 'react-leaflet'],
   },
   build: {
+    commonjsOptions: {
+      include: [/react-leaflet/, /node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -46,8 +61,13 @@ export default defineConfig({
               return 'recharts-vendor';
             }
             // Map libraries - split OpenLayers and Leaflet
-            if (id.includes('leaflet')) {
+            // Don't chunk react-leaflet separately - bundle it with React to avoid context issues
+            if (id.includes('leaflet') && !id.includes('react-leaflet')) {
               return 'leaflet-vendor';
+            }
+            // react-leaflet should be bundled with react-vendor to share the same React instance
+            if (id.includes('react-leaflet')) {
+              return 'react-vendor';
             }
             if (id.includes('/ol') || id.includes('openlayers')) {
               return 'openlayers-vendor';

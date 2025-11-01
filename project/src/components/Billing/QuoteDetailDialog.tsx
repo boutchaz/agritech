@@ -89,9 +89,9 @@ const statusActionCopy: Record<
     confirmLabel: 'Send Quote',
   },
   accepted: {
-    title: 'Mark as Accepted',
-    body: 'Confirm that the customer has accepted this quote.',
-    confirmLabel: 'Mark as Accepted',
+    title: 'Accept Quote & Create Sales Order',
+    body: 'This will mark the quote as accepted and automatically create a Sales Order to begin fulfillment.',
+    confirmLabel: 'Accept & Create Order',
   },
   rejected: {
     title: 'Mark as Rejected',
@@ -187,10 +187,33 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         .eq('id', resolvedQuote.id);
 
       if (error) throw error;
+
+      // If status is 'accepted', automatically convert to sales order
+      if (status === 'accepted') {
+        return { shouldConvert: true };
+      }
+      return { shouldConvert: false };
     },
-    onSuccess: (_data, status) => {
+    onSuccess: async (result, status) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      toast.success(`Quote marked as ${status}`);
+
+      // If accepted, trigger automatic conversion to sales order
+      if (result?.shouldConvert && resolvedQuote) {
+        toast.success('Quote accepted. Creating sales order...');
+
+        // Trigger conversion
+        convertToOrder.mutate(resolvedQuote.id, {
+          onSuccess: (salesOrder) => {
+            toast.success(`Sales Order #${salesOrder.order_number} created successfully`);
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            toast.error('Failed to convert to sales order: ' + error.message);
+          },
+        });
+      } else {
+        toast.success(`Quote marked as ${status}`);
+      }
     },
     onError: (error) => {
       toast.error('Failed to update quote status: ' + error.message);

@@ -5,8 +5,8 @@ const config: Config = {
   title: 'AgriTech Platform Documentation',
   tagline: 'Comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights',
   url: 'https://docs.agritech.example.com',
-  baseUrl: '/',
-  favicon: 'img/favicon.ico',
+  baseUrl: '/', // Make sure your new logo is at `static/img/logo.svg`
+  favicon: 'img/logo.svg',
   organizationName: 'agritech',
   projectName: 'agritech-platform',
   onBrokenLinks: 'throw',
@@ -50,7 +50,7 @@ const config: Config = {
       title: 'AgriTech Platform',
       logo: {
         alt: 'AgriTech Platform',
-        src: 'img/logo.svg',
+        src: 'img/logo.svg', // This path should point to your new logo
       },
       items: [
         {
