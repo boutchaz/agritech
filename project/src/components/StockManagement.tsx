@@ -73,10 +73,15 @@ interface WarehouseData {
 }
 
 
-const StockManagement: React.FC = () => {
+export type InventoryTab = 'stock' | 'suppliers' | 'warehouses';
+
+interface StockManagementProps {
+  activeTab: InventoryTab;
+}
+
+const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const { currentOrganization, currentFarm } = useAuth();
   const { symbol: currencySymbol } = useCurrency();
-  const [activeTab, setActiveTab] = useState<'stock' | 'suppliers' | 'warehouses'>('stock');
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
@@ -535,51 +540,6 @@ const StockManagement: React.FC = () => {
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           Gestion du Stock
         </h2>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <nav className="-mb-px flex space-x-4 sm:space-x-8">
-          <button
-            onClick={() => setActiveTab('stock')}
-            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-              activeTab === 'stock'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Stock</span>
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('suppliers')}
-            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-              activeTab === 'suppliers'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Fournisseurs</span>
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('warehouses')}
-            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-              activeTab === 'warehouses'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <Warehouse className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Entrepôts</span>
-            </div>
-          </button>
-        </nav>
       </div>
 
       {/* Tab Actions */}

@@ -1,13 +1,12 @@
-import React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { useAuth } from '../components/MultiTenantAuthProvider'
-import Sidebar from '../components/Sidebar'
-import StockManagement from '../components/StockManagement'
-import ModernPageHeader from '../components/ModernPageHeader'
-import { useState } from 'react'
-import { Building2, Package } from 'lucide-react'
-import type { Module } from '../types'
-import { withRouteProtection } from '../components/authorization/withRouteProtection'
+import React, { useMemo, useState } from 'react';
+import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
+import { useAuth } from '../components/MultiTenantAuthProvider';
+import Sidebar from '../components/Sidebar';
+import ModernPageHeader from '../components/ModernPageHeader';
+import { Building2, Package } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Module } from '../types';
+import { withRouteProtection } from '../components/authorization/withRouteProtection';
 
 const mockModules: Module[] = [
   {
@@ -22,11 +21,12 @@ const mockModules: Module[] = [
       { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
     ]
   },
-  // ... other modules would be here
 ];
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
+  const router = useRouter();
+  const { location } = useRouterState();
   const [activeModule, setActiveModule] = useState('stock');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
@@ -34,6 +34,28 @@ const AppContent: React.FC = () => {
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const tabs = useMemo(
+    () => [
+      { value: 'inventory', label: 'Inventory & Purchases', to: '/stock/inventory' },
+      { value: 'entries', label: 'Stock Entries', to: '/stock/entries' },
+      { value: 'reports', label: 'Reports & Analytics', to: '/stock/reports' },
+    ],
+    [],
+  );
+
+  const activeTab = useMemo(() => {
+    if (!location) return 'inventory';
+    if (location.pathname.startsWith('/stock/entries')) return 'entries';
+    if (location.pathname.startsWith('/stock/reports')) return 'reports';
+    return 'inventory';
+  }, [location]);
+
+  const handleTabChange = (value: string) => {
+    const target = tabs.find((tab) => tab.value === value);
+    if (!target) return;
+    router.navigate({ to: target.to });
   };
 
   if (!currentOrganization) {
@@ -60,12 +82,28 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Package, label: 'Gestion du Stock', isActive: true }
+            { icon: Package, label: 'Stock Management', isActive: true }
           ]}
-          title="Gestion du Stock"
-          subtitle="Gérez vos achats, inventaire et fournisseurs"
+          title="Stock Management"
+          subtitle="Comprehensive inventory, entries, and warehouse management"
         />
-        <StockManagement />
+
+        <div className="p-6">
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+            <TabsList>
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="mt-6">
+            <Outlet />
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -73,4 +111,4 @@ const AppContent: React.FC = () => {
 
 export const Route = createFileRoute('/stock')({
   component: withRouteProtection(AppContent, 'read', 'Stock'),
-})
+});

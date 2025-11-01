@@ -24,6 +24,7 @@ import {
   Circle,
   AlertCircle,
   XCircle,
+  PackagePlus,
 } from 'lucide-react';
 import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderWithItems } from '@/hooks/usePurchaseOrders';
 import { useConvertPOToBill, usePurchaseOrder } from '@/hooks/usePurchaseOrders';
@@ -158,6 +159,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const [isEditingDetails, setIsEditingDetails] = React.useState(false);
   const [pendingStatus, setPendingStatus] = React.useState<StatusActionKey | null>(null);
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [isCreatingReceipt, setIsCreatingReceipt] = React.useState(false);
   const [editFormData, setEditFormData] = React.useState<{
     expectedDeliveryDate: string;
     paymentTerms: string;
@@ -348,6 +350,10 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const canDownload = po.status !== 'draft';
   const canEditDetails = ['draft', 'submitted'].includes(po.status);
 
+  // Check if PO is confirmed and stock not yet received
+  const canCreateMaterialReceipt = ['confirmed', 'submitted'].includes(po.status) &&
+    !(po as any).stock_received;
+
   const remainingToBill = Number(po.grand_total) - Number(po.billed_amount);
 
   const handleDownload = async () => {
@@ -482,6 +488,52 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         },
       },
     );
+  };
+
+  const handleCreateMaterialReceipt = async () => {
+    if (!po || !po.id) return;
+
+    setIsCreatingReceipt(true);
+    try {
+      // Get first warehouse from organization as default
+      const { data: warehouses, error: whError } = await supabase
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', po.organization_id)
+        .limit(1);
+
+      if (whError) throw whError;
+      if (!warehouses || warehouses.length === 0) {
+        toast.error('No warehouse found. Please create a warehouse first.');
+        setIsCreatingReceipt(false);
+        return;
+      }
+
+      const warehouseId = warehouses[0].id;
+      const today = new Date().toISOString().split('T')[0];
+
+      // Call the database function to create material receipt
+      const { data, error } = await supabase.rpc('create_material_receipt_from_po', {
+        p_purchase_order_id: po.id,
+        p_warehouse_id: warehouseId,
+        p_receipt_date: today
+      });
+
+      if (error) throw error;
+
+      toast.success('Material Receipt created successfully. Navigate to Stock Entries to view.');
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
+      if (po.id) {
+        queryClient.invalidateQueries({ queryKey: ['purchase_order', po.id] });
+      }
+      // onOpenChange(false); // Keep dialog open so user can see the result
+    } catch (error) {
+      toast.error(
+        'Failed to create material receipt: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      );
+    } finally {
+      setIsCreatingReceipt(false);
+    }
   };
 
   const statusActions: Array<{
@@ -1022,6 +1074,21 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Order
+                </Button>
+              )}
+              {canCreateMaterialReceipt && (
+                <Button
+                  onClick={handleCreateMaterialReceipt}
+                  disabled={isCreatingReceipt}
+                  variant="outline"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                >
+                  {isCreatingReceipt ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <PackagePlus className="mr-2 h-4 w-4" />
+                  )}
+                  Create Material Receipt
                 </Button>
               )}
               {canCreateBill && remainingToBill > 0 && (

@@ -49,10 +49,14 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ModuleIdRouteImport } from './routes/$moduleId'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
+import { Route as StockIndexRouteImport } from './routes/stock/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-work'
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
+import { Route as StockReportsRouteImport } from './routes/stock/reports'
+import { Route as StockInventoryRouteImport } from './routes/stock/inventory'
+import { Route as StockEntriesRouteImport } from './routes/stock/entries'
 import { Route as SettingsWorkUnitsRouteImport } from './routes/settings.work-units'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
 import { Route as SettingsSubscriptionRouteImport } from './routes/settings.subscription'
@@ -62,6 +66,10 @@ import { Route as SettingsOrganizationRouteImport } from './routes/settings.orga
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
+import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
+import { Route as StockInventoryWarehousesRouteImport } from './routes/stock/inventory/warehouses'
+import { Route as StockInventorySuppliersRouteImport } from './routes/stock/inventory/suppliers'
+import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -262,6 +270,11 @@ const TasksIndexRoute = TasksIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TasksRoute,
 } as any)
+const StockIndexRoute = StockIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StockRoute,
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -281,6 +294,21 @@ const TasksCalendarRoute = TasksCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => TasksRoute,
+} as any)
+const StockReportsRoute = StockReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => StockRoute,
+} as any)
+const StockInventoryRoute = StockInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => StockRoute,
+} as any)
+const StockEntriesRoute = StockEntriesRouteImport.update({
+  id: '/entries',
+  path: '/entries',
+  getParentRoute: () => StockRoute,
 } as any)
 const SettingsWorkUnitsRoute = SettingsWorkUnitsRouteImport.update({
   id: '/work-units',
@@ -327,6 +355,27 @@ const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => SettingsRoute,
 } as any)
+const StockInventoryIndexRoute = StockInventoryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StockInventoryRoute,
+} as any)
+const StockInventoryWarehousesRoute =
+  StockInventoryWarehousesRouteImport.update({
+    id: '/warehouses',
+    path: '/warehouses',
+    getParentRoute: () => StockInventoryRoute,
+  } as any)
+const StockInventorySuppliersRoute = StockInventorySuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => StockInventoryRoute,
+} as any)
+const StockInventoryStockRoute = StockInventoryStockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => StockInventoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -363,7 +412,7 @@ export interface FileRoutesByFullPath {
   '/set-password': typeof SetPasswordRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
-  '/stock': typeof StockRoute
+  '/stock': typeof StockRouteWithChildren
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
@@ -376,11 +425,19 @@ export interface FileRoutesByFullPath {
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
+  '/stock/entries': typeof StockEntriesRoute
+  '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/stock/inventory/stock': typeof StockInventoryStockRoute
+  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
+  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/stock/inventory/': typeof StockInventoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -415,7 +472,6 @@ export interface FileRoutesByTo {
   '/select-trial': typeof SelectTrialRoute
   '/set-password': typeof SetPasswordRoute
   '/soil-analysis': typeof SoilAnalysisRoute
-  '/stock': typeof StockRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -427,11 +483,18 @@ export interface FileRoutesByTo {
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
+  '/stock/entries': typeof StockEntriesRoute
+  '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/stock': typeof StockIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/stock/inventory/stock': typeof StockInventoryStockRoute
+  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
+  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/stock/inventory': typeof StockInventoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -470,7 +533,7 @@ export interface FileRoutesById {
   '/set-password': typeof SetPasswordRoute
   '/settings': typeof SettingsRouteWithChildren
   '/soil-analysis': typeof SoilAnalysisRoute
-  '/stock': typeof StockRoute
+  '/stock': typeof StockRouteWithChildren
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
@@ -483,11 +546,19 @@ export interface FileRoutesById {
   '/settings/subscription': typeof SettingsSubscriptionRoute
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
+  '/stock/entries': typeof StockEntriesRoute
+  '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/stock/inventory/stock': typeof StockInventoryStockRoute
+  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
+  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/stock/inventory/': typeof StockInventoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -539,11 +610,19 @@ export interface FileRouteTypes {
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
+    | '/stock/entries'
+    | '/stock/inventory'
+    | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
+    | '/stock/'
     | '/tasks/'
+    | '/stock/inventory/stock'
+    | '/stock/inventory/suppliers'
+    | '/stock/inventory/warehouses'
+    | '/stock/inventory/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -578,7 +657,6 @@ export interface FileRouteTypes {
     | '/select-trial'
     | '/set-password'
     | '/soil-analysis'
-    | '/stock'
     | '/utilities'
     | '/workers'
     | '/settings/dashboard'
@@ -590,11 +668,18 @@ export interface FileRouteTypes {
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
+    | '/stock/entries'
+    | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding'
     | '/settings'
+    | '/stock'
     | '/tasks'
+    | '/stock/inventory/stock'
+    | '/stock/inventory/suppliers'
+    | '/stock/inventory/warehouses'
+    | '/stock/inventory'
   id:
     | '__root__'
     | '/'
@@ -645,11 +730,19 @@ export interface FileRouteTypes {
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
+    | '/stock/entries'
+    | '/stock/inventory'
+    | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
+    | '/stock/'
     | '/tasks/'
+    | '/stock/inventory/stock'
+    | '/stock/inventory/suppliers'
+    | '/stock/inventory/warehouses'
+    | '/stock/inventory/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -688,7 +781,7 @@ export interface RootRouteChildren {
   SetPasswordRoute: typeof SetPasswordRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SoilAnalysisRoute: typeof SoilAnalysisRoute
-  StockRoute: typeof StockRoute
+  StockRoute: typeof StockRouteWithChildren
   TasksRoute: typeof TasksRouteWithChildren
   UtilitiesRoute: typeof UtilitiesRoute
   WorkersRoute: typeof WorkersRouteWithChildren
@@ -976,6 +1069,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksIndexRouteImport
       parentRoute: typeof TasksRoute
     }
+    '/stock/': {
+      id: '/stock/'
+      path: '/'
+      fullPath: '/stock/'
+      preLoaderRoute: typeof StockIndexRouteImport
+      parentRoute: typeof StockRoute
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -1003,6 +1103,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/tasks/calendar'
       preLoaderRoute: typeof TasksCalendarRouteImport
       parentRoute: typeof TasksRoute
+    }
+    '/stock/reports': {
+      id: '/stock/reports'
+      path: '/reports'
+      fullPath: '/stock/reports'
+      preLoaderRoute: typeof StockReportsRouteImport
+      parentRoute: typeof StockRoute
+    }
+    '/stock/inventory': {
+      id: '/stock/inventory'
+      path: '/inventory'
+      fullPath: '/stock/inventory'
+      preLoaderRoute: typeof StockInventoryRouteImport
+      parentRoute: typeof StockRoute
+    }
+    '/stock/entries': {
+      id: '/stock/entries'
+      path: '/entries'
+      fullPath: '/stock/entries'
+      preLoaderRoute: typeof StockEntriesRouteImport
+      parentRoute: typeof StockRoute
     }
     '/settings/work-units': {
       id: '/settings/work-units'
@@ -1067,6 +1188,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsDashboardRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/stock/inventory/': {
+      id: '/stock/inventory/'
+      path: '/'
+      fullPath: '/stock/inventory/'
+      preLoaderRoute: typeof StockInventoryIndexRouteImport
+      parentRoute: typeof StockInventoryRoute
+    }
+    '/stock/inventory/warehouses': {
+      id: '/stock/inventory/warehouses'
+      path: '/warehouses'
+      fullPath: '/stock/inventory/warehouses'
+      preLoaderRoute: typeof StockInventoryWarehousesRouteImport
+      parentRoute: typeof StockInventoryRoute
+    }
+    '/stock/inventory/suppliers': {
+      id: '/stock/inventory/suppliers'
+      path: '/suppliers'
+      fullPath: '/stock/inventory/suppliers'
+      preLoaderRoute: typeof StockInventorySuppliersRouteImport
+      parentRoute: typeof StockInventoryRoute
+    }
+    '/stock/inventory/stock': {
+      id: '/stock/inventory/stock'
+      path: '/stock'
+      fullPath: '/stock/inventory/stock'
+      preLoaderRoute: typeof StockInventoryStockRouteImport
+      parentRoute: typeof StockInventoryRoute
+    }
   }
 }
 
@@ -1111,6 +1260,40 @@ const SettingsRouteChildren: SettingsRouteChildren = {
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
+
+interface StockInventoryRouteChildren {
+  StockInventoryStockRoute: typeof StockInventoryStockRoute
+  StockInventorySuppliersRoute: typeof StockInventorySuppliersRoute
+  StockInventoryWarehousesRoute: typeof StockInventoryWarehousesRoute
+  StockInventoryIndexRoute: typeof StockInventoryIndexRoute
+}
+
+const StockInventoryRouteChildren: StockInventoryRouteChildren = {
+  StockInventoryStockRoute: StockInventoryStockRoute,
+  StockInventorySuppliersRoute: StockInventorySuppliersRoute,
+  StockInventoryWarehousesRoute: StockInventoryWarehousesRoute,
+  StockInventoryIndexRoute: StockInventoryIndexRoute,
+}
+
+const StockInventoryRouteWithChildren = StockInventoryRoute._addFileChildren(
+  StockInventoryRouteChildren,
+)
+
+interface StockRouteChildren {
+  StockEntriesRoute: typeof StockEntriesRoute
+  StockInventoryRoute: typeof StockInventoryRouteWithChildren
+  StockReportsRoute: typeof StockReportsRoute
+  StockIndexRoute: typeof StockIndexRoute
+}
+
+const StockRouteChildren: StockRouteChildren = {
+  StockEntriesRoute: StockEntriesRoute,
+  StockInventoryRoute: StockInventoryRouteWithChildren,
+  StockReportsRoute: StockReportsRoute,
+  StockIndexRoute: StockIndexRoute,
+}
+
+const StockRouteWithChildren = StockRoute._addFileChildren(StockRouteChildren)
 
 interface TasksRouteChildren {
   TasksCalendarRoute: typeof TasksCalendarRoute
@@ -1171,7 +1354,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetPasswordRoute: SetPasswordRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SoilAnalysisRoute: SoilAnalysisRoute,
-  StockRoute: StockRoute,
+  StockRoute: StockRouteWithChildren,
   TasksRoute: TasksRouteWithChildren,
   UtilitiesRoute: UtilitiesRoute,
   WorkersRoute: WorkersRouteWithChildren,
