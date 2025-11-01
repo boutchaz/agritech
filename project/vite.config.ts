@@ -40,17 +40,22 @@ export default defineConfig({
         manualChunks(id) {
           // Vendor chunks - split large libraries
           if (id.includes('node_modules')) {
-            // React core
-            if (id.includes('react/') || id.includes('react-dom/')) {
+            // React core + React-dependent UI libraries (must share same React instance)
+            // Bundle together: React, ReactDOM, Radix UI, react-leaflet, TanStack Query
+            if (
+              id.includes('react/') ||
+              id.includes('react-dom/') ||
+              id.includes('@radix-ui/') ||
+              id.includes('react-leaflet') ||
+              id.includes('@tanstack/react-query') ||
+              id.includes('react-hook-form') ||
+              id.includes('@hookform/')
+            ) {
               return 'react-vendor';
             }
-            // TanStack
-            if (id.includes('@tanstack/')) {
+            // TanStack Router (can be separate, doesn't have React context issues)
+            if (id.includes('@tanstack/') && !id.includes('@tanstack/react-query')) {
               return 'tanstack-vendor';
-            }
-            // Radix UI
-            if (id.includes('@radix-ui/')) {
-              return 'ui-vendor';
             }
             // ECharts (heavier, separate from recharts)
             if (id.includes('echarts')) {
@@ -60,15 +65,11 @@ export default defineConfig({
             if (id.includes('recharts')) {
               return 'recharts-vendor';
             }
-            // Map libraries - split OpenLayers and Leaflet
-            // Don't chunk react-leaflet separately - bundle it with React to avoid context issues
+            // Map libraries - Leaflet (non-React parts)
             if (id.includes('leaflet') && !id.includes('react-leaflet')) {
               return 'leaflet-vendor';
             }
-            // react-leaflet should be bundled with react-vendor to share the same React instance
-            if (id.includes('react-leaflet')) {
-              return 'react-vendor';
-            }
+            // OpenLayers
             if (id.includes('/ol') || id.includes('openlayers')) {
               return 'openlayers-vendor';
             }
@@ -76,11 +77,7 @@ export default defineConfig({
             if (id.includes('@supabase/')) {
               return 'supabase-vendor';
             }
-            // Form libraries
-            if (id.includes('react-hook-form') || id.includes('@hookform/')) {
-              return 'form-vendor';
-            }
-            // Zod (validation, used with forms but can be separate)
+            // Zod (validation)
             if (id.includes('zod') && !id.includes('node_modules/zod/dist')) {
               return 'validation-vendor';
             }
@@ -107,7 +104,7 @@ export default defineConfig({
             // Other node_modules (catch-all for smaller libraries)
             return 'vendor';
           }
-          
+
           // Split app code by routes if needed (optional)
           // if (id.includes('/src/routes/')) {
           //   return 'routes';
