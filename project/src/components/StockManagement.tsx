@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload } from 'lucide-react';
+import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload, MoreVertical, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useCurrency } from '../hooks/useCurrency';
@@ -7,6 +7,13 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Product {
   id: string;
@@ -72,6 +79,57 @@ interface WarehouseData {
   updated_at: string | null;
 }
 
+const createDefaultPurchaseState = () => ({
+  product_id: '',
+  product_name: '',
+  category: '',
+  brand: '',
+  packaging_type: '',
+  packaging_size: 0,
+  quantity: 0,
+  unit: 'units',
+  cost_per_unit: 0,
+  total_cost: 0,
+  supplier: '',
+  supplier_id: '',
+  warehouse_id: '',
+  notes: '',
+  batch_number: '',
+  purchase_date: new Date().toISOString().split('T')[0],
+  invoice_file: null as File | null,
+  invoice_number: '',
+});
+
+const createDefaultSupplierState = () => ({
+  name: '',
+  contact_person: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  postal_code: '',
+  country: 'Morocco',
+  website: '',
+  tax_id: '',
+  payment_terms: '',
+  notes: '',
+});
+
+const createDefaultWarehouseState = () => ({
+  name: '',
+  description: '',
+  location: '',
+  address: '',
+  city: '',
+  postal_code: '',
+  capacity: '',
+  capacity_unit: 'm3',
+  temperature_controlled: false,
+  humidity_controlled: false,
+  security_level: 'standard',
+  manager_name: '',
+  manager_phone: '',
+});
 
 export type InventoryTab = 'stock' | 'suppliers' | 'warehouses';
 
@@ -92,57 +150,33 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [newPurchase, setNewPurchase] = useState({
-    product_id: '',
-    product_name: '',  // Nouveau: nom du produit pour création automatique
-    category: '',
-    brand: '',
-    packaging_type: '', // Nouveau: type de conditionnement
-    packaging_size: 0,  // Nouveau: taille du conditionnement
-    quantity: 0,
-    unit: 'units',
-    cost_per_unit: 0,
-    total_cost: 0,
-    supplier: '',
-    supplier_id: '',
-    warehouse_id: '',
-    notes: '',
-    batch_number: '',
-    purchase_date: new Date().toISOString().split('T')[0],
-    invoice_file: null as File | null, // Nouveau: fichier de facture/bon
-    invoice_number: '' // Nouveau: numéro de facture
-  });
+  const [newPurchase, setNewPurchase] = useState(createDefaultPurchaseState());
 
-  const [newSupplier, setNewSupplier] = useState({
-    name: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    country: 'Morocco',
-    website: '',
-    tax_id: '',
-    payment_terms: '',
-    notes: ''
-  });
+  const [newSupplier, setNewSupplier] = useState(createDefaultSupplierState());
 
-  const [newWarehouse, setNewWarehouse] = useState({
-    name: '',
-    description: '',
-    location: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    capacity: '',
-    capacity_unit: 'm3',
-    temperature_controlled: false,
-    humidity_controlled: false,
-    security_level: 'standard',
-    manager_name: '',
-    manager_phone: ''
+  const [newWarehouse, setNewWarehouse] = useState(createDefaultWarehouseState());
+  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
+  const [quantityAdjustment, setQuantityAdjustment] = useState<{ type: 'increase' | 'decrease'; amount: number; reason: string }>({
+    type: 'increase',
+    amount: 0,
+    reason: '',
   });
+  const [isAdjustingQuantity, setIsAdjustingQuantity] = useState(false);
+  const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
+  const [isSubmittingWarehouse, setIsSubmittingWarehouse] = useState(false);
+
+  const resetPurchaseForm = () => setNewPurchase(createDefaultPurchaseState());
+  const resetSupplierForm = () => {
+    setNewSupplier(createDefaultSupplierState());
+    setEditingSupplierId(null);
+  };
+  const resetWarehouseForm = () => {
+    setNewWarehouse(createDefaultWarehouseState());
+    setEditingWarehouseId(null);
+  };
 
   useEffect(() => {
     if (currentOrganization) {
@@ -239,6 +273,166 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     }
   };
 
+  const openCreatePurchaseModal = () => {
+    resetPurchaseForm();
+    setSelectedProduct(null);
+    setNewPurchase((prev) => ({ ...prev, warehouse_id: warehouses[0]?.id || '' }));
+    setError(null);
+    setShowAddPurchase(true);
+  };
+
+  const openRestockModal = (product: Product) => {
+    setSelectedProduct(product);
+    setNewPurchase({
+      ...createDefaultPurchaseState(),
+      product_id: product.id,
+      quantity: product.packaging_size && product.packaging_size > 0 ? product.packaging_size : 1,
+      unit: product.unit || 'units',
+      supplier: product.supplier || '',
+      supplier_id: product.supplier_id || '',
+      warehouse_id: product.warehouse_id || warehouses[0]?.id || '',
+      cost_per_unit: product.cost_per_unit || 0,
+      packaging_type: product.packaging_type || '',
+      packaging_size: product.packaging_size && product.packaging_size > 0 ? product.packaging_size : 1,
+    });
+    setError(null);
+    setShowAddPurchase(true);
+  };
+
+  const closePurchaseModal = () => {
+    setShowAddPurchase(false);
+    resetPurchaseForm();
+    setSelectedProduct(null);
+  };
+
+  const openCreateSupplierModal = () => {
+    resetSupplierForm();
+    setError(null);
+    setShowAddSupplier(true);
+  };
+
+  const openEditSupplierModal = (supplier: Supplier) => {
+    setEditingSupplierId(supplier.id);
+    setNewSupplier({
+      name: supplier.name,
+      contact_person: supplier.contact_person || '',
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+      city: supplier.city || '',
+      postal_code: supplier.postal_code || '',
+      country: supplier.country || 'Morocco',
+      website: supplier.website || '',
+      tax_id: supplier.tax_id || '',
+      payment_terms: supplier.payment_terms || '',
+      notes: supplier.notes || '',
+    });
+    setError(null);
+    setShowAddSupplier(true);
+  };
+
+  const closeSupplierModal = () => {
+    setShowAddSupplier(false);
+    resetSupplierForm();
+    setIsSubmittingSupplier(false);
+  };
+
+  const openCreateWarehouseModal = () => {
+    resetWarehouseForm();
+    setError(null);
+    setShowAddWarehouse(true);
+  };
+
+  const openEditWarehouseModal = (warehouse: WarehouseData) => {
+    setEditingWarehouseId(warehouse.id);
+    setNewWarehouse({
+      name: warehouse.name,
+      description: warehouse.description || '',
+      location: warehouse.location || '',
+      address: warehouse.address || '',
+      city: warehouse.city || '',
+      postal_code: warehouse.postal_code || '',
+      capacity: warehouse.capacity?.toString() || '',
+      capacity_unit: warehouse.capacity_unit || 'm3',
+      temperature_controlled: Boolean(warehouse.temperature_controlled),
+      humidity_controlled: Boolean(warehouse.humidity_controlled),
+      security_level: warehouse.security_level || 'standard',
+      manager_name: warehouse.manager_name || '',
+      manager_phone: warehouse.manager_phone || '',
+    });
+    setError(null);
+    setShowAddWarehouse(true);
+  };
+
+  const closeWarehouseModal = () => {
+    setShowAddWarehouse(false);
+    resetWarehouseForm();
+    setIsSubmittingWarehouse(false);
+  };
+
+  const openAdjustQuantityModal = (product: Product) => {
+    setSelectedProduct(product);
+    setQuantityAdjustment({ type: 'increase', amount: 0, reason: '' });
+    setError(null);
+    setQuantityModalOpen(true);
+  };
+
+  const closeAdjustQuantityModal = () => {
+    setQuantityModalOpen(false);
+    setSelectedProduct(null);
+    setQuantityAdjustment({ type: 'increase', amount: 0, reason: '' });
+    setIsAdjustingQuantity(false);
+  };
+
+  const handleAdjustQuantity = async () => {
+    if (!currentOrganization || !selectedProduct) return;
+    if (quantityAdjustment.amount <= 0) {
+      setError('Veuillez saisir une quantité positive');
+      return;
+    }
+
+    setIsAdjustingQuantity(true);
+    try {
+      const delta = quantityAdjustment.type === 'increase' ? quantityAdjustment.amount : -quantityAdjustment.amount;
+      const currentQuantity = selectedProduct.quantity || 0;
+      const newQuantity = Math.max(0, currentQuantity + delta);
+      const minStock = selectedProduct.minimum_quantity || 10;
+      const status = newQuantity === 0 ? 'out_of_stock' : newQuantity < minStock ? 'low_stock' : 'available';
+
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({
+          quantity: newQuantity,
+          notes: quantityAdjustment.reason || selectedProduct.notes || null,
+        })
+        .eq('id', selectedProduct.id)
+        .eq('organization_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === selectedProduct.id
+            ? {
+                ...item,
+                quantity: newQuantity,
+                status,
+                notes: quantityAdjustment.reason || item.notes,
+              }
+            : item,
+        ),
+      );
+
+      closeAdjustQuantityModal();
+      setError(null);
+    } catch (adjustError) {
+      console.error('Error adjusting quantity:', adjustError);
+      setError(adjustError instanceof Error ? adjustError.message : 'Failed to adjust quantity');
+    } finally {
+      setIsAdjustingQuantity(false);
+    }
+  };
+
   // Removed handleAddProduct - products are now created automatically during purchase
 
   const handleAddPurchase = async () => {
@@ -303,7 +497,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         }
       } else if (product) {
         // Si le produit existe, mettre à jour sa quantité
-        const newQuantity = product.quantity + newPurchase.quantity;
+        const newQuantity = (product.quantity || 0) + newPurchase.quantity;
+        const minStock = product.minimum_quantity || 10;
+        const status = newQuantity === 0 ? 'out_of_stock' : newQuantity < minStock ? 'low_stock' : 'available';
 
         const { error: updateError } = await supabase
           .from('inventory_items')
@@ -328,11 +524,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               ? {
                   ...p,
                   quantity: newQuantity,
+                  status,
                   cost_per_unit: newPurchase.cost_per_unit,
                   supplier: newPurchase.supplier,
                   batch_number: newPurchase.batch_number || p.batch_number,
                   packaging_type: newPurchase.packaging_type || p.packaging_type,
-                  packaging_size: newPurchase.packaging_size || p.packaging_size
+                  packaging_size: newPurchase.packaging_size || p.packaging_size,
+                  last_purchase_date: newPurchase.purchase_date,
                 }
               : p
           ));
@@ -354,28 +552,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         return;
       }
 
-      setShowAddPurchase(false);
-      // Reset form
-      setNewPurchase({
-        product_id: '',
-        product_name: '',
-        category: '',
-        brand: '',
-        packaging_type: '',
-        packaging_size: 0,
-        quantity: 0,
-        unit: 'units',
-        cost_per_unit: 0,
-        total_cost: 0,
-        supplier: '',
-        supplier_id: '',
-        warehouse_id: '',
-        notes: '',
-        batch_number: '',
-        purchase_date: new Date().toISOString().split('T')[0],
-        invoice_file: null,
-        invoice_number: ''
-      });
+      closePurchaseModal();
       setError(null);
     } catch (error) {
       console.error('Error adding purchase:', error);
@@ -404,46 +581,55 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     }
   };
 
-  const handleAddSupplier = async () => {
+  const handleSubmitSupplier = async () => {
     if (!currentOrganization) return;
 
+    setIsSubmittingSupplier(true);
     try {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .insert([{
-          ...newSupplier,
-          organization_id: currentOrganization.id
-        }])
-        .select()
-        .single();
+      if (editingSupplierId) {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .update({
+            ...newSupplier,
+          })
+          .eq('id', editingSupplierId)
+          .eq('organization_id', currentOrganization.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setSuppliers([...suppliers, data]);
-      setShowAddSupplier(false);
-      setNewSupplier({
-        name: '',
-        contact_person: '',
-        email: '',
-        phone: '',
-        address: '',
-        city: '',
-        postal_code: '',
-        country: 'Morocco',
-        website: '',
-        tax_id: '',
-        payment_terms: '',
-        notes: ''
-      });
+        setSuppliers((prev) =>
+          prev.map((supplier) => (supplier.id === editingSupplierId ? data : supplier)),
+        );
+      } else {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .insert([{
+            ...newSupplier,
+            organization_id: currentOrganization.id,
+            is_active: true,
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setSuppliers([...suppliers, data]);
+      }
+
+      closeSupplierModal();
       setError(null);
     } catch (error) {
-      console.error('Error adding supplier:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add supplier');
+      console.error('Error saving supplier:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save supplier');
+    } finally {
+      setIsSubmittingSupplier(false);
     }
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce fournisseur?')) return;
+    if (!confirm('Êtes-vous sûr de vouloir archiver ce fournisseur ?')) return;
     if (!currentOrganization) return;
 
     try {
@@ -456,6 +642,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       if (error) throw error;
 
       setSuppliers(suppliers.filter(s => s.id !== id));
+      if (editingSupplierId === id) {
+        closeSupplierModal();
+      }
       setError(null);
     } catch (error) {
       console.error('Error deleting supplier:', error);
@@ -463,49 +652,56 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     }
   };
 
-  const handleAddWarehouse = async () => {
+  const handleSubmitWarehouse = async () => {
     if (!currentOrganization) return;
 
+    setIsSubmittingWarehouse(true);
     try {
-      const { data, error } = await supabase
-        .from('warehouses')
-        .insert([{
-          ...newWarehouse,
-          capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : null,
-          organization_id: currentOrganization.id,
-          farm_id: currentFarm?.id || null
-        }])
-        .select()
-        .single();
+      const payload = {
+        ...newWarehouse,
+        capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : null,
+        organization_id: currentOrganization.id,
+        farm_id: currentFarm?.id || null,
+      };
 
-      if (error) throw error;
+      if (editingWarehouseId) {
+        const { data, error } = await supabase
+          .from('warehouses')
+          .update(payload)
+          .eq('id', editingWarehouseId)
+          .eq('organization_id', currentOrganization.id)
+          .select()
+          .single();
 
-      setWarehouses([...warehouses, data]);
-      setShowAddWarehouse(false);
-      setNewWarehouse({
-        name: '',
-        description: '',
-        location: '',
-        address: '',
-        city: '',
-        postal_code: '',
-        capacity: '',
-        capacity_unit: 'm3',
-        temperature_controlled: false,
-        humidity_controlled: false,
-        security_level: 'standard',
-        manager_name: '',
-        manager_phone: ''
-      });
+        if (error) throw error;
+
+        setWarehouses((prev) =>
+          prev.map((warehouse) => (warehouse.id === editingWarehouseId ? data : warehouse)),
+        );
+      } else {
+        const { data, error } = await supabase
+          .from('warehouses')
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setWarehouses([...warehouses, data]);
+      }
+
+      closeWarehouseModal();
       setError(null);
     } catch (error) {
-      console.error('Error adding warehouse:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add warehouse');
+      console.error('Error saving warehouse:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save warehouse');
+    } finally {
+      setIsSubmittingWarehouse(false);
     }
   };
 
   const handleDeleteWarehouse = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet entrepôt?')) return;
+    if (!confirm('Êtes-vous sûr de vouloir archiver cet entrepôt ?')) return;
     if (!currentOrganization) return;
 
     try {
@@ -518,6 +714,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       if (error) throw error;
 
       setWarehouses(warehouses.filter(w => w.id !== id));
+      if (editingWarehouseId === id) {
+        closeWarehouseModal();
+      }
       setError(null);
     } catch (error) {
       console.error('Error deleting warehouse:', error);
@@ -546,7 +745,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {activeTab === 'stock' && (
           <button
-            onClick={() => setShowAddPurchase(true)}
+            onClick={openCreatePurchaseModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -555,7 +754,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         )}
         {activeTab === 'suppliers' && (
           <button
-            onClick={() => setShowAddSupplier(true)}
+            onClick={openCreateSupplierModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -564,7 +763,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         )}
         {activeTab === 'warehouses' && (
           <button
-            onClick={() => setShowAddWarehouse(true)}
+            onClick={openCreateWarehouseModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -678,12 +877,34 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     </span>
                   </td>
                   <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium">
-                    <button
-                      onClick={() => handleDeleteProduct(product.id)}
-                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openRestockModal(product)}>
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          Enregistrer un achat
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openAdjustQuantityModal(product)}>
+                          <Package className="mr-2 h-4 w-4" />
+                          Ajuster la quantité
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -788,12 +1009,30 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleDeleteSupplier(supplier.id)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteSupplier(supplier.id)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Archiver
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -908,12 +1147,30 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleDeleteWarehouse(warehouse.id)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteWarehouse(warehouse.id)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Archiver
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -1149,7 +1406,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 Nouvel Achat de Produit
               </h3>
               <button
-                onClick={() => setShowAddPurchase(false)}
+                onClick={closePurchaseModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
@@ -1518,7 +1775,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={() => setShowAddPurchase(false)}
+                onClick={closePurchaseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 Annuler
@@ -1542,10 +1799,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouveau Fournisseur
+                {editingSupplierId ? 'Modifier le fournisseur' : 'Nouveau Fournisseur'}
               </h3>
               <button
-                onClick={() => setShowAddSupplier(false)}
+                onClick={closeSupplierModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
@@ -1691,17 +1948,17 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={() => setShowAddSupplier(false)}
+                onClick={closeSupplierModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 Annuler
               </button>
               <button
-                onClick={handleAddSupplier}
-                disabled={!newSupplier.name}
+                onClick={handleSubmitSupplier}
+                disabled={isSubmittingSupplier || !newSupplier.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Ajouter
+                {isSubmittingSupplier ? 'Enregistrement...' : editingSupplierId ? 'Mettre à jour' : 'Ajouter'}
               </button>
             </div>
           </div>
@@ -1714,10 +1971,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvel Entrepôt
+                {editingWarehouseId ? 'Modifier l’entrepôt' : 'Nouvel Entrepôt'}
               </h3>
               <button
-                onClick={() => setShowAddWarehouse(false)}
+                onClick={closeWarehouseModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
@@ -1890,17 +2147,105 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={() => setShowAddWarehouse(false)}
+                onClick={closeWarehouseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 Annuler
               </button>
               <button
-                onClick={handleAddWarehouse}
-                disabled={!newWarehouse.name}
+                onClick={handleSubmitWarehouse}
+                disabled={isSubmittingWarehouse || !newWarehouse.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Ajouter
+                {isSubmittingWarehouse ? 'Enregistrement...' : editingWarehouseId ? 'Mettre à jour' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {quantityModalOpen && selectedProduct && (
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Ajuster la quantité
+              </h3>
+              <button
+                onClick={closeAdjustQuantityModal}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Produit :{' '}
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {selectedProduct.item_name || selectedProduct.name}
+                </span>
+              </p>
+              <div className="grid grid-cols-1 gap-4">
+                <FormField label="Type d'ajustement" htmlFor="adjustment_type">
+                  <Select
+                    id="adjustment_type"
+                    value={quantityAdjustment.type}
+                    onChange={(e) =>
+                      setQuantityAdjustment({
+                        ...quantityAdjustment,
+                        type: (e.target as HTMLSelectElement).value as 'increase' | 'decrease',
+                      })
+                    }
+                  >
+                    <option value="increase">Augmenter le stock</option>
+                    <option value="decrease">Diminuer le stock</option>
+                  </Select>
+                </FormField>
+                <FormField label="Quantité" htmlFor="adjustment_amount" required>
+                  <Input
+                    id="adjustment_amount"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={quantityAdjustment.amount}
+                    onChange={(e) =>
+                      setQuantityAdjustment({
+                        ...quantityAdjustment,
+                        amount: Number((e.target as HTMLInputElement).value),
+                      })
+                    }
+                    required
+                  />
+                </FormField>
+                <FormField
+                  label="Motif"
+                  htmlFor="adjustment_reason"
+                  helper="Optionnel, utile pour l'audit."
+                >
+                  <Textarea
+                    id="adjustment_reason"
+                    rows={3}
+                    value={quantityAdjustment.reason}
+                    onChange={(e) =>
+                      setQuantityAdjustment({ ...quantityAdjustment, reason: e.target.value })
+                    }
+                  />
+                </FormField>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={closeAdjustQuantityModal}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAdjustQuantity}
+                disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAdjustingQuantity ? 'Enregistrement...' : 'Appliquer'}
               </button>
             </div>
           </div>

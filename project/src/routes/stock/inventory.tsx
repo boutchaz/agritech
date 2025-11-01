@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { createFileRoute, useRouter, useRouterState } from '@tanstack/react-router';
+import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import StockManagement, { type InventoryTab } from '../../components/StockManagement';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Users, Warehouse } from 'lucide-react';
@@ -43,6 +43,7 @@ const StockInventoryLayout: React.FC = () => {
       </Tabs>
 
       <StockManagement activeTab={activeTab} />
+      <Outlet />
     </div>
   );
 };

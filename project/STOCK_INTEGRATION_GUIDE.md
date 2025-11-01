@@ -7,6 +7,7 @@ Complete guide to how Purchases, Sales, Inventory, and Accounting integrate in t
 The stock management system follows a **source of truth** pattern where:
 - **Stock Entries** are the single source of truth for all quantity changes
 - **Purchase Orders** and **Sales Orders** create stock entries but don't directly modify inventory
+- **Reception Batches** track harvest quality control before creating stock entries
 - **Posting** a stock entry triggers all downstream effects (inventory updates, accounting entries)
 
 ```
@@ -21,6 +22,11 @@ The stock management system follows a **source of truth** pattern where:
                          │ Journal Entry   │
                          │  (GL Impact)    │
                          └─────────────────┘
+
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   Harvest       │──1──>│ Reception Batch │──2──>│  Stock Entry    │
+│  (Completed)    │      │ (Quality Check) │      │   (Decision)    │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
 ```
 
 ## 🔄 Complete Purchase-to-Inventory Flow
@@ -260,6 +266,176 @@ INSERT INTO journal_items (
 - ✅ SO marked as "stock issued"
 - ✅ COGS journal entry created
 
+## 🌾 Complete Harvest-to-Inventory Flow (Reception Center)
+
+### Overview
+Reception centers provide a quality control checkpoint between harvest and inventory. This workflow ensures that only quality-checked produce enters your stock system.
+
+### Step 1: Configure Reception Center
+**Location**: Stock → Warehouses → Edit Warehouse
+
+**What to Configure**:
+```typescript
+{
+  is_reception_center: true,
+  reception_type: 'olivier',  // or 'viticole', 'fruiter', etc.
+  has_weighing_station: true,
+  has_quality_lab: true
+}
+```
+
+### Step 2: Create Reception Batch
+**Location**: Stock → Reception Batches → New Reception Batch
+
+**Code Reference**:
+- UI: `project/src/components/Stock/ReceptionBatchForm.tsx`
+- Hook: `project/src/hooks/useReceptionBatches.ts`
+
+**What Happens**:
+```typescript
+// 1. Create reception batch
+{
+  batch_code: "LOT-2025-OLIV-MA-0035",    // Auto-generated
+  warehouse_id: "reception-center-uuid",
+  parcel_id: "parcel-uuid",
+  harvest_id: "harvest-uuid",             // Optional link
+
+  // Weighing
+  weight: 500,
+  weight_unit: "kg",
+
+  // Initial quality check (optional at creation)
+  quality_grade: null,
+  quality_score: null,
+
+  // Status workflow
+  status: "received",
+  decision: "pending"
+}
+```
+
+### Step 3: Quality Control
+**Location**: Stock → Reception Batches → View Batch → Quality Control
+
+**What Happens**:
+```typescript
+// Update batch with quality information
+{
+  quality_grade: "A",
+  quality_score: 8,
+  humidity_percentage: 12.5,
+  temperature: 18.2,
+  moisture_content: 15.0,
+  maturity_level: "Ripe",
+  quality_notes: "Good overall quality, minor blemishes on 5%",
+  quality_checked_by: "user-uuid",
+
+  status: "quality_checked"    // Status updated
+}
+```
+
+### Step 4: Make Decision
+**Location**: Stock → Reception Batches → View Batch → Make Decision
+
+**Decision Options**:
+
+#### Option A: Storage (Most Common)
+```typescript
+// User selects: "Store in warehouse"
+await supabase.rpc('make_reception_decision', {
+  p_batch_id: batch.id,
+  p_decision: 'storage',
+  p_destination_warehouse_id: 'storage-warehouse-uuid',
+  p_item_id: 'olives-item-uuid'
+});
+
+// Function executes:
+// 1. If destination = reception center:
+//    Creates Material Receipt (stock IN)
+// 2. If destination ≠ reception center:
+//    Creates Stock Transfer (move to other warehouse)
+
+// 3. Updates batch
+{
+  decision: "storage",
+  decision_date: "2025-11-01",
+  destination_warehouse_id: "storage-warehouse-uuid",
+  stock_entry_id: "created-entry-uuid",
+  status: "decision_made"
+}
+```
+
+#### Option B: Direct Sale
+```typescript
+// User selects: "Direct sale"
+await supabase.rpc('make_reception_decision', {
+  p_batch_id: batch.id,
+  p_decision: 'direct_sale'
+});
+
+// Function creates sales order
+{
+  decision: "direct_sale",
+  sales_order_id: "created-so-uuid",
+  status: "decision_made"
+}
+```
+
+#### Option C: Transformation
+```typescript
+// User selects: "Send to transformation"
+{
+  decision: "transformation",
+  decision_notes: "Send to olive oil processing",
+  status: "decision_made"
+}
+// Manual processing required
+```
+
+#### Option D: Rejected
+```typescript
+// User selects: "Reject batch"
+{
+  decision: "rejected",
+  decision_notes: "Quality below minimum standards",
+  status: "decision_made"
+}
+// No stock entry created
+```
+
+### Step 5: Process Decision (for Storage)
+**Location**: Stock → Stock Entries → Find entry created by batch → Post Entry
+
+**What Happens** (same as regular stock entry posting):
+```typescript
+// 1. Stock entry posted
+UPDATE stock_entries
+SET status = 'Posted'
+WHERE id = entry_id;
+
+// 2. Inventory updated
+UPDATE inventory_items
+SET quantity = quantity + 500;
+
+// 3. Stock movement recorded
+INSERT INTO stock_movements (...);
+
+// 4. Reception batch marked as processed
+UPDATE reception_batches
+SET status = 'processed'
+WHERE id = batch_id;
+
+// 5. Journal entry created (if accounting configured)
+INSERT INTO journal_entries (...);
+```
+
+**Result**:
+- ✅ Batch quality-checked and graded
+- ✅ Decision made and recorded
+- ✅ Stock entry created (if storage/transformation)
+- ✅ Inventory updated (after posting)
+- ✅ Full audit trail maintained
+
 ## 📦 Opening Stock Balance
 
 ### Purpose
@@ -461,6 +637,21 @@ Every stock transaction creates multiple audit records:
 - [ ] Verify SO.stock_issued = true
 - [ ] Check journal entry for COGS impact
 
+### End-to-End Reception Batch Flow
+- [ ] Configure warehouse as reception center (is_reception_center = true)
+- [ ] Create reception batch with weighing data
+- [ ] Verify batch code auto-generated (LOT-YYYY-CULTURE-WH-NNNN)
+- [ ] Add quality control data (grade, score, humidity, temperature)
+- [ ] Verify status changes: received → quality_checked
+- [ ] Make decision: select "Storage" with destination warehouse
+- [ ] Verify stock entry created automatically
+- [ ] Verify batch.stock_entry_id populated
+- [ ] Navigate to Stock → Entries and find the created entry
+- [ ] Post the stock entry
+- [ ] Verify inventory updated
+- [ ] Verify batch status = "processed"
+- [ ] Check harvest record linked to batch (if applicable)
+
 ### Opening Stock
 - [ ] Configure account mappings for "Opening Stock"
 - [ ] Create opening stock record
@@ -488,22 +679,41 @@ Every stock transaction creates multiple audit records:
 **Cause**: Material receipt not posted yet
 **Fix**: Post the stock entry to trigger PO status update
 
+### "No reception centers available"
+**Cause**: No warehouses configured as reception centers
+**Fix**: Edit a warehouse and set `is_reception_center = true`
+
+### Batch code generation fails
+**Cause**: Missing culture_type or warehouse has no name
+**Fix**: Ensure warehouse has a name and culture_type is provided
+
 ## 📚 File References
 
-### Frontend
+### Frontend - Core Stock Management
 - PO Material Receipt Button: `src/components/Billing/PurchaseOrderDetailDialog.tsx:489-533`
 - SO Material Issue Button: `src/components/Billing/SalesOrderDetailDialog.tsx:187-230`
 - Stock Entry Posting: `src/hooks/useStockEntries.ts:229-254`
 - Opening Stock Hooks: `src/hooks/useOpeningStock.ts`
+- Warehouse Selector: `src/hooks/useWarehouses.ts`
+- Stock Entry List: `src/components/Stock/StockEntryList.tsx`
+- Stock Reports: `src/components/Stock/StockReportsDashboard.tsx`
+
+### Frontend - Reception Center System
+- Reception Batch List: `src/components/Stock/ReceptionBatchList.tsx`
+- Reception Batch Form: `src/components/Stock/ReceptionBatchForm.tsx`
+- Reception Hooks: `src/hooks/useReceptionBatches.ts`
+- Reception Route: `src/routes/stock/reception.tsx`
 
 ### Backend
 - Stock Entry System: `supabase/migrations/20250201000000_create_stock_entries.sql`
 - PO/SO Integration: `supabase/migrations/20250201000002_purchase_sales_order_integration.sql`
 - Opening Stock & Accounting: `supabase/migrations/20250201000003_opening_stock_and_accounting_integration.sql`
+- Reception Center System: `supabase/migrations/20250201000004_create_reception_center_system.sql`
 
 ### Types
 - Stock Entries: `src/types/stock-entries.ts`
 - Opening Stock: `src/types/opening-stock.ts`
+- Reception Batches: `src/types/reception.ts`
 - Database Types: `src/types/database.types.ts`
 
 ---

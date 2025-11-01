@@ -55,6 +55,7 @@ import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-work'
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
 import { Route as StockReportsRouteImport } from './routes/stock/reports'
+import { Route as StockReceptionRouteImport } from './routes/stock/reception'
 import { Route as StockInventoryRouteImport } from './routes/stock/inventory'
 import { Route as StockEntriesRouteImport } from './routes/stock/entries'
 import { Route as SettingsWorkUnitsRouteImport } from './routes/settings.work-units'
@@ -300,6 +301,11 @@ const StockReportsRoute = StockReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => StockRoute,
 } as any)
+const StockReceptionRoute = StockReceptionRouteImport.update({
+  id: '/reception',
+  path: '/reception',
+  getParentRoute: () => StockRoute,
+} as any)
 const StockInventoryRoute = StockInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -427,6 +433,7 @@ export interface FileRoutesByFullPath {
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
+  '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
@@ -548,6 +556,7 @@ export interface FileRoutesById {
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
@@ -612,6 +621,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/stock/entries'
     | '/stock/inventory'
+    | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
@@ -669,6 +679,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/stock/entries'
+    | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
@@ -732,6 +743,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/stock/entries'
     | '/stock/inventory'
+    | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
     | '/workers/piece-work'
@@ -1111,6 +1123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockReportsRouteImport
       parentRoute: typeof StockRoute
     }
+    '/stock/reception': {
+      id: '/stock/reception'
+      path: '/reception'
+      fullPath: '/stock/reception'
+      preLoaderRoute: typeof StockReceptionRouteImport
+      parentRoute: typeof StockRoute
+    }
     '/stock/inventory': {
       id: '/stock/inventory'
       path: '/inventory'
@@ -1282,6 +1301,7 @@ const StockInventoryRouteWithChildren = StockInventoryRoute._addFileChildren(
 interface StockRouteChildren {
   StockEntriesRoute: typeof StockEntriesRoute
   StockInventoryRoute: typeof StockInventoryRouteWithChildren
+  StockReceptionRoute: typeof StockReceptionRoute
   StockReportsRoute: typeof StockReportsRoute
   StockIndexRoute: typeof StockIndexRoute
 }
@@ -1289,6 +1309,7 @@ interface StockRouteChildren {
 const StockRouteChildren: StockRouteChildren = {
   StockEntriesRoute: StockEntriesRoute,
   StockInventoryRoute: StockInventoryRouteWithChildren,
+  StockReceptionRoute: StockReceptionRoute,
   StockReportsRoute: StockReportsRoute,
   StockIndexRoute: StockIndexRoute,
 }
