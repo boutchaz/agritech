@@ -85,7 +85,10 @@ export function useStockEntry(entryId: string | null) {
         .from('stock_entries')
         .select(`
           *,
-          items:stock_entry_items(*),
+          items:stock_entry_items(
+            *,
+            item:items(id, item_code, item_name, default_unit, item_group:item_groups(name))
+          ),
           from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
           to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
         `)
@@ -337,7 +340,7 @@ export function useStockMovements(filters?: StockMovementFilters) {
         .from('stock_movements')
         .select(`
           *,
-          item:inventory_items(id, name, unit),
+          item:items(id, item_code, item_name, default_unit),
           warehouse:warehouses(id, name),
           stock_entry:stock_entries(id, entry_number, entry_type)
         `)

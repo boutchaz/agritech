@@ -56,6 +56,7 @@ import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-wor
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
 import { Route as StockReportsRouteImport } from './routes/stock/reports'
 import { Route as StockReceptionRouteImport } from './routes/stock/reception'
+import { Route as StockItemsRouteImport } from './routes/stock/items'
 import { Route as StockInventoryRouteImport } from './routes/stock/inventory'
 import { Route as StockEntriesRouteImport } from './routes/stock/entries'
 import { Route as SettingsWorkUnitsRouteImport } from './routes/settings.work-units'
@@ -306,6 +307,11 @@ const StockReceptionRoute = StockReceptionRouteImport.update({
   path: '/reception',
   getParentRoute: () => StockRoute,
 } as any)
+const StockItemsRoute = StockItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => StockRoute,
+} as any)
 const StockInventoryRoute = StockInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -433,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -491,6 +498,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
+  '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
+  '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
   '/tasks/calendar': typeof TasksCalendarRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/stock/entries'
     | '/stock/inventory'
+    | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
@@ -679,6 +689,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/stock/entries'
+    | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
@@ -743,6 +754,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/stock/entries'
     | '/stock/inventory'
+    | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
     | '/tasks/calendar'
@@ -1130,6 +1142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockReceptionRouteImport
       parentRoute: typeof StockRoute
     }
+    '/stock/items': {
+      id: '/stock/items'
+      path: '/items'
+      fullPath: '/stock/items'
+      preLoaderRoute: typeof StockItemsRouteImport
+      parentRoute: typeof StockRoute
+    }
     '/stock/inventory': {
       id: '/stock/inventory'
       path: '/inventory'
@@ -1301,6 +1320,7 @@ const StockInventoryRouteWithChildren = StockInventoryRoute._addFileChildren(
 interface StockRouteChildren {
   StockEntriesRoute: typeof StockEntriesRoute
   StockInventoryRoute: typeof StockInventoryRouteWithChildren
+  StockItemsRoute: typeof StockItemsRoute
   StockReceptionRoute: typeof StockReceptionRoute
   StockReportsRoute: typeof StockReportsRoute
   StockIndexRoute: typeof StockIndexRoute
@@ -1309,6 +1329,7 @@ interface StockRouteChildren {
 const StockRouteChildren: StockRouteChildren = {
   StockEntriesRoute: StockEntriesRoute,
   StockInventoryRoute: StockInventoryRouteWithChildren,
+  StockItemsRoute: StockItemsRoute,
   StockReceptionRoute: StockReceptionRoute,
   StockReportsRoute: StockReportsRoute,
   StockIndexRoute: StockIndexRoute,

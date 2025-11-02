@@ -8,10 +8,18 @@ import { Textarea } from '@/components/ui/Textarea';
 import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
 import { useCreateQuote } from '@/hooks/useQuotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
+import { useItemSelection } from '@/hooks/useItems';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
@@ -19,6 +27,7 @@ import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 
 const quoteItemSchema = z.object({
+  item_id: z.string().optional(),
   item_name: z.string().min(1, 'Item name is required'),
   description: z.string().optional(),
   quantity: z.coerce.number().min(0.01, 'Quantity must be positive'),
@@ -65,6 +74,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   const { data: customers = [] } = useCustomers();
   const { data: accounts = [] } = useAccounts();
   const { data: taxes = [] } = useTaxes('sales');
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
+    is_sales_item: true 
+  });
 
   const [totals, setTotals] = useState<any>(null);
 
@@ -75,6 +87,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<QuoteFormData>({
@@ -84,6 +97,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
       valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
       items: [
         {
+          item_id: '',
           item_name: '',
           description: '',
           quantity: 1,
@@ -115,6 +129,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
         try {
           const result = await calculateInvoiceTotals(
             validItems.map((item) => ({
+              item_id: item.item_id || undefined,
               item_name: item.item_name,
               description: item.description,
               quantity: Number(item.quantity),
@@ -141,6 +156,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
       await createQuote.mutateAsync({
         ...data,
         items: data.items.map((item) => ({
+          item_id: item.item_id || undefined,
           item_name: item.item_name,
           description: item.description,
           quantity: Number(item.quantity),
@@ -221,6 +237,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 size="sm"
                 onClick={() =>
                   append({
+                    item_id: '',
                     item_name: '',
                     description: '',
                     quantity: 1,
@@ -240,7 +257,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="text-left py-2 px-3 text-sm font-medium">Item Name</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium">Item *</th>
                       <th className="text-left py-2 px-3 text-sm font-medium">Description</th>
                       <th className="text-left py-2 px-3 text-sm font-medium w-24">Qty</th>
                       <th className="text-left py-2 px-3 text-sm font-medium w-32">Rate</th>
@@ -258,10 +275,47 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                       return (
                         <tr key={field.id} className="border-t">
                           <td className="py-2 px-3">
-                            <Input
+                            <Select
+                              value={watch(`items.${index}.item_id`) || ''}
+                              onValueChange={(itemId) => {
+                                const selectedItem = items.find(item => item.id === itemId);
+                                if (selectedItem) {
+                                  setValue(`items.${index}.item_id`, itemId);
+                                  setValue(`items.${index}.item_name`, selectedItem.item_name);
+                                  // Optionally populate rate from item_prices if available
+                                  // For now, user can still enter rate manually
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select item" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {itemsLoading ? (
+                                  <SelectItem value="_loading" disabled>
+                                    Loading items...
+                                  </SelectItem>
+                                ) : items.length === 0 ? (
+                                  <SelectItem value="_none" disabled>
+                                    No items available. Create items first.
+                                  </SelectItem>
+                                ) : (
+                                  items.map((item) => (
+                                    <SelectItem key={item.id} value={item.id}>
+                                      {item.item_code} - {item.item_name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            {/* Hidden field for item_name (required for backward compatibility) */}
+                            <input
+                              type="hidden"
+                              {...register(`items.${index}.item_id`)}
+                            />
+                            <input
+                              type="hidden"
                               {...register(`items.${index}.item_name`)}
-                              placeholder="Item name"
-                              className="w-full"
                             />
                           </td>
                           <td className="py-2 px-3">

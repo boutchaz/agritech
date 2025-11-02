@@ -60,6 +60,16 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const [selectedFarmForParcels, setSelectedFarmForParcels] = useState<{ id: string; name: string } | null>(null);
   const [selectedFarmForDetails, setSelectedFarmForDetails] = useState<string | null>(null);
   const [farmToDelete, setFarmToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [relatedDataCounts, setRelatedDataCounts] = useState<{
+    parcels: number;
+    workers: number;
+    tasks: number;
+    satellite_data: number;
+    warehouses: number;
+    inventory_items: number;
+    structures: number;
+  } | null>(null);
+  const [loadingRelatedData, setLoadingRelatedData] = useState(false);
 
   const {
     register,
@@ -241,6 +251,51 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     createFarmMutation.mutate(data);
   };
 
+  // Fetch related data counts for a farm
+  const fetchRelatedDataCounts = async (farmId: string) => {
+    setLoadingRelatedData(true);
+    try {
+      const [
+        parcelsRes,
+        workersRes,
+        tasksRes,
+        satelliteRes,
+        warehousesRes,
+        inventoryRes,
+        structuresRes
+      ] = await Promise.all([
+        supabase.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
+      ]);
+
+      setRelatedDataCounts({
+        parcels: parcelsRes.count || 0,
+        workers: workersRes.count || 0,
+        tasks: tasksRes.count || 0,
+        satellite_data: satelliteRes.count || 0,
+        warehouses: warehousesRes.count || 0,
+        inventory_items: inventoryRes.count || 0,
+        structures: structuresRes.count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching related data counts:', error);
+      setRelatedDataCounts(null);
+    } finally {
+      setLoadingRelatedData(false);
+    }
+  };
+
+  // Handle delete farm click
+  const handleDeleteFarmClick = (farm: { id: string; name: string }) => {
+    setFarmToDelete(farm);
+    fetchRelatedDataCounts(farm.id);
+  };
+
   // Delete farm mutation
   const deleteFarmMutation = useMutation({
     mutationFn: async (farmId: string) => {
@@ -250,15 +305,28 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         .delete()
         .eq('id', farmId);
 
-      if (error) throw error;
+      if (error) {
+        // Provide user-friendly error messages
+        if (error.message.includes('permission')) {
+          throw new Error("Vous n'avez pas les permissions nécessaires pour supprimer cette ferme.");
+        } else if (error.message.includes('subscription')) {
+          throw new Error("Votre abonnement ne permet pas de supprimer des fermes.");
+        } else {
+          throw new Error(error.message || "Une erreur s'est produite lors de la suppression.");
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
       setFarmToDelete(null);
+      setRelatedDataCounts(null);
+
+      // Success feedback
+      alert(`✓ La ferme "${farmToDelete?.name}" et toutes ses données associées ont été supprimées avec succès.`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Error deleting farm:', error);
-      alert(`Erreur lors de la suppression de la ferme: ${error.message}`);
+      alert(`❌ Erreur lors de la suppression de la ferme:\n\n${error.message}`);
     }
   });
 
@@ -322,7 +390,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           onSelect={() => setSelectedFarmForDetails(farm.farm_id)}
           onManage={() => onManageFarm?.(farm.farm_id)}
           onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
-          onDelete={() => setFarmToDelete({ id: farm.farm_id, name: farm.farm_name })}
+          onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
         />
         {farm.children && farm.children.length > 0 && (
           <div className="ml-8 space-y-3">
@@ -463,26 +531,112 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       )}
 
       {/* Delete Farm Confirmation Dialog */}
-      <AlertDialog open={!!farmToDelete} onOpenChange={(open) => !open && setFarmToDelete(null)}>
-        <AlertDialogContent className="bg-white dark:bg-gray-800">
+      <AlertDialog open={!!farmToDelete} onOpenChange={(open) => {
+        if (!open) {
+          setFarmToDelete(null);
+          setRelatedDataCounts(null);
+        }
+      }}>
+        <AlertDialogContent className="bg-white dark:bg-gray-800 max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Confirmer la suppression</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer la ferme <strong className="text-gray-900 dark:text-white">{farmToDelete?.name}</strong> ?
-              <br /><br />
-              <span className="text-red-600 dark:text-red-400">
-                ⚠️ Cette action supprimera également toutes les parcelles, analyses, tâches et autres données associées à cette ferme. Cette action est irréversible.
-              </span>
+            <AlertDialogTitle className="text-gray-900 dark:text-white text-xl">
+              Confirmer la suppression de la ferme
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p className="text-gray-700 dark:text-gray-300">
+                Êtes-vous sûr de vouloir supprimer la ferme <strong className="text-gray-900 dark:text-white font-semibold">{farmToDelete?.name}</strong> ?
+              </p>
+
+              {/* Loading state */}
+              {loadingRelatedData && (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                  <span className="ml-3 text-gray-600 dark:text-gray-400">Analyse des données liées...</span>
+                </div>
+              )}
+
+              {/* Related data counts */}
+              {!loadingRelatedData && relatedDataCounts && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <span className="text-red-600 dark:text-red-400 text-xl">⚠️</span>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">
+                        Données qui seront supprimées définitivement :
+                      </h4>
+                      <ul className="space-y-2 text-sm">
+                        {relatedDataCounts.parcels > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.parcels}</span>
+                            <span>Parcelle{relatedDataCounts.parcels > 1 ? 's' : ''}</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.tasks > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.tasks}</span>
+                            <span>Tâche{relatedDataCounts.tasks > 1 ? 's' : ''}</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.satellite_data > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.satellite_data}</span>
+                            <span>Analyse{relatedDataCounts.satellite_data > 1 ? 's' : ''} satellite</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.warehouses > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.warehouses}</span>
+                            <span>Entrepôt{relatedDataCounts.warehouses > 1 ? 's' : ''}</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.inventory_items > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.inventory_items}</span>
+                            <span>Article{relatedDataCounts.inventory_items > 1 ? 's' : ''} d'inventaire</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.structures > 0 && (
+                          <li className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.structures}</span>
+                            <span>Infrastructure{relatedDataCounts.structures > 1 ? 's' : ''} (écuries, bassins, puits, salles techniques)</span>
+                          </li>
+                        )}
+                        {relatedDataCounts.workers > 0 && (
+                          <li className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                            <span className="font-medium min-w-[30px]">{relatedDataCounts.workers}</span>
+                            <span>Travailleur{relatedDataCounts.workers > 1 ? 's' : ''} (seront dissociés de la ferme)</span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <p className="text-red-900 dark:text-red-200 font-semibold text-sm mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                    ⚡ Cette action est irréversible et supprimera toutes les données associées à cette ferme.
+                  </p>
+                </div>
+              )}
+
+              {/* Error state */}
+              {!loadingRelatedData && !relatedDataCounts && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-yellow-800 dark:text-yellow-300 text-sm">
+                    ⚠️ Impossible de charger les données liées. La suppression continuera de supprimer toutes les données associées à cette ferme.
+                  </p>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteFarmMutation.isPending}>
+              Annuler
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => farmToDelete && deleteFarmMutation.mutate(farmToDelete.id)}
-              disabled={deleteFarmMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteFarmMutation.isPending || loadingRelatedData}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
-              {deleteFarmMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              {deleteFarmMutation.isPending ? 'Suppression en cours...' : 'Supprimer définitivement'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

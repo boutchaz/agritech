@@ -255,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 variant="ghost"
                 className={cn(
                   "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/stock' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                  (currentPath === '/stock' || currentPath.startsWith('/stock/')) && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
                 onClick={(e) => handleNavigation('/stock', e)}
               >

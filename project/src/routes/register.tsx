@@ -41,14 +41,13 @@ function RegisterPage() {
 
     try {
       // Sign up the user with organization name in metadata
-      // The backend trigger will automatically create profile and organization
+      // The database trigger will automatically call the Edge Function to create profile and organization
       const { data: authData, error: signUpError } = await authSupabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/select-trial`,
           data: {
-            email_confirm: false,
             organization_name: organizationName,
           }
         }
@@ -64,13 +63,18 @@ function RegisterPage() {
       if (authData.user) {
         // Check if email confirmation is required
         if (authData.user.identities && authData.user.identities.length === 0) {
-          // Email confirmation is required - show message
+          // Email confirmation is required
+          // The Edge Function will be called automatically by the database trigger after email confirmation
           setShowEmailConfirmation(true)
           setIsLoading(false)
           return
         }
 
-        // Email confirmation disabled or already confirmed - redirect to trial selection
+        // Email confirmation disabled or already confirmed
+        // The Edge Function is called automatically by the database trigger
+        // Wait a moment for the Edge Function to complete, then redirect
+        console.log('✅ Account created - Edge Function will setup organization automatically')
+        // Redirect to trial selection
         window.location.href = '/select-trial'
       }
     } catch (error) {

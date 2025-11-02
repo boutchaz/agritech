@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, TrendingUp, PieChart, Activity, BookOpen } from 'lucide-react';
 import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
+import { accountingApi } from '../lib/accounting-api';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -28,6 +30,7 @@ interface Utility {
   notes?: string;
   created_at: string;
   updated_at: string;
+  journal_entry_id?: string | null;
 }
 
 const UTILITY_TYPES = [
@@ -51,8 +54,21 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
   other: ['unit', 'pcs', 'kg', 'L']
 };
 
+const UTILITY_ACCOUNT_CODES: Record<Utility['type'], string> = {
+  electricity: '5230', // Utilities expense
+  water: '5140', // Water and irrigation (direct cost)
+  diesel: '5240', // Fuel and oil
+  gas: '5230',
+  internet: '5230',
+  phone: '5230',
+  other: '5360', // Miscellaneous expense
+};
+
+const CASH_ACCOUNT_CODE = '1110';
+const ACCOUNTS_PAYABLE_ACCOUNT_CODE = '2110';
+
 const UtilitiesManagement: React.FC = () => {
-  const { currentFarm } = useAuth();
+  const { currentOrganization, currentFarm, user } = useAuth();
   const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
   const { format: formatCurrency, symbol: currency } = useCurrency();
   const [utilities, setUtilities] = useState<Utility[]>([]);
@@ -63,6 +79,8 @@ const UtilitiesManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<'cards' | 'grouped' | 'list' | 'dashboard'>('grouped');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const navigate = useNavigate();
+  const accountIdCacheRef = useRef<Record<string, string>>({});
 
   // Advanced filtering state
   const [filters, setFilters] = useState({
@@ -89,6 +107,36 @@ const UtilitiesManagement: React.FC = () => {
     recurring_frequency: 'monthly',
     notes: ''
   });
+
+  const getAccountIdByCode = useCallback(async (accountCode: string) => {
+    if (!currentOrganization?.id) {
+      throw new Error('Aucune organisation active pour résoudre les comptes comptables.');
+    }
+
+    const cacheKey = `${currentOrganization.id}:${accountCode}`;
+    const cached = accountIdCacheRef.current[cacheKey];
+    if (cached) {
+      return cached;
+    }
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('organization_id', currentOrganization.id)
+      .eq('code', accountCode)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data?.id) {
+      throw new Error(`Compte comptable ${accountCode} introuvable pour l'organisation.`);
+    }
+
+    accountIdCacheRef.current[cacheKey] = data.id;
+    return data.id;
+  }, [currentOrganization?.id]);
 
   // Helper function to calculate unit cost
   const calculateUnitCost = (amount: number, consumptionValue?: number): string => {
@@ -235,9 +283,89 @@ const UtilitiesManagement: React.FC = () => {
   }, [filteredAndSortedUtilities]);
 
   // Helper function to get utility label
-  const getUtilityLabel = (type: string) => {
+  const getUtilityLabel = useCallback((type: string) => {
     return UTILITY_TYPES.find(ut => ut.value === type)?.label || type;
-  };
+  }, []);
+
+  const syncUtilityJournalEntry = useCallback(async (utility: Utility) => {
+    if (!currentOrganization?.id || !user?.id) {
+      return utility.journal_entry_id ?? null;
+    }
+
+    const amountValue = Number(utility.amount);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      return utility.journal_entry_id ?? null;
+    }
+
+    const entryDate = utility.billing_date ? new Date(utility.billing_date) : new Date();
+    const debitAccountCode = UTILITY_ACCOUNT_CODES[utility.type] ?? UTILITY_ACCOUNT_CODES.other;
+    const paymentStatus = utility.payment_status ?? 'pending';
+    const creditAccountCode = paymentStatus === 'paid'
+      ? CASH_ACCOUNT_CODE
+      : ACCOUNTS_PAYABLE_ACCOUNT_CODE;
+
+    const [debitAccountId, creditAccountId] = await Promise.all([
+      getAccountIdByCode(debitAccountCode),
+      getAccountIdByCode(creditAccountCode),
+    ]);
+
+    const basePayload = {
+      entry_date: entryDate,
+      posting_date: entryDate,
+      reference_type: 'utilities',
+      reference_id: utility.id,
+      remarks: utility.notes || `Utility expense (${getUtilityLabel(utility.type)})`,
+      items: [
+        {
+          account_id: debitAccountId,
+          debit: amountValue,
+          credit: 0,
+          farm_id: utility.farm_id,
+          description: `Utility expense - ${getUtilityLabel(utility.type)}`,
+        },
+        {
+          account_id: creditAccountId,
+          debit: 0,
+          credit: amountValue,
+          farm_id: utility.farm_id,
+          description: paymentStatus === 'paid'
+            ? 'Utility paid in cash'
+            : 'Utility payable',
+        },
+      ],
+    };
+
+    if (utility.journal_entry_id) {
+      await accountingApi.updateJournalEntry({
+        id: utility.journal_entry_id,
+        ...basePayload,
+      });
+
+      if (user?.id) {
+        try {
+          await accountingApi.postJournalEntry(utility.journal_entry_id, user.id);
+        } catch (postError) {
+          console.error('Error posting journal entry:', postError);
+        }
+      }
+      return utility.journal_entry_id;
+    }
+
+    const entry = await accountingApi.createJournalEntry(
+      basePayload,
+      currentOrganization.id,
+      user.id
+    );
+
+    if (user?.id) {
+      try {
+        await accountingApi.postJournalEntry(entry.id, user.id);
+      } catch (postError) {
+        console.error('Error posting journal entry:', postError);
+      }
+    }
+    return entry.id;
+  }, [currentOrganization?.id, user?.id, getAccountIdByCode, getUtilityLabel]);
 
   // Prepare chart data
   const chartData = useMemo(() => {
@@ -297,7 +425,7 @@ const UtilitiesManagement: React.FC = () => {
       costByType,
       consumptionData
     };
-  }, [filteredAndSortedUtilities]);
+  }, [filteredAndSortedUtilities, getUtilityLabel]);
 
   const fetchUtilities = async () => {
     try {
@@ -330,6 +458,7 @@ const UtilitiesManagement: React.FC = () => {
         return;
       }
 
+      setError(null);
       setUploading(true);
       let invoiceUrl: string | null = null;
 
@@ -353,9 +482,31 @@ const UtilitiesManagement: React.FC = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error || !data) {
+        throw error ?? new Error('Échec de la création de la charge.');
+      }
 
-      setUtilities([data, ...utilities]);
+      let createdUtility = data as Utility;
+
+      try {
+        const journalEntryId = await syncUtilityJournalEntry({
+          ...createdUtility,
+          journal_entry_id: createdUtility.journal_entry_id ?? null,
+        });
+
+        if (journalEntryId && journalEntryId !== createdUtility.journal_entry_id) {
+          await supabase
+            .from('utilities')
+            .update({ journal_entry_id: journalEntryId })
+            .eq('id', createdUtility.id);
+          createdUtility = { ...createdUtility, journal_entry_id: journalEntryId };
+        }
+      } catch (journalError) {
+        console.error('Error creating journal entry for utility:', journalError);
+        setError('Charge enregistrée, mais l\'écriture comptable n\'a pas été créée.');
+      }
+
+      setUtilities([createdUtility, ...utilities]);
       setShowAddModal(false);
       setSelectedFile(null);
       setNewUtility({
@@ -385,16 +536,41 @@ const UtilitiesManagement: React.FC = () => {
         setError('Sélectionnez une ferme pour modifier une charge.');
         return;
       }
-      const { error } = await supabase
+      setError(null);
+
+      const { data, error } = await supabase
         .from('utilities')
         .update(editingUtility)
         .eq('id', editingUtility.id)
-        .eq('farm_id', currentFarm.id);
+        .eq('farm_id', currentFarm.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error || !data) {
+        throw error ?? new Error('Échec de la mise à jour de la charge.');
+      }
 
-      setUtilities(utilities.map(util => 
-        util.id === editingUtility.id ? editingUtility : util
+      let updatedUtility: Utility = {
+        ...data,
+        journal_entry_id: data.journal_entry_id ?? editingUtility.journal_entry_id ?? null,
+      };
+
+      try {
+        const journalEntryId = await syncUtilityJournalEntry(updatedUtility);
+        if (journalEntryId && journalEntryId !== updatedUtility.journal_entry_id) {
+          await supabase
+            .from('utilities')
+            .update({ journal_entry_id: journalEntryId })
+            .eq('id', updatedUtility.id);
+          updatedUtility = { ...updatedUtility, journal_entry_id: journalEntryId };
+        }
+      } catch (journalError) {
+        console.error('Error updating journal entry for utility:', journalError);
+        setError('Charge mise à jour, mais l\'écriture comptable n\'a pas été synchronisée.');
+      }
+
+      setUtilities(utilities.map(util =>
+        util.id === updatedUtility.id ? updatedUtility : util
       ));
       setEditingUtility(null);
     } catch (error) {
@@ -406,11 +582,14 @@ const UtilitiesManagement: React.FC = () => {
   const handleDeleteUtility = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) return;
 
+    const utilityToDelete = utilities.find(util => util.id === id);
+
     try {
       if (!currentFarm?.id) {
         setError('Sélectionnez une ferme pour supprimer une charge.');
         return;
       }
+      setError(null);
       const { error } = await supabase
         .from('utilities')
         .delete()
@@ -418,6 +597,14 @@ const UtilitiesManagement: React.FC = () => {
         .eq('farm_id', currentFarm.id);
 
       if (error) throw error;
+
+      if (utilityToDelete?.journal_entry_id) {
+        try {
+          await accountingApi.deleteJournalEntry(utilityToDelete.journal_entry_id);
+        } catch (journalError) {
+          console.error('Error deleting journal entry for utility:', journalError);
+        }
+      }
 
       setUtilities(utilities.filter(util => util.id !== id));
     } catch (error) {
@@ -447,6 +634,13 @@ const UtilitiesManagement: React.FC = () => {
           Gestion des Charges Fixes
         </h2>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate({ to: '/accounting-journal' })}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Journal Comptable</span>
+          </button>
           {/* View Mode Toggle */}
           <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button

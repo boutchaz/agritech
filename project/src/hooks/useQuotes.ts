@@ -193,6 +193,7 @@ export function useCreateQuote() {
       const items = totals.items_with_tax.map((item, index) => ({
         quote_id: quote.id,
         line_number: index + 1,
+        item_id: item.item_id || null,
         item_name: item.item_name,
         description: item.description || null,
         quantity: item.quantity,

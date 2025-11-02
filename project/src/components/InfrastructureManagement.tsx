@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, X, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, X, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask, Building, MapPin } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -70,13 +70,21 @@ const BASIN_SHAPES = [
   { value: 'circular', label: 'Circulaire' }
 ];
 
+interface Farm {
+  id: string;
+  name: string;
+}
+
 const InfrastructureManagement: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const [structures, setStructures] = useState<Structure[]>([]);
+  const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStructure, setEditingStructure] = useState<Structure | null>(null);
+  const [activeTab, setActiveTab] = useState<'organization' | 'farm'>('organization');
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
 
   const [newStructure, setNewStructure] = useState<Partial<Structure>>({
     name: '',
@@ -90,7 +98,25 @@ const InfrastructureManagement: React.FC = () => {
 
   useEffect(() => {
     fetchStructures();
-  }, []);
+    fetchFarms();
+  }, [currentOrganization]);
+
+  const fetchFarms = async () => {
+    try {
+      if (!currentOrganization) return;
+
+      const { data, error } = await supabase
+        .from('farms')
+        .select('id, name')
+        .eq('organization_id', currentOrganization.id)
+        .order('name');
+
+      if (error) throw error;
+      setFarms(data || []);
+    } catch (error) {
+      console.error('Error fetching farms:', error);
+    }
+  };
 
   const fetchStructures = async () => {
     try {
@@ -120,6 +146,22 @@ const InfrastructureManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Categorize structures
+  const organizationStructures = useMemo(() =>
+    structures.filter(s => !s.farm_id),
+    [structures]
+  );
+
+  const farmStructures = useMemo(() =>
+    structures.filter(s => s.farm_id === selectedFarmId),
+    [structures, selectedFarmId]
+  );
+
+  const allFarmStructures = useMemo(() =>
+    structures.filter(s => s.farm_id),
+    [structures]
+  );
 
   const calculateBasinVolume = (shape: string, dimensions: any) => {
     switch (shape) {
@@ -481,12 +523,20 @@ const InfrastructureManagement: React.FC = () => {
     }
 
     try {
+      // Determine farm_id based on active tab and selection
+      let farmId = null;
+      if (activeTab === 'farm' && selectedFarmId) {
+        farmId = selectedFarmId;
+      } else if (activeTab === 'farm' && currentFarm) {
+        farmId = currentFarm.id;
+      }
+
       const { data, error } = await supabase
         .from('structures')
         .insert([{
           ...newStructure,
           organization_id: currentOrganization.id,
-          farm_id: currentFarm?.id || null,
+          farm_id: farmId,
           location: newStructure.location || { lat: 0, lng: 0 },
           structure_details: newStructure.structure_details || {}
         }])
@@ -554,6 +604,133 @@ const InfrastructureManagement: React.FC = () => {
     }
   };
 
+  // Render structure card component
+  const renderStructureCard = (structure: Structure) => (
+    <div
+      key={structure.id}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center space-x-3">
+          {structure.type === 'stable' ? (
+            <Building2 className="h-6 w-6 text-blue-500" />
+          ) : structure.type === 'technical_room' ? (
+            <Wrench className="h-6 w-6 text-green-500" />
+          ) : structure.type === 'basin' ? (
+            <Droplets className="h-6 w-6 text-blue-500" />
+          ) : (
+            <Flask className="h-6 w-6 text-purple-500" />
+          )}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{structure.name}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {STRUCTURE_TYPES.find(t => t.value === structure.type)?.label}
+            </p>
+            {structure.farm && (
+              <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
+                <MapPin className="h-3 w-3" />
+                <span>{structure.farm.name}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setEditingStructure(structure)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <Edit2 className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => handleDeleteStructure(structure.id)}
+            className="text-gray-400 hover:text-red-500"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <div className="flex justify-between">
+          <span className="text-gray-500 dark:text-gray-400">Installation</span>
+          <span>{new Date(structure.installation_date).toLocaleDateString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500 dark:text-gray-400">État</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            structure.condition === 'excellent' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+            structure.condition === 'good' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+            structure.condition === 'fair' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+          }`}>
+            {structure.condition}
+          </span>
+        </div>
+        {structure.usage && (
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Utilisation</span>
+            <span className="text-right">{structure.usage}</span>
+          </div>
+        )}
+
+        {/* Structure-specific details */}
+        {structure.type === 'stable' && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm">
+              <span className="text-gray-500">Dimensions:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
+            </p>
+            <p className="text-sm">
+              <span className="text-gray-500">Construction:</span> {structure.structure_details.construction_type}
+            </p>
+          </div>
+        )}
+
+        {structure.type === 'basin' && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm">
+              <span className="text-gray-500">Forme:</span> {BASIN_SHAPES.find(s => s.value === structure.structure_details.shape)?.label}
+            </p>
+            <p className="text-sm">
+              <span className="text-gray-500">Volume:</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{structure.structure_details.volume?.toFixed(2)} m³</span>
+            </p>
+          </div>
+        )}
+
+        {structure.type === 'technical_room' && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm">
+              <span className="text-gray-500">Dimensions:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
+            </p>
+            {structure.structure_details.equipment && structure.structure_details.equipment.length > 0 && (
+              <div className="mt-2">
+                <p className="font-medium text-xs text-gray-500 mb-1">Équipements:</p>
+                <ul className="list-disc list-inside text-xs space-y-0.5">
+                  {structure.structure_details.equipment.slice(0, 3).map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                  {structure.structure_details.equipment.length > 3 && (
+                    <li className="text-gray-400">+{structure.structure_details.equipment.length - 3} autres...</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {structure.type === 'well' && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm">
+              <span className="text-gray-500">Profondeur:</span> {structure.structure_details.depth}m
+            </p>
+            <p className="text-sm">
+              <span className="text-gray-500">Pompe:</span> {structure.structure_details.pump_type} ({structure.structure_details.pump_power} kW)
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -564,140 +741,214 @@ const InfrastructureManagement: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion des Infrastructures
-        </h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Gestion des Infrastructures
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Gérez vos infrastructures au niveau organisation ou ferme
+          </p>
+        </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
         >
           <Plus className="h-5 w-5" />
-          <span>Nouvelle Structure</span>
+          <span>Nouvelle Infrastructure</span>
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
           <p className="text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      {structures.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune infrastructure
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
-            Commencez par ajouter votre première infrastructure (écurie, local technique, bassin ou puits)
-          </p>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            onClick={() => setActiveTab('organization')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${activeTab === 'organization'
+                ? 'border-green-500 text-green-600 dark:text-green-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }
+            `}
           >
-            <Plus className="h-5 w-5" />
-            <span>Ajouter une infrastructure</span>
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {structures.map(structure => (
-          <div
-            key={structure.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center space-x-3">
-                {structure.type === 'stable' ? (
-                  <Building2 className="h-6 w-6 text-blue-500" />
-                ) : structure.type === 'technical_room' ? (
-                  <Wrench className="h-6 w-6 text-green-500" />
-                ) : structure.type === 'basin' ? (
-                  <Droplets className="h-6 w-6 text-blue-500" />
-                ) : (
-                  <Flask className="h-6 w-6 text-purple-500" />
-                )}
-                <div>
-                  <h3 className="text-lg font-semibold">{structure.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    {STRUCTURE_TYPES.find(t => t.value === structure.type)?.label}
-                  </p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setEditingStructure(structure)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <Edit2 className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handleDeleteStructure(structure.id)}
-                  className="text-gray-400 hover:text-red-500"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              <span>Organisation</span>
+              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                {organizationStructures.length}
+              </span>
             </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('farm')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${activeTab === 'farm'
+                ? 'border-green-500 text-green-600 dark:text-green-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }
+            `}
+          >
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              <span>Par Ferme</span>
+              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                {allFarmStructures.length}
+              </span>
+            </div>
+          </button>
+        </nav>
+      </div>
 
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Installation</span>
-                <span>{new Date(structure.installation_date).toLocaleDateString()}</span>
+      {/* Organization Tab Content */}
+      {activeTab === 'organization' && (
+        <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Building className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-blue-900 dark:text-blue-300">Infrastructures de l'organisation</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                  Ces infrastructures sont partagées au niveau de l'organisation et ne sont pas liées à une ferme spécifique.
+                </p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">État</span>
-                <span>{structure.condition}</span>
-              </div>
-              {structure.usage && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Utilisation</span>
-                  <span>{structure.usage}</span>
-                </div>
-              )}
-
-              {/* Structure-specific details */}
-              {structure.type === 'stable' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p>Dimensions: {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m</p>
-                  <p>Construction: {structure.structure_details.construction_type}</p>
-                </div>
-              )}
-
-              {structure.type === 'basin' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p>Forme: {BASIN_SHAPES.find(s => s.value === structure.structure_details.shape)?.label}</p>
-                  <p>Volume: {structure.structure_details.volume?.toFixed(2)} m³</p>
-                </div>
-              )}
-
-              {structure.type === 'technical_room' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p>Dimensions: {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m</p>
-                  {structure.structure_details.equipment && (
-                    <div className="mt-2">
-                      <p className="font-medium mb-1">Équipements:</p>
-                      <ul className="list-disc list-inside">
-                        {structure.structure_details.equipment.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {structure.type === 'well' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p>Profondeur: {structure.structure_details.depth}m</p>
-                  <p>Pompe: {structure.structure_details.pump_type} ({structure.structure_details.pump_power} kW)</p>
-                  <p>État: {structure.structure_details.condition}</p>
-                </div>
-              )}
             </div>
           </div>
-          ))}
+
+          {organizationStructures.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Aucune infrastructure organisation
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
+                Les infrastructures de l'organisation sont accessibles par toutes les fermes
+              </p>
+              <button
+                onClick={() => {
+                  setActiveTab('organization');
+                  setShowAddModal(true);
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Ajouter une infrastructure</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {organizationStructures.map(structure => renderStructureCard(structure))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Farm Tab Content */}
+      {activeTab === 'farm' && (
+        <div className="space-y-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-medium text-green-900 dark:text-green-300">Infrastructures par ferme</h3>
+                <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                  Ces infrastructures sont spécifiques à une ferme et seront supprimées si la ferme est supprimée.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Farm Selector */}
+          {farms.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Filtrer par ferme
+              </label>
+              <select
+                value={selectedFarmId || ''}
+                onChange={(e) => setSelectedFarmId(e.target.value || null)}
+                className="w-full md:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Toutes les fermes</option>
+                {farms.map(farm => (
+                  <option key={farm.id} value={farm.id}>
+                    {farm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Display structures */}
+          {selectedFarmId ? (
+            // Filtered by selected farm
+            farmStructures.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Aucune infrastructure pour cette ferme
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
+                  Ajoutez votre première infrastructure pour la ferme sélectionnée
+                </p>
+                <button
+                  onClick={() => {
+                    setActiveTab('farm');
+                    setShowAddModal(true);
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Ajouter une infrastructure</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {farmStructures.map(structure => renderStructureCard(structure))}
+              </div>
+            )
+          ) : (
+            // All farm structures grouped by farm
+            allFarmStructures.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Aucune infrastructure de ferme
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
+                  Sélectionnez une ferme ci-dessus pour ajouter des infrastructures spécifiques
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {farms.filter(farm => allFarmStructures.some(s => s.farm_id === farm.id)).map(farm => {
+                  const farmStructuresForFarm = allFarmStructures.filter(s => s.farm_id === farm.id);
+                  return (
+                    <div key={farm.id} className="space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{farm.name}</h3>
+                        <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                          {farmStructuresForFarm.length} infrastructure{farmStructuresForFarm.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {farmStructuresForFarm.map(structure => renderStructureCard(structure))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -742,6 +993,54 @@ const InfrastructureManagement: React.FC = () => {
                   required
                 />
               </FormField>
+
+              <FormField label="Niveau d'affectation" htmlFor="struct_scope" required>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={activeTab === 'organization' && !editingStructure?.farm_id}
+                        onChange={() => setActiveTab('organization')}
+                        className="text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Organisation</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={activeTab === 'farm' || !!editingStructure?.farm_id}
+                        onChange={() => setActiveTab('farm')}
+                        className="text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Ferme spécifique</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {activeTab === 'organization'
+                      ? 'Accessible par toutes les fermes de l\'organisation'
+                      : 'Liée à une ferme spécifique et supprimée avec elle'}
+                  </p>
+                </div>
+              </FormField>
+
+              {(activeTab === 'farm' || editingStructure?.farm_id) && farms.length > 0 && (
+                <FormField label="Ferme" htmlFor="struct_farm" required>
+                  <Select
+                    id="struct_farm"
+                    value={selectedFarmId || editingStructure?.farm_id || ''}
+                    onChange={(e) => setSelectedFarmId(e.target.value)}
+                    required
+                  >
+                    <option value="">Sélectionner une ferme</option>
+                    {farms.map(farm => (
+                      <option key={farm.id} value={farm.id}>
+                        {farm.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
 
               <FormField label="Type de structure" htmlFor="struct_type" required>
                 <Select

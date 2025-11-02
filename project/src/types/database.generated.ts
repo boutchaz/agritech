@@ -3194,6 +3194,7 @@ export type Database = {
           farm_id: string
           id: string
           invoice_url: string | null
+          journal_entry_id: string | null
           is_recurring: boolean | null
           notes: string | null
           parcel_id: string | null
@@ -3215,6 +3216,7 @@ export type Database = {
           farm_id: string
           id?: string
           invoice_url?: string | null
+          journal_entry_id?: string | null
           is_recurring?: boolean | null
           notes?: string | null
           parcel_id?: string | null
@@ -3236,6 +3238,7 @@ export type Database = {
           farm_id?: string
           id?: string
           invoice_url?: string | null
+          journal_entry_id?: string | null
           is_recurring?: boolean | null
           notes?: string | null
           parcel_id?: string | null
@@ -4142,4 +4145,3 @@ export const Constants = {
     },
   },
 } as const
-

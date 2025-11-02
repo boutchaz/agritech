@@ -14,9 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
 import { CheckCircle2, ShoppingCart, FileText, Truck } from 'lucide-react';
 import type { SalesOrder } from '@/hooks/useSalesOrders';
-import { useConvertOrderToInvoice } from '@/hooks/useSalesOrders';
+import { useSalesOrder, useConvertOrderToInvoice } from '@/hooks/useSalesOrders';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
+import { useAuth } from '../MultiTenantAuthProvider';
 
 interface SalesOrderDetailDialogProps {
   salesOrder: SalesOrder | null;
@@ -32,6 +33,14 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
+  
+  const salesOrderId = salesOrder?.id ?? null;
+  const {
+    data: salesOrderWithItems,
+    isLoading: isDetailLoading,
+    error: detailError,
+  } = useSalesOrder(open ? salesOrderId : null);
+  const resolvedSalesOrder: SalesOrder | null = salesOrderWithItems ?? salesOrder ?? null;
 
   // Update order status mutation
   const updateStatus = useMutation({
@@ -105,7 +114,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
     }
   };
 
-  if (!salesOrderId) return null;
+  if (!salesOrderId || !open) return null;
 
   if (isDetailLoading || !resolvedSalesOrder) {
     return (

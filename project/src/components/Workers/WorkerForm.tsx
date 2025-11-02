@@ -8,6 +8,7 @@ import {
   WORKER_TYPE_OPTIONS,
   METAYAGE_TYPE_OPTIONS,
   CALCULATION_BASIS_OPTIONS,
+  PAYMENT_FREQUENCY_OPTIONS,
 } from '../../types/workers';
 import { useCreateWorker, useUpdateWorker } from '../../hooks/useWorkers';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -680,6 +681,114 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Payment Settings */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Paramètres de paiement
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Payment Frequency */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Fréquence de paiement
+                </label>
+                <select
+                  {...register('payment_frequency')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Sélectionner...</option>
+                  {PAYMENT_FREQUENCY_OPTIONS.map(option => {
+                    // Conditional display based on worker type
+                    // "per_task" only for daily workers
+                    // "monthly" only for fixed salary
+                    // "harvest_share" only for metayage
+                    // "daily" for daily workers and fixed salary
+
+                    if (option.value === 'per_task' && workerType !== 'daily_worker') {
+                      return null; // Hide "À la tâche" for non-daily workers
+                    }
+                    if (option.value === 'monthly' && workerType !== 'fixed_salary') {
+                      return null; // Hide "Mensuel" for non-salaried workers
+                    }
+                    if (option.value === 'harvest_share' && workerType !== 'metayage') {
+                      return null; // Hide "Partage de récolte" for non-metayage workers
+                    }
+                    if (option.value === 'daily' && workerType === 'metayage') {
+                      return null; // Hide "Journalier" for metayage workers
+                    }
+
+                    return (
+                      <option key={option.value} value={option.value}>
+                        {option.labelFr}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {workerType === 'fixed_salary' && 'Généralement mensuel pour les salariés fixes'}
+                  {workerType === 'daily_worker' && 'Journalier ou à la tâche pour les ouvriers'}
+                  {workerType === 'metayage' && 'Partage de récolte pour le métayage'}
+                </p>
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mode de paiement
+                </label>
+                <select
+                  {...register('payment_method')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="cash">Espèces</option>
+                  <option value="bank_transfer">Virement bancaire</option>
+                  <option value="check">Chèque</option>
+                  <option value="mobile_money">Mobile Money</option>
+                </select>
+              </div>
+
+              {/* Bank Account (conditional) */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Numéro de compte bancaire (optionnel)
+                </label>
+                <input
+                  {...register('bank_account')}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="IBAN ou RIB"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Nécessaire pour les virements bancaires
+                </p>
+              </div>
+            </div>
+
+            {/* Payment frequency info box - conditional based on worker type */}
+            <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+              <p className="font-medium mb-1">ℹ️ Informations sur les fréquences de paiement:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {workerType === 'fixed_salary' && (
+                  <>
+                    <li><strong>Mensuel:</strong> Paiement fixe chaque mois (recommandé pour salariés fixes)</li>
+                    <li><strong>Journalier:</strong> Paiement basé sur les jours effectivement travaillés</li>
+                  </>
+                )}
+                {workerType === 'daily_worker' && (
+                  <>
+                    <li><strong>Journalier:</strong> Paiement basé sur le nombre de jours travaillés</li>
+                    <li><strong>À la tâche:</strong> Paiement par tâche ou unité complétée (ex: nombre d'arbres taillés, kg récoltés)</li>
+                  </>
+                )}
+                {workerType === 'metayage' && (
+                  <li><strong>Partage de récolte:</strong> Paiement basé sur le pourcentage du revenu de la récolte (khammass, rebâa, tholth)</li>
+                )}
+              </ul>
+            </div>
           </div>
 
           {/* Skills & Certifications */}

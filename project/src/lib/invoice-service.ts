@@ -13,7 +13,8 @@ import { supabase } from './supabase';
 import { calculateInvoiceTotals } from './taxCalculations';
 
 export interface InvoiceItemInput {
-  item_name: string;
+  item_id?: string; // Reference to items table (preferred)
+  item_name: string; // Kept for backward compatibility
   description?: string;
   quantity: number;
   rate: number;
@@ -115,6 +116,7 @@ async function createInvoiceItems(
     })
     .map(item => ({
       invoice_id: invoiceId,
+      item_id: item.item_id || null, // Reference to items table
       item_name: item.item_name,
       description: item.description || null,
       quantity: Number(item.quantity),

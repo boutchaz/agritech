@@ -38,6 +38,7 @@ const AppContent: React.FC = () => {
 
   const tabs = useMemo(
     () => [
+      { value: 'items', label: 'Items', to: '/stock/items' },
       { value: 'inventory', label: 'Inventory & Purchases', to: '/stock/inventory' },
       { value: 'entries', label: 'Stock Entries', to: '/stock/entries' },
       { value: 'reception', label: 'Reception Batches', to: '/stock/reception' },
@@ -47,11 +48,13 @@ const AppContent: React.FC = () => {
   );
 
   const activeTab = useMemo(() => {
-    if (!location) return 'inventory';
+    if (!location) return 'items';
+    if (location.pathname.startsWith('/stock/items')) return 'items';
     if (location.pathname.startsWith('/stock/entries')) return 'entries';
     if (location.pathname.startsWith('/stock/reception')) return 'reception';
     if (location.pathname.startsWith('/stock/reports')) return 'reports';
-    return 'inventory';
+    if (location.pathname.startsWith('/stock/inventory')) return 'inventory';
+    return 'items';
   }, [location]);
 
   const handleTabChange = (value: string) => {

@@ -291,13 +291,26 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {entry.from_warehouse_id && entry.to_warehouse_id
-                        ? 'Transfer'
-                        : entry.from_warehouse_id
-                        ? 'From Warehouse'
-                        : entry.to_warehouse_id
-                        ? 'To Warehouse'
-                        : '-'}
+                      {(() => {
+                        const fromWarehouse = (entry as any).from_warehouse;
+                        const toWarehouse = (entry as any).to_warehouse;
+                        
+                        if (fromWarehouse && toWarehouse) {
+                          return (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-500">From: {fromWarehouse.name}</span>
+                              <span className="text-xs text-gray-500">To: {toWarehouse.name}</span>
+                            </div>
+                          );
+                        }
+                        if (fromWarehouse) {
+                          return <span>From: {fromWarehouse.name}</span>;
+                        }
+                        if (toWarehouse) {
+                          return <span>To: {toWarehouse.name}</span>;
+                        }
+                        return '-';
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm">
                       {entry.reference_number || '-'}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
 import { useWarehouses } from '@/hooks/useWarehouses';
+import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entries';
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
@@ -84,6 +85,9 @@ export default function StockEntryForm({
   const { currentOrganization } = useAuth();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
+    is_stock_item: true 
+  });
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
 
   const form = useForm<StockEntryFormData>({
@@ -129,7 +133,7 @@ export default function StockEntryForm({
         entry_date: data.entry_date,
         from_warehouse_id: data.from_warehouse_id,
         to_warehouse_id: data.to_warehouse_id,
-        reference_type: referenceType,
+        reference_type: referenceType as any,
         reference_id: referenceId,
         reference_number: referenceNumber,
         purpose: data.purpose,
@@ -343,11 +347,48 @@ export default function StockEntryForm({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label>Item Name *</Label>
-                      <Input
-                        placeholder="Select item"
+                      <Label>Item *</Label>
+                      <Select
+                        value={form.watch(`items.${index}.item_id`) || ''}
+                        onValueChange={(itemId) => {
+                          const selectedItem = items.find(item => item.id === itemId);
+                          if (selectedItem) {
+                            form.setValue(`items.${index}.item_id`, itemId);
+                            form.setValue(`items.${index}.item_name`, selectedItem.item_name);
+                            form.setValue(`items.${index}.unit`, selectedItem.default_unit);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select item" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {itemsLoading ? (
+                            <SelectItem value="_loading" disabled>
+                              Loading items...
+                            </SelectItem>
+                          ) : items.length === 0 ? (
+                            <SelectItem value="_none" disabled>
+                              No items available. Create items first.
+                            </SelectItem>
+                          ) : (
+                            items.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.item_code} - {item.item_name} ({item.default_unit})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.items?.[index]?.item_id && (
+                        <p className="text-sm text-red-600 mt-1">
+                          {form.formState.errors.items[index]?.item_id?.message}
+                        </p>
+                      )}
+                      {/* Hidden field for item_name (still required for backward compatibility) */}
+                      <input
+                        type="hidden"
                         {...form.register(`items.${index}.item_name`)}
-                        className="mt-1"
                       />
                     </div>
 
@@ -369,6 +410,8 @@ export default function StockEntryForm({
                         placeholder="kg, L, units"
                         {...form.register(`items.${index}.unit`)}
                         className="mt-1"
+                        readOnly
+                        style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
                       />
                     </div>
 

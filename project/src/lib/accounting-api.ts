@@ -512,6 +512,16 @@ export const accountingApi = {
   async createJournalEntry(entry: CreateJournalEntryInput, organizationId: string, userId: string) {
     const { items, ...entryData } = entry;
 
+    const { data: entryNumber, error: entryNumberError } = await supabase.rpc(
+      'generate_journal_entry_number',
+      { p_organization_id: organizationId }
+    );
+
+    if (entryNumberError) throw entryNumberError;
+    if (!entryNumber) {
+      throw new Error('Failed to generate journal entry number');
+    }
+
     const { data: createdEntry, error: entryError } = await supabase
       .from('journal_entries')
       .insert({
@@ -520,6 +530,7 @@ export const accountingApi = {
         posting_date: entryData.posting_date.toISOString().split('T')[0],
         organization_id: organizationId,
         created_by: userId,
+        entry_number: entryNumber as string,
       })
       .select()
       .single();

@@ -3,12 +3,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, FileEdit, XCircle } from 'lucide-react';
+import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, FileEdit, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useJournalEntries, useJournalStats } from '../hooks/useJournalEntries';
+import { useJournalEntries, useJournalStats, useJournalEntry } from '../hooks/useJournalEntries';
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 
 const mockModules: Module[] = [
   {
@@ -34,12 +35,28 @@ const AppContent: React.FC = () => {
   // Real data from database
   const { data: journalEntries = [], isLoading, error } = useJournalEntries();
   const stats = useJournalStats();
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const { data: selectedEntry, isLoading: isEntryLoading } = useJournalEntry(selectedEntryId);
+  const isDrawerOpen = !!selectedEntryId;
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
   };
 
+  const formatAmount = (value: number) => {
+    return `MAD ${Number(value || 0).toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const formatDate = (value: string | null) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleDateString('fr-FR');
+  };
+
+  const closeDrawer = () => setSelectedEntryId(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -93,44 +110,45 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: BookOpen, label: 'Journal Entries', isActive: true }
-          ]}
-          title="Journal Entries"
-          subtitle="Manage general ledger journal entries"
+    <>
+      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
         />
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: BookOpen, label: 'Journal Entries', isActive: true }
+            ]}
+            title="Journal Entries"
+            subtitle="Manage general ledger journal entries"
+          />
 
-        <div className="p-6 space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Journal Entries</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                View and manage your general ledger journal entries
-              </p>
+          <div className="p-6 space-y-6">
+            {/* Header Actions */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Journal Entries</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  View and manage your general ledger journal entries
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filter
+                </Button>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Entry
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Entry
-              </Button>
-            </div>
-          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -263,7 +281,7 @@ const AppContent: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedEntryId(entry.id)}>
                             View
                           </Button>
                         </td>
@@ -300,9 +318,144 @@ const AppContent: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </main>
-    </div>
+          </div>
+        </main>
+      </div>
+
+      <Drawer open={isDrawerOpen} onOpenChange={(open) => {
+        if (!open) {
+          closeDrawer();
+        }
+      }}>
+        <DrawerContent side="right" className="max-w-xl w-full">
+          <DrawerHeader>
+            <DrawerTitle>
+              {selectedEntry ? `Journal Entry ${selectedEntry.entry_number}` : 'Journal Entry'}
+            </DrawerTitle>
+            <DrawerDescription>
+              {selectedEntry
+                ? `Enregistrée le ${formatDate(selectedEntry.entry_date)}`
+                : 'Chargement des détails de l\'écriture'}
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-6 pb-6 space-y-6">
+            {isEntryLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              </div>
+            ) : selectedEntry ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Numéro</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedEntry.entry_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Statut</p>
+                    <span className={`mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedEntry.status)}`}>
+                      {getStatusIcon(selectedEntry.status)}
+                      {selectedEntry.status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Date d'écriture</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{formatDate(selectedEntry.entry_date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Date comptable</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{formatDate(selectedEntry.posting_date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Référence</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEntry.reference_type || '—'}
+                    </p>
+                    {selectedEntry.reference_number && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {selectedEntry.reference_number}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Remarques</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEntry.remarks || '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Lignes comptables</h3>
+                  <div className="mt-3 space-y-3">
+                    {selectedEntry.lines && selectedEntry.lines.length > 0 ? (
+                      selectedEntry.lines.map((line) => (
+                        <div
+                          key={line.id}
+                          className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 p-3"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {line.account
+                                ? `${line.account.code} · ${line.account.name}`
+                                : 'Compte introuvable'}
+                            </p>
+                            {line.description && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {line.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right text-sm font-semibold text-gray-800 dark:text-gray-200 space-y-1">
+                            {line.debit > 0 && (
+                              <div className="text-emerald-600 dark:text-emerald-400">
+                                Débit {formatAmount(line.debit)}
+                              </div>
+                            )}
+                            {line.credit > 0 && (
+                              <div className="text-sky-600 dark:text-sky-400">
+                                Crédit {formatAmount(line.credit)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-md border border-dashed border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500 dark:text-gray-400">
+                        Aucune ligne comptable n'est associée à cette écriture.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 text-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Total Débit</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {formatAmount(selectedEntry.total_debit)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Total Crédit</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {formatAmount(selectedEntry.total_credit)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-md border border-dashed border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500 dark:text-gray-400">
+                Impossible de charger les détails de cette écriture.
+              </div>
+            )}
+          </div>
+          <DrawerFooter className="px-6 pb-6">
+            <Button variant="outline" onClick={closeDrawer}>
+              Fermer
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 };
 

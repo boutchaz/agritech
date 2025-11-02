@@ -33,24 +33,39 @@ serve(async (req) => {
       }
     );
 
-    // Parse webhook payload
-    const payload: WebhookPayload = await req.json();
+    // Parse request - handle both webhook payload and direct user data
+    let newUser: any;
+    let payload: WebhookPayload | null = null;
 
-    console.log('🔔 Webhook triggered:', {
-      type: payload.type,
-      table: payload.table,
-      userId: payload.record?.id
-    });
+    try {
+      payload = await req.json();
+      // Check if it's a webhook payload
+      if (payload.type && payload.table && payload.record) {
+        console.log('🔔 Webhook triggered:', {
+          type: payload.type,
+          table: payload.table,
+          userId: payload.record?.id
+        });
 
-    // Only process INSERT events on auth.users table
-    if (payload.type !== 'INSERT' || payload.table !== 'users') {
+        // Only process INSERT events on auth.users table
+        if (payload.type !== 'INSERT' || payload.table !== 'users') {
+          return new Response(
+            JSON.stringify({ message: 'Event ignored - not a user insert' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+
+        newUser = payload.record;
+      } else {
+        // Direct call with user data
+        newUser = payload;
+      }
+    } catch (e) {
       return new Response(
-        JSON.stringify({ message: 'Event ignored - not a user insert' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        JSON.stringify({ error: 'Invalid request payload' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
-
-    const newUser = payload.record;
     const userId = newUser.id;
     const email = newUser.email;
 

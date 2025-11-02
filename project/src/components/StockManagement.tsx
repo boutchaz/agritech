@@ -145,12 +145,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddPurchase, setShowAddPurchase] = useState(false);
+  // showAddPurchase removed - purchases now handled via Stock Entries
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [newPurchase, setNewPurchase] = useState(createDefaultPurchaseState());
+  // newPurchase state removed - purchases now handled via Stock Entries
 
   const [newSupplier, setNewSupplier] = useState(createDefaultSupplierState());
 
@@ -168,7 +168,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
   const [isSubmittingWarehouse, setIsSubmittingWarehouse] = useState(false);
 
-  const resetPurchaseForm = () => setNewPurchase(createDefaultPurchaseState());
+  // resetPurchaseForm removed - purchases now handled via Stock Entries
   const resetSupplierForm = () => {
     setNewSupplier(createDefaultSupplierState());
     setEditingSupplierId(null);
@@ -180,60 +180,15 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
   useEffect(() => {
     if (currentOrganization) {
-      fetchProducts();
+      // Only fetch suppliers and warehouses - stock tab is handled by InventoryStock component
       fetchSuppliers();
       fetchWarehouses();
     }
      
   }, [currentOrganization]);
 
-  const fetchProducts = async () => {
-    if (!currentOrganization) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('name');
-
-      if (error) throw error;
-      
-      // Map to Product interface (inventory_items uses 'name', interface uses 'item_name')
-      const mappedData = (data || []).map(item => {
-        // Calculate status based on quantity and minimum_stock
-        const quantity = item.quantity || 0;
-        const minStock = item.minimum_stock || 10;
-        const status = quantity === 0 ? 'out_of_stock' :
-                      quantity < minStock ? 'low_stock' : 'available';
-        
-        return {
-          ...item,
-          item_name: item.name,
-          item_type: item.category,
-          brand: item.brand || null,
-          status,
-          minimum_quantity: item.minimum_stock,
-          batch_number: item.batch_number || null,
-          expiry_date: item.expiry_date || null,
-          storage_location: item.location,
-          packaging_type: item.packaging_type || null,
-          packaging_size: item.packaging_size || null,
-          last_purchase_date: item.last_purchase_date || null
-        };
-      });
-      
-      setProducts(mappedData as Product[]);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // fetchProducts removed - stock management is now handled by InventoryStock component
+  // which uses the items table instead of the obsolete inventory_items table
 
   const fetchSuppliers = async () => {
     if (!currentOrganization) return;
@@ -273,37 +228,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     }
   };
 
-  const openCreatePurchaseModal = () => {
-    resetPurchaseForm();
-    setSelectedProduct(null);
-    setNewPurchase((prev) => ({ ...prev, warehouse_id: warehouses[0]?.id || '' }));
-    setError(null);
-    setShowAddPurchase(true);
-  };
-
-  const openRestockModal = (product: Product) => {
-    setSelectedProduct(product);
-    setNewPurchase({
-      ...createDefaultPurchaseState(),
-      product_id: product.id,
-      quantity: product.packaging_size && product.packaging_size > 0 ? product.packaging_size : 1,
-      unit: product.unit || 'units',
-      supplier: product.supplier || '',
-      supplier_id: product.supplier_id || '',
-      warehouse_id: product.warehouse_id || warehouses[0]?.id || '',
-      cost_per_unit: product.cost_per_unit || 0,
-      packaging_type: product.packaging_type || '',
-      packaging_size: product.packaging_size && product.packaging_size > 0 ? product.packaging_size : 1,
-    });
-    setError(null);
-    setShowAddPurchase(true);
-  };
-
-  const closePurchaseModal = () => {
-    setShowAddPurchase(false);
-    resetPurchaseForm();
-    setSelectedProduct(null);
-  };
+  // openCreatePurchaseModal, closePurchaseModal removed - purchases now handled via Stock Entries
+  // openRestockModal removed - stock management now handled by InventoryStock component
 
   const openCreateSupplierModal = () => {
     resetSupplierForm();
@@ -370,216 +296,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setIsSubmittingWarehouse(false);
   };
 
-  const openAdjustQuantityModal = (product: Product) => {
-    setSelectedProduct(product);
-    setQuantityAdjustment({ type: 'increase', amount: 0, reason: '' });
-    setError(null);
-    setQuantityModalOpen(true);
-  };
+  // openAdjustQuantityModal, handleAdjustQuantity removed - stock adjustments now handled via Stock Entries
 
-  const closeAdjustQuantityModal = () => {
-    setQuantityModalOpen(false);
-    setSelectedProduct(null);
-    setQuantityAdjustment({ type: 'increase', amount: 0, reason: '' });
-    setIsAdjustingQuantity(false);
-  };
-
-  const handleAdjustQuantity = async () => {
-    if (!currentOrganization || !selectedProduct) return;
-    if (quantityAdjustment.amount <= 0) {
-      setError('Veuillez saisir une quantité positive');
-      return;
-    }
-
-    setIsAdjustingQuantity(true);
-    try {
-      const delta = quantityAdjustment.type === 'increase' ? quantityAdjustment.amount : -quantityAdjustment.amount;
-      const currentQuantity = selectedProduct.quantity || 0;
-      const newQuantity = Math.max(0, currentQuantity + delta);
-      const minStock = selectedProduct.minimum_quantity || 10;
-      const status = newQuantity === 0 ? 'out_of_stock' : newQuantity < minStock ? 'low_stock' : 'available';
-
-      const { error } = await supabase
-        .from('inventory_items')
-        .update({
-          quantity: newQuantity,
-          notes: quantityAdjustment.reason || selectedProduct.notes || null,
-        })
-        .eq('id', selectedProduct.id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
-
-      setProducts((prev) =>
-        prev.map((item) =>
-          item.id === selectedProduct.id
-            ? {
-                ...item,
-                quantity: newQuantity,
-                status,
-                notes: quantityAdjustment.reason || item.notes,
-              }
-            : item,
-        ),
-      );
-
-      closeAdjustQuantityModal();
-      setError(null);
-    } catch (adjustError) {
-      console.error('Error adjusting quantity:', adjustError);
-      setError(adjustError instanceof Error ? adjustError.message : 'Failed to adjust quantity');
-    } finally {
-      setIsAdjustingQuantity(false);
-    }
-  };
-
-  // Removed handleAddProduct - products are now created automatically during purchase
-
-  const handleAddPurchase = async () => {
-    if (!currentOrganization) return;
-
-    try {
-      let productId = newPurchase.product_id;
-      let product = products.find(p => p.id === productId);
-
-      // Si le produit n'existe pas, le créer automatiquement
-      if (!productId && newPurchase.product_name) {
-        const { data: newProductData, error: createError } = await supabase
-          .from('inventory_items')
-          .insert([{
-            organization_id: currentOrganization.id,
-            farm_id: currentFarm?.id,
-            name: newPurchase.product_name,
-            category: newPurchase.category || 'other',
-            brand: newPurchase.brand || null,
-            packaging_type: newPurchase.packaging_type || null,
-            packaging_size: newPurchase.packaging_size || null,
-            quantity: newPurchase.quantity,
-            unit: newPurchase.unit,
-            cost_per_unit: newPurchase.cost_per_unit,
-            supplier: newPurchase.supplier || null,
-            warehouse_id: newPurchase.warehouse_id || null,
-            batch_number: newPurchase.batch_number || null,
-            minimum_stock: 10
-          }])
-          .select()
-          .single();
-
-        if (createError) throw createError;
-
-        // Map to Product interface
-        const newProduct: Product = {
-          ...newProductData,
-          item_name: newProductData.name,
-          item_type: newProductData.category,
-          brand: newProductData.brand || null,
-          status: 'available',
-          minimum_quantity: newProductData.minimum_stock,
-          storage_location: newProductData.location,
-          last_purchase_date: newPurchase.purchase_date
-        };
-
-        // Ajouter le nouveau produit à la liste locale
-        setProducts([...products, newProduct]);
-        product = newProduct;
-        productId = newProduct.id;
-
-        // Si un fichier de facture est fourni, l'uploader
-        if (newPurchase.invoice_file) {
-          const fileName = `invoices/${currentOrganization.id}/${productId}/${newPurchase.invoice_number || Date.now()}.pdf`;
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(fileName, newPurchase.invoice_file);
-
-          if (uploadError) {
-            console.error('Error uploading invoice:', uploadError);
-          }
-        }
-      } else if (product) {
-        // Si le produit existe, mettre à jour sa quantité
-        const newQuantity = (product.quantity || 0) + newPurchase.quantity;
-        const minStock = product.minimum_quantity || 10;
-        const status = newQuantity === 0 ? 'out_of_stock' : newQuantity < minStock ? 'low_stock' : 'available';
-
-        const { error: updateError } = await supabase
-          .from('inventory_items')
-          .update({
-            quantity: newQuantity,
-            cost_per_unit: newPurchase.cost_per_unit,
-            supplier: newPurchase.supplier || null,
-            batch_number: newPurchase.batch_number || product.batch_number || null,
-            packaging_type: newPurchase.packaging_type || product.packaging_type || null,
-            packaging_size: newPurchase.packaging_size || product.packaging_size || null
-          })
-          .eq('id', product.id)
-          .eq('organization_id', currentOrganization.id);
-
-        if (updateError) throw updateError;
-
-        // Update local state
-        if (product) {
-          const updatedProductId = product.id;
-          setProducts(products.map(p =>
-            p.id === updatedProductId
-              ? {
-                  ...p,
-                  quantity: newQuantity,
-                  status,
-                  cost_per_unit: newPurchase.cost_per_unit,
-                  supplier: newPurchase.supplier,
-                  batch_number: newPurchase.batch_number || p.batch_number,
-                  packaging_type: newPurchase.packaging_type || p.packaging_type,
-                  packaging_size: newPurchase.packaging_size || p.packaging_size,
-                  last_purchase_date: newPurchase.purchase_date,
-                }
-              : p
-          ));
-        }
-
-        // Upload invoice if provided
-        if (newPurchase.invoice_file) {
-          const fileName = `invoices/${currentOrganization.id}/${product.id}/${newPurchase.invoice_number || Date.now()}.pdf`;
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(fileName, newPurchase.invoice_file);
-
-          if (uploadError) {
-            console.error('Error uploading invoice:', uploadError);
-          }
-        }
-      } else {
-        setError('Veuillez sélectionner un produit existant ou entrer le nom d\'un nouveau produit');
-        return;
-      }
-
-      closePurchaseModal();
-      setError(null);
-    } catch (error) {
-      console.error('Error adding purchase:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add purchase');
-    }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) return;
-    if (!currentOrganization) return;
-
-    try {
-      const { error } = await supabase
-        .from('inventory_items')
-        .delete()
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
-
-      setProducts(products.filter(p => p.id !== id));
-      setError(null);
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete product');
-    }
-  };
+  // handleAddPurchase, handleDeleteProduct removed - purchases and stock management 
+  // are now handled via Stock Entries and Items system (not inventory_items)
 
   const handleSubmitSupplier = async () => {
     if (!currentOrganization) return;
@@ -742,16 +462,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       </div>
 
       {/* Tab Actions */}
+      {/* Stock tab is handled by InventoryStock component, so no actions needed here */}
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-        {activeTab === 'stock' && (
-          <button
-            onClick={openCreatePurchaseModal}
-            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouvel Achat</span>
-          </button>
-        )}
+        {/* Stock tab actions removed - handled by InventoryStock component */}
         {activeTab === 'suppliers' && (
           <button
             onClick={openCreateSupplierModal}
@@ -780,149 +493,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       )}
 
       {/* Tab Content */}
-      {activeTab === 'stock' && (
-        <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
-            <Input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 sm:pl-10 text-sm"
-            />
-          </div>
-
-      {/* Products List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Produit
-              </th>
-              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="hidden sm:table-cell px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Prix Unitaire
-              </th>
-              <th className="hidden md:table-cell px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Statut
-              </th>
-              <th className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {products
-              .filter(product =>
-                product.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((product) => (
-                <tr key={product.id}>
-                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-                      </div>
-                      <div className="ml-2 sm:ml-4">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                          {product.item_name}
-                          {product.packaging_type && (
-                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
-                              {product.packaging_type} {product.packaging_size && `${product.packaging_size}${product.unit}`}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                          {product.category} • {product.supplier}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                    <div className="flex items-center">
-                      <span className={`text-xs sm:text-sm ${
-                        product.status === 'out_of_stock'
-                          ? 'text-red-600 dark:text-red-400'
-                          : product.status === 'low_stock'
-                          ? 'text-yellow-600 dark:text-yellow-400'
-                          : 'text-gray-900 dark:text-white'
-                      }`}>
-                        {product.quantity} {product.unit}
-                      </span>
-                      {(product.status === 'low_stock' || product.status === 'out_of_stock') && (
-                        <AlertTriangle className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="hidden sm:table-cell px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    {product.cost_per_unit?.toFixed(2)} {currencySymbol}/{product.unit}
-                  </td>
-                  <td className="hidden md:table-cell px-4 lg:px-6 py-3 sm:py-4">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.status === 'available'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : product.status === 'low_stock'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {product.status === 'available' ? 'Disponible' :
-                       product.status === 'low_stock' ? 'Stock faible' : 'Rupture'}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openRestockModal(product)}>
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          Enregistrer un achat
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openAdjustQuantityModal(product)}>
-                          <Package className="mr-2 h-4 w-4" />
-                          Ajuster la quantité
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun produit</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Commencez par ajouter un nouveau produit à votre inventaire.
-            </p>
-          </div>
-        )}
-      </div>
-        </>
-      )}
+      {/* Stock tab is handled by InventoryStock component via Outlet in parent route */}
+      {/* Stock tab content removed - now handled by InventoryStock component using items table */}
 
       {/* Suppliers Tab */}
       {activeTab === 'suppliers' && (
@@ -1397,8 +969,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         </div>
       )} */}
 
-      {/* Add Purchase Modal */}
-      {showAddPurchase && (
+      {/* Add Purchase Modal - REMOVED: Purchase functionality now handled via Stock Entries */}
+      {false && (
         <div className="modal-overlay">
           <div className="modal-panel p-4 sm:p-6 max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">

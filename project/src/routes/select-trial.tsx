@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
 import { authSupabase } from '../lib/auth-supabase'
@@ -14,6 +14,53 @@ function SelectTrialPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('professional')
   const [error, setError] = useState<string | null>(null)
+  const [isSettingUp, setIsSettingUp] = useState(false)
+
+  // If user exists but no organization, call Edge Function to set it up
+  useEffect(() => {
+    const setupUserIfNeeded = async () => {
+      if (!loading && user && !currentOrganization && !isSettingUp) {
+        setIsSettingUp(true)
+        try {
+          // Call the Edge Function to set up the user
+          const { data: { session } } = await authSupabase.auth.getSession()
+          if (!session) return
+
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/on-user-created`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                id: user.id,
+                email: user.email,
+                raw_user_meta_data: user.user_metadata,
+              }),
+            }
+          )
+
+          if (!response.ok) {
+            const error = await response.json()
+            console.error('Edge Function error:', error)
+          } else {
+            const result = await response.json()
+            console.log('✅ Edge Function setup completed:', result)
+            // Reload the page to refresh organization data
+            window.location.reload()
+          }
+        } catch (error) {
+          console.error('Error calling Edge Function:', error)
+        } finally {
+          setIsSettingUp(false)
+        }
+      }
+    }
+
+    setupUserIfNeeded()
+  }, [loading, user, currentOrganization, isSettingUp])
 
   // Show loading state while auth data is being fetched
   if (loading) {

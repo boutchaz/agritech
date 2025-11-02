@@ -32,7 +32,7 @@ export function useOpeningStockBalances(filters?: OpeningStockFilters) {
         .from('opening_stock_balances')
         .select(`
           *,
-          item:inventory_items(id, name, unit, category),
+          item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
           warehouse:warehouses(id, name),
           journal_entry:journal_entries(id, entry_number)
         `)
@@ -81,7 +81,7 @@ export function useOpeningStockBalance(balanceId: string | null) {
         .from('opening_stock_balances')
         .select(`
           *,
-          item:inventory_items(id, name, unit, category),
+          item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
           warehouse:warehouses(id, name),
           journal_entry:journal_entries(id, entry_number)
         `)
@@ -118,7 +118,7 @@ export function useCreateOpeningStock() {
         })
         .select(`
           *,
-          item:inventory_items(id, name, unit, category),
+          item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
           warehouse:warehouses(id, name)
         `)
         .single();
@@ -128,7 +128,7 @@ export function useCreateOpeningStock() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['opening-stock-balances'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory_items'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
     },
   });
 }
@@ -148,7 +148,7 @@ export function useUpdateOpeningStock() {
         .eq('status', 'Draft') // Only allow updates to drafts
         .select(`
           *,
-          item:inventory_items(id, name, unit, category),
+          item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
           warehouse:warehouses(id, name)
         `)
         .single();
@@ -181,7 +181,7 @@ export function usePostOpeningStock() {
     onSuccess: (_, balanceId) => {
       queryClient.invalidateQueries({ queryKey: ['opening-stock-balances'] });
       queryClient.invalidateQueries({ queryKey: ['opening-stock-balance', balanceId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory_items'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
     },

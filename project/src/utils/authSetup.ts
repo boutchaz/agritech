@@ -1,4 +1,4 @@
-import { authSupabase } from '../lib/auth-authSupabase';
+import { authSupabase } from '../lib/auth-supabase';
 
 interface SetupNewUserParams {
   userId: string;
