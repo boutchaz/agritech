@@ -194,6 +194,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           {/* Main Navigation */}
           <div className="space-y-1">
+            {/* Overview */}
             <ProtectedNavItem action="read" subject="Dashboard">
               <Button
                 variant="ghost"
@@ -208,31 +209,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               </Button>
             </ProtectedNavItem>
 
-            <ProtectedNavItem action="read" subject="Analysis">
+            {/* Farm Management Section */}
+            <ProtectedNavItem action="read" subject="FarmHierarchy">
               <Button
                 variant="ghost"
                 className={cn(
                   "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/production-intelligence' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                  currentPath === '/farm-hierarchy' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                 )}
-                onClick={(e) => handleNavigation('/production-intelligence', e)}
+                onClick={(e) => handleNavigation('/farm-hierarchy', e)}
               >
-                <BarChart3 className="mr-3 h-4 w-4" />
-                Production Intelligence
-              </Button>
-            </ProtectedNavItem>
-
-            <ProtectedNavItem action="read" subject="Analysis">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/analyses' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/analyses', e)}
-              >
-                <FileText className="mr-3 h-4 w-4" />
-                {t('nav.analyses')}
+                <Network className="mr-3 h-4 w-4" />
+                {t('nav.farmHierarchy')}
               </Button>
             </ProtectedNavItem>
 
@@ -250,6 +238,37 @@ const Sidebar: React.FC<SidebarProps> = ({
               </Button>
             </ProtectedNavItem>
 
+            {/* Production Intelligence Section */}
+            <ProtectedNavItem action="read" subject="Analysis">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/production-intelligence' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/production-intelligence', e)}
+              >
+                <BarChart3 className="mr-3 h-4 w-4" />
+                Production Intelligence
+              </Button>
+            </ProtectedNavItem>
+
+            {/* Analyses navigation removed - now integrated in parcel detail pages */}
+            {/* <ProtectedNavItem action="read" subject="Analysis">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-gray-600 dark:text-gray-400",
+                  currentPath === '/analyses' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                )}
+                onClick={(e) => handleNavigation('/analyses', e)}
+              >
+                <FileText className="mr-3 h-4 w-4" />
+                {t('nav.analyses')}
+              </Button>
+            </ProtectedNavItem> */}
+
+            {/* Operations Section */}
             <ProtectedNavItem action="read" subject="Stock">
               <Button
                 variant="ghost"
@@ -275,20 +294,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <Building2 className="mr-3 h-4 w-4" />
                 {t('nav.infrastructure')}
-              </Button>
-            </ProtectedNavItem>
-
-            <ProtectedNavItem action="read" subject="FarmHierarchy">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-gray-600 dark:text-gray-400",
-                  currentPath === '/farm-hierarchy' && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
-                )}
-                onClick={(e) => handleNavigation('/farm-hierarchy', e)}
-              >
-                <Network className="mr-3 h-4 w-4" />
-                {t('nav.farmHierarchy')}
               </Button>
             </ProtectedNavItem>
           </div>

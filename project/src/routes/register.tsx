@@ -19,6 +19,7 @@ function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -41,7 +42,9 @@ function RegisterPage() {
 
     try {
       // Sign up the user with organization name in metadata
-      // The database trigger will automatically call the Edge Function to create profile and organization
+      // The Edge Function will be called directly after signup (bypassing triggers)
+      console.log('📝 Starting user signup...', { email, organizationName })
+      
       const { data: authData, error: signUpError } = await authSupabase.auth.signUp({
         email,
         password,
@@ -49,33 +52,99 @@ function RegisterPage() {
           emailRedirectTo: `${window.location.origin}/select-trial`,
           data: {
             organization_name: organizationName,
+            allow_unconfirmed_setup: true, // Allow Edge Function to setup even if email not confirmed
           }
         }
       })
+      
+      console.log('📝 Signup response:', { user: authData?.user?.id, error: signUpError?.message })
 
       if (signUpError) {
-        if (signUpError.message.includes('User already registered')) {
+        console.error('❌ Signup error:', signUpError)
+        console.error('❌ Signup error details:', JSON.stringify(signUpError, null, 2))
+        console.error('❌ Signup error status:', signUpError.status)
+        console.error('❌ Signup error message:', signUpError.message)
+        
+        if (signUpError.message?.includes('User already registered') || signUpError.message?.includes('already registered')) {
           throw new Error('A user with this email already exists')
         }
-        throw signUpError
+        
+        // Handle 500 errors specifically - show actual error message
+        if (signUpError.message?.includes('500') || signUpError.status === 500 || signUpError.message?.includes('Internal Server Error')) {
+          const errorMsg = signUpError.message || 'Unknown server error'
+          throw new Error(`Server error during registration: ${errorMsg}. Please check the Supabase dashboard logs.`)
+        }
+        
+        // Show the actual error message to the user
+        throw new Error(signUpError.message || 'An error occurred during registration')
       }
 
       if (authData.user) {
+        // Call Edge Function directly to setup user (bypass trigger)
+        // Wait a moment for session to be available (new users might need a moment)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        let edgeFunctionCalled = false
+        try {
+          // Wait a bit more for session to be established
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          console.log('📞 Calling Edge Function to setup user...')
+          
+          // Use Supabase client to call Edge Function (handles auth automatically)
+          const { data, error } = await authSupabase.functions.invoke('on-user-created', {
+            body: {
+              id: authData.user.id,
+              email: authData.user.email,
+              raw_user_meta_data: {
+                organization_name: organizationName,
+                allow_unconfirmed_setup: true,
+                ...authData.user.user_metadata,
+              },
+            },
+          })
+
+          if (error) {
+            console.error('❌ Edge Function error:', error)
+            console.error('❌ Edge Function error details:', JSON.stringify(error, null, 2))
+            // Continue anyway - select-trial page will retry if needed
+          } else {
+            console.log('✅ Edge Function setup completed:', data)
+            edgeFunctionCalled = true
+          }
+        } catch (edgeError) {
+          console.error('⚠️ Error calling Edge Function:', edgeError)
+          // Continue anyway - select-trial page will retry if needed
+        }
+        
+        // Wait a moment for Edge Function to complete if it was called
+        if (edgeFunctionCalled) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+
         // Check if email confirmation is required
         if (authData.user.identities && authData.user.identities.length === 0) {
           // Email confirmation is required
-          // The Edge Function will be called automatically by the database trigger after email confirmation
+          setNeedsEmailConfirmation(true)
           setShowEmailConfirmation(true)
           setIsLoading(false)
           return
         }
 
         // Email confirmation disabled or already confirmed
-        // The Edge Function is called automatically by the database trigger
-        // Wait a moment for the Edge Function to complete, then redirect
-        console.log('✅ Account created - Edge Function will setup organization automatically')
-        // Redirect to trial selection
-        window.location.href = '/select-trial'
+        // Wait a moment for Edge Function to complete
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+        console.log('✅ Account created - showing activation message')
+        
+        // Show success message with activation instructions
+        setNeedsEmailConfirmation(false)
+        setShowEmailConfirmation(true) // Reuse this state to show activation message
+        setIsLoading(false)
+        
+        // Redirect to trial selection after showing message for 3 seconds
+        setTimeout(() => {
+          window.location.href = '/select-trial'
+        }, 3000) // Give user 3 seconds to see the message
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred during registration')
@@ -84,32 +153,109 @@ function RegisterPage() {
     }
   }
 
-  // Show email confirmation message
+  // Show email confirmation or account activation message
   if (showEmailConfirmation) {
-    return (
-      <AuthLayout
-        title="Check your email"
-        subtitle="We've sent you a confirmation link"
-        helperText={`Please check ${email} and click the link to confirm your account.`}
-        switchLabel="Didn't receive the email?"
-        switchHref="/register"
-        switchCta="Try again"
-      >
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+    if (needsEmailConfirmation) {
+      // Email confirmation required
+      return (
+        <AuthLayout
+          title="Check your email"
+          subtitle="We've sent you a confirmation link"
+          helperText={`Please check ${email} and click the link to confirm your account.`}
+          switchLabel="Didn't receive the email?"
+          switchHref="/register"
+          switchCta="Try again"
+        >
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="space-y-3">
+              <p className="text-gray-600 dark:text-gray-400">
+                After confirming your email, you'll be redirected to select your free trial plan.
+              </p>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                  📋 Important: Activate Your Account
+                </p>
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  After confirming your email, please visit{' '}
+                  <a 
+                    href="/select-trial" 
+                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      window.location.href = '/select-trial'
+                    }}
+                  >
+                    http://localhost:5173/select-trial
+                  </a>
+                  {' '}to activate your account and select your free trial plan.
+                </p>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Make sure to check your spam folder if you don't see the email within a few minutes.
+              </p>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            After confirming your email, you'll be redirected to select your free trial plan.
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">
-            Make sure to check your spam folder if you don't see the email within a few minutes.
-          </p>
-        </div>
-      </AuthLayout>
-    )
+        </AuthLayout>
+      )
+    } else {
+      // Account created, show activation message
+      return (
+        <AuthLayout
+          title="Account Created Successfully!"
+          subtitle="Your account is being set up"
+          helperText="Please complete the activation process to start using your account."
+          switchLabel="Already have an account?"
+          switchHref="/login"
+          switchCta="Sign in"
+        >
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="space-y-3">
+              <p className="text-gray-600 dark:text-gray-400">
+                Your account has been created successfully. To activate your account, please visit:
+              </p>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                  📋 Activate Your Account
+                </p>
+                <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
+                  Go to{' '}
+                  <a 
+                    href="/select-trial" 
+                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300 break-all"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      window.location.href = '/select-trial'
+                    }}
+                  >
+                    http://localhost:5173/select-trial
+                  </a>
+                  {' '}to activate your account and select your free trial plan.
+                </p>
+                <button
+                  onClick={() => window.location.href = '/select-trial'}
+                  className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  Go to Activation Page
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                You will be redirected automatically in a few seconds...
+              </p>
+            </div>
+          </div>
+        </AuthLayout>
+      )
+    }
   }
 
   return (

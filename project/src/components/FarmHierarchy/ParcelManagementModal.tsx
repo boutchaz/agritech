@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
-import { X, Plus, Leaf, Edit, Trash2, MapPin, Sprout } from 'lucide-react';
+import { Plus, Leaf, Edit, Trash2, MapPin, Sprout } from 'lucide-react';
 import {
   getPlantingSystemsByCategory,
   getCropTypesByCategory,
@@ -13,6 +13,13 @@ import {
   calculatePlantCount,
   type CropCategory,
 } from '../../lib/plantingSystemData';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,13 +30,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
+import { FormField } from '../ui/FormField';
 import {
-
-
-
-
-
-} from '../ui/dialog';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/radix-select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
 interface Parcel {
   id: string;
@@ -226,14 +238,18 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         .eq('id', parcelId);
 
       if (error) throw error;
+      return parcelId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['parcels', farmId] });
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      setParcelToDelete(null); // Close dialog after successful deletion
     },
     onError: (error: any) => {
       console.error('Error deleting parcel:', error);
-      alert('Erreur lors de la suppression de la parcelle');
+      alert(`Erreur lors de la suppression de la parcelle: ${error.message || 'Erreur inconnue'}`);
+      // Don't close dialog on error so user can try again or see the error
     }
   });
 
@@ -274,431 +290,402 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     });
   };
 
+  const handleParcelClick = (parcelId: string) => {
+    // Navigate to parcel detail page
+    navigate({
+      to: `/parcels/${parcelId}`
+    });
+    onClose(); // Close the modal after navigation
+  };
+
   const totalArea = parcels.reduce((sum, p) => sum + p.area, 0);
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                Gestion des Parcelles
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {farmName} • {parcels.length} parcelle{parcels.length !== 1 ? 's' : ''} • {totalArea.toFixed(2)} ha
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
+      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              Gestion des Parcelles
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+              {farmName} • {parcels.length} parcelle{parcels.length !== 1 ? 's' : ''} • {totalArea.toFixed(2)} ha
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Add Button */}
-          {!showForm && (
-            <button
-              onClick={handleAddNew}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">Ajouter une parcelle</span>
-            </button>
-          )}
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+            {/* Add Button */}
+            {!showForm && (
+              <Button
+                onClick={handleAddNew}
+                variant="outline"
+                className="w-full border-dashed border-2 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="font-medium">Ajouter une parcelle</span>
+              </Button>
+            )}
 
-          {/* Form */}
-          {showForm && (
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {editingParcel ? 'Modifier la parcelle' : 'Nouvelle parcelle'}
-              </h3>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Sprout className="w-4 h-4" />
-                    Informations de base
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Nom de la parcelle *
-                      </label>
-                      <input
-                        {...register('name')}
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Ex: Parcelle Nord"
-                      />
-                      {errors.name && (
-                        <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Surface (ha) *
-                      </label>
-                      <input
-                        {...register('area', { valueAsNumber: true })}
-                        type="number"
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="0.00"
-                      />
-                      {errors.area && (
-                        <p className="text-red-600 text-sm mt-1">{errors.area.message}</p>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        {...register('description')}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Description de la parcelle..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Crop Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Leaf className="w-4 h-4" />
-                    Culture et plantation
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Catégorie de culture
-                      </label>
-                      <select
-                        {...register('crop_category')}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      >
-                        <option value="">Sélectionner...</option>
-                        <option value="trees">Arbres fruitiers</option>
-                        <option value="cereals">Céréales</option>
-                        <option value="vegetables">Légumes</option>
-                        <option value="other">Autre</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de culture
-                      </label>
-                      {availableCropTypes.length > 0 ? (
-                        <select
-                          {...register('crop_type')}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="">Sélectionner...</option>
-                          {availableCropTypes.map(crop => (
-                            <option key={crop} value={crop}>{crop}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          {...register('crop_type')}
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="Ex: Tomates"
-                        />
-                      )}
-                    </div>
-
-                    {availableVarieties.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Variété
-                        </label>
-                        <select
-                          {...register('variety')}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="">Sélectionner...</option>
-                          {availableVarieties.map(variety => (
-                            <option key={variety} value={variety}>{variety}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {selectedCategory === 'trees' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Porte-greffe
-                        </label>
-                        <input
-                          {...register('rootstock')}
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="Ex: GF677"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Planting System */}
-                {availablePlantingSystems.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Système de plantation
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Type de système
-                        </label>
-                        <select
-                          {...register('planting_system')}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="">Sélectionner...</option>
-                          {availablePlantingSystems.map((system, idx) => (
-                            <option key={idx} value={system.type}>
-                              {system.type} ({system.spacing})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Espacement
-                        </label>
-                        <input
-                          {...register('spacing')}
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
-                          placeholder="Ex: 4x1.5"
-                          readOnly
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Densité (plants/ha)
-                        </label>
-                        <input
-                          {...register('density_per_hectare', { valueAsNumber: true })}
-                          type="number"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
-                          placeholder="0"
-                          readOnly
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Nombre total de plants
-                        </label>
-                        <input
-                          {...register('plant_count', { valueAsNumber: true })}
-                          type="number"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
-                          placeholder="0"
-                          readOnly
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Date de plantation
-                        </label>
-                        <input
-                          {...register('planting_date')}
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Année de plantation
-                        </label>
-                        <input
-                          {...register('planting_year', { valueAsNumber: true })}
-                          type="number"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                          placeholder="2024"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Informations complémentaires
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de sol
-                      </label>
-                      <input
-                        {...register('soil_type')}
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Ex: Argileux"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type d'irrigation
-                      </label>
-                      <select
-                        {...register('irrigation_type')}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                      >
-                        <option value="">Sélectionner...</option>
-                        <option value="Goutte à goutte">Goutte à goutte</option>
-                        <option value="Aspersion">Aspersion</option>
-                        <option value="Gravitaire">Gravitaire</option>
-                        <option value="Pivot">Pivot</option>
-                        <option value="Submersion">Submersion</option>
-                        <option value="Pluvial">Pluvial (bour)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={saveParcelMutation.isPending}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {saveParcelMutation.isPending ? 'Enregistrement...' : (editingParcel ? 'Mettre à jour' : 'Créer la parcelle')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingParcel(null);
-                      reset();
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Parcels List */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            </div>
-          ) : parcels.length === 0 ? (
-            <div className="text-center py-12">
-              <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Aucune parcelle créée</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {parcels.map((parcel) => (
-                <div
-                  key={parcel.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer group"
-                  onClick={() => {
-                    // Navigate to parcels page with this parcel selected
-                    navigate({
-                      to: '/parcels',
-                      search: { farmId, parcelId: parcel.id }
-                    });
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                          {parcel.name}
+            {/* Form */}
+            {showForm && (
+              <Card className="bg-gray-50 dark:bg-gray-900/50">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingParcel ? 'Modifier la parcelle' : 'Nouvelle parcelle'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Basic Information */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Sprout className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Informations de base
                         </h4>
-                        {parcel.crop_type && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {parcel.crop_type}
-                          </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label="Nom de la parcelle *" htmlFor="name" error={errors.name?.message}>
+                          <Input
+                            id="name"
+                            {...register('name')}
+                            placeholder="Ex: Parcelle Nord"
+                            invalid={!!errors.name}
+                          />
+                        </FormField>
+
+                        <FormField label="Surface (ha) *" htmlFor="area" error={errors.area?.message}>
+                          <Input
+                            id="area"
+                            type="number"
+                            step="0.01"
+                            {...register('area', { valueAsNumber: true })}
+                            placeholder="0.00"
+                            invalid={!!errors.area}
+                          />
+                        </FormField>
+
+                        <div className="md:col-span-2">
+                          <FormField label="Description" htmlFor="description">
+                            <Textarea
+                              id="description"
+                              {...register('description')}
+                              rows={2}
+                              placeholder="Description de la parcelle..."
+                            />
+                          </FormField>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Crop Information */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Leaf className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Culture et plantation
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label="Catégorie de culture" htmlFor="crop_category">
+                          <Select value={watch('crop_category') || ''} onValueChange={(value) => setValue('crop_category', value)}>
+                            <SelectTrigger id="crop_category">
+                              <SelectValue placeholder="Sélectionner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Sélectionner...</SelectItem>
+                              <SelectItem value="trees">Arbres fruitiers</SelectItem>
+                              <SelectItem value="cereals">Céréales</SelectItem>
+                              <SelectItem value="vegetables">Légumes</SelectItem>
+                              <SelectItem value="other">Autre</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+
+                        <FormField label="Type de culture" htmlFor="crop_type">
+                          {availableCropTypes.length > 0 ? (
+                            <Select value={watch('crop_type') || ''} onValueChange={(value) => setValue('crop_type', value)}>
+                              <SelectTrigger id="crop_type">
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Sélectionner...</SelectItem>
+                                {availableCropTypes.map(crop => (
+                                  <SelectItem key={crop} value={crop}>{crop}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              id="crop_type"
+                              {...register('crop_type')}
+                              placeholder="Ex: Tomates"
+                            />
+                          )}
+                        </FormField>
+
+                        {availableVarieties.length > 0 && (
+                          <FormField label="Variété" htmlFor="variety">
+                            <Select value={watch('variety') || ''} onValueChange={(value) => setValue('variety', value)}>
+                              <SelectTrigger id="variety">
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Sélectionner...</SelectItem>
+                                {availableVarieties.map(variety => (
+                                  <SelectItem key={variety} value={variety}>{variety}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+                        )}
+
+                        {selectedCategory === 'trees' && (
+                          <FormField label="Porte-greffe" htmlFor="rootstock">
+                            <Input
+                              id="rootstock"
+                              {...register('rootstock')}
+                              placeholder="Ex: GF677"
+                            />
+                          </FormField>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(parcel);
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(parcel.id, parcel.name);
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Surface:</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {parcel.area} ha
-                      </span>
-                    </div>
-                    {parcel.soil_type && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Sol:</span>
-                        <span className="text-gray-900 dark:text-white">{parcel.soil_type}</span>
+                    {/* Planting System */}
+                    {availablePlantingSystems.length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Système de plantation
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField label="Type de système" htmlFor="planting_system">
+                            <Select value={watch('planting_system') || ''} onValueChange={(value) => setValue('planting_system', value)}>
+                              <SelectTrigger id="planting_system">
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Sélectionner...</SelectItem>
+                                {availablePlantingSystems.map((system, idx) => (
+                                  <SelectItem key={idx} value={system.type}>
+                                    {system.type} ({system.spacing})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+
+                          <FormField label="Espacement" htmlFor="spacing">
+                            <Input
+                              id="spacing"
+                              {...register('spacing')}
+                              placeholder="Ex: 4x1.5"
+                              readOnly
+                              className="bg-gray-50 dark:bg-gray-800"
+                            />
+                          </FormField>
+
+                          <FormField label="Densité (plants/ha)" htmlFor="density_per_hectare">
+                            <Input
+                              id="density_per_hectare"
+                              type="number"
+                              {...register('density_per_hectare', { valueAsNumber: true })}
+                              placeholder="0"
+                              readOnly
+                              className="bg-gray-50 dark:bg-gray-800"
+                            />
+                          </FormField>
+
+                          <FormField label="Nombre total de plants" htmlFor="plant_count">
+                            <Input
+                              id="plant_count"
+                              type="number"
+                              {...register('plant_count', { valueAsNumber: true })}
+                              placeholder="0"
+                              readOnly
+                              className="bg-gray-50 dark:bg-gray-800"
+                            />
+                          </FormField>
+
+                          <FormField label="Date de plantation" htmlFor="planting_date">
+                            <Input
+                              id="planting_date"
+                              type="date"
+                              {...register('planting_date')}
+                            />
+                          </FormField>
+
+                          <FormField label="Année de plantation" htmlFor="planting_year">
+                            <Input
+                              id="planting_year"
+                              type="number"
+                              {...register('planting_year', { valueAsNumber: true })}
+                              placeholder="2024"
+                            />
+                          </FormField>
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      Cliquer pour voir sur la carte
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                    {/* Additional Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Informations complémentaires
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label="Type de sol" htmlFor="soil_type">
+                          <Input
+                            id="soil_type"
+                            {...register('soil_type')}
+                            placeholder="Ex: Argileux"
+                          />
+                        </FormField>
 
-    </div>
+                        <FormField label="Type d'irrigation" htmlFor="irrigation_type">
+                          <Select value={watch('irrigation_type') || ''} onValueChange={(value) => setValue('irrigation_type', value)}>
+                            <SelectTrigger id="irrigation_type">
+                              <SelectValue placeholder="Sélectionner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Sélectionner...</SelectItem>
+                              <SelectItem value="Goutte à goutte">Goutte à goutte</SelectItem>
+                              <SelectItem value="Aspersion">Aspersion</SelectItem>
+                              <SelectItem value="Gravitaire">Gravitaire</SelectItem>
+                              <SelectItem value="Pivot">Pivot</SelectItem>
+                              <SelectItem value="Submersion">Submersion</SelectItem>
+                              <SelectItem value="Pluvial">Pluvial (bour)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <Button
+                        type="submit"
+                        disabled={saveParcelMutation.isPending}
+                        className="flex-1"
+                      >
+                        {saveParcelMutation.isPending ? 'Enregistrement...' : (editingParcel ? 'Mettre à jour' : 'Créer la parcelle')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowForm(false);
+                          setEditingParcel(null);
+                          reset();
+                        }}
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Parcels List */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            ) : parcels.length === 0 ? (
+              <div className="text-center py-12">
+                <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">Aucune parcelle créée</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {parcels.map((parcel) => (
+                  <Card
+                    key={parcel.id}
+                    className="hover:shadow-md transition-shadow cursor-pointer group"
+                    onClick={() => handleParcelClick(parcel.id)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <CardTitle className="group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                              {parcel.name}
+                            </CardTitle>
+                            {parcel.crop_type && (
+                              <CardDescription>{parcel.crop_type}</CardDescription>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(parcel);
+                            }}
+                            className="h-8 w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(parcel.id, parcel.name);
+                            }}
+                            className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Surface:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {parcel.area} ha
+                          </span>
+                        </div>
+                        {parcel.soil_type && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Sol:</span>
+                            <span className="text-gray-900 dark:text-white">{parcel.soil_type}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          Cliquer pour voir les détails
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Parcel Confirmation Dialog */}
-      <AlertDialog open={!!parcelToDelete} onOpenChange={(open) => !open && setParcelToDelete(null)}>
+      <AlertDialog 
+        open={!!parcelToDelete && !deleteParcelMutation.isSuccess} 
+        onOpenChange={(open) => {
+          if (!open && !deleteParcelMutation.isPending) {
+            setParcelToDelete(null);
+            deleteParcelMutation.reset();
+          }
+        }}
+      >
         <AlertDialogContent className="bg-white dark:bg-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white">Confirmer la suppression</AlertDialogTitle>
@@ -711,12 +698,14 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteParcelMutation.isPending}>
+              Annuler
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (parcelToDelete) {
                   deleteParcelMutation.mutate(parcelToDelete.id);
-                  setParcelToDelete(null);
+                  // Don't close dialog here - let onSuccess handle it
                 }
               }}
               disabled={deleteParcelMutation.isPending}

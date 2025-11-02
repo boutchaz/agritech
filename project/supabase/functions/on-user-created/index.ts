@@ -68,28 +68,56 @@ serve(async (req) => {
     }
     const userId = newUser.id;
     const email = newUser.email;
+    const emailConfirmed = newUser.email_confirmed_at !== null;
 
-    console.log('👤 Setting up new user:', { userId, email });
+    console.log('👤 Setting up new user:', { userId, email, emailConfirmed });
+
+    // Skip if email not confirmed and confirmation is required
+    // In production, you might want to wait for email confirmation
+    // For now, we'll proceed but log a warning
+    if (!emailConfirmed && !newUser.raw_user_meta_data?.allow_unconfirmed_setup) {
+      console.log('⚠️ User email not confirmed, but proceeding with setup');
+    }
 
     // 1. Create user profile
-    const firstName = newUser.raw_user_meta_data?.first_name || email.split('@')[0];
+    const firstName = newUser.raw_user_meta_data?.first_name || email?.split('@')[0] || 'User';
     const lastName = newUser.raw_user_meta_data?.last_name || '';
-    const needsPasswordSetup = newUser.raw_user_meta_data?.needs_password_setup === true;
 
+    // Create user profile with email field (without password_set column - it doesn't exist in schema)
     const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
         id: userId,
+        email: email,
         first_name: firstName,
         last_name: lastName,
+        full_name: `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'User',
         timezone: newUser.raw_user_meta_data?.timezone || 'Africa/Casablanca',
         language: newUser.raw_user_meta_data?.language || 'fr',
-        password_set: !needsPasswordSetup, // FALSE if invited user, TRUE otherwise
-      });
+      })
+      .select();
 
     if (profileError && profileError.code !== '23505') {
       console.error('❌ Error creating user profile:', profileError);
-      throw new Error(`Profile creation failed: ${profileError.message}`);
+      // Try upsert instead of insert in case of race condition
+      const { error: upsertError } = await supabaseAdmin
+        .from('user_profiles')
+        .upsert({
+          id: userId,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'User',
+          timezone: newUser.raw_user_meta_data?.timezone || 'Africa/Casablanca',
+          language: newUser.raw_user_meta_data?.language || 'fr',
+        }, {
+          onConflict: 'id'
+        });
+
+      if (upsertError) {
+        console.error('❌ Error upserting user profile:', upsertError);
+        throw new Error(`Profile creation failed: ${upsertError.message}`);
+      }
     }
 
     console.log('✅ User profile created');
@@ -172,7 +200,11 @@ serve(async (req) => {
     const orgName = newUser.raw_user_meta_data?.organization_name || `${firstName}'s Organization`;
     const orgSlug = `${orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${userId.substring(0, 8)}`;
 
-    const { data: newOrg, error: orgError } = await supabaseAdmin
+    let newOrg;
+    let orgError;
+
+    // Try to create organization
+    const { data: orgData, error: orgErr } = await supabaseAdmin
       .from('organizations')
       .insert({
         name: orgName,
@@ -185,12 +217,35 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (orgError) {
-      console.error('❌ Error creating organization:', orgError);
-      throw new Error(`Organization creation failed: ${orgError.message}`);
-    }
+    orgError = orgErr;
+    newOrg = orgData;
 
-    console.log('✅ Organization created:', newOrg.id);
+    if (orgError) {
+      // Check if it's a duplicate key error (org already exists)
+      if (orgError.code === '23505') {
+        console.log('⚠️ Organization already exists, attempting to fetch it');
+        // Try to get existing organization by owner_id
+        const { data: existingOrg, error: fetchError } = await supabaseAdmin
+          .from('organizations')
+          .select('id, name, slug')
+          .eq('owner_id', userId)
+          .limit(1)
+          .single();
+
+        if (fetchError || !existingOrg) {
+          console.error('❌ Error fetching existing organization:', fetchError);
+          throw new Error(`Organization creation failed: ${orgError.message}`);
+        }
+
+        newOrg = existingOrg;
+        console.log('✅ Using existing organization:', newOrg.id);
+      } else {
+        console.error('❌ Error creating organization:', orgError);
+        throw new Error(`Organization creation failed: ${orgError.message} (code: ${orgError.code})`);
+      }
+    } else {
+      console.log('✅ Organization created:', newOrg.id);
+    }
 
     // 4. Get organization_admin role
     const { data: roles, error: rolesError } = await supabaseAdmin
@@ -213,16 +268,37 @@ serve(async (req) => {
         user_id: userId,
         organization_id: newOrg.id,
         role_id: roleId,
+        role: 'admin', // Also set the role text field
         is_active: true,
         invited_by: userId,
       });
 
     if (orgUserError) {
-      console.error('❌ Error adding user to organization:', orgUserError);
-      throw new Error(`Adding user to organization failed: ${orgUserError.message}`);
-    }
+      // Check if it's a duplicate key error (user already in org)
+      if (orgUserError.code === '23505') {
+        console.log('⚠️ User already in organization, skipping');
+        // Update existing record to ensure it's active
+        const { error: updateError } = await supabaseAdmin
+          .from('organization_users')
+          .update({
+            role_id: roleId,
+            role: 'admin',
+            is_active: true,
+          })
+          .eq('user_id', userId)
+          .eq('organization_id', newOrg.id);
 
-    console.log('✅ User added to organization');
+        if (updateError) {
+          console.error('❌ Error updating organization user:', updateError);
+          throw new Error(`Adding user to organization failed: ${orgUserError.message}`);
+        }
+      } else {
+        console.error('❌ Error adding user to organization:', orgUserError);
+        throw new Error(`Adding user to organization failed: ${orgUserError.message} (code: ${orgUserError.code})`);
+      }
+    } else {
+      console.log('✅ User added to organization');
+    }
 
     // 7. Optional: Create default farm for the organization
     // Uncomment if you want to create a starter farm

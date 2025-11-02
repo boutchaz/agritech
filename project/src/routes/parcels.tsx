@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
@@ -8,8 +8,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import Map from '../components/Map'
 import ModernPageHeader from '../components/ModernPageHeader'
-import ParcelCard from '../components/ParcelCard'
-import { useFarms, useParcelsByFarm, useParcelsByFarms, useParcelById, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
+import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '../hooks/useParcelsQuery'
 import type { Module, SensorData } from '../types'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
@@ -30,20 +29,29 @@ const mockModules: Module[] = [
   // ... other modules would be here
 ];
 
-const AppContent: React.FC = () => {
+interface ParcelsListContentProps {
+  search: { farmId?: string };
+}
+
+const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
+  console.log('🎨 ParcelsListContent rendering', { search });
   const navigate = useNavigate();
-  const search = Route.useSearch();
   const { currentOrganization, currentFarm } = useAuth();
+
+  console.log('Auth state:', {
+    hasOrg: !!currentOrganization,
+    orgName: currentOrganization?.name,
+    hasFarm: !!currentFarm
+  });
+
   const [activeModule, setActiveModule] = useState('parcels');
   const [isDarkMode] = useState(false);
   const [modules] = useState(mockModules);
   const [_sensorData, _setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
-  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(search.parcelId || null);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(search.farmId || null);
-  const [activeParcelTab, setActiveParcelTab] = useState<string>(search.tab || 'overview');
 
   // Track if we're currently syncing to prevent loops
   const isSyncingRef = useRef(false);
@@ -60,8 +68,6 @@ const AppContent: React.FC = () => {
     !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
   );
 
-  // Fetch specific parcel by ID if provided in URL
-  const { data: directParcel, isLoading: directParcelLoading } = useParcelById(selectedParcelId);
 
   // Get the appropriate parcels data
   const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
@@ -82,57 +88,33 @@ const AppContent: React.FC = () => {
 
     isSyncingRef.current = true;
 
-    const urlParcelId = search.parcelId || null;
-    const urlTab = search.tab || 'overview';
     const urlFarmId = search.farmId || null;
-
-    if (urlParcelId !== selectedParcelId) {
-      setSelectedParcelId(urlParcelId);
-    }
-
-    if (urlTab !== activeParcelTab) {
-      setActiveParcelTab(urlTab);
-    }
 
     if (urlFarmId !== selectedFarmId) {
       setSelectedFarmId(urlFarmId);
     }
 
     isSyncingRef.current = false;
-     
-  }, [search.parcelId, search.tab, search.farmId]);
+
+  }, [search.farmId]);
 
   // Update URL when state changes (state changes trigger URL update)
   useEffect(() => {
     if (isSyncingRef.current) return;
 
-    const newSearch: { parcelId: string | undefined; tab: string | undefined; farmId: string | undefined } = {
-      parcelId: undefined,
-      tab: undefined,
+    const newSearch: { farmId: string | undefined } = {
       farmId: undefined
     };
-    const currentParcelId = search.parcelId || null;
-    const currentTab = search.tab || 'overview';
     const currentFarmId = search.farmId || null;
-
-    if (selectedParcelId) {
-      newSearch.parcelId = selectedParcelId;
-    }
-
-    if (activeParcelTab && activeParcelTab !== 'overview') {
-      newSearch.tab = activeParcelTab;
-    }
 
     if (selectedFarmId) {
       newSearch.farmId = selectedFarmId;
     }
 
     // Only navigate if something actually changed
-    const parcelChanged = currentParcelId !== selectedParcelId;
-    const tabChanged = currentTab !== activeParcelTab;
     const farmChanged = currentFarmId !== selectedFarmId;
 
-    if (parcelChanged || tabChanged || farmChanged) {
+    if (farmChanged) {
       isSyncingRef.current = true;
       navigate({
         to: '/parcels',
@@ -142,8 +124,8 @@ const AppContent: React.FC = () => {
         isSyncingRef.current = false;
       });
     }
-     
-  }, [selectedParcelId, activeParcelTab, selectedFarmId]);
+
+  }, [selectedFarmId]);
 
   // Farms and parcels are loaded automatically via React Query hooks
   // No manual fetching needed
@@ -151,9 +133,6 @@ const AppContent: React.FC = () => {
   const handleDeleteParcel = async (parcelId: string) => {
     try {
       await deleteParcelMutation.mutateAsync(parcelId);
-      if (selectedParcelId === parcelId) {
-        setSelectedParcelId(null);
-      }
     } catch (error) {
       console.error('Error deleting parcel:', error);
       alert('Erreur lors de la suppression de la parcelle');
@@ -172,8 +151,17 @@ const AppContent: React.FC = () => {
   };
 
   const handleParcelSelect = (parcelId: string) => {
-    setSelectedParcelId(parcelId);
-    // Map will automatically center on the selected parcel via the selectedParcelId prop
+    console.log('handleParcelSelect called with:', parcelId);
+    console.log('Attempting to navigate to:', `/parcels/${parcelId}`);
+
+    try {
+      // Navigate to the parcel detail page instead of using state
+      navigate({ to: `/parcels/${parcelId}` });
+      console.log('Navigation successful');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      alert(`Error navigating to parcel: ${error}`);
+    }
   };
 
 
@@ -372,63 +360,33 @@ const AppContent: React.FC = () => {
                 sensors={[]}
                 farmId={targetFarmId}
                 enableDrawing={true}
-                selectedParcelId={selectedParcelId}
+                selectedParcelId={null}
                 onParcelSelect={handleParcelSelect}
-                parcels={directParcel && !parcels.find(p => p.id === directParcel.id) 
-                  ? [...parcels, directParcel]  // Include directParcel if not already in list
-                  : parcels}
+                parcels={parcels}
                 onParcelAdded={(newParcel) => {
                   // React Query will automatically refetch the data
                   setShowAddParcelMap(false);
-                  // Redirect to the newly created parcel
+                  // Navigate to the newly created parcel detail page
                   if (newParcel?.id) {
-                    setSelectedParcelId(newParcel.id);
+                    navigate({ to: `/parcels/${newParcel.id}` });
                   }
                 }}
               />
 
-              {/* Selected Parcel Detail View */}
-              {selectedParcelId && (
-                <div className="mt-6">
-                  {(() => {
-                    // Try to find in current parcels list first, fallback to direct fetch
-                    const selectedParcel = parcels.find(p => p.id === selectedParcelId) || directParcel;
-                    
-                    // Show loading state while fetching
-                    if (directParcelLoading && !selectedParcel) {
-                      return (
-                        <div className="text-center py-8">
-                          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
-                        </div>
-                      );
-                    }
-                    
-                    if (!selectedParcel) return null;
+              {/* Parcel selection now navigates to dedicated parcel detail pages */}
 
-                    return (
-                      <div className="w-full">
-                        <ParcelCard
-                          parcel={selectedParcel}
-                          activeTab={activeParcelTab}
-                          onTabChange={setActiveParcelTab}
-                          sensorData={_sensorData}
-                          isAssigned={true}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {parcels.length > 0 && !selectedParcelId && (
+              {parcels.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                   {parcels.map((parcel) => {
                     const farm = farms.find(f => f.id === parcel.farm_id);
                     return (
                       <div
                         key={parcel.id}
-                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all cursor-pointer hover:shadow-lg hover:border-green-300"
-                        onClick={() => handleParcelSelect(parcel.id)}
+                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all cursor-pointer hover:shadow-lg hover:border-green-300 hover:bg-green-50"
+                        onClick={(e) => {
+                          console.log('Card clicked!', parcel.id, e);
+                          handleParcelSelect(parcel.id);
+                        }}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
@@ -514,7 +472,7 @@ const AppContent: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
                           {parcel.boundary && parcel.boundary.length > 0 ? (
                             <p className="text-xs text-green-600 dark:text-green-400 font-medium">
                               ✓ Limites définies
@@ -535,9 +493,17 @@ const AppContent: React.FC = () => {
                               </button>
                             </div>
                           )}
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Cliquer pour voir les détails →
-                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('View Details button clicked for:', parcel.id);
+                              handleParcelSelect(parcel.id);
+                            }}
+                            className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
+                          >
+                            <span>Voir les détails</span>
+                            <span>→</span>
+                          </button>
                         </div>
                       </div>
                     );
@@ -545,17 +511,6 @@ const AppContent: React.FC = () => {
                 </div>
               )}
 
-              {/* Back to list button when viewing parcel details */}
-              {selectedParcelId && (
-                <div className="mt-6 flex justify-center">
-                  <button
-                    onClick={() => setSelectedParcelId(null)}
-                    className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                  >
-                    <span>← Retour à la liste des parcelles</span>
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -702,16 +657,35 @@ const AppContent: React.FC = () => {
   );
 };
 
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const search = Route.useSearch();
+  // Match /parcels/{id} or /parcels/{id}/ or /parcels/{id}/something
+  const isParcelDetailRoute = location.pathname.match(/^\/parcels\/[^/]+(\/.*)?$/);
+
+  console.log('📋 Parcels route check', { 
+    pathname: location.pathname, 
+    isParcelDetailRoute: !!isParcelDetailRoute, 
+    search 
+  });
+
+  // If we're on a parcel detail route, show the full-page detail view
+  if (isParcelDetailRoute) {
+    console.log('🎯 Rendering full-page parcel detail');
+    return <Outlet />;
+  }
+
+  // Otherwise show the parcels list
+  console.log('📝 Rendering parcels list with search:', search);
+  return <ParcelsListContent search={search} />;
+};
+
 export const Route = createFileRoute('/parcels')({
   component: AppContent,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      parcelId: (search.parcelId as string) || undefined,
-      tab: (search.tab as string) || undefined,
       farmId: (search.farmId as string) || undefined,
     } as {
-      parcelId: string | undefined;
-      tab: string | undefined;
       farmId: string | undefined;
     };
   },

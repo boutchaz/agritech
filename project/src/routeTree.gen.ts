@@ -68,10 +68,17 @@ import { Route as SettingsOrganizationRouteImport } from './routes/settings.orga
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
+import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
+import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
 import { Route as StockInventoryWarehousesRouteImport } from './routes/stock/inventory/warehouses'
 import { Route as StockInventorySuppliersRouteImport } from './routes/stock/inventory/suppliers'
 import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
+import { Route as ParcelsParcelIdWeatherRouteImport } from './routes/parcels.$parcelId.weather'
+import { Route as ParcelsParcelIdSoilRouteImport } from './routes/parcels.$parcelId.soil'
+import { Route as ParcelsParcelIdSatelliteRouteImport } from './routes/parcels.$parcelId.satellite'
+import { Route as ParcelsParcelIdReportsRouteImport } from './routes/parcels.$parcelId.reports'
+import { Route as ParcelsParcelIdProfitabilityRouteImport } from './routes/parcels.$parcelId.profitability'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -367,10 +374,20 @@ const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => SettingsRoute,
 } as any)
+const ParcelsParcelIdRoute = ParcelsParcelIdRouteImport.update({
+  id: '/$parcelId',
+  path: '/$parcelId',
+  getParentRoute: () => ParcelsRoute,
+} as any)
 const StockInventoryIndexRoute = StockInventoryIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => StockInventoryRoute,
+} as any)
+const ParcelsParcelIdIndexRoute = ParcelsParcelIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ParcelsParcelIdRoute,
 } as any)
 const StockInventoryWarehousesRoute =
   StockInventoryWarehousesRouteImport.update({
@@ -388,6 +405,33 @@ const StockInventoryStockRoute = StockInventoryStockRouteImport.update({
   path: '/stock',
   getParentRoute: () => StockInventoryRoute,
 } as any)
+const ParcelsParcelIdWeatherRoute = ParcelsParcelIdWeatherRouteImport.update({
+  id: '/weather',
+  path: '/weather',
+  getParentRoute: () => ParcelsParcelIdRoute,
+} as any)
+const ParcelsParcelIdSoilRoute = ParcelsParcelIdSoilRouteImport.update({
+  id: '/soil',
+  path: '/soil',
+  getParentRoute: () => ParcelsParcelIdRoute,
+} as any)
+const ParcelsParcelIdSatelliteRoute =
+  ParcelsParcelIdSatelliteRouteImport.update({
+    id: '/satellite',
+    path: '/satellite',
+    getParentRoute: () => ParcelsParcelIdRoute,
+  } as any)
+const ParcelsParcelIdReportsRoute = ParcelsParcelIdReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => ParcelsParcelIdRoute,
+} as any)
+const ParcelsParcelIdProfitabilityRoute =
+  ParcelsParcelIdProfitabilityRouteImport.update({
+    id: '/profitability',
+    path: '/profitability',
+    getParentRoute: () => ParcelsParcelIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -414,7 +458,7 @@ export interface FileRoutesByFullPath {
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
-  '/parcels': typeof ParcelsRoute
+  '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
@@ -428,6 +472,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -448,9 +493,15 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
+  '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
+  '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
+  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
+  '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
   '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory/': typeof StockInventoryIndexRoute
 }
 export interface FileRoutesByTo {
@@ -477,7 +528,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
-  '/parcels': typeof ParcelsRoute
+  '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
@@ -507,9 +558,15 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/stock': typeof StockIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
+  '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
+  '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
+  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
+  '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
   '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/parcels/$parcelId': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory': typeof StockInventoryIndexRoute
 }
 export interface FileRoutesById {
@@ -539,7 +596,7 @@ export interface FileRoutesById {
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
-  '/parcels': typeof ParcelsRoute
+  '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/register': typeof RegisterRoute
@@ -553,6 +610,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -573,9 +631,15 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
+  '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
+  '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
+  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
+  '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
   '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
+  '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory/': typeof StockInventoryIndexRoute
 }
 export interface FileRouteTypes {
@@ -619,6 +683,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -639,9 +704,15 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/profitability'
+    | '/parcels/$parcelId/reports'
+    | '/parcels/$parcelId/satellite'
+    | '/parcels/$parcelId/soil'
+    | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/stock/inventory/suppliers'
     | '/stock/inventory/warehouses'
+    | '/parcels/$parcelId/'
     | '/stock/inventory/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -698,9 +769,15 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stock'
     | '/tasks'
+    | '/parcels/$parcelId/profitability'
+    | '/parcels/$parcelId/reports'
+    | '/parcels/$parcelId/satellite'
+    | '/parcels/$parcelId/soil'
+    | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/stock/inventory/suppliers'
     | '/stock/inventory/warehouses'
+    | '/parcels/$parcelId'
     | '/stock/inventory'
   id:
     | '__root__'
@@ -743,6 +820,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -763,9 +841,15 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/profitability'
+    | '/parcels/$parcelId/reports'
+    | '/parcels/$parcelId/satellite'
+    | '/parcels/$parcelId/soil'
+    | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/stock/inventory/suppliers'
     | '/stock/inventory/warehouses'
+    | '/parcels/$parcelId/'
     | '/stock/inventory/'
   fileRoutesById: FileRoutesById
 }
@@ -795,7 +879,7 @@ export interface RootRouteChildren {
   LabServicesRoute: typeof LabServicesRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
-  ParcelsRoute: typeof ParcelsRoute
+  ParcelsRoute: typeof ParcelsRouteWithChildren
   ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
   ProfitabilityRoute: typeof ProfitabilityRoute
   RegisterRoute: typeof RegisterRoute
@@ -1226,12 +1310,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsDashboardRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/parcels/$parcelId': {
+      id: '/parcels/$parcelId'
+      path: '/$parcelId'
+      fullPath: '/parcels/$parcelId'
+      preLoaderRoute: typeof ParcelsParcelIdRouteImport
+      parentRoute: typeof ParcelsRoute
+    }
     '/stock/inventory/': {
       id: '/stock/inventory/'
       path: '/'
       fullPath: '/stock/inventory/'
       preLoaderRoute: typeof StockInventoryIndexRouteImport
       parentRoute: typeof StockInventoryRoute
+    }
+    '/parcels/$parcelId/': {
+      id: '/parcels/$parcelId/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/'
+      preLoaderRoute: typeof ParcelsParcelIdIndexRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
     }
     '/stock/inventory/warehouses': {
       id: '/stock/inventory/warehouses'
@@ -1254,6 +1352,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockInventoryStockRouteImport
       parentRoute: typeof StockInventoryRoute
     }
+    '/parcels/$parcelId/weather': {
+      id: '/parcels/$parcelId/weather'
+      path: '/weather'
+      fullPath: '/parcels/$parcelId/weather'
+      preLoaderRoute: typeof ParcelsParcelIdWeatherRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
+    '/parcels/$parcelId/soil': {
+      id: '/parcels/$parcelId/soil'
+      path: '/soil'
+      fullPath: '/parcels/$parcelId/soil'
+      preLoaderRoute: typeof ParcelsParcelIdSoilRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
+    '/parcels/$parcelId/satellite': {
+      id: '/parcels/$parcelId/satellite'
+      path: '/satellite'
+      fullPath: '/parcels/$parcelId/satellite'
+      preLoaderRoute: typeof ParcelsParcelIdSatelliteRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
+    '/parcels/$parcelId/reports': {
+      id: '/parcels/$parcelId/reports'
+      path: '/reports'
+      fullPath: '/parcels/$parcelId/reports'
+      preLoaderRoute: typeof ParcelsParcelIdReportsRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
+    '/parcels/$parcelId/profitability': {
+      id: '/parcels/$parcelId/profitability'
+      path: '/profitability'
+      fullPath: '/parcels/$parcelId/profitability'
+      preLoaderRoute: typeof ParcelsParcelIdProfitabilityRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
   }
 }
 
@@ -1268,6 +1401,39 @@ const OnboardingRouteChildren: OnboardingRouteChildren = {
 const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
   OnboardingRouteChildren,
 )
+
+interface ParcelsParcelIdRouteChildren {
+  ParcelsParcelIdProfitabilityRoute: typeof ParcelsParcelIdProfitabilityRoute
+  ParcelsParcelIdReportsRoute: typeof ParcelsParcelIdReportsRoute
+  ParcelsParcelIdSatelliteRoute: typeof ParcelsParcelIdSatelliteRoute
+  ParcelsParcelIdSoilRoute: typeof ParcelsParcelIdSoilRoute
+  ParcelsParcelIdWeatherRoute: typeof ParcelsParcelIdWeatherRoute
+  ParcelsParcelIdIndexRoute: typeof ParcelsParcelIdIndexRoute
+}
+
+const ParcelsParcelIdRouteChildren: ParcelsParcelIdRouteChildren = {
+  ParcelsParcelIdProfitabilityRoute: ParcelsParcelIdProfitabilityRoute,
+  ParcelsParcelIdReportsRoute: ParcelsParcelIdReportsRoute,
+  ParcelsParcelIdSatelliteRoute: ParcelsParcelIdSatelliteRoute,
+  ParcelsParcelIdSoilRoute: ParcelsParcelIdSoilRoute,
+  ParcelsParcelIdWeatherRoute: ParcelsParcelIdWeatherRoute,
+  ParcelsParcelIdIndexRoute: ParcelsParcelIdIndexRoute,
+}
+
+const ParcelsParcelIdRouteWithChildren = ParcelsParcelIdRoute._addFileChildren(
+  ParcelsParcelIdRouteChildren,
+)
+
+interface ParcelsRouteChildren {
+  ParcelsParcelIdRoute: typeof ParcelsParcelIdRouteWithChildren
+}
+
+const ParcelsRouteChildren: ParcelsRouteChildren = {
+  ParcelsParcelIdRoute: ParcelsParcelIdRouteWithChildren,
+}
+
+const ParcelsRouteWithChildren =
+  ParcelsRoute._addFileChildren(ParcelsRouteChildren)
 
 interface SettingsRouteChildren {
   SettingsDashboardRoute: typeof SettingsDashboardRoute
@@ -1386,7 +1552,7 @@ const rootRouteChildren: RootRouteChildren = {
   LabServicesRoute: LabServicesRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
-  ParcelsRoute: ParcelsRoute,
+  ParcelsRoute: ParcelsRouteWithChildren,
   ProductionIntelligenceRoute: ProductionIntelligenceRoute,
   ProfitabilityRoute: ProfitabilityRoute,
   RegisterRoute: RegisterRoute,

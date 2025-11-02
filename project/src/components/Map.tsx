@@ -132,7 +132,6 @@ const MapComponent: React.FC<MapProps> = ({
     density_per_hectare: 0,
     plant_count: 0,
     planting_date: '',
-    planting_year: undefined as number | undefined,
     planting_type: '',
     rootstock: ''
   });
@@ -152,6 +151,8 @@ const MapComponent: React.FC<MapProps> = ({
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
+  const viewRef = useRef<View | null>(null);
+  const zoomCenterRef = useRef<{ zoom: number; center: number[] } | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelDetails | null>(null);
   const [drawingMode, setDrawingMode] = useState<'manual' | 'assisted'>('manual');
@@ -327,13 +328,36 @@ const MapComponent: React.FC<MapProps> = ({
     };
   }, [isFullScreen]);
 
-  // Handle map type changes (since we removed DOM manipulation)
+  // Handle place names toggle (no zoom preservation needed)
   useEffect(() => {
     if (mapInstanceRef.current) {
       const layers = mapInstanceRef.current.getLayers();
       const layerArray = layers.getArray();
 
-      // Find OSM, satellite, and labels layers
+      layerArray.forEach((layer) => {
+        if (layer instanceof TileLayer) {
+          const source = layer.getSource();
+          if (source instanceof XYZ) {
+            const url = source.getUrls()?.[0];
+            if (url?.includes('World_Boundaries_and_Places')) {
+              // Labels controlled by showPlaceNames, not mapType
+              layer.setVisible(showPlaceNames);
+            }
+          }
+        }
+      });
+    }
+  }, [showPlaceNames]);
+
+  // Handle map type changes (preserve zoom and center)
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const storedZoomCenter = zoomCenterRef.current;
+      
+      // Update layer visibility
+      const layers = mapInstanceRef.current.getLayers();
+      const layerArray = layers.getArray();
+      
       layerArray.forEach((layer) => {
         if (layer instanceof TileLayer) {
           const source = layer.getSource();
@@ -343,15 +367,30 @@ const MapComponent: React.FC<MapProps> = ({
             const url = source.getUrls()?.[0];
             if (url?.includes('World_Imagery')) {
               layer.setVisible(mapType === 'satellite');
-            } else if (url?.includes('World_Boundaries_and_Places')) {
-              // Labels controlled by showPlaceNames, not mapType
-              layer.setVisible(showPlaceNames);
             }
           }
         }
       });
+      
+      // Restore zoom and center after layer updates (if we stored them before state change)
+      if (storedZoomCenter?.zoom && storedZoomCenter?.center) {
+        const { zoom, center } = storedZoomCenter;
+        // Use multiple animation frames to ensure layers are fully updated
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (mapInstanceRef.current && zoom && center) {
+              const view = mapInstanceRef.current.getView();
+              view.cancelAnimations();
+              view.setZoom(zoom);
+              view.setCenter(center);
+              // Clear the stored values after restoring
+              zoomCenterRef.current = null;
+            }
+          });
+        });
+      }
     }
-  }, [mapType, showPlaceNames]);
+  }, [mapType]);
 
   // Center map on selected parcel when it changes
   useEffect(() => {
@@ -672,6 +711,13 @@ const MapComponent: React.FC<MapProps> = ({
       visible: showPlaceNames
     });
 
+    const view = new View({
+      center: fromLonLat([center[1], center[0]]),
+      zoom: 6,
+    });
+    
+    viewRef.current = view;
+    
     const map = new Map({
       target: mapRef.current,
       layers: [
@@ -680,10 +726,7 @@ const MapComponent: React.FC<MapProps> = ({
         labelsLayer,
         vectorLayer,
       ],
-      view: new View({
-        center: fromLonLat([center[1], center[0]]),
-        zoom: 6,
-      }),
+      view: view,
     });
 
     // Note: Using React-based full-screen instead of OpenLayers FullScreen control
@@ -1123,7 +1166,6 @@ const MapComponent: React.FC<MapProps> = ({
       density_per_hectare: 0,
       plant_count: 0,
       planting_date: '',
-      planting_year: undefined,
       planting_type: '',
       rootstock: ''
     });
@@ -1156,7 +1198,7 @@ const MapComponent: React.FC<MapProps> = ({
         density_per_hectare: parcelDetails.density_per_hectare || undefined,
         plant_count: parcelDetails.plant_count || undefined,
         planting_date: parcelDetails.planting_date || undefined,
-        planting_year: parcelDetails.planting_year || undefined,
+        planting_year: parcelDetails.planting_date ? new Date(parcelDetails.planting_date).getFullYear() : undefined,
         planting_type: parcelDetails.planting_type || undefined,
         rootstock: parcelDetails.rootstock || undefined,
         calculated_area: calculatedArea,
@@ -1550,37 +1592,25 @@ const MapComponent: React.FC<MapProps> = ({
                       </>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Date de plantation
-                        </label>
-                        <input
-                          type="date"
-                          value={parcelDetails.planting_date}
-                          onChange={(e) => setParcelDetails(prev => ({
-                            ...prev,
-                            planting_date: e.target.value
-                          }))}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Année de plantation
-                        </label>
-                        <input
-                          type="number"
-                          value={parcelDetails.planting_year || ''}
-                          onChange={(e) => setParcelDetails(prev => ({
-                            ...prev,
-                            planting_year: e.target.value ? Number(e.target.value) : undefined
-                          }))}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                          placeholder="2024"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Date de plantation
+                      </label>
+                      <input
+                        type="date"
+                        value={parcelDetails.planting_date}
+                        onChange={(e) => setParcelDetails(prev => ({
+                          ...prev,
+                          planting_date: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        placeholder="jj/mm/aaaa"
+                      />
+                      {parcelDetails.planting_date && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Année de plantation: {new Date(parcelDetails.planting_date).getFullYear()}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1635,7 +1665,25 @@ const MapComponent: React.FC<MapProps> = ({
 
             {/* Map Type Toggle Button */}
             <button
-              onClick={() => setMapType(mapType === 'osm' ? 'satellite' : 'osm')}
+              onClick={() => {
+                // Capture zoom and center BEFORE state change
+                if (mapInstanceRef.current) {
+                  const view = mapInstanceRef.current.getView();
+                  const currentZoom = view.getZoom();
+                  const currentCenter = view.getCenter();
+                  
+                  // Store in ref to restore after state update
+                  if (currentZoom && currentCenter) {
+                    zoomCenterRef.current = {
+                      zoom: currentZoom,
+                      center: currentCenter as number[]
+                    };
+                  }
+                }
+                
+                // Then update the map type
+                setMapType(mapType === 'osm' ? 'satellite' : 'osm');
+              }}
               className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
               title={mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte'}
             >
