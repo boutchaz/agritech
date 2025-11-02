@@ -8,6 +8,7 @@ import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
 import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
+import FarmImportDialog from './FarmImportDialog';
 import { Building2, X } from 'lucide-react';
 import {
   AlertDialog,
@@ -19,6 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface FarmNode {
   farm_id: string;
@@ -60,6 +68,8 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const [selectedFarmForParcels, setSelectedFarmForParcels] = useState<{ id: string; name: string } | null>(null);
   const [selectedFarmForDetails, setSelectedFarmForDetails] = useState<string | null>(null);
   const [farmToDelete, setFarmToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [relatedDataCounts, setRelatedDataCounts] = useState<{
     parcels: number;
     workers: number;
@@ -251,6 +261,76 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     createFarmMutation.mutate(data);
   };
 
+  // Export farm handler
+  const handleExportFarm = async (farmId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-farm', {
+        body: { farm_id: farmId, include_sub_farms: true },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erreur lors de l\'export');
+      }
+
+      if (data?.success && data?.data) {
+        // Download as JSON file
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `farm-export-${farmId}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Export réussi!');
+      } else {
+        throw new Error(data?.error || 'Erreur lors de l\'export');
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      alert(`Erreur lors de l'export: ${error.message}`);
+    }
+  };
+
+  // Export all farms handler
+  const handleExportAll = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-farm', {
+        body: { organization_id: organizationId },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erreur lors de l\'export');
+      }
+
+      if (data?.success && data?.data) {
+        // Download as JSON file
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `farms-export-${organization?.name || 'all'}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Export réussi!');
+      } else {
+        throw new Error(data?.error || 'Erreur lors de l\'export');
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      alert(`Erreur lors de l'export: ${error.message}`);
+    }
+  };
+
+  // Import handler
+  const handleImportSuccess = () => {
+    setShowImportDialog(false);
+    queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+  };
+
   // Fetch related data counts for a farm
   const fetchRelatedDataCounts = async (farmId: string) => {
     setLoadingRelatedData(true);
@@ -296,37 +376,64 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     fetchRelatedDataCounts(farm.id);
   };
 
-  // Delete farm mutation
+  // Delete farm mutation using Edge Function
   const deleteFarmMutation = useMutation({
     mutationFn: async (farmId: string) => {
-      // Delete farm (cascade will handle related data via DB constraints)
-      const { error } = await supabase
-        .from('farms')
-        .delete()
-        .eq('id', farmId);
+      console.log('🗑️ Starting delete farm via Edge Function:', farmId);
+
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        throw new Error('Utilisateur non authentifié');
+      }
+
+      // Call the Edge Function
+      const { data, error } = await supabase.functions.invoke('delete-farm', {
+        body: { farm_id: farmId },
+      });
 
       if (error) {
-        // Provide user-friendly error messages
-        if (error.message.includes('permission')) {
-          throw new Error("Vous n'avez pas les permissions nécessaires pour supprimer cette ferme.");
-        } else if (error.message.includes('subscription')) {
-          throw new Error("Votre abonnement ne permet pas de supprimer des fermes.");
-        } else {
-          throw new Error(error.message || "Une erreur s'est produite lors de la suppression.");
-        }
+        console.error('❌ Edge Function error:', error);
+        throw new Error(error.message || 'Erreur lors de la suppression de la ferme');
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
-      setFarmToDelete(null);
-      setRelatedDataCounts(null);
 
+      if (!data?.success) {
+        const errorMessage = data?.error || 'La suppression a échoué';
+        console.error('❌ Delete failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ Farm deleted successfully via Edge Function:', data.deleted_farm?.id);
+      return farmId;
+    },
+    onSuccess: (farmId) => {
+      console.log('✅ Delete success callback for farm:', farmId);
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
+      
       // Success feedback
       alert(`✓ La ferme "${farmToDelete?.name}" et toutes ses données associées ont été supprimées avec succès.`);
+      
+      // Close dialog and reset state
+      setFarmToDelete(null);
+      setRelatedDataCounts(null);
+      deleteFarmMutation.reset();
     },
-    onError: (error: Error) => {
-      console.error('Error deleting farm:', error);
-      alert(`❌ Erreur lors de la suppression de la ferme:\n\n${error.message}`);
+    onError: (error: any) => {
+      console.error('❌ Delete error:', error);
+      
+      let errorMessage = 'Erreur lors de la suppression de la ferme';
+      
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      } else if (error?.details) {
+        errorMessage += `: ${error.details}`;
+      }
+
+      alert(errorMessage);
+      // Don't close dialog on error so user can try again or see the error
     }
   });
 
@@ -423,6 +530,10 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         onAddFarm={() => setShowAddForm(true)}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onExportAll={handleExportAll}
+        onImport={() => setShowImportDialog(true)}
+        selectedFarmId={selectedFarmId}
+        onExportFarm={handleExportFarm}
       />
 
       {/* Add Farm Form Modal */}
@@ -529,6 +640,14 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           }}
         />
       )}
+
+      {/* Import Farm Dialog */}
+      <FarmImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        organizationId={organizationId}
+        onSuccess={handleImportSuccess}
+      />
 
       {/* Delete Farm Confirmation Dialog */}
       <AlertDialog open={!!farmToDelete} onOpenChange={(open) => {

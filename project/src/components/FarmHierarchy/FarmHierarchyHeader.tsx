@@ -7,7 +7,8 @@ import {
   Grid3x3,
   List,
   BarChart3,
-  Download
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface FarmHierarchyHeaderProps {
@@ -19,6 +20,10 @@ interface FarmHierarchyHeaderProps {
   onAddFarm: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  onExportAll?: () => void;
+  onImport?: () => void;
+  selectedFarmId?: string | null;
+  onExportFarm?: (farmId: string) => void;
 }
 
 const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
@@ -29,7 +34,11 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   onViewModeChange,
   onAddFarm,
   searchTerm,
-  onSearchChange
+  onSearchChange,
+  onExportAll,
+  onImport,
+  selectedFarmId,
+  onExportFarm
 }) => {
   return (
     <div className="space-y-6">
@@ -51,13 +60,42 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onAddFarm}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nouvelle Ferme</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {(selectedFarmId && onExportFarm) && (
+            <button
+              onClick={() => onExportFarm(selectedFarmId)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
+            >
+              <Download className="w-4 h-4" />
+              <span>Exporter cette ferme</span>
+            </button>
+          )}
+          {onExportAll && (
+            <button
+              onClick={onExportAll}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
+            >
+              <Download className="w-4 h-4" />
+              <span>Exporter tout</span>
+            </button>
+          )}
+          {onImport && (
+            <button
+              onClick={onImport}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Importer</span>
+            </button>
+          )}
+          <button
+            onClick={onAddFarm}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nouvelle Ferme</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -103,11 +141,11 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
               <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <button className="text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
-            Exporter les données
-          </button>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            Export/Import
+          </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Format PDF ou Excel
+            Sauvegarder et restaurer les fermes
           </p>
         </div>
       </div>

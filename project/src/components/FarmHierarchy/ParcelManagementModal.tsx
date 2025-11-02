@@ -1,28 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { Edit, Leaf, MapPin, Plus, Sprout, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { supabase } from '../../lib/supabase';
-import { Plus, Leaf, Edit, Trash2, MapPin, Sprout } from 'lucide-react';
+import { useSubscription } from '../../hooks/useSubscription';
 import {
-  getPlantingSystemsByCategory,
-  getCropTypesByCategory,
-  getVarietiesByCropType,
   calculatePlantCount,
+  getCropTypesByCategory,
+  getPlantingSystemsByCategory,
+  getVarietiesByCropType,
   type CropCategory,
 } from '../../lib/plantingSystemData';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../MultiTenantAuthProvider';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -31,9 +25,16 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { Button } from '../ui/button';
-import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { FormField } from '../ui/FormField';
+import { Input } from '../ui/Input';
 import {
   Select,
   SelectContent,
@@ -41,7 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/radix-select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Textarea } from '../ui/Textarea';
 
 interface Parcel {
   id: string;
@@ -97,6 +98,8 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { data: subscription } = useSubscription();
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [parcelToDelete, setParcelToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -229,26 +232,63 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     }
   });
 
-  // Delete parcel mutation
+  // Delete parcel mutation using Edge Function
   const deleteParcelMutation = useMutation({
     mutationFn: async (parcelId: string) => {
-      const { error } = await supabase
-        .from('parcels')
-        .delete()
-        .eq('id', parcelId);
+      console.log('🗑️ Starting delete parcel via Edge Function:', parcelId);
 
-      if (error) throw error;
+      // Check if user is authenticated
+      if (!user?.id) {
+        throw new Error('Utilisateur non authentifié');
+      }
+
+      // Call the Edge Function
+      const { data, error } = await supabase.functions.invoke('delete-parcel', {
+        body: { parcel_id: parcelId },
+      });
+
+      if (error) {
+        console.error('❌ Edge Function error:', error);
+        throw new Error(error.message || 'Erreur lors de la suppression de la parcelle');
+      }
+
+      if (!data?.success) {
+        const errorMessage = data?.error || 'La suppression a échoué';
+        console.error('❌ Delete failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ Parcel deleted successfully via Edge Function:', data.deleted_parcel?.id);
       return parcelId;
     },
-    onSuccess: () => {
+    onSuccess: (parcelId) => {
+      console.log('✅ Delete success callback for parcel:', parcelId);
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['parcels', farmId] });
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
-      setParcelToDelete(null); // Close dialog after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['parcel', parcelId] });
+      
+      // Close dialog after successful deletion
+      setParcelToDelete(null);
+      deleteParcelMutation.reset();
     },
     onError: (error: any) => {
-      console.error('Error deleting parcel:', error);
-      alert(`Erreur lors de la suppression de la parcelle: ${error.message || 'Erreur inconnue'}`);
+      console.error('❌ Delete error:', error);
+      
+      let errorMessage = 'Erreur lors de la suppression de la parcelle';
+      
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      } else if (error?.details) {
+        errorMessage += `: ${error.details}`;
+      } else if (error?.code === 'PGRST116') {
+        errorMessage = 'Aucune parcelle trouvée avec cet ID';
+      } else if (error?.code === '42501') {
+        errorMessage = 'Vous n\'avez pas les permissions nécessaires pour supprimer cette parcelle';
+      }
+      
+      alert(errorMessage);
       // Don't close dialog on error so user can try again or see the error
     }
   });
@@ -678,11 +718,14 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 
       {/* Delete Parcel Confirmation Dialog */}
       <AlertDialog 
-        open={!!parcelToDelete && !deleteParcelMutation.isSuccess} 
+        open={!!parcelToDelete} 
         onOpenChange={(open) => {
+          // Only allow closing if mutation is not pending and not successful
           if (!open && !deleteParcelMutation.isPending) {
             setParcelToDelete(null);
-            deleteParcelMutation.reset();
+            if (deleteParcelMutation.isSuccess) {
+              deleteParcelMutation.reset();
+            }
           }
         }}
       >
@@ -701,18 +744,18 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
             <AlertDialogCancel disabled={deleteParcelMutation.isPending}>
               Annuler
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={() => {
-                if (parcelToDelete) {
+                if (parcelToDelete && !deleteParcelMutation.isPending) {
+                  console.log('🔴 Delete button clicked for parcel:', parcelToDelete.id);
                   deleteParcelMutation.mutate(parcelToDelete.id);
-                  // Don't close dialog here - let onSuccess handle it
                 }
               }}
               disabled={deleteParcelMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
               {deleteParcelMutation.isPending ? 'Suppression...' : 'Supprimer'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
