@@ -101,15 +101,6 @@ const ParcelLayout = () => {
         {/* Tabs Navigation */}
         <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-b-4 border-green-500 py-4">
           <div className="container mx-auto px-6">
-            <div className="mb-3">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                Navigation des Onglets
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {tabs.length} onglets disponibles • Chemin actuel: {location.pathname}
-              </p>
-            </div>
-
             <nav className="flex flex-wrap gap-2">
               {tabs.map((tab) => {
                 const isActive = location.pathname === tab.path;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import {
   Building2,
@@ -41,11 +42,12 @@ interface FarmHierarchyManagerProps {
   onManageRoles?: (farmId: string, farmName: string) => void;
 }
 
-const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({ 
-  organizationId, 
+const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
+  organizationId,
   currentUserId,
   onManageRoles
 }) => {
+  const { t } = useTranslation();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [userRoles, setUserRoles] = useState<FarmRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,7 +126,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
         farm_type: farm.farm_type || 'main',
         parent_farm_id: farm.parent_farm_id || null,
         hierarchy_level: farm.hierarchy_level || 1,
-        manager_name: farm.manager_name || 'No Manager',
+        manager_name: farm.manager_name || t('farmHierarchy.farm.noManager'),
         sub_farms_count: farm.sub_farms_count || 0,
         is_active: true
       }));

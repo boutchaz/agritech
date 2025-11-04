@@ -13,6 +13,7 @@ import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
 import { authSupabase } from '../lib/auth-supabase'
 import { withRouteProtection } from '../components/authorization/withRouteProtection'
+import { useTranslation } from 'react-i18next'
 
 const mockModules: Module[] = [
   {
@@ -58,6 +59,7 @@ const defaultDashboardSettings: DashboardSettings = {
 };
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -172,29 +174,29 @@ const AppContent: React.FC = () => {
   const featureHighlights = useMemo(() => [
     {
       id: 'farm-ops',
-      title: 'Opérations agricoles pilotées',
-      description: 'Visualisez vos fermes, parcelles et suivis culturaux en temps réel pour déclencher les bonnes actions.',
-      cta: { label: 'Ouvrir la gestion des parcelles', to: '/parcels' }
+      title: t('dashboard.keyFeatures.farmOps.title'),
+      description: t('dashboard.keyFeatures.farmOps.description'),
+      cta: { label: t('dashboard.keyFeatures.farmOps.cta'), to: '/parcels' }
     },
     {
       id: 'task-execution',
-      title: 'Tâches et main-d’œuvre coordonnés',
-      description: 'Planifiez les travaux, assignez vos équipes et suivez l’avancement et le temps passé depuis un seul écran.',
-      cta: { label: 'Planifier une tâche', to: '/tasks' }
+      title: t('dashboard.keyFeatures.taskExecution.title'),
+      description: t('dashboard.keyFeatures.taskExecution.description'),
+      cta: { label: t('dashboard.keyFeatures.taskExecution.cta'), to: '/tasks' }
     },
     {
       id: 'financial-health',
-      title: 'Santé financière consolidée',
-      description: 'Reliez factures, paiements et coûts par ferme pour anticiper trésorerie et marges.',
-      cta: { label: 'Consulter la comptabilité', to: '/accounting' }
+      title: t('dashboard.keyFeatures.financialHealth.title'),
+      description: t('dashboard.keyFeatures.financialHealth.description'),
+      cta: { label: t('dashboard.keyFeatures.financialHealth.cta'), to: '/accounting' }
     },
     {
       id: 'lab-services',
-      title: 'Analyses & services intégrés',
-      description: 'Commandez vos analyses de sol et laboratoire depuis la plateforme et intégrez les résultats à vos décisions.',
-      cta: { label: 'Explorer les analyses', to: '/analyses' }
+      title: t('dashboard.keyFeatures.labServices.title'),
+      description: t('dashboard.keyFeatures.labServices.description'),
+      cta: { label: t('dashboard.keyFeatures.labServices.cta'), to: '/analyses' }
     },
-  ], []);
+  ], [t]);
 
   const commandActions = useMemo<Action[]>(() => {
     const navigationActions: Action[] = [
@@ -281,7 +283,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
@@ -303,7 +305,7 @@ const AppContent: React.FC = () => {
           aria-labelledby="dashboard-hero-title"
         >
           <h1 id="dashboard-hero-title" className="sr-only">
-            Pilotage de l'exploitation agricole
+            {t('dashboard.heroTitle')}
           </h1>
           <header className="border-b border-transparent" role="presentation">
             <SubscriptionBanner />
@@ -311,23 +313,23 @@ const AppContent: React.FC = () => {
               breadcrumbs={[
                 { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
                 ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
-                { icon: Home, label: 'Tableau de bord', isActive: true }
+                { icon: Home, label: t('nav.dashboard'), isActive: true }
               ]}
-              title="Pilotage de l'exploitation"
-              subtitle="Analysez vos fermes, vos équipes et votre performance financière en un seul endroit."
+              title={t('dashboard.title')}
+              subtitle={t('dashboard.subtitle')}
               actions={<QuickActionsButton />}
             />
           </header>
 
-          <div className="p-6 max-w-7xl mx-auto space-y-6">
+          <div className="p-3 sm:p-4 lg:p-6 space-y-6">
             {/* Feature Highlights */}
             <div className="flex flex-col gap-6 rounded-xl bg-white dark:bg-gray-800 shadow-sm p-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Points clés de la plateforme
+                  {t('dashboard.keyFeatures.title')}
                 </h2>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Activez les modules qui soutiennent vos objectifs quotidiens et accédez rapidement aux actions stratégiques.
+                  {t('dashboard.keyFeatures.subtitle')}
                 </p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -361,10 +363,10 @@ const AppContent: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Vue opérationnelle unifiée
+                  {t('dashboard.unifiedView.title')}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Surveillez en direct vos indicateurs clés : taches prioritaires, données météo et performances financières.
+                  {t('dashboard.unifiedView.subtitle')}
                 </p>
               </div>
               <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
@@ -387,6 +389,7 @@ export const Route = createFileRoute('/dashboard')({
 })
 
 const QuickActionsButton: React.FC = () => {
+  const { t } = useTranslation();
   const { query } = useKBar()
 
   return (
@@ -397,7 +400,7 @@ const QuickActionsButton: React.FC = () => {
     >
       <span className="flex items-center gap-2">
         <Search className="h-4 w-4" />
-        Actions rapides
+        {t('dashboard.quickActions')}
       </span>
       <span className="hidden items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 sm:flex">
         <kbd className="font-semibold">Cmd</kbd>

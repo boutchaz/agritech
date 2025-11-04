@@ -12,6 +12,7 @@ import StockAlertsWidget from './Dashboard/StockAlertsWidget';
 import WorkersActivityWidget from './Dashboard/WorkersActivityWidget';
 import SoilAnalysisWidget from './Dashboard/SoilAnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
+import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
   sensorData: SensorData[];
@@ -19,6 +20,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
+  const { t } = useTranslation();
   const { latestReadings, _isConnected } = useSensorData();
   const { currentFarm } = useAuth();
   const farmId = currentFarm?.id ?? null;
@@ -72,24 +74,24 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Ferme</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.farm.title')}</p>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
-                  {currentFarm ? currentFarm.name : 'Aucune ferme sélectionnée'}
+                  {currentFarm ? currentFarm.name : t('dashboard.widgets.farm.noFarm')}
                 </h3>
               </div>
               <MapPin className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
             </div>
             <div className="mt-3 sm:mt-4 grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
               <div>
-                <div className="text-gray-500 text-xs sm:text-sm">Parcelles</div>
+                <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.parcels')}</div>
                 <div className="text-base sm:text-lg font-semibold">{parcelsLoading ? '…' : parcels.length}</div>
               </div>
               <div>
-                <div className="text-gray-500 text-xs sm:text-sm">Surface</div>
+                <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.surface')}</div>
                 <div className="text-base sm:text-lg font-semibold">{parcelsLoading ? '…' : totalArea.toFixed(2)} ha</div>
               </div>
               <div>
-                <div className="text-gray-500 text-xs sm:text-sm">Analyses</div>
+                <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.analyses')}</div>
                 <div className="text-base sm:text-lg font-semibold">{analysesLoading ? '…' : analyses.length}</div>
               </div>
             </div>
@@ -98,13 +100,13 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
                 onClick={() => navigate({ to: '/parcels' })}
                 className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 w-full sm:w-auto"
               >
-                Voir les parcelles
+                {t('dashboard.widgets.farm.viewParcels')}
               </button>
               <button
                 onClick={() => navigate({ to: '/parcels' })}
                 className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
               >
-                Ajouter une parcelle
+                {t('dashboard.widgets.farm.addParcel')}
               </button>
             </div>
           </div>
@@ -114,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">pH du sol</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.soil.ph')}</p>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2">
                   {getSensorValue('ph')}
                 </h3>
@@ -137,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Température</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.climate.temperature')}</p>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2">
                   {getSensorValue('temperature')}°C
                 </h3>
@@ -160,14 +162,14 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Irrigation</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.irrigation.title')}</p>
                 <div className="flex items-center space-x-2 mt-1 sm:mt-2">
                   <h3 className={`text-base sm:text-lg font-bold ${
                     infrastructureStatus.irrigation.status === 'active'
                       ? 'text-green-600 dark:text-green-400'
                       : 'text-gray-600 dark:text-gray-400'
                   }`}>
-                    {infrastructureStatus.irrigation.status === 'active' ? 'En cours' : 'Arrêtée'}
+                    {infrastructureStatus.irrigation.status === 'active' ? t('dashboard.widgets.irrigation.active') : t('dashboard.widgets.irrigation.stopped')}
                   </h3>
                   <Droplets className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     infrastructureStatus.irrigation.status === 'active'
@@ -180,15 +182,15 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
             {infrastructureStatus.irrigation.status === 'active' && (
               <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Secteur</span>
+                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.sector')}</span>
                   <span className="font-medium">{infrastructureStatus.irrigation.sector}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Début</span>
+                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.start')}</span>
                   <span className="font-medium">{infrastructureStatus.irrigation.startTime}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Durée</span>
+                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.duration')}</span>
                   <span className="font-medium">{infrastructureStatus.irrigation.duration} min</span>
                 </div>
               </div>
@@ -201,10 +203,10 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Maintenance</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.maintenance.title')}</p>
                 <div className="flex items-center space-x-2 mt-1 sm:mt-2">
                   <h3 className="text-base sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                    {infrastructureStatus.maintenance.length} en cours
+                    {infrastructureStatus.maintenance.length} {t('dashboard.widgets.maintenance.inProgress')}
                   </h3>
                   <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
                 </div>
@@ -223,8 +225,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
                     </span>
                   </div>
                   <div className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-orange-600 dark:text-orange-400 space-y-0.5">
-                    <p>Début: {new Date(item.startDate).toLocaleDateString()}</p>
-                    <p>Fin prévue: {new Date(item.expectedEndDate).toLocaleDateString()}</p>
+                    <p>{t('dashboard.widgets.maintenance.start')}: {new Date(item.startDate).toLocaleDateString()}</p>
+                    <p>{t('dashboard.widgets.maintenance.expectedEnd')}: {new Date(item.expectedEndDate).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}
@@ -236,10 +238,10 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         return settings.showProductionData && (
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Analyse des rendements
+              {t('dashboard.widgets.production.title')}
             </h3>
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-              <span className="text-xs sm:text-sm text-gray-500">Graphique à venir</span>
+              <span className="text-xs sm:text-sm text-gray-500">{t('dashboard.widgets.production.chartComing')}</span>
             </div>
           </div>
         );
@@ -248,10 +250,10 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         return settings.showFinancialData && (
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Données financières
+              {t('dashboard.widgets.financial.title')}
             </h3>
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-              <span className="text-xs sm:text-sm text-gray-500">Graphique à venir</span>
+              <span className="text-xs sm:text-sm text-gray-500">{t('dashboard.widgets.financial.chartComing')}</span>
             </div>
           </div>
         );
@@ -260,14 +262,14 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         return settings.showStockAlerts && (
           <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Alertes de stock
+              {t('dashboard.widgets.alerts.title')}
             </h3>
             <div className="space-y-3 sm:space-y-4">
               <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 flex-shrink-0" />
                   <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300">
-                    Stock faible: Fertilisant NPK
+                    {t('dashboard.widgets.alerts.lowStock')}: Fertilisant NPK
                   </p>
                 </div>
               </div>
@@ -292,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
     <div className="space-y-6">
       {!currentFarm && (
         <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">
-          Sélectionnez une ferme pour afficher les parcelles et données associées.
+          {t('dashboard.widgets.noFarmSelected')}
         </div>
       )}
 

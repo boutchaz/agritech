@@ -61,7 +61,7 @@ export function useJournalEntries() {
         .order('entry_date', { ascending: false });
 
       if (error) throw error;
-      return data as JournalEntry[];
+      return (data || []) as JournalEntry[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -88,7 +88,7 @@ export function useJournalEntriesByStatus(status: 'draft' | 'posted' | 'cancelle
         .order('entry_date', { ascending: false });
 
       if (error) throw error;
-      return data as JournalEntry[];
+      return (data || []) as JournalEntry[];
     },
     enabled: !!currentOrganization?.id,
   });

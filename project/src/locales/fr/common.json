@@ -49,6 +49,207 @@
     "personnel": "Personnel",
     "tasks": "Tâches"
   },
+  "stock": {
+    "title": "Gestion des Stocks",
+    "subtitle": "Gestion complète de l'inventaire, des entrées et des entrepôts",
+    "tabs": {
+      "items": "Articles",
+      "inventory": "Inventaire & Achats",
+      "entries": "Entrées de Stock",
+      "reception": "Lots de Réception",
+      "reports": "Rapports & Analyses"
+    }
+  },
+  "dashboard": {
+    "title": "Pilotage de l'exploitation",
+    "subtitle": "Analysez vos fermes, vos équipes et votre performance financière en un seul endroit",
+    "loading": "Chargement de l'organisation...",
+    "heroTitle": "Pilotage de l'exploitation agricole",
+    "quickActions": "Actions rapides",
+    "keyFeatures": {
+      "title": "Points clés de la plateforme",
+      "subtitle": "Activez les modules qui soutiennent vos objectifs quotidiens et accédez rapidement aux actions stratégiques",
+      "farmOps": {
+        "title": "Opérations agricoles pilotées",
+        "description": "Visualisez vos fermes, parcelles et suivis culturaux en temps réel pour déclencher les bonnes actions",
+        "cta": "Ouvrir la gestion des parcelles"
+      },
+      "taskExecution": {
+        "title": "Tâches et main-d'œuvre coordonnés",
+        "description": "Planifiez les travaux, assignez vos équipes et suivez l'avancement et le temps passé depuis un seul écran",
+        "cta": "Planifier une tâche"
+      },
+      "financialHealth": {
+        "title": "Santé financière consolidée",
+        "description": "Reliez factures, paiements et coûts par ferme pour anticiper trésorerie et marges",
+        "cta": "Consulter la comptabilité"
+      },
+      "labServices": {
+        "title": "Analyses & services intégrés",
+        "description": "Commandez vos analyses de sol et laboratoire depuis la plateforme et intégrez les résultats à vos décisions",
+        "cta": "Explorer les analyses"
+      }
+    },
+    "unifiedView": {
+      "title": "Vue opérationnelle unifiée",
+      "subtitle": "Surveillez en direct vos indicateurs clés : taches prioritaires, données météo et performances financières"
+    },
+    "widgets": {
+      "noFarmSelected": "Sélectionnez une ferme pour afficher les parcelles et données associées",
+      "farm": {
+        "title": "Ferme",
+        "noFarm": "Aucune ferme sélectionnée",
+        "parcels": "Parcelles",
+        "surface": "Surface",
+        "analyses": "Analyses",
+        "viewParcels": "Voir les parcelles",
+        "addParcel": "Ajouter une parcelle"
+      },
+      "soil": {
+        "ph": "pH du sol"
+      },
+      "climate": {
+        "temperature": "Température"
+      },
+      "irrigation": {
+        "title": "Irrigation",
+        "active": "En cours",
+        "stopped": "Arrêtée",
+        "sector": "Secteur",
+        "start": "Début",
+        "duration": "Durée"
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "inProgress": "en cours",
+        "start": "Début",
+        "expectedEnd": "Fin prévue"
+      },
+      "production": {
+        "title": "Analyse des rendements",
+        "chartComing": "Graphique à venir"
+      },
+      "financial": {
+        "title": "Données financières",
+        "chartComing": "Graphique à venir"
+      },
+      "alerts": {
+        "title": "Alertes de stock",
+        "lowStock": "Stock faible"
+      }
+    }
+  },
+  "profitability": {
+    "title": "Rentabilité",
+    "loading": "Chargement de la rentabilité...",
+    "filters": {
+      "startDate": "Date de début",
+      "endDate": "Date de fin"
+    },
+    "buttons": {
+      "addCost": "Coût",
+      "addRevenue": "Revenu"
+    },
+    "summary": {
+      "totalCosts": "Coûts Totaux",
+      "totalRevenue": "Revenus Totaux",
+      "netProfit": "Bénéfice Net",
+      "margin": "Marge"
+    },
+    "costBreakdown": {
+      "title": "Répartition des Coûts"
+    },
+    "recentTransactions": {
+      "costs": "Coûts Récents",
+      "revenues": "Revenus Récents",
+      "noCosts": "Aucun coût enregistré",
+      "noRevenues": "Aucun revenu enregistré"
+    },
+    "tabs": {
+      "overview": "Aperçu",
+      "accounts": "Comptes",
+      "costCenters": "Centres de Coûts",
+      "journal": "Écritures Comptables",
+      "trends": "Tendances"
+    },
+    "overview": {
+      "title": "Vue d'Ensemble Financière",
+      "legacyCosts": "Coûts Hérités",
+      "legacyRevenue": "Revenus Hérités",
+      "ledgerExpenses": "Dépenses Comptables",
+      "ledgerRevenue": "Revenus Comptables"
+    },
+    "accounts": {
+      "title": "Répartition par Plan Comptable",
+      "noData": "Aucune donnée comptable disponible pour cette période",
+      "code": "Code",
+      "name": "Nom du Compte",
+      "type": "Type",
+      "debit": "Débit",
+      "credit": "Crédit",
+      "net": "Net"
+    },
+    "costCenters": {
+      "title": "Rentabilité par Centre de Coûts",
+      "noData": "Aucune donnée de centre de coûts disponible",
+      "expenses": "Dépenses",
+      "revenue": "Revenus"
+    },
+    "journal": {
+      "title": "Écritures Comptables Associées",
+      "noEntries": "Aucune écriture comptable trouvée",
+      "account": "Compte",
+      "debit": "Débit",
+      "credit": "Crédit"
+    },
+    "trends": {
+      "title": "Tendances de Rentabilité Mensuelle",
+      "noData": "Aucune donnée de tendance disponible",
+      "costs": "Coûts",
+      "revenue": "Revenus"
+    },
+    "addCost": {
+      "title": "Ajouter un Coût",
+      "type": "Type",
+      "amount": "Montant",
+      "date": "Date",
+      "description": "Description",
+      "placeholder": "Ex: Achat de semences",
+      "adding": "Ajout...",
+      "add": "Ajouter",
+      "cancel": "Annuler",
+      "types": {
+        "materials": "Matériaux",
+        "labor": "Main-d'œuvre",
+        "utilities": "Services publics",
+        "equipment": "Équipement",
+        "other": "Autre"
+      },
+      "createJournalEntry": "Créer une écriture comptable",
+      "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
+    },
+    "addRevenue": {
+      "title": "Ajouter un Revenu",
+      "type": "Type",
+      "amount": "Montant",
+      "date": "Date",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "unitPlaceholder": "kg, tonnes...",
+      "description": "Description",
+      "placeholder": "Ex: Récolte d'olives",
+      "adding": "Ajout...",
+      "add": "Ajouter",
+      "cancel": "Annuler",
+      "types": {
+        "harvest": "Récolte",
+        "subsidy": "Subvention",
+        "other": "Autre"
+      },
+      "createJournalEntry": "Créer une écriture comptable",
+      "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
+    }
+  },
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",
@@ -86,6 +287,140 @@
     "thisMonth": "Ce mois-ci",
     "thisYear": "Cette année",
     "custom": "Personnalisé"
+  },
+  "farmHierarchy": {
+    "title": "Gestion des Fermes et Parcelles",
+    "subtitle": "Organisez et gérez vos fermes et parcelles",
+    "loading": "Chargement des fermes...",
+    "accessRequired": "Accès requis",
+    "loginRequired": "Veuillez vous connecter pour gérer la hiérarchie des fermes.",
+    "backToHierarchy": "Retour à la hiérarchie",
+    "organizationLoading": "Chargement de l'organisation...",
+    "totalFarms": "Fermes totales",
+    "totalArea": "Surface totale",
+    "filters": "Filtres",
+    "exportImport": "Export/Import",
+    "exportImportDescription": "Sauvegarder et restaurer les fermes",
+    "viewMode": {
+      "grid": "Grille",
+      "list": "Liste"
+    },
+    "farm": {
+      "create": "Créer une ferme",
+      "createNew": "Créer une nouvelle ferme",
+      "newFarm": "Nouvelle Ferme",
+      "edit": "Modifier la ferme",
+      "delete": "Supprimer la ferme",
+      "name": "Nom de la ferme",
+      "namePlaceholder": "Ex: Ferme principale",
+      "type": "Type de ferme",
+      "main": "Principale",
+      "sub": "Secondaire",
+      "manager": "Gestionnaire",
+      "noManager": "Aucun gestionnaire",
+      "size": "Taille",
+      "area": "Surface",
+      "status": "Statut",
+      "active": "Active",
+      "inactive": "Inactive",
+      "subFarms": "Sous-fermes",
+      "parcels": "Parcelles",
+      "creating": "Création...",
+      "updating": "Mise à jour...",
+      "viewDetails": "Voir détails",
+      "manageParcels": "Gérer les parcelles",
+      "manageRoles": "Gérer les rôles",
+      "export": "Exporter la ferme",
+      "exportAll": "Exporter tout",
+      "import": "Importer",
+      "searchPlaceholder": "Rechercher une ferme",
+      "deleteConfirm": "Confirmer la suppression de la ferme",
+      "deleteWarning": "Êtes-vous sûr de vouloir supprimer la ferme",
+      "deleteIrreversible": "Cette action est irréversible et supprimera toutes les données associées à cette ferme.",
+      "relatedData": "Données qui seront supprimées définitivement :",
+      "analyzing": "Analyse des données liées...",
+      "deleted": "La ferme a été supprimée avec succès",
+      "noFarms": "Aucune ferme",
+      "noFarmsFound": "Aucune ferme trouvée",
+      "noFarmsMessage": "Commencez par créer votre première ferme",
+      "noSearchResults": "Aucune ferme ne correspond à votre recherche",
+      "validation": {
+        "nameRequired": "Le nom doit contenir au moins 2 caractères"
+      }
+    },
+    "details": {
+      "title": "Détails de la ferme",
+      "information": "Informations de la ferme",
+      "location": "Localisation",
+      "manager": "Responsable",
+      "createdAt": "Date de création",
+      "description": "Description",
+      "parcelsSummary": "Parcelles",
+      "moreItems": "autres parcelles",
+      "editFarm": "Modifier la ferme",
+      "loading": "Chargement..."
+    },
+    "parcel": {
+      "management": "Gestion des Parcelles",
+      "add": "Ajouter une parcelle",
+      "create": "Créer la parcelle",
+      "edit": "Modifier la parcelle",
+      "new": "Nouvelle parcelle",
+      "delete": "Supprimer la parcelle",
+      "name": "Nom de la parcelle",
+      "namePlaceholder": "Ex: Parcelle Nord",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de la parcelle...",
+      "area": "Surface (ha)",
+      "areaPlaceholder": "0.00",
+      "cropCategory": "Catégorie de culture",
+      "cropType": "Type de culture",
+      "variety": "Variété",
+      "plantingSystem": "Système de plantation",
+      "spacing": "Espacement",
+      "spacingPlaceholder": "Ex: 4x1.5",
+      "densityPerHectare": "Densité (plants/ha)",
+      "plantCount": "Nombre total de plants",
+      "plantingDate": "Date de plantation",
+      "plantingYear": "Année de plantation",
+      "rootstock": "Porte-greffe",
+      "rootstockPlaceholder": "Ex: GF677",
+      "soilType": "Type de sol",
+      "soilTypePlaceholder": "Ex: Argileux",
+      "irrigationType": "Type d'irrigation",
+      "saving": "Enregistrement...",
+      "update": "Mettre à jour",
+      "clickForDetails": "Cliquer pour voir les détails",
+      "deleteConfirm": "Confirmer la suppression",
+      "deleteWarning": "Êtes-vous sûr de vouloir supprimer la parcelle",
+      "deleteIrreversibleWarning": "Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.",
+      "deleting": "Suppression...",
+      "noParcels": "Aucune parcelle créée",
+      "sections": {
+        "basicInfo": "Informations de base",
+        "cropInfo": "Culture et plantation",
+        "plantingSystem": "Système de plantation",
+        "additionalInfo": "Informations complémentaires"
+      },
+      "categories": {
+        "trees": "Arbres fruitiers",
+        "cereals": "Céréales",
+        "vegetables": "Légumes",
+        "other": "Autre"
+      },
+      "irrigation": {
+        "drip": "Goutte à goutte",
+        "sprinkler": "Aspersion",
+        "gravity": "Gravitaire",
+        "pivot": "Pivot",
+        "submersion": "Submersion",
+        "rainfed": "Pluvial (bour)"
+      },
+      "validation": {
+        "nameRequired": "Le nom doit contenir au moins 2 caractères",
+        "areaPositive": "La surface doit être positive"
+      }
+    }
   },
   "landing": {
     "hero": {
@@ -166,5 +501,81 @@
       "legalNotice": "Mentions légales",
       "copyright": "Tous droits réservés."
     }
+  },
+  "items": {
+    "title": "Gestion des Articles",
+    "subtitle": "Gérez les articles pour le stock, les ventes et les achats",
+    "createItem": "Créer un Article",
+    "editItem": "Modifier l'Article",
+    "deleteItem": "Supprimer l'Article",
+    "itemCode": "Code Article",
+    "itemName": "Nom de l'Article",
+    "description": "Description",
+    "group": "Groupe",
+    "defaultUnit": "Unité par Défaut",
+    "standardRate": "Tarif Standard",
+    "stockLevel": "Niveau de Stock",
+    "status": "Statut",
+    "actions": "Actions",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "noStock": "Pas de stock",
+    "salesItem": "Article de Vente",
+    "purchaseItem": "Article d'Achat",
+    "stockItem": "Article en Stock",
+    "currentStockLevel": "Niveau de Stock Actuel",
+    "totalQuantity": "Quantité Totale",
+    "totalValue": "Valeur Totale",
+    "byWarehouse": "Par Entrepôt",
+    "noStockAvailable": "Aucun stock disponible pour cet article",
+    "viewInventory": "Voir l'Inventaire",
+    "creating": "Création...",
+    "updating": "Mise à jour...",
+    "noItemsFound": "Aucun article trouvé. Créez votre premier article pour commencer.",
+    "createItemDescription": "Créer un nouvel article pour la gestion du stock",
+    "updateItemDescription": "Mettre à jour les détails de l'article",
+    "itemCodePlaceholder": "OLIV-FRUIT-001",
+    "itemCodeHint": "Laisser vide pour générer automatiquement",
+    "itemNamePlaceholder": "Olives - Picholine",
+    "descriptionPlaceholder": "Description de l'article",
+    "selectItemGroup": "Sélectionner un groupe d'articles",
+    "selectUnit": "Sélectionner une unité",
+    "itemGroupRequired": "Le groupe d'articles est requis",
+    "unitRequired": "L'unité est requise",
+    "loadingStockLevel": "Chargement du niveau de stock...",
+    "toAddStock": "Pour ajouter du stock :",
+    "createStockEntry": "Créer une Entrée de Stock (Réception de Matériel)",
+    "postEntry": "Valider l'entrée pour mettre à jour les niveaux de stock",
+    "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer",
+    "itemCreated": "Article créé avec succès",
+    "itemUpdated": "Article mis à jour avec succès",
+    "itemDeleted": "Article supprimé avec succès",
+    "noOrganization": "Aucune organisation sélectionnée",
+    "selectItemGroupError": "Veuillez sélectionner un groupe d'articles",
+    "selectUnitError": "Veuillez sélectionner une unité par défaut",
+    "itemGroup": {
+      "create": "Créer un Groupe d'Articles",
+      "createFirst": "Créer le Premier Groupe d'Articles",
+      "createNew": "Créer un Groupe",
+      "title": "Créer un Groupe d'Articles",
+      "description": "Créer un nouveau groupe d'articles pour organiser vos articles",
+      "name": "Nom du Groupe",
+      "code": "Code du Groupe",
+      "groupDescription": "Description",
+      "namePlaceholder": "ex : Cultures, Bétail, Équipement",
+      "codePlaceholder": "Code optionnel",
+      "descriptionPlaceholder": "Description optionnelle",
+      "nameRequired": "Le nom du groupe est requis",
+      "noGroupsFound": "Aucun groupe d'articles trouvé. Créez-en un pour continuer.",
+      "creating": "Création...",
+      "created": "Groupe d'articles créé avec succès"
+    },
+    "unit": {
+      "manage": "Gérer les Unités",
+      "goToSettings": "Aller aux Paramètres des Unités de Travail",
+      "noUnitsFound": "Aucune unité de travail trouvée. Créez d'abord des unités dans les paramètres.",
+      "loadingUnits": "Chargement des unités..."
+    }
   }
 }
+

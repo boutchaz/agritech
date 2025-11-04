@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
 import { useItemSelection } from '@/hooks/useItems';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ interface ItemFormProps {
 }
 
 function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess?: () => void }) {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
   const [groupName, setGroupName] = useState('');
@@ -51,7 +53,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentOrganization || !groupName.trim()) {
-      toast.error('Group name is required');
+      toast.error(t('items.itemGroup.nameRequired'));
       return;
     }
 
@@ -63,7 +65,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
         description: groupDescription.trim() || undefined,
         is_active: true,
       });
-      toast.success('Item group created successfully');
+      toast.success(t('items.itemGroup.created'));
       setGroupName('');
       setGroupCode('');
       setGroupDescription('');
@@ -78,40 +80,40 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent side="right" className="max-w-md">
         <DrawerHeader>
-          <DrawerTitle>Create Item Group</DrawerTitle>
+          <DrawerTitle>{t('items.itemGroup.title')}</DrawerTitle>
           <DrawerDescription>
-            Create a new item group to organize your items
+            {t('items.itemGroup.description')}
           </DrawerDescription>
         </DrawerHeader>
         <form id="item-group-form" onSubmit={handleSubmit} className="space-y-4 px-6 pb-6">
           <div>
-            <Label htmlFor="group_name">Group Name *</Label>
+            <Label htmlFor="group_name">{t('items.itemGroup.name')} *</Label>
             <Input
               id="group_name"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="e.g., Crops, Livestock, Equipment"
+              placeholder={t('items.itemGroup.namePlaceholder')}
               className="mt-1"
               required
             />
           </div>
           <div>
-            <Label htmlFor="group_code">Group Code</Label>
+            <Label htmlFor="group_code">{t('items.itemGroup.code')}</Label>
             <Input
               id="group_code"
               value={groupCode}
               onChange={(e) => setGroupCode(e.target.value)}
-              placeholder="Optional code"
+              placeholder={t('items.itemGroup.codePlaceholder')}
               className="mt-1"
             />
           </div>
           <div>
-            <Label htmlFor="group_description">Description</Label>
+            <Label htmlFor="group_description">{t('items.itemGroup.groupDescription')}</Label>
             <Input
               id="group_description"
               value={groupDescription}
               onChange={(e) => setGroupDescription(e.target.value)}
-              placeholder="Optional description"
+              placeholder={t('items.itemGroup.descriptionPlaceholder')}
               className="mt-1"
             />
           </div>
@@ -123,9 +125,9 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
             onClick={() => onOpenChange(false)}
             disabled={createItemGroup.isPending}
           >
-            Cancel
+            {t('app.cancel')}
           </Button>
-          <Button 
+          <Button
             type="submit"
             form="item-group-form"
             disabled={createItemGroup.isPending}
@@ -133,10 +135,10 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
             {createItemGroup.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creating...
+                {t('items.itemGroup.creating')}
               </>
             ) : (
-              'Create Group'
+              t('items.itemGroup.createNew')
             )}
           </Button>
         </DrawerFooter>
@@ -146,6 +148,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 }
 
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
   const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups();
@@ -278,30 +281,30 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentOrganization) {
-      toast.error('No organization selected');
+      toast.error(t('items.noOrganization'));
       return;
     }
 
     if (!formData.item_group_id) {
-      toast.error('Please select an item group');
+      toast.error(t('items.selectItemGroupError'));
       return;
     }
 
     if (!formData.default_unit) {
-      toast.error('Please select a default unit');
+      toast.error(t('items.selectUnitError'));
       return;
     }
 
     try {
       if (item) {
         await updateItem.mutateAsync({ itemId: item.id, input: formData });
-        toast.success('Item updated successfully');
+        toast.success(t('items.itemUpdated'));
       } else {
         await createItem.mutateAsync({
           ...formData,
           organization_id: currentOrganization.id,
         } as CreateItemInput);
-        toast.success('Item created successfully');
+        toast.success(t('items.itemCreated'));
       }
       onOpenChange(false);
     } catch (error: any) {
@@ -313,38 +316,38 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{item ? 'Edit Item' : 'Create Item'}</DialogTitle>
+          <DialogTitle>{item ? t('items.editItem') : t('items.createItem')}</DialogTitle>
           <DialogDescription>
-            {item ? 'Update item details' : 'Create a new item for stock management'}
+            {item ? t('items.updateItemDescription') : t('items.createItemDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="item_code">Item Code *</Label>
+              <Label htmlFor="item_code">{t('items.itemCode')} *</Label>
               <Input
                 id="item_code"
                 value={formData.item_code}
                 onChange={(e) => setFormData({ ...formData, item_code: e.target.value })}
-                placeholder="OLIV-FRUIT-001"
+                placeholder={t('items.itemCodePlaceholder')}
                 disabled={!!item} // Don't allow editing code after creation
                 className="mt-1"
               />
               {!item && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Leave empty to auto-generate
+                  {t('items.itemCodeHint')}
                 </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="item_name">Item Name *</Label>
+              <Label htmlFor="item_name">{t('items.itemName')} *</Label>
               <Input
                 id="item_name"
                 value={formData.item_name}
                 onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                placeholder="Olives - Picholine"
+                placeholder={t('items.itemNamePlaceholder')}
                 className="mt-1"
                 required
               />
@@ -353,7 +356,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label htmlFor="item_group_id">Item Group *</Label>
+              <Label htmlFor="item_group_id">{t('items.itemGroup')} *</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -362,13 +365,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 className="h-auto py-1 px-2 text-xs"
               >
                 <Plus className="w-3 h-3 mr-1" />
-                Create Group
+                {t('items.itemGroup.createNew')}
               </Button>
             </div>
             {itemGroups.length === 0 ? (
               <div className="mt-1 p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  No item groups found. Create one to continue.
+                  {t('items.itemGroup.noGroupsFound')}
                 </p>
                 <Button
                   type="button"
@@ -377,7 +380,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   onClick={() => setShowGroupForm(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Create First Item Group
+                  {t('items.itemGroup.createFirst')}
                 </Button>
               </div>
             ) : (
@@ -386,7 +389,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 onValueChange={(value) => setFormData({ ...formData, item_group_id: value })}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select item group" />
+                  <SelectValue placeholder={t('items.selectItemGroup')} />
                 </SelectTrigger>
                 <SelectContent>
                   {itemGroups.map((group) => (
@@ -398,17 +401,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               </Select>
             )}
             {!formData.item_group_id && itemGroups.length > 0 && (
-              <p className="text-xs text-red-600 mt-1">Item group is required</p>
+              <p className="text-xs text-red-600 mt-1">{t('items.itemGroupRequired')}</p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('items.description')}</Label>
             <Input
               id="description"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Item description"
+              placeholder={t('items.descriptionPlaceholder')}
               className="mt-1"
             />
           </div>
@@ -416,7 +419,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label htmlFor="default_unit">Default Unit *</Label>
+                <Label htmlFor="default_unit">{t('items.defaultUnit')} *</Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -428,13 +431,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   className="h-auto py-1 px-2 text-xs"
                 >
                   <ExternalLink className="w-3 h-3 mr-1" />
-                  Manage Units
+                  {t('items.unit.manage')}
                 </Button>
               </div>
               {workUnits.length === 0 ? (
                 <div className="mt-1 p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    No work units found. Create units in settings first.
+                    {t('items.unit.noUnitsFound')}
                   </p>
                   <Button
                     type="button"
@@ -446,7 +449,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                     }}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Go to Work Units Settings
+                    {t('items.unit.goToSettings')}
                   </Button>
                 </div>
               ) : (
@@ -462,12 +465,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   }}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select unit" />
+                    <SelectValue placeholder={t('items.selectUnit')} />
                   </SelectTrigger>
                   <SelectContent>
                     {workUnitsLoading ? (
                       <SelectItem value="_loading" disabled>
-                        Loading units...
+                        {t('items.unit.loadingUnits')}
                       </SelectItem>
                     ) : (
                       workUnits.map((unit) => (
@@ -481,12 +484,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </Select>
               )}
               {!formData.default_unit && workUnits.length > 0 && (
-                <p className="text-xs text-red-600 mt-1">Unit is required</p>
+                <p className="text-xs text-red-600 mt-1">{t('items.unitRequired')}</p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="standard_rate">Standard Rate</Label>
+              <Label htmlFor="standard_rate">{t('items.standardRate')}</Label>
               <Input
                 id="standard_rate"
                 type="number"
@@ -506,7 +509,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 checked={formData.is_active ?? true}
                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
               />
-              <span className="text-sm">Active</span>
+              <span className="text-sm">{t('items.active')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -514,7 +517,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 checked={formData.is_sales_item ?? true}
                 onChange={(e) => setFormData({ ...formData, is_sales_item: e.target.checked })}
               />
-              <span className="text-sm">Sales Item</span>
+              <span className="text-sm">{t('items.salesItem')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -522,7 +525,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 checked={formData.is_purchase_item ?? true}
                 onChange={(e) => setFormData({ ...formData, is_purchase_item: e.target.checked })}
               />
-              <span className="text-sm">Purchase Item</span>
+              <span className="text-sm">{t('items.purchaseItem')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -530,7 +533,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 checked={formData.is_stock_item ?? true}
                 onChange={(e) => setFormData({ ...formData, is_stock_item: e.target.checked })}
               />
-              <span className="text-sm">Stock Item</span>
+              <span className="text-sm">{t('items.stockItem')}</span>
             </label>
           </div>
 
@@ -539,30 +542,30 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
               <div className="flex items-center gap-2 mb-3">
                 <Package className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Current Stock Level</h4>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white">{t('items.currentStockLevel')}</h4>
               </div>
               {stockLevelLoading ? (
                 <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading stock level...
+                  {t('items.loadingStockLevel')}
                 </div>
               ) : itemStockLevel ? (
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Quantity:</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{t('items.totalQuantity')}:</span>
                     <span className="text-lg font-semibold text-gray-900 dark:text-white">
                       {itemStockLevel.total_quantity.toFixed(3)} {item.default_unit}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Value:</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{t('items.totalValue')}:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       ₪{itemStockLevel.total_value.toFixed(2)}
                     </span>
                   </div>
                   {itemStockLevel.warehouses.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">By Warehouse:</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('items.byWarehouse')}:</p>
                       <div className="space-y-1">
                         {itemStockLevel.warehouses.map((wh) => (
                           <div key={wh.warehouse_id} className="flex items-center justify-between text-xs">
@@ -579,13 +582,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               ) : (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    No stock available for this item
+                    {t('items.noStockAvailable')}
                   </div>
                   <div className="text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="mb-1">To add stock:</p>
+                    <p className="mb-1">{t('items.toAddStock')}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      <li>Create a Stock Entry (Material Receipt)</li>
-                      <li>Post the entry to update stock levels</li>
+                      <li>{t('items.createStockEntry')}</li>
+                      <li>{t('items.postEntry')}</li>
                     </ul>
                   </div>
                 </div>
@@ -600,16 +603,16 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               onClick={() => onOpenChange(false)}
               disabled={createItem.isPending || updateItem.isPending}
             >
-              Cancel
+              {t('app.cancel')}
             </Button>
             <Button type="submit" disabled={createItem.isPending || updateItem.isPending}>
               {createItem.isPending || updateItem.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {item ? 'Updating...' : 'Creating...'}
+                  {item ? t('items.updating') : t('items.creating')}
                 </>
               ) : (
-                item ? 'Update Item' : 'Create Item'
+                item ? t('items.editItem') : t('items.createItem')
               )}
             </Button>
           </div>
@@ -625,6 +628,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 }
 
 export default function ItemManagement() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
   const { data: items = [], isLoading } = useItems({ is_active: true });
@@ -679,13 +683,13 @@ export default function ItemManagement() {
   };
 
   const handleDelete = async (item: Item) => {
-    if (!confirm(`Are you sure you want to delete "${item.item_name}"?`)) {
+    if (!confirm(`${t('items.deleteConfirmation')} "${item.item_name}"?`)) {
       return;
     }
 
     try {
       await deleteItem.mutateAsync(item.id);
-      toast.success('Item deleted successfully');
+      toast.success(t('items.itemDeleted'));
     } catch (error: any) {
       toast.error(`Failed to delete item: ${error.message}`);
     }
@@ -695,14 +699,14 @@ export default function ItemManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Item Management</h1>
+          <h1 className="text-2xl font-bold">{t('items.title')}</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Manage items for stock, sales, and purchasing
+            {t('items.subtitle')}
           </p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Item
+          {t('items.createItem')}
         </Button>
       </div>
 
@@ -716,28 +720,28 @@ export default function ItemManagement() {
             <thead className="bg-gray-50 dark:bg-gray-800 border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Item Code
+                  {t('items.itemCode')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Item Name
+                  {t('items.itemName')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Group
+                  {t('items.group')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Unit
+                  {t('items.defaultUnit')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Standard Rate
+                  {t('items.standardRate')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Stock Level
+                  {t('items.stockLevel')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Status
+                  {t('items.status')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                  Actions
+                  {t('items.actions')}
                 </th>
               </tr>
             </thead>
@@ -745,7 +749,7 @@ export default function ItemManagement() {
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
-                    No items found. Create your first item to get started.
+                    {t('items.noItemsFound')}
                   </td>
                 </tr>
               ) : (
@@ -779,7 +783,7 @@ export default function ItemManagement() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400">No stock</span>
+                          <span className="text-gray-400">{t('items.noStock')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -790,7 +794,7 @@ export default function ItemManagement() {
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
                           }`}
                         >
-                          {item.is_active ? 'Active' : 'Inactive'}
+                          {item.is_active ? t('items.active') : t('items.inactive')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -800,7 +804,7 @@ export default function ItemManagement() {
                             size="sm"
                             onClick={() => navigate({ to: '/stock/inventory/stock' })}
                             className="text-blue-600 hover:text-blue-700"
-                            title="View Inventory"
+                            title={t('items.viewInventory')}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>

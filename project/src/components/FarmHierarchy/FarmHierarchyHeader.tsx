@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Plus,
@@ -40,6 +41,8 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   selectedFarmId,
   onExportFarm
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       {/* Page Title & Quick Stats */}
@@ -51,7 +54,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Hiérarchie des Fermes
+                {t('nav.farmHierarchy')}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {organizationName}
@@ -67,7 +70,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Download className="w-4 h-4" />
-              <span>Exporter cette ferme</span>
+              <span>{t('farmHierarchy.farm.export')}</span>
             </button>
           )}
           {onExportAll && (
@@ -76,7 +79,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Download className="w-4 h-4" />
-              <span>Exporter tout</span>
+              <span>{t('farmHierarchy.farm.exportAll')}</span>
             </button>
           )}
           {onImport && (
@@ -85,7 +88,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Upload className="w-4 h-4" />
-              <span>Importer</span>
+              <span>{t('farmHierarchy.farm.import')}</span>
             </button>
           )}
           <button
@@ -93,7 +96,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4" />
-            <span>Nouvelle Ferme</span>
+            <span>{t('farmHierarchy.farm.newFarm')}</span>
           </button>
         </div>
       </div>
@@ -113,7 +116,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
             {totalFarms}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Fermes totales
+            {t('farmHierarchy.totalFarms')}
           </p>
         </div>
 
@@ -131,7 +134,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
             <span className="text-lg font-normal text-gray-500 ml-1">ha</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Surface totale
+            {t('farmHierarchy.totalArea')}
           </p>
         </div>
 
@@ -142,10 +145,10 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
             </div>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            Export/Import
+            {t('farmHierarchy.exportImport')}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Sauvegarder et restaurer les fermes
+            {t('farmHierarchy.exportImportDescription')}
           </p>
         </div>
       </div>
@@ -157,7 +160,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher une ferme..."
+            placeholder={t('farmHierarchy.farm.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white transition-shadow"
@@ -167,7 +170,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
         {/* Filters Button */}
         <button className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filtres</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('farmHierarchy.filters')}</span>
         </button>
 
         {/* View Mode Toggle */}

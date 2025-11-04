@@ -49,6 +49,207 @@
     "personnel": "الموظفون",
     "tasks": "المهام"
   },
+  "stock": {
+    "title": "إدارة المخزون",
+    "subtitle": "إدارة شاملة للمخزون والإدخالات والمستودعات",
+    "tabs": {
+      "items": "المواد",
+      "inventory": "المخزون والمشتريات",
+      "entries": "قيود المخزون",
+      "reception": "دفعات الاستلام",
+      "reports": "التقارير والتحليلات"
+    }
+  },
+  "dashboard": {
+    "title": "إدارة عمليات المزرعة",
+    "subtitle": "حلل مزارعك وفرقك وأدائك المالي في مكان واحد",
+    "loading": "جاري تحميل المنظمة...",
+    "heroTitle": "إدارة عمليات المزرعة الزراعية",
+    "quickActions": "إجراءات سريعة",
+    "keyFeatures": {
+      "title": "الميزات الرئيسية للمنصة",
+      "subtitle": "قم بتفعيل الوحدات التي تدعم أهدافك اليومية والوصول بسرعة إلى الإجراءات الاستراتيجية",
+      "farmOps": {
+        "title": "عمليات زراعية مُدارة",
+        "description": "شاهد مزارعك وقطعك ومراقبة المحاصيل في الوقت الفعلي لتفعيل الإجراءات الصحيحة",
+        "cta": "فتح إدارة القطع"
+      },
+      "taskExecution": {
+        "title": "مهام وقوى عاملة منسقة",
+        "description": "خطط للعمل، عيّن فرقك وتابع التقدم والوقت المستغرق من شاشة واحدة",
+        "cta": "تخطيط مهمة"
+      },
+      "financialHealth": {
+        "title": "الصحة المالية الموحدة",
+        "description": "اربط الفواتير والمدفوعات والتكاليف حسب المزرعة لتوقع التدفق النقدي والهوامش",
+        "cta": "التحقق من المحاسبة"
+      },
+      "labServices": {
+        "title": "التحليلات والخدمات المتكاملة",
+        "description": "اطلب تحليلات التربة والمختبر من المنصة ودمج النتائج في قراراتك",
+        "cta": "استكشاف التحليلات"
+      }
+    },
+    "unifiedView": {
+      "title": "عرض تشغيلي موحد",
+      "subtitle": "راقب مؤشراتك الرئيسية مباشرةً: المهام ذات الأولوية وبيانات الطقس والأداء المالي"
+    },
+    "widgets": {
+      "noFarmSelected": "حدد مزرعة لعرض القطع والبيانات المرتبطة",
+      "farm": {
+        "title": "المزرعة",
+        "noFarm": "لم يتم تحديد مزرعة",
+        "parcels": "القطع",
+        "surface": "المساحة",
+        "analyses": "التحليلات",
+        "viewParcels": "عرض القطع",
+        "addParcel": "إضافة قطعة"
+      },
+      "soil": {
+        "ph": "درجة حموضة التربة"
+      },
+      "climate": {
+        "temperature": "درجة الحرارة"
+      },
+      "irrigation": {
+        "title": "الري",
+        "active": "نشط",
+        "stopped": "متوقف",
+        "sector": "القطاع",
+        "start": "البداية",
+        "duration": "المدة"
+      },
+      "maintenance": {
+        "title": "الصيانة",
+        "inProgress": "قيد التنفيذ",
+        "start": "البداية",
+        "expectedEnd": "النهاية المتوقعة"
+      },
+      "production": {
+        "title": "تحليل المحصول",
+        "chartComing": "الرسم البياني قريباً"
+      },
+      "financial": {
+        "title": "البيانات المالية",
+        "chartComing": "الرسم البياني قريباً"
+      },
+      "alerts": {
+        "title": "تنبيهات المخزون",
+        "lowStock": "مخزون منخفض"
+      }
+    }
+  },
+  "profitability": {
+    "title": "الربحية",
+    "loading": "جاري تحميل الربحية...",
+    "filters": {
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية"
+    },
+    "buttons": {
+      "addCost": "تكلفة",
+      "addRevenue": "إيراد"
+    },
+    "summary": {
+      "totalCosts": "إجمالي التكاليف",
+      "totalRevenue": "إجمالي الإيرادات",
+      "netProfit": "صافي الربح",
+      "margin": "الهامش"
+    },
+    "costBreakdown": {
+      "title": "تفصيل التكاليف"
+    },
+    "recentTransactions": {
+      "costs": "التكاليف الأخيرة",
+      "revenues": "الإيرادات الأخيرة",
+      "noCosts": "لا توجد تكاليف مسجلة",
+      "noRevenues": "لا توجد إيرادات مسجلة"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "accounts": "الحسابات",
+      "costCenters": "مراكز التكلفة",
+      "journal": "القيود المحاسبية",
+      "trends": "الاتجاهات"
+    },
+    "overview": {
+      "title": "النظرة المالية العامة",
+      "legacyCosts": "التكاليف القديمة",
+      "legacyRevenue": "الإيرادات القديمة",
+      "ledgerExpenses": "المصروفات المحاسبية",
+      "ledgerRevenue": "الإيرادات المحاسبية"
+    },
+    "accounts": {
+      "title": "التفصيل حسب دليل الحسابات",
+      "noData": "لا توجد بيانات محاسبية متاحة لهذه الفترة",
+      "code": "الرمز",
+      "name": "اسم الحساب",
+      "type": "النوع",
+      "debit": "مدين",
+      "credit": "دائن",
+      "net": "الصافي"
+    },
+    "costCenters": {
+      "title": "الربحية حسب مركز التكلفة",
+      "noData": "لا توجد بيانات مركز تكلفة متاحة",
+      "expenses": "المصروفات",
+      "revenue": "الإيرادات"
+    },
+    "journal": {
+      "title": "القيود المحاسبية المرتبطة",
+      "noEntries": "لم يتم العثور على قيود محاسبية",
+      "account": "الحساب",
+      "debit": "مدين",
+      "credit": "دائن"
+    },
+    "trends": {
+      "title": "اتجاهات الربحية الشهرية",
+      "noData": "لا توجد بيانات اتجاه متاحة",
+      "costs": "التكاليف",
+      "revenue": "الإيرادات"
+    },
+    "addCost": {
+      "title": "إضافة تكلفة",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "description": "الوصف",
+      "placeholder": "مثال: شراء البذور",
+      "adding": "جاري الإضافة...",
+      "add": "إضافة",
+      "cancel": "إلغاء",
+      "types": {
+        "materials": "مواد",
+        "labor": "عمالة",
+        "utilities": "مرافق",
+        "equipment": "معدات",
+        "other": "أخرى"
+      },
+      "createJournalEntry": "إنشاء قيد محاسبي",
+      "journalEntryHelp": "إنشاء قيد تلقائي في دفتر الأستاذ المحاسبي"
+    },
+    "addRevenue": {
+      "title": "إضافة إيراد",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "quantity": "الكمية",
+      "unit": "الوحدة",
+      "unitPlaceholder": "كجم، أطنان...",
+      "description": "الوصف",
+      "placeholder": "مثال: حصاد الزيتون",
+      "adding": "جاري الإضافة...",
+      "add": "إضافة",
+      "cancel": "إلغاء",
+      "types": {
+        "harvest": "حصاد",
+        "subsidy": "دعم",
+        "other": "أخرى"
+      },
+      "createJournalEntry": "إنشاء قيد محاسبي",
+      "journalEntryHelp": "إنشاء قيد تلقائي في دفتر الأستاذ المحاسبي"
+    }
+  },
   "auth": {
     "login": "تسجيل الدخول",
     "logout": "تسجيل الخروج",
@@ -86,5 +287,214 @@
     "thisMonth": "هذا الشهر",
     "thisYear": "هذا العام",
     "custom": "مخصص"
+  },
+  "farmHierarchy": {
+    "title": "إدارة المزارع والقطع",
+    "subtitle": "نظم وأدر مزارعك وقطعك",
+    "loading": "جاري تحميل المزارع...",
+    "accessRequired": "مطلوب وصول",
+    "loginRequired": "يرجى تسجيل الدخول لإدارة تسلسل المزارع.",
+    "backToHierarchy": "العودة إلى التسلسل",
+    "organizationLoading": "جاري تحميل المنظمة...",
+    "totalFarms": "إجمالي المزارع",
+    "totalArea": "المساحة الإجمالية",
+    "filters": "الفلاتر",
+    "exportImport": "تصدير/استيراد",
+    "exportImportDescription": "حفظ واستعادة المزارع",
+    "viewMode": {
+      "grid": "شبكة",
+      "list": "قائمة"
+    },
+    "farm": {
+      "create": "إنشاء مزرعة",
+      "createNew": "إنشاء مزرعة جديدة",
+      "newFarm": "مزرعة جديدة",
+      "edit": "تعديل المزرعة",
+      "delete": "حذف المزرعة",
+      "name": "اسم المزرعة",
+      "namePlaceholder": "مثال: المزرعة الرئيسية",
+      "type": "نوع المزرعة",
+      "main": "رئيسية",
+      "sub": "فرعية",
+      "manager": "المدير",
+      "noManager": "لا يوجد مدير",
+      "size": "الحجم",
+      "area": "المساحة",
+      "status": "الحالة",
+      "active": "نشطة",
+      "inactive": "غير نشطة",
+      "subFarms": "المزارع الفرعية",
+      "parcels": "القطع",
+      "creating": "جاري الإنشاء...",
+      "updating": "جاري التحديث...",
+      "viewDetails": "عرض التفاصيل",
+      "manageParcels": "إدارة القطع",
+      "manageRoles": "إدارة الأدوار",
+      "export": "تصدير المزرعة",
+      "exportAll": "تصدير الكل",
+      "import": "استيراد",
+      "searchPlaceholder": "البحث عن مزرعة",
+      "deleteConfirm": "تأكيد حذف المزرعة",
+      "deleteWarning": "هل أنت متأكد من رغبتك في حذف المزرعة",
+      "deleteIrreversible": "هذا الإجراء غير قابل للتراجع وسيحذف جميع البيانات المرتبطة بهذه المزرعة.",
+      "relatedData": "البيانات التي سيتم حذفها نهائياً:",
+      "analyzing": "جاري تحليل البيانات المرتبطة...",
+      "deleted": "تم حذف المزرعة بنجاح",
+      "noFarms": "لا توجد مزارع",
+      "noFarmsFound": "لم يتم العثور على مزارع",
+      "noFarmsMessage": "ابدأ بإنشاء مزرعتك الأولى",
+      "noSearchResults": "لا توجد مزارع تطابق بحثك",
+      "validation": {
+        "nameRequired": "يجب أن يحتوي الاسم على حرفين على الأقل"
+      }
+    },
+    "details": {
+      "title": "تفاصيل المزرعة",
+      "information": "معلومات المزرعة",
+      "location": "الموقع",
+      "manager": "المدير",
+      "createdAt": "تاريخ الإنشاء",
+      "description": "الوصف",
+      "parcelsSummary": "القطع",
+      "moreItems": "قطع أخرى",
+      "editFarm": "تعديل المزرعة",
+      "loading": "جاري التحميل..."
+    },
+    "parcel": {
+      "management": "إدارة القطع",
+      "add": "إضافة قطعة",
+      "create": "إنشاء قطعة",
+      "edit": "تعديل القطعة",
+      "new": "قطعة جديدة",
+      "delete": "حذف القطعة",
+      "name": "اسم القطعة",
+      "namePlaceholder": "مثال: القطعة الشمالية",
+      "description": "الوصف",
+      "descriptionPlaceholder": "وصف القطعة...",
+      "area": "المساحة (هكتار)",
+      "areaPlaceholder": "0.00",
+      "cropCategory": "فئة المحصول",
+      "cropType": "نوع المحصول",
+      "variety": "الصنف",
+      "plantingSystem": "نظام الزراعة",
+      "spacing": "التباعد",
+      "spacingPlaceholder": "مثال: 4×1.5",
+      "densityPerHectare": "الكثافة (نبات/هكتار)",
+      "plantCount": "إجمالي عدد النباتات",
+      "plantingDate": "تاريخ الزراعة",
+      "plantingYear": "سنة الزراعة",
+      "rootstock": "الأصل",
+      "rootstockPlaceholder": "مثال: GF677",
+      "soilType": "نوع التربة",
+      "soilTypePlaceholder": "مثال: طينية",
+      "irrigationType": "نوع الري",
+      "saving": "جاري الحفظ...",
+      "update": "تحديث",
+      "clickForDetails": "انقر لعرض التفاصيل",
+      "deleteConfirm": "تأكيد الحذف",
+      "deleteWarning": "هل أنت متأكد من رغبتك في حذف القطعة",
+      "deleteIrreversibleWarning": "سيؤدي هذا الإجراء أيضاً إلى حذف جميع التحليلات والمهام والبيانات الأخرى المرتبطة بهذه القطعة. هذا الإجراء غير قابل للتراجع.",
+      "deleting": "جاري الحذف...",
+      "noParcels": "لم يتم إنشاء قطع",
+      "sections": {
+        "basicInfo": "المعلومات الأساسية",
+        "cropInfo": "المحصول والزراعة",
+        "plantingSystem": "نظام الزراعة",
+        "additionalInfo": "معلومات إضافية"
+      },
+      "categories": {
+        "trees": "أشجار مثمرة",
+        "cereals": "حبوب",
+        "vegetables": "خضروات",
+        "other": "أخرى"
+      },
+      "irrigation": {
+        "drip": "الري بالتنقيط",
+        "sprinkler": "الرش",
+        "gravity": "الجاذبية",
+        "pivot": "المحوري",
+        "submersion": "الغمر",
+        "rainfed": "البعلي"
+      },
+      "validation": {
+        "nameRequired": "يجب أن يحتوي الاسم على حرفين على الأقل",
+        "areaPositive": "يجب أن تكون المساحة موجبة"
+      }
+    }
+  },
+  "items": {
+    "title": "إدارة المواد",
+    "subtitle": "إدارة المواد للمخزون والمبيعات والمشتريات",
+    "createItem": "إنشاء مادة",
+    "editItem": "تعديل المادة",
+    "deleteItem": "حذف المادة",
+    "itemCode": "رمز المادة",
+    "itemName": "اسم المادة",
+    "description": "الوصف",
+    "group": "مجموعة المواد",
+    "defaultUnit": "الوحدة الافتراضية",
+    "standardRate": "السعر القياسي",
+    "stockLevel": "مستوى المخزون",
+    "status": "الحالة",
+    "actions": "الإجراءات",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "noStock": "لا يوجد مخزون",
+    "salesItem": "مادة بيع",
+    "purchaseItem": "مادة شراء",
+    "stockItem": "مادة مخزون",
+    "currentStockLevel": "مستوى المخزون الحالي",
+    "totalQuantity": "الكمية الإجمالية",
+    "totalValue": "القيمة الإجمالية",
+    "byWarehouse": "حسب المستودع",
+    "noStockAvailable": "لا يوجد مخزون متاح لهذه المادة",
+    "viewInventory": "عرض المخزون",
+    "creating": "جاري الإنشاء...",
+    "updating": "جاري التحديث...",
+    "noItemsFound": "لم يتم العثور على مواد. أنشئ المادة الأولى للبدء.",
+    "createItemDescription": "إنشاء مادة جديدة لإدارة المخزون",
+    "updateItemDescription": "تحديث تفاصيل المادة",
+    "itemCodePlaceholder": "OLIV-FRUIT-001",
+    "itemCodeHint": "اتركه فارغاً للإنشاء التلقائي",
+    "itemNamePlaceholder": "زيتون - بيشولين",
+    "descriptionPlaceholder": "وصف المادة",
+    "selectItemGroup": "اختر مجموعة المواد",
+    "selectUnit": "اختر الوحدة",
+    "itemGroupRequired": "مجموعة المواد مطلوبة",
+    "unitRequired": "الوحدة مطلوبة",
+    "loadingStockLevel": "جاري تحميل مستوى المخزون...",
+    "toAddStock": "لإضافة مخزون:",
+    "createStockEntry": "إنشاء قيد مخزون (إيصال مواد)",
+    "postEntry": "ترحيل القيد لتحديث مستويات المخزون",
+    "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف",
+    "itemCreated": "تم إنشاء المادة بنجاح",
+    "itemUpdated": "تم تحديث المادة بنجاح",
+    "itemDeleted": "تم حذف المادة بنجاح",
+    "noOrganization": "لم يتم تحديد منظمة",
+    "selectItemGroupError": "يرجى اختيار مجموعة مواد",
+    "selectUnitError": "يرجى اختيار وحدة افتراضية",
+    "itemGroup": {
+      "create": "إنشاء مجموعة مواد",
+      "createFirst": "إنشاء أول مجموعة مواد",
+      "createNew": "إنشاء مجموعة",
+      "title": "إنشاء مجموعة مواد",
+      "description": "إنشاء مجموعة مواد جديدة لتنظيم موادك",
+      "name": "اسم المجموعة",
+      "code": "رمز المجموعة",
+      "groupDescription": "الوصف",
+      "namePlaceholder": "مثال: محاصيل، ماشية، معدات",
+      "codePlaceholder": "رمز اختياري",
+      "descriptionPlaceholder": "وصف اختياري",
+      "nameRequired": "اسم المجموعة مطلوب",
+      "noGroupsFound": "لم يتم العثور على مجموعات مواد. أنشئ واحدة للمتابعة.",
+      "creating": "جاري الإنشاء...",
+      "created": "تم إنشاء مجموعة المواد بنجاح"
+    },
+    "unit": {
+      "manage": "إدارة الوحدات",
+      "goToSettings": "الانتقال إلى إعدادات وحدات العمل",
+      "noUnitsFound": "لم يتم العثور على وحدات عمل. أنشئ وحدات في الإعدادات أولاً.",
+      "loadingUnits": "جاري تحميل الوحدات..."
+    }
   }
 }

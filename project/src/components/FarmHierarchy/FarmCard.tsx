@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Building2,
   MapPin,
@@ -29,6 +30,7 @@ interface FarmCardProps {
 }
 
 const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewParcels, onDelete }) => {
+  const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
 
   return (
@@ -56,12 +58,10 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
                 </h3>
               </div>
 
-              {farm.manager_name && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {farm.manager_name}
-                </p>
-              )}
+              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                {farm.manager_name || t('farmHierarchy.farm.noManager')}
+              </p>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-lg"
                   >
-                    Gérer les rôles
+                    {t('farmHierarchy.farm.manageRoles')}
                   </button>
                 )}
                 {onDelete && (
@@ -97,7 +97,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
                     className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 last:rounded-b-lg flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Supprimer la ferme
+                    {t('farmHierarchy.farm.delete')}
                   </button>
                 )}
               </div>
@@ -111,7 +111,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
             <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 mb-1">
               <MapPin className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">Surface</span>
+              <span className="text-xs font-medium">{t('farmHierarchy.farm.area')}</span>
             </div>
             <p className="text-lg font-semibold text-gray-900 dark:text-white">
               {farm.size}
@@ -124,7 +124,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
               <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 mb-1">
                 <Leaf className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">Parcelles</span>
+                <span className="text-xs font-medium">{t('farmHierarchy.farm.parcels')}</span>
               </div>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {farm.parcels_count}
@@ -140,14 +140,14 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <Leaf className="w-4 h-4" />
-            <span>Parcelles</span>
+            <span>{t('farmHierarchy.farm.parcels')}</span>
           </button>
 
           <button
             onClick={onSelect}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
           >
-            <span>Voir détails</span>
+            <span>{t('farmHierarchy.farm.viewDetails')}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -157,7 +157,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
       {!farm.is_active && (
         <div className="absolute top-3 right-3">
           <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
-            Inactive
+            {t('farmHierarchy.farm.inactive')}
           </span>
         </div>
       )}

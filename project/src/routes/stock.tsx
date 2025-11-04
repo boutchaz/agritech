@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -24,12 +25,14 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { currentOrganization } = useAuth();
   const router = useRouter();
   const { location } = useRouterState();
   const [activeModule, setActiveModule] = useState('stock');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const isRTL = i18n.language === 'ar';
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -37,14 +40,18 @@ const AppContent: React.FC = () => {
   };
 
   const tabs = useMemo(
-    () => [
-      { value: 'items', label: 'Items', to: '/stock/items' },
-      { value: 'inventory', label: 'Inventory & Purchases', to: '/stock/inventory' },
-      { value: 'entries', label: 'Stock Entries', to: '/stock/entries' },
-      { value: 'reception', label: 'Reception Batches', to: '/stock/reception' },
-      { value: 'reports', label: 'Reports & Analytics', to: '/stock/reports' },
-    ],
-    [],
+    () => {
+      const tabItems = [
+        { value: 'items', label: t('stock.tabs.items'), to: '/stock/items' },
+        { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory' },
+        { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries' },
+        { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
+        { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
+      ];
+      // Reverse tabs for RTL languages so they flow from right to left
+      return isRTL ? [...tabItems].reverse() : tabItems;
+    },
+    [t, isRTL],
   );
 
   const activeTab = useMemo(() => {
@@ -68,14 +75,14 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -87,10 +94,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Package, label: 'Stock Management', isActive: true }
+            { icon: Package, label: t('stock.title'), isActive: true }
           ]}
-          title="Stock Management"
-          subtitle="Comprehensive inventory, entries, and warehouse management"
+          title={t('stock.title')}
+          subtitle={t('stock.subtitle')}
         />
 
         <div className="p-6">

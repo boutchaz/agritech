@@ -2,10 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Suspense, lazy } from 'react'
 import { useParcelById } from '../hooks/useParcelsQuery'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const ParcelProfitability = lazy(() => import('../components/ParcelProfitability'));
 
 const ParcelProfitabilityPage = () => {
+  const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
 
@@ -25,7 +27,7 @@ const ParcelProfitabilityPage = () => {
         fallback={
           <div className="flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement de la rentabilité...</span>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('profitability.loading')}</span>
           </div>
         }
       >

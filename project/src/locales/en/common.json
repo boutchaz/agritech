@@ -49,6 +49,207 @@
     "personnel": "Personnel",
     "tasks": "Tasks"
   },
+  "stock": {
+    "title": "Stock Management",
+    "subtitle": "Comprehensive inventory, entries, and warehouse management",
+    "tabs": {
+      "items": "Items",
+      "inventory": "Inventory & Purchases",
+      "entries": "Stock Entries",
+      "reception": "Reception Batches",
+      "reports": "Reports & Analytics"
+    }
+  },
+  "dashboard": {
+    "title": "Farm Operations Dashboard",
+    "subtitle": "Analyze your farms, teams, and financial performance in one place",
+    "loading": "Loading organization...",
+    "heroTitle": "Farm operations management",
+    "quickActions": "Quick actions",
+    "keyFeatures": {
+      "title": "Platform key features",
+      "subtitle": "Activate the modules that support your daily goals and quickly access strategic actions",
+      "farmOps": {
+        "title": "Managed farm operations",
+        "description": "View your farms, parcels and crop monitoring in real time to trigger the right actions",
+        "cta": "Open parcel management"
+      },
+      "taskExecution": {
+        "title": "Coordinated tasks and workforce",
+        "description": "Plan work, assign your teams and track progress and time spent from a single screen",
+        "cta": "Plan a task"
+      },
+      "financialHealth": {
+        "title": "Consolidated financial health",
+        "description": "Link invoices, payments and costs by farm to anticipate cash flow and margins",
+        "cta": "Check accounting"
+      },
+      "labServices": {
+        "title": "Integrated analyses & services",
+        "description": "Order your soil and lab analyses from the platform and integrate results into your decisions",
+        "cta": "Explore analyses"
+      }
+    },
+    "unifiedView": {
+      "title": "Unified operational view",
+      "subtitle": "Monitor your key indicators live: priority tasks, weather data and financial performance"
+    },
+    "widgets": {
+      "noFarmSelected": "Select a farm to display parcels and associated data",
+      "farm": {
+        "title": "Farm",
+        "noFarm": "No farm selected",
+        "parcels": "Parcels",
+        "surface": "Surface",
+        "analyses": "Analyses",
+        "viewParcels": "View parcels",
+        "addParcel": "Add a parcel"
+      },
+      "soil": {
+        "ph": "Soil pH"
+      },
+      "climate": {
+        "temperature": "Temperature"
+      },
+      "irrigation": {
+        "title": "Irrigation",
+        "active": "Active",
+        "stopped": "Stopped",
+        "sector": "Sector",
+        "start": "Start",
+        "duration": "Duration"
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "inProgress": "in progress",
+        "start": "Start",
+        "expectedEnd": "Expected end"
+      },
+      "production": {
+        "title": "Yield analysis",
+        "chartComing": "Chart coming"
+      },
+      "financial": {
+        "title": "Financial data",
+        "chartComing": "Chart coming"
+      },
+      "alerts": {
+        "title": "Stock alerts",
+        "lowStock": "Low stock"
+      }
+    }
+  },
+  "profitability": {
+    "title": "Profitability",
+    "loading": "Loading profitability...",
+    "filters": {
+      "startDate": "Start date",
+      "endDate": "End date"
+    },
+    "buttons": {
+      "addCost": "Cost",
+      "addRevenue": "Revenue"
+    },
+    "summary": {
+      "totalCosts": "Total Costs",
+      "totalRevenue": "Total Revenue",
+      "netProfit": "Net Profit",
+      "margin": "Margin"
+    },
+    "costBreakdown": {
+      "title": "Cost Breakdown"
+    },
+    "recentTransactions": {
+      "costs": "Recent Costs",
+      "revenues": "Recent Revenues",
+      "noCosts": "No costs recorded",
+      "noRevenues": "No revenues recorded"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "accounts": "Accounts",
+      "costCenters": "Cost Centers",
+      "journal": "Journal Entries",
+      "trends": "Trends"
+    },
+    "overview": {
+      "title": "Financial Overview",
+      "legacyCosts": "Legacy Costs",
+      "legacyRevenue": "Legacy Revenue",
+      "ledgerExpenses": "Ledger Expenses",
+      "ledgerRevenue": "Ledger Revenue"
+    },
+    "accounts": {
+      "title": "Breakdown by Chart of Accounts",
+      "noData": "No ledger data available for this period",
+      "code": "Code",
+      "name": "Account Name",
+      "type": "Type",
+      "debit": "Debit",
+      "credit": "Credit",
+      "net": "Net"
+    },
+    "costCenters": {
+      "title": "Profitability by Cost Center",
+      "noData": "No cost center data available",
+      "expenses": "Expenses",
+      "revenue": "Revenue"
+    },
+    "journal": {
+      "title": "Related Journal Entries",
+      "noEntries": "No journal entries found",
+      "account": "Account",
+      "debit": "Debit",
+      "credit": "Credit"
+    },
+    "trends": {
+      "title": "Monthly Profitability Trends",
+      "noData": "No trend data available",
+      "costs": "Costs",
+      "revenue": "Revenue"
+    },
+    "addCost": {
+      "title": "Add a Cost",
+      "type": "Type",
+      "amount": "Amount",
+      "date": "Date",
+      "description": "Description",
+      "placeholder": "Ex: Seed purchase",
+      "adding": "Adding...",
+      "add": "Add",
+      "cancel": "Cancel",
+      "types": {
+        "materials": "Materials",
+        "labor": "Labor",
+        "utilities": "Utilities",
+        "equipment": "Equipment",
+        "other": "Other"
+      },
+      "createJournalEntry": "Create journal entry",
+      "journalEntryHelp": "Automatically create a journal entry in the accounting ledger"
+    },
+    "addRevenue": {
+      "title": "Add a Revenue",
+      "type": "Type",
+      "amount": "Amount",
+      "date": "Date",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPlaceholder": "kg, tonnes...",
+      "description": "Description",
+      "placeholder": "Ex: Olive harvest",
+      "adding": "Adding...",
+      "add": "Add",
+      "cancel": "Cancel",
+      "types": {
+        "harvest": "Harvest",
+        "subsidy": "Subsidy",
+        "other": "Other"
+      },
+      "createJournalEntry": "Create journal entry",
+      "journalEntryHelp": "Automatically create a journal entry in the accounting ledger"
+    }
+  },
   "auth": {
     "login": "Login",
     "logout": "Logout",
@@ -86,6 +287,140 @@
     "thisMonth": "This month",
     "thisYear": "This year",
     "custom": "Custom"
+  },
+  "farmHierarchy": {
+    "title": "Farm and Parcel Management",
+    "subtitle": "Organize and manage your farms and parcels",
+    "loading": "Loading farms...",
+    "accessRequired": "Access Required",
+    "loginRequired": "Please log in to manage the farm hierarchy.",
+    "backToHierarchy": "Back to hierarchy",
+    "organizationLoading": "Loading organization...",
+    "totalFarms": "Total Farms",
+    "totalArea": "Total Area",
+    "filters": "Filters",
+    "exportImport": "Export/Import",
+    "exportImportDescription": "Save and restore farms",
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "farm": {
+      "create": "Create a farm",
+      "createNew": "Create a new farm",
+      "newFarm": "New Farm",
+      "edit": "Edit farm",
+      "delete": "Delete farm",
+      "name": "Farm name",
+      "namePlaceholder": "Ex: Main Farm",
+      "type": "Farm type",
+      "main": "Main",
+      "sub": "Sub",
+      "manager": "Manager",
+      "noManager": "No Manager",
+      "size": "Size",
+      "area": "Area",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "subFarms": "Sub-farms",
+      "parcels": "Parcels",
+      "creating": "Creating...",
+      "updating": "Updating...",
+      "viewDetails": "View details",
+      "manageParcels": "Manage parcels",
+      "manageRoles": "Manage roles",
+      "export": "Export farm",
+      "exportAll": "Export all",
+      "import": "Import",
+      "searchPlaceholder": "Search for a farm",
+      "deleteConfirm": "Confirm farm deletion",
+      "deleteWarning": "Are you sure you want to delete the farm",
+      "deleteIrreversible": "This action is irreversible and will delete all data associated with this farm.",
+      "relatedData": "Data to be permanently deleted:",
+      "analyzing": "Analyzing related data...",
+      "deleted": "Farm deleted successfully",
+      "noFarms": "No farms",
+      "noFarmsFound": "No farms found",
+      "noFarmsMessage": "Start by creating your first farm",
+      "noSearchResults": "No farms match your search",
+      "validation": {
+        "nameRequired": "Name must contain at least 2 characters"
+      }
+    },
+    "details": {
+      "title": "Farm Details",
+      "information": "Farm Information",
+      "location": "Location",
+      "manager": "Manager",
+      "createdAt": "Created on",
+      "description": "Description",
+      "parcelsSummary": "Parcels",
+      "moreItems": "more items",
+      "editFarm": "Edit farm",
+      "loading": "Loading..."
+    },
+    "parcel": {
+      "management": "Parcel Management",
+      "add": "Add a parcel",
+      "create": "Create parcel",
+      "edit": "Edit parcel",
+      "new": "New parcel",
+      "delete": "Delete parcel",
+      "name": "Parcel name",
+      "namePlaceholder": "Ex: North Parcel",
+      "description": "Description",
+      "descriptionPlaceholder": "Parcel description...",
+      "area": "Area (ha)",
+      "areaPlaceholder": "0.00",
+      "cropCategory": "Crop category",
+      "cropType": "Crop type",
+      "variety": "Variety",
+      "plantingSystem": "Planting system",
+      "spacing": "Spacing",
+      "spacingPlaceholder": "Ex: 4x1.5",
+      "densityPerHectare": "Density (plants/ha)",
+      "plantCount": "Total number of plants",
+      "plantingDate": "Planting date",
+      "plantingYear": "Planting year",
+      "rootstock": "Rootstock",
+      "rootstockPlaceholder": "Ex: GF677",
+      "soilType": "Soil type",
+      "soilTypePlaceholder": "Ex: Clay",
+      "irrigationType": "Irrigation type",
+      "saving": "Saving...",
+      "update": "Update",
+      "clickForDetails": "Click to view details",
+      "deleteConfirm": "Confirm deletion",
+      "deleteWarning": "Are you sure you want to delete the parcel",
+      "deleteIrreversibleWarning": "This action will also delete all analyses, tasks and other data associated with this parcel. This action is irreversible.",
+      "deleting": "Deleting...",
+      "noParcels": "No parcels created",
+      "sections": {
+        "basicInfo": "Basic information",
+        "cropInfo": "Crop and planting",
+        "plantingSystem": "Planting system",
+        "additionalInfo": "Additional information"
+      },
+      "categories": {
+        "trees": "Fruit trees",
+        "cereals": "Cereals",
+        "vegetables": "Vegetables",
+        "other": "Other"
+      },
+      "irrigation": {
+        "drip": "Drip irrigation",
+        "sprinkler": "Sprinkler",
+        "gravity": "Gravity",
+        "pivot": "Pivot",
+        "submersion": "Submersion",
+        "rainfed": "Rainfed (bour)"
+      },
+      "validation": {
+        "nameRequired": "Name must contain at least 2 characters",
+        "areaPositive": "Area must be positive"
+      }
+    }
   },
   "landing": {
     "hero": {
@@ -165,6 +500,81 @@
       "terms": "Terms of Service",
       "legalNotice": "Legal Notice",
       "copyright": "All rights reserved."
+    }
+  },
+  "items": {
+    "title": "Item Management",
+    "subtitle": "Manage items for stock, sales, and purchasing",
+    "createItem": "Create Item",
+    "editItem": "Edit Item",
+    "deleteItem": "Delete Item",
+    "itemCode": "Item Code",
+    "itemName": "Item Name",
+    "description": "Description",
+    "group": "Group",
+    "defaultUnit": "Default Unit",
+    "standardRate": "Standard Rate",
+    "stockLevel": "Stock Level",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noStock": "No stock",
+    "salesItem": "Sales Item",
+    "purchaseItem": "Purchase Item",
+    "stockItem": "Stock Item",
+    "currentStockLevel": "Current Stock Level",
+    "totalQuantity": "Total Quantity",
+    "totalValue": "Total Value",
+    "byWarehouse": "By Warehouse",
+    "noStockAvailable": "No stock available for this item",
+    "viewInventory": "View Inventory",
+    "creating": "Creating...",
+    "updating": "Updating...",
+    "noItemsFound": "No items found. Create your first item to get started.",
+    "createItemDescription": "Create a new item for stock management",
+    "updateItemDescription": "Update item details",
+    "itemCodePlaceholder": "OLIV-FRUIT-001",
+    "itemCodeHint": "Leave empty to auto-generate",
+    "itemNamePlaceholder": "Olives - Picholine",
+    "descriptionPlaceholder": "Item description",
+    "selectItemGroup": "Select item group",
+    "selectUnit": "Select unit",
+    "itemGroupRequired": "Item group is required",
+    "unitRequired": "Unit is required",
+    "loadingStockLevel": "Loading stock level...",
+    "toAddStock": "To add stock:",
+    "createStockEntry": "Create a Stock Entry (Material Receipt)",
+    "postEntry": "Post the entry to update stock levels",
+    "deleteConfirmation": "Are you sure you want to delete",
+    "itemCreated": "Item created successfully",
+    "itemUpdated": "Item updated successfully",
+    "itemDeleted": "Item deleted successfully",
+    "noOrganization": "No organization selected",
+    "selectItemGroupError": "Please select an item group",
+    "selectUnitError": "Please select a default unit",
+    "itemGroup": {
+      "create": "Create Item Group",
+      "createFirst": "Create First Item Group",
+      "createNew": "Create Group",
+      "title": "Create Item Group",
+      "description": "Create a new item group to organize your items",
+      "name": "Group Name",
+      "code": "Group Code",
+      "groupDescription": "Description",
+      "namePlaceholder": "e.g., Crops, Livestock, Equipment",
+      "codePlaceholder": "Optional code",
+      "descriptionPlaceholder": "Optional description",
+      "nameRequired": "Group name is required",
+      "noGroupsFound": "No item groups found. Create one to continue.",
+      "creating": "Creating...",
+      "created": "Item group created successfully"
+    },
+    "unit": {
+      "manage": "Manage Units",
+      "goToSettings": "Go to Work Units Settings",
+      "noUnitsFound": "No work units found. Create units in settings first.",
+      "loadingUnits": "Loading units..."
     }
   }
 }

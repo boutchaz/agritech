@@ -4,8 +4,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { Edit, Leaf, MapPin, Plus, Sprout, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { useSubscription } from '../../hooks/useSubscription';
 import {
   calculatePlantCount,
   getCropTypesByCategory,
@@ -70,11 +70,11 @@ interface ParcelManagementModalProps {
   onClose: () => void;
 }
 
-const parcelSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+const getParcelSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(2, t('farmHierarchy.parcel.validation.nameRequired')),
   description: z.string().optional(),
-  area: z.number().positive('La surface doit être positive'),
-  area_unit: z.string().default('hectares'),
+  area: z.number().positive(t('farmHierarchy.parcel.validation.areaPositive')),
+  area_unit: z.string().optional().default('hectares'),
   crop_category: z.string().optional(),
   crop_type: z.string().optional(),
   variety: z.string().optional(),
@@ -89,17 +89,34 @@ const parcelSchema = z.object({
   irrigation_type: z.string().optional(),
 });
 
-type ParcelFormValues = z.infer<typeof parcelSchema>;
+type ParcelFormValues = {
+  name: string;
+  description?: string;
+  area: number;
+  area_unit?: string;
+  crop_category?: string;
+  crop_type?: string;
+  variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
+  planting_date?: string;
+  planting_year?: number;
+  rootstock?: string;
+  soil_type?: string;
+  irrigation_type?: string;
+};
 
 const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   farmId,
   farmName,
   onClose
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: subscription } = useSubscription();
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [parcelToDelete, setParcelToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -112,7 +129,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     watch,
     formState: { errors }
   } = useForm<ParcelFormValues>({
-    resolver: zodResolver(parcelSchema),
+    resolver: zodResolver(getParcelSchema(t)),
     defaultValues: {
       area_unit: 'hectares'
     }
@@ -228,7 +245,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     },
     onError: (error: any) => {
       console.error('Error saving parcel:', error);
-      alert('Erreur lors de la sauvegarde de la parcelle');
+      alert(t('app.error') + ': ' + (error.message || ''));
     }
   });
 
@@ -346,10 +363,10 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              Gestion des Parcelles
+              {t('farmHierarchy.parcel.management')}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
-              {farmName} • {parcels.length} parcelle{parcels.length !== 1 ? 's' : ''} • {totalArea.toFixed(2)} ha
+              {farmName} • {parcels.length} {t('farmHierarchy.farm.parcels').toLowerCase()} • {totalArea.toFixed(2)} ha
             </DialogDescription>
           </DialogHeader>
 
@@ -363,7 +380,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                 className="w-full border-dashed border-2 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10"
               >
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">Ajouter une parcelle</span>
+                <span className="font-medium">{t('farmHierarchy.parcel.add')}</span>
               </Button>
             )}
 
@@ -372,7 +389,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
               <Card className="bg-gray-50 dark:bg-gray-900/50">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {editingParcel ? 'Modifier la parcelle' : 'Nouvelle parcelle'}
+                    {editingParcel ? t('farmHierarchy.parcel.edit') : t('farmHierarchy.parcel.new')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -382,7 +399,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                       <div className="flex items-center gap-2">
                         <Sprout className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Informations de base
+                          {t('farmHierarchy.parcel.sections.basicInfo')}
                         </h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -429,12 +446,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField label="Catégorie de culture" htmlFor="crop_category">
-                          <Select value={watch('crop_category') || ''} onValueChange={(value) => setValue('crop_category', value)}>
+                          <Select value={watch('crop_category') || undefined} onValueChange={(value) => setValue('crop_category', value)}>
                             <SelectTrigger id="crop_category">
                               <SelectValue placeholder="Sélectionner..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Sélectionner...</SelectItem>
                               <SelectItem value="trees">Arbres fruitiers</SelectItem>
                               <SelectItem value="cereals">Céréales</SelectItem>
                               <SelectItem value="vegetables">Légumes</SelectItem>
@@ -445,12 +461,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 
                         <FormField label="Type de culture" htmlFor="crop_type">
                           {availableCropTypes.length > 0 ? (
-                            <Select value={watch('crop_type') || ''} onValueChange={(value) => setValue('crop_type', value)}>
+                            <Select value={watch('crop_type') || undefined} onValueChange={(value) => setValue('crop_type', value)}>
                               <SelectTrigger id="crop_type">
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Sélectionner...</SelectItem>
                                 {availableCropTypes.map(crop => (
                                   <SelectItem key={crop} value={crop}>{crop}</SelectItem>
                                 ))}
@@ -467,12 +482,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 
                         {availableVarieties.length > 0 && (
                           <FormField label="Variété" htmlFor="variety">
-                            <Select value={watch('variety') || ''} onValueChange={(value) => setValue('variety', value)}>
+                            <Select value={watch('variety') || undefined} onValueChange={(value) => setValue('variety', value)}>
                               <SelectTrigger id="variety">
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Sélectionner...</SelectItem>
                                 {availableVarieties.map(variety => (
                                   <SelectItem key={variety} value={variety}>{variety}</SelectItem>
                                 ))}
@@ -501,12 +515,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField label="Type de système" htmlFor="planting_system">
-                            <Select value={watch('planting_system') || ''} onValueChange={(value) => setValue('planting_system', value)}>
+                            <Select value={watch('planting_system') || undefined} onValueChange={(value) => setValue('planting_system', value)}>
                               <SelectTrigger id="planting_system">
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Sélectionner...</SelectItem>
                                 {availablePlantingSystems.map((system, idx) => (
                                   <SelectItem key={idx} value={system.type}>
                                     {system.type} ({system.spacing})
@@ -583,12 +596,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         </FormField>
 
                         <FormField label="Type d'irrigation" htmlFor="irrigation_type">
-                          <Select value={watch('irrigation_type') || ''} onValueChange={(value) => setValue('irrigation_type', value)}>
+                          <Select value={watch('irrigation_type') || undefined} onValueChange={(value) => setValue('irrigation_type', value)}>
                             <SelectTrigger id="irrigation_type">
                               <SelectValue placeholder="Sélectionner..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Sélectionner...</SelectItem>
                               <SelectItem value="Goutte à goutte">Goutte à goutte</SelectItem>
                               <SelectItem value="Aspersion">Aspersion</SelectItem>
                               <SelectItem value="Gravitaire">Gravitaire</SelectItem>
@@ -607,7 +619,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         disabled={saveParcelMutation.isPending}
                         className="flex-1"
                       >
-                        {saveParcelMutation.isPending ? 'Enregistrement...' : (editingParcel ? 'Mettre à jour' : 'Créer la parcelle')}
+                        {saveParcelMutation.isPending ? t('farmHierarchy.parcel.saving') : (editingParcel ? t('farmHierarchy.parcel.update') : t('farmHierarchy.parcel.create'))}
                       </Button>
                       <Button
                         type="button"
@@ -618,7 +630,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                           reset();
                         }}
                       >
-                        Annuler
+                        {t('app.cancel')}
                       </Button>
                     </div>
                   </form>
@@ -634,7 +646,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
             ) : parcels.length === 0 ? (
               <div className="text-center py-12">
                 <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">Aucune parcelle créée</p>
+                <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.noParcels')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -704,7 +716,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          Cliquer pour voir les détails
+                          {t('farmHierarchy.parcel.clickForDetails')}
                         </span>
                       </div>
                     </CardContent>
@@ -717,8 +729,8 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       </Dialog>
 
       {/* Delete Parcel Confirmation Dialog */}
-      <AlertDialog 
-        open={!!parcelToDelete} 
+      <AlertDialog
+        open={!!parcelToDelete}
         onOpenChange={(open) => {
           // Only allow closing if mutation is not pending and not successful
           if (!open && !deleteParcelMutation.isPending) {
@@ -731,18 +743,18 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       >
         <AlertDialogContent className="bg-white dark:bg-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">{t('farmHierarchy.parcel.deleteConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer la parcelle <strong className="text-gray-900 dark:text-white">{parcelToDelete?.name}</strong> ?
+              {t('farmHierarchy.parcel.deleteWarning')} <strong className="text-gray-900 dark:text-white">{parcelToDelete?.name}</strong> ?
               <br /><br />
               <span className="text-red-600 dark:text-red-400">
-                ⚠️ Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.
+                ⚠️ {t('farmHierarchy.parcel.deleteIrreversibleWarning')}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteParcelMutation.isPending}>
-              Annuler
+              {t('app.cancel')}
             </AlertDialogCancel>
             <Button
               onClick={() => {
@@ -754,7 +766,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
               disabled={deleteParcelMutation.isPending}
               className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
-              {deleteParcelMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              {deleteParcelMutation.isPending ? t('farmHierarchy.parcel.deleting') : t('farmHierarchy.parcel.delete')}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

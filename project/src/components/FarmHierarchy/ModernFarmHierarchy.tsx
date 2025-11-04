@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
@@ -49,11 +50,14 @@ interface ModernFarmHierarchyProps {
   onManageFarm?: (farmId: string) => void;
 }
 
-const farmSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+// Schema will be defined inside the component to access t function
+const getFarmSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(2, t('farmHierarchy.farm.validation.nameRequired')),
 });
 
-type FarmFormValues = z.infer<typeof farmSchema>;
+type FarmFormValues = {
+  name: string;
+};
 
 const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   organizationId,
@@ -61,6 +65,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   _onAddParcel,
   onManageFarm
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,7 +92,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     reset,
     formState: { errors }
   } = useForm<FarmFormValues>({
-    resolver: zodResolver(farmSchema),
+    resolver: zodResolver(getFarmSchema(t)),
   });
 
   // Fetch organization
@@ -253,7 +258,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     },
     onError: (error: any) => {
       console.error('Error creating farm:', error);
-      alert('Erreur lors de la création de la ferme');
+      alert(t('app.error') + ': ' + (error.message || ''));
     }
   });
 
@@ -513,7 +518,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Chargement des fermes...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.loading')}</p>
         </div>
       </div>
     );
@@ -541,7 +546,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Créer une nouvelle ferme
+              {t('farmHierarchy.farm.createNew')}
             </h3>
             <button
               onClick={() => setShowAddForm(false)}
@@ -554,13 +559,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nom de la ferme *
+                {t('farmHierarchy.farm.name')} *
               </label>
               <input
                 {...register('name')}
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Ex: Ferme principale"
+                placeholder={t('farmHierarchy.farm.namePlaceholder')}
               />
               {errors.name && (
                 <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
@@ -573,14 +578,14 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
                 disabled={createFarmMutation.isPending}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
               >
-                {createFarmMutation.isPending ? 'Création...' : 'Créer la ferme'}
+                {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
-                Annuler
+                {t('app.cancel')}
               </button>
             </div>
           </form>
@@ -594,19 +599,19 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             <Building2 className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {searchTerm ? 'Aucune ferme trouvée' : 'Aucune ferme'}
+            {searchTerm ? t('farmHierarchy.farm.noFarmsFound') : t('farmHierarchy.farm.noFarms')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             {searchTerm
-              ? 'Aucune ferme ne correspond à votre recherche'
-              : 'Commencez par créer votre première ferme'}
+              ? t('farmHierarchy.farm.noSearchResults')
+              : t('farmHierarchy.farm.noFarmsMessage')}
           </p>
           {!searchTerm && (
             <button
               onClick={() => setShowAddForm(true)}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
             >
-              Créer une ferme
+              {t('farmHierarchy.farm.create')}
             </button>
           )}
         </div>
@@ -659,18 +664,18 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         <AlertDialogContent className="bg-white dark:bg-gray-800 max-w-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white text-xl">
-              Confirmer la suppression de la ferme
+              {t('farmHierarchy.farm.deleteConfirm')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-4">
               <p className="text-gray-700 dark:text-gray-300">
-                Êtes-vous sûr de vouloir supprimer la ferme <strong className="text-gray-900 dark:text-white font-semibold">{farmToDelete?.name}</strong> ?
+                {t('farmHierarchy.farm.deleteWarning')} <strong className="text-gray-900 dark:text-white font-semibold">{farmToDelete?.name}</strong> ?
               </p>
 
               {/* Loading state */}
               {loadingRelatedData && (
                 <div className="flex items-center justify-center py-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-                  <span className="ml-3 text-gray-600 dark:text-gray-400">Analyse des données liées...</span>
+                  <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.farm.analyzing')}</span>
                 </div>
               )}
 
@@ -681,7 +686,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
                     <span className="text-red-600 dark:text-red-400 text-xl">⚠️</span>
                     <div className="flex-1">
                       <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">
-                        Données qui seront supprimées définitivement :
+                        {t('farmHierarchy.farm.relatedData')}
                       </h4>
                       <ul className="space-y-2 text-sm">
                         {relatedDataCounts.parcels > 0 && (
@@ -731,7 +736,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
                   </div>
 
                   <p className="text-red-900 dark:text-red-200 font-semibold text-sm mt-3 pt-3 border-t border-red-200 dark:border-red-800">
-                    ⚡ Cette action est irréversible et supprimera toutes les données associées à cette ferme.
+                    ⚡ {t('farmHierarchy.farm.deleteIrreversible')}
                   </p>
                 </div>
               )}
@@ -740,7 +745,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               {!loadingRelatedData && !relatedDataCounts && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                   <p className="text-yellow-800 dark:text-yellow-300 text-sm">
-                    ⚠️ Impossible de charger les données liées. La suppression continuera de supprimer toutes les données associées à cette ferme.
+                    ⚠️ {t('farmHierarchy.farm.deleteIrreversible')}
                   </p>
                 </div>
               )}
@@ -748,14 +753,14 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteFarmMutation.isPending}>
-              Annuler
+              {t('app.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => farmToDelete && deleteFarmMutation.mutate(farmToDelete.id)}
               disabled={deleteFarmMutation.isPending || loadingRelatedData}
               className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
-              {deleteFarmMutation.isPending ? 'Suppression en cours...' : 'Supprimer définitivement'}
+              {deleteFarmMutation.isPending ? t('farmHierarchy.farm.deleting') : t('farmHierarchy.farm.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
