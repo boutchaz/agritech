@@ -69,6 +69,7 @@ import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
 import { Route as StockInventoryWarehousesRouteImport } from './routes/stock/inventory/warehouses'
@@ -379,6 +380,11 @@ const ParcelsParcelIdRoute = ParcelsParcelIdRouteImport.update({
   path: '/$parcelId',
   getParentRoute: () => ParcelsRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StockInventoryIndexRoute = StockInventoryIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -472,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
@@ -539,6 +546,7 @@ export interface FileRoutesByTo {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -610,6 +618,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
@@ -683,6 +692,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/auth/callback'
     | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
@@ -750,6 +760,7 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/utilities'
     | '/workers'
+    | '/auth/callback'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -820,6 +831,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/auth/callback'
     | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
@@ -893,6 +905,7 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRouteWithChildren
   UtilitiesRoute: typeof UtilitiesRoute
   WorkersRoute: typeof WorkersRouteWithChildren
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1317,6 +1330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdRouteImport
       parentRoute: typeof ParcelsRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stock/inventory/': {
       id: '/stock/inventory/'
       path: '/'
@@ -1566,6 +1586,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRouteWithChildren,
   UtilitiesRoute: UtilitiesRoute,
   WorkersRoute: WorkersRouteWithChildren,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

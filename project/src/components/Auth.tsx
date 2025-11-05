@@ -21,11 +21,14 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isSignUp) {
+        const emailRedirectUrl = new URL('/auth/callback', window.location.origin);
+        emailRedirectUrl.searchParams.set('next', '/select-trial');
+
         const { data, error: signUpError } = await authSupabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: emailRedirectUrl.toString(),
             data: {
               email_confirm: false
             }

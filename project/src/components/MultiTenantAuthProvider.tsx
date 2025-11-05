@@ -95,10 +95,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password', '/auth/callback'];
 
   // Routes that don't require password to be set (accessible with temporary password)
-  const noPasswordRequiredRoutes = ['/tasks'];
+  const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
 
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);

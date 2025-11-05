@@ -44,12 +44,15 @@ function RegisterPage() {
       // Sign up the user with organization name in metadata
       // The Edge Function will be called directly after signup (bypassing triggers)
       console.log('📝 Starting user signup...', { email, organizationName })
-      
+
+      const emailRedirectUrl = new URL('/auth/callback', window.location.origin)
+      emailRedirectUrl.searchParams.set('next', '/select-trial')
+
       const { data: authData, error: signUpError } = await authSupabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/select-trial`,
+          emailRedirectTo: emailRedirectUrl.toString(),
           data: {
             organization_name: organizationName,
             allow_unconfirmed_setup: true, // Allow Edge Function to setup even if email not confirmed
