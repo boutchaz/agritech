@@ -7,8 +7,8 @@ import { createInvoiceFromOrder } from '../lib/invoice-service';
 export interface PurchaseOrder {
   id: string;
   organization_id: string;
-  po_number: string;
-  po_date: string;
+  order_number: string;
+  order_date: string;
   expected_delivery_date: string | null;
   supplier_id: string | null;
   supplier_name: string;
@@ -87,7 +87,7 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
         .from('purchase_orders')
         .select('*, items:purchase_order_items(*)')
         .eq('organization_id', currentOrganization.id)
-        .order('po_date', { ascending: false });
+        .order('order_date', { ascending: false });
 
       if (status) {
         query = query.eq('status', status);
@@ -136,7 +136,7 @@ export function useCreatePurchaseOrder() {
   return useMutation({
     mutationFn: async (poData: {
       supplier_id: string;
-      po_date: string;
+      order_date: string;
       expected_delivery_date?: string;
       items: InvoiceItemInput[];
       payment_terms?: string;
@@ -171,8 +171,8 @@ export function useCreatePurchaseOrder() {
         .from('purchase_orders')
         .insert({
           organization_id: currentOrganization.id,
-          po_number: poNumber,
-          po_date: poData.po_date,
+          order_number: poNumber,
+          order_date: poData.order_date,
           expected_delivery_date: poData.expected_delivery_date || null,
           supplier_id: poData.supplier_id,
           supplier_name: supplier?.name || '',
@@ -338,7 +338,7 @@ export function useUpdatePurchaseOrder() {
   return useMutation({
     mutationFn: async (poData: {
       poId: string;
-      po_date?: string;
+      order_date?: string;
       expected_delivery_date?: string;
       payment_terms?: string;
       delivery_address?: string;

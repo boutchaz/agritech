@@ -1,6 +1,19 @@
 -- Seed a minimal Chart of Accounts per organization with multilingual labels
 -- Idempotent: skips rows where (organization_id, code) already exists
 
+-- Pre-clean duplicates by keeping the lowest id per (organization_id, code)
+WITH d AS (
+  SELECT a.id
+  FROM public.accounts a
+  JOIN public.accounts b
+    ON a.organization_id = b.organization_id
+   AND a.code = b.code
+   AND a.id > b.id
+)
+DELETE FROM public.accounts a
+USING d
+WHERE a.id = d.id;
+
 -- 1) Insert ERPNext-style GROUP accounts (hierarchy)
 -- Root groups
 WITH roots AS (
@@ -32,7 +45,8 @@ FROM public.organizations o
 CROSS JOIN roots r
 LEFT JOIN public.accounts a
   ON a.organization_id = o.id AND a.code = r.code
-WHERE a.id IS NULL;
+WHERE a.id IS NULL
+ON CONFLICT (organization_id, code) DO NOTHING;
 
 -- Common sub-groups
 WITH subs AS (
@@ -75,7 +89,8 @@ JOIN public.accounts p
   ON p.organization_id = o.id AND p.code = s.parent_code
 LEFT JOIN public.accounts a
   ON a.organization_id = o.id AND a.code = s.code
-WHERE a.id IS NULL;
+WHERE a.id IS NULL
+ON CONFLICT (organization_id, code) DO NOTHING;
 
 -- 2) Insert key LEDGER accounts under appropriate groups
 WITH seed AS (
@@ -130,6 +145,7 @@ FROM public.organizations o
 CROSS JOIN seed s
 LEFT JOIN public.accounts a
   ON a.organization_id = o.id AND a.code = s.code
-WHERE a.id IS NULL;
+WHERE a.id IS NULL
+ON CONFLICT (organization_id, code) DO NOTHING;
 
 

@@ -14,7 +14,7 @@ export const useAccounts = () => {
     queryKey: ['accounts', currentOrganization?.id],
     queryFn: () => accountingApi.getAccounts(currentOrganization!.id),
     enabled: !!currentOrganization,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minute - accounts change frequently
   });
 
   const createAccount = useMutation({

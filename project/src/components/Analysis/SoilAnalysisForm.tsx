@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Save, X } from 'lucide-react';
 import type { SoilAnalysisData } from '../../types/analysis';
 import { FormField } from '../ui/FormField';
@@ -18,6 +19,7 @@ interface SoilAnalysisFormProps {
 }
 
 const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+  const { t } = useTranslation();
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split('T')[0]);
   const [laboratory, setLaboratory] = useState('');
   const [notes, setNotes] = useState('');
@@ -53,7 +55,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Nouvelle Analyse de Sol</h3>
+        <h3 className="text-lg font-semibold">{t('farmHierarchy.parcel.soil.form.title')}</h3>
         <button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -67,12 +69,12 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
         {selectedParcel && (
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Parcelle sélectionnée
+              {t('farmHierarchy.parcel.soil.form.selectedParcel')}
             </h4>
             <p className="text-sm text-blue-800 dark:text-blue-200">
               <strong>{selectedParcel.name}</strong>
               {selectedParcel.soil_type && (
-                <span> - Type de sol: {selectedParcel.soil_type}</span>
+                <span> - {t('farmHierarchy.parcel.soil.soilType')}: {selectedParcel.soil_type}</span>
               )}
             </p>
           </div>
@@ -80,7 +82,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
 
         {/* General Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Date d'analyse" htmlFor="analysisDate">
+          <FormField label={t('farmHierarchy.parcel.soil.form.analysisDate')} htmlFor="analysisDate">
             <Input
               id="analysisDate"
               type="date"
@@ -90,22 +92,22 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
             />
           </FormField>
 
-          <FormField label="Laboratoire (optionnel)" htmlFor="laboratory">
+          <FormField label={t('farmHierarchy.parcel.soil.form.laboratoryOptional')} htmlFor="laboratory">
             <Input
               id="laboratory"
               type="text"
               value={laboratory}
               onChange={(e) => setLaboratory(e.target.value)}
-              placeholder="Nom du laboratoire"
+              placeholder={t('farmHierarchy.parcel.soil.form.laboratoryPlaceholder')}
             />
           </FormField>
         </div>
 
         {/* Physical Properties */}
         <div>
-          <h4 className="font-medium mb-4">Propriétés Physiques</h4>
+          <h4 className="font-medium mb-4">{t('farmHierarchy.parcel.soil.form.physicalProperties')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="pH" htmlFor="ph_level">
+            <FormField label={t('farmHierarchy.parcel.soil.form.ph')} htmlFor="ph_level">
               <Input
                 id="ph_level"
                 type="number"
@@ -117,28 +119,28 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Texture du sol" htmlFor="texture">
+            <FormField label={t('farmHierarchy.parcel.soil.form.texture')} htmlFor="texture">
               <Select
                 id="texture"
                 value={formData.texture || ''}
                 onChange={(e) => updateField('texture', e.target.value as 'sand' | 'loamy_sand' | 'sandy_loam' | 'loam' | 'silt_loam' | 'silt' | 'sandy_clay_loam' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay' | undefined)}
               >
-                <option value="">Sélectionner...</option>
-                <option value="sand">Sable</option>
-                <option value="loamy_sand">Sable limoneux</option>
-                <option value="sandy_loam">Limon sableux</option>
-                <option value="loam">Limon</option>
-                <option value="silt_loam">Limon argileux</option>
-                <option value="silt">Silt</option>
-                <option value="clay_loam">Argile limoneuse</option>
-                <option value="silty_clay_loam">Argile silteuse limoneuse</option>
-                <option value="sandy_clay">Argile sableuse</option>
-                <option value="silty_clay">Argile silteuse</option>
-                <option value="clay">Argile</option>
+                <option value="">{t('farmHierarchy.parcel.soil.form.selectTexture')}</option>
+                <option value="sand">{t('farmHierarchy.parcel.soil.form.textures.sand')}</option>
+                <option value="loamy_sand">{t('farmHierarchy.parcel.soil.form.textures.loamy_sand')}</option>
+                <option value="sandy_loam">{t('farmHierarchy.parcel.soil.form.textures.sandy_loam')}</option>
+                <option value="loam">{t('farmHierarchy.parcel.soil.form.textures.loam')}</option>
+                <option value="silt_loam">{t('farmHierarchy.parcel.soil.form.textures.silt_loam')}</option>
+                <option value="silt">{t('farmHierarchy.parcel.soil.form.textures.silt')}</option>
+                <option value="clay_loam">{t('farmHierarchy.parcel.soil.form.textures.clay_loam')}</option>
+                <option value="silty_clay_loam">{t('farmHierarchy.parcel.soil.form.textures.silty_clay_loam')}</option>
+                <option value="sandy_clay">{t('farmHierarchy.parcel.soil.form.textures.sandy_clay')}</option>
+                <option value="silty_clay">{t('farmHierarchy.parcel.soil.form.textures.silty_clay')}</option>
+                <option value="clay">{t('farmHierarchy.parcel.soil.form.textures.clay')}</option>
               </Select>
             </FormField>
 
-            <FormField label="Matière organique (%)" htmlFor="organic_matter">
+            <FormField label={t('farmHierarchy.parcel.soil.form.organicMatter')} htmlFor="organic_matter">
               <Input
                 id="organic_matter"
                 type="number"
@@ -154,9 +156,9 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
 
         {/* Chemical Properties - Macronutrients */}
         <div>
-          <h4 className="font-medium mb-4">Macronutriments (ppm)</h4>
+          <h4 className="font-medium mb-4">{t('farmHierarchy.parcel.soil.form.macronutrients')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField label="Azote (N)" htmlFor="nitrogen">
+            <FormField label={t('farmHierarchy.parcel.soil.form.nitrogen')} htmlFor="nitrogen">
               <Input
                 id="nitrogen"
                 type="number"
@@ -167,7 +169,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Phosphore (P)" htmlFor="phosphorus">
+            <FormField label={t('farmHierarchy.parcel.soil.form.phosphorus')} htmlFor="phosphorus">
               <Input
                 id="phosphorus"
                 type="number"
@@ -178,7 +180,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Potassium (K)" htmlFor="potassium">
+            <FormField label={t('farmHierarchy.parcel.soil.form.potassium')} htmlFor="potassium">
               <Input
                 id="potassium"
                 type="number"
@@ -189,7 +191,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Calcium (Ca)" htmlFor="calcium">
+            <FormField label={t('farmHierarchy.parcel.soil.form.calcium')} htmlFor="calcium">
               <Input
                 id="calcium"
                 type="number"
@@ -200,7 +202,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Magnésium (Mg)" htmlFor="magnesium">
+            <FormField label={t('farmHierarchy.parcel.soil.form.magnesium')} htmlFor="magnesium">
               <Input
                 id="magnesium"
                 type="number"
@@ -211,7 +213,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="Soufre (S)" htmlFor="sulfur">
+            <FormField label={t('farmHierarchy.parcel.soil.form.sulfur')} htmlFor="sulfur">
               <Input
                 id="sulfur"
                 type="number"
@@ -226,9 +228,9 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
 
         {/* Soil Health Indicators */}
         <div>
-          <h4 className="font-medium mb-4">Indicateurs de Santé du Sol</h4>
+          <h4 className="font-medium mb-4">{t('farmHierarchy.parcel.soil.form.soilHealth')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Salinité (EC dS/m)" htmlFor="salinity">
+            <FormField label={t('farmHierarchy.parcel.soil.form.salinity')} htmlFor="salinity">
               <Input
                 id="salinity"
                 type="number"
@@ -239,7 +241,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               />
             </FormField>
 
-            <FormField label="CEC (meq/100g)" htmlFor="cec">
+            <FormField label={t('farmHierarchy.parcel.soil.form.cec')} htmlFor="cec">
               <Input
                 id="cec"
                 type="number"
@@ -253,14 +255,14 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
         </div>
 
         {/* Notes */}
-        <FormField label="Notes (optionnel)" htmlFor="notes">
+        <FormField label={t('farmHierarchy.parcel.soil.form.notesOptional')} htmlFor="notes">
           <textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             rows={4}
-            placeholder="Observations supplémentaires..."
+            placeholder={t('farmHierarchy.parcel.soil.form.notesPlaceholder')}
           />
         </FormField>
 
@@ -271,14 +273,14 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
             onClick={onCancel}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            Annuler
+            {t('farmHierarchy.parcel.soil.form.cancel')}
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
           >
             <Save className="h-4 w-4" />
-            <span>Enregistrer</span>
+            <span>{t('farmHierarchy.parcel.soil.form.save')}</span>
           </button>
         </div>
       </form>

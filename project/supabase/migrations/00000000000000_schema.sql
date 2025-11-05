@@ -30,7 +30,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
-END;
+END
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
@@ -195,6 +195,16 @@ DO $$ BEGIN
     'rebaa',
     'tholth',
     'custom'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Calculation Basis for metayage settlements and worker contracts
+DO $$ BEGIN
+  CREATE TYPE calculation_basis AS ENUM (
+    'net_revenue',
+    'gross_revenue'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
@@ -366,19 +376,34 @@ CREATE TABLE IF NOT EXISTS customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
+  customer_code TEXT,
+  contact_person TEXT,
   email VARCHAR(255),
   phone VARCHAR(50),
+  mobile TEXT,
   address TEXT,
   city VARCHAR(100),
+  state_province TEXT,
   postal_code VARCHAR(20),
   country VARCHAR(100),
+  website TEXT,
   tax_id VARCHAR(100),
+  payment_terms TEXT,
+  credit_limit NUMERIC(15, 2),
+  currency_code TEXT DEFAULT 'MAD',
+  customer_type TEXT CHECK (customer_type IN ('individual', 'business', 'government', 'other') OR customer_type IS NULL),
+  price_list TEXT,
+  assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_customers_org ON customers(organization_id);
+CREATE INDEX IF NOT EXISTS idx_customers_assigned_to ON customers(assigned_to) WHERE assigned_to IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_code_org ON customers(organization_id, customer_code) WHERE customer_code IS NOT NULL;
 
 -- Suppliers
 CREATE TABLE IF NOT EXISTS suppliers (
@@ -897,7 +922,7 @@ BEGIN
   SELECT COUNT(*) INTO v_count
   FROM purchase_orders
   WHERE organization_id = p_organization_id
-    AND EXTRACT(YEAR FROM po_date) = EXTRACT(YEAR FROM NOW());
+    AND EXTRACT(YEAR FROM order_date) = EXTRACT(YEAR FROM NOW());
   v_number := 'PO-' || v_year || '-' || LPAD((v_count + 1)::TEXT, 5, '0');
   RETURN v_number;
 END;
@@ -949,6 +974,101 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Analytics: Parcel Performance Summary
+CREATE OR REPLACE FUNCTION get_parcel_performance_summary(
+  p_organization_id UUID,
+  p_farm_id UUID DEFAULT NULL,
+  p_parcel_id UUID DEFAULT NULL,
+  p_from_date DATE DEFAULT NULL,
+  p_to_date DATE DEFAULT NULL
+)
+RETURNS TABLE (
+  parcel_id UUID,
+  parcel_name TEXT,
+  farm_name TEXT,
+  crop_type TEXT,
+  total_harvests BIGINT,
+  avg_yield_per_hectare NUMERIC,
+  avg_target_yield NUMERIC,
+  avg_variance_percent NUMERIC,
+  performance_rating TEXT,
+  total_revenue NUMERIC,
+  total_cost NUMERIC,
+  total_profit NUMERIC,
+  avg_profit_margin NUMERIC,
+  last_harvest_date DATE
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH harvest_stats AS (
+    SELECT
+      hr.parcel_id,
+      p.parcel_name,
+      f.farm_name,
+      hr.crop_type,
+      COUNT(*) as total_harvests,
+      AVG(CASE
+        WHEN p.area_hectares > 0 THEN hr.actual_yield / p.area_hectares
+        ELSE NULL
+      END) as avg_yield_per_hectare,
+      AVG(hr.estimated_yield) as avg_target_yield,
+      AVG(CASE
+        WHEN hr.estimated_yield > 0
+        THEN ((hr.actual_yield - hr.estimated_yield) / hr.estimated_yield * 100)
+        ELSE NULL
+      END) as avg_variance_percent,
+      SUM(COALESCE(hr.revenue_amount, 0)) as total_revenue,
+      SUM(COALESCE(hr.cost_amount, 0)) as total_cost,
+      SUM(COALESCE(hr.profit_amount, 0)) as total_profit,
+      MAX(hr.harvest_date) as last_harvest_date
+    FROM harvest_records hr
+    JOIN parcels p ON hr.parcel_id = p.id
+    JOIN farms f ON p.farm_id = f.id
+    WHERE hr.organization_id = p_organization_id
+      AND (p_farm_id IS NULL OR p.farm_id = p_farm_id)
+      AND (p_parcel_id IS NULL OR hr.parcel_id = p_parcel_id)
+      AND (p_from_date IS NULL OR hr.harvest_date >= p_from_date)
+      AND (p_to_date IS NULL OR hr.harvest_date <= p_to_date)
+    GROUP BY hr.parcel_id, p.parcel_name, f.farm_name, hr.crop_type
+  )
+  SELECT
+    hs.parcel_id,
+    hs.parcel_name,
+    hs.farm_name,
+    hs.crop_type,
+    hs.total_harvests,
+    ROUND(hs.avg_yield_per_hectare, 2) as avg_yield_per_hectare,
+    ROUND(hs.avg_target_yield, 2) as avg_target_yield,
+    ROUND(hs.avg_variance_percent, 2) as avg_variance_percent,
+    CASE
+      WHEN hs.avg_variance_percent >= 10 THEN 'excellent'
+      WHEN hs.avg_variance_percent >= 0 THEN 'good'
+      WHEN hs.avg_variance_percent >= -10 THEN 'acceptable'
+      ELSE 'poor'
+    END as performance_rating,
+    ROUND(hs.total_revenue, 2) as total_revenue,
+    ROUND(hs.total_cost, 2) as total_cost,
+    ROUND(hs.total_profit, 2) as total_profit,
+    ROUND(
+      CASE
+        WHEN hs.total_revenue > 0
+        THEN (hs.total_profit / hs.total_revenue * 100)
+        ELSE 0
+      END,
+      2
+    ) as avg_profit_margin,
+    hs.last_harvest_date
+  FROM harvest_stats hs
+  ORDER BY hs.avg_variance_percent DESC NULLS LAST;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_parcel_performance_summary(UUID, UUID, UUID, DATE, DATE) TO authenticated;
+COMMENT ON FUNCTION get_parcel_performance_summary IS 'Aggregates harvest performance data by parcel for analytics and reporting. Returns yield, financial metrics, and performance ratings.';
+
 -- =====================================================
 -- 9. TRIGGERS FOR UPDATED_AT
 -- =====================================================
@@ -995,33 +1115,33 @@ AS $$
 $$;
 
 -- Enable RLS on all tables
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organization_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE farms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE parcels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quote_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sales_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sales_order_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE purchase_order_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cost_centers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE taxes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bank_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE accounting_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_allocations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE item_groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE work_units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organization_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS farms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS parcels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS quote_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS sales_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS sales_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS purchase_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS purchase_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cost_centers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS taxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS journal_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS journal_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS invoice_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS accounting_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_allocations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS item_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS work_units ENABLE ROW LEVEL SECURITY;
 
 -- Organization Users Policies
 -- Note: Users can only see/modify their own rows to avoid infinite recursion
@@ -1060,6 +1180,56 @@ CREATE POLICY "org_delete_organization_users" ON organization_users
     user_id = auth.uid()
   );
 
+-- Customers Policies
+DROP POLICY IF EXISTS "org_read_customers" ON customers;
+CREATE POLICY "org_read_customers" ON customers
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_customers" ON customers;
+CREATE POLICY "org_write_customers" ON customers
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_customers" ON customers;
+CREATE POLICY "org_update_customers" ON customers
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_customers" ON customers;
+CREATE POLICY "org_delete_customers" ON customers
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Suppliers Policies
+DROP POLICY IF EXISTS "org_read_suppliers" ON suppliers;
+CREATE POLICY "org_read_suppliers" ON suppliers
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_suppliers" ON suppliers;
+CREATE POLICY "org_write_suppliers" ON suppliers
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_suppliers" ON suppliers;
+CREATE POLICY "org_update_suppliers" ON suppliers
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_suppliers" ON suppliers;
+CREATE POLICY "org_delete_suppliers" ON suppliers
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Quotes Policies
 DROP POLICY IF EXISTS "org_read_quotes" ON quotes;
 CREATE POLICY "org_read_quotes" ON quotes
@@ -1092,25 +1262,19 @@ CREATE POLICY "org_access_quote_items" ON quote_items
 DROP POLICY IF EXISTS "org_read_sales_orders" ON sales_orders;
 CREATE POLICY "org_read_sales_orders" ON sales_orders
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_sales_orders" ON sales_orders;
 CREATE POLICY "org_write_sales_orders" ON sales_orders
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_sales_orders" ON sales_orders;
 CREATE POLICY "org_update_sales_orders" ON sales_orders
   FOR UPDATE USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Sales Order Items Policies
@@ -1126,25 +1290,19 @@ CREATE POLICY "org_access_sales_order_items" ON sales_order_items
 DROP POLICY IF EXISTS "org_read_purchase_orders" ON purchase_orders;
 CREATE POLICY "org_read_purchase_orders" ON purchase_orders
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_purchase_orders" ON purchase_orders;
 CREATE POLICY "org_write_purchase_orders" ON purchase_orders
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_purchase_orders" ON purchase_orders;
 CREATE POLICY "org_update_purchase_orders" ON purchase_orders
   FOR UPDATE USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Purchase Order Items Policies
@@ -1160,25 +1318,19 @@ CREATE POLICY "org_access_purchase_order_items" ON purchase_order_items
 DROP POLICY IF EXISTS "org_read_accounts" ON accounts;
 CREATE POLICY "org_read_accounts" ON accounts
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_accounts" ON accounts;
 CREATE POLICY "org_write_accounts" ON accounts
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_accounts" ON accounts;
 CREATE POLICY "org_update_accounts" ON accounts
   FOR UPDATE USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Similar policies for other accounting tables (journal_entries, invoices, etc.)
@@ -1660,6 +1812,79 @@ CREATE INDEX IF NOT EXISTS idx_harvest_records_farm ON harvest_records(farm_id);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_parcel ON harvest_records(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_date ON harvest_records(harvest_date DESC);
 
+-- Harvest Forecasts (Production Intelligence)
+CREATE TABLE IF NOT EXISTS harvest_forecasts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  crop_type TEXT NOT NULL,
+  variety TEXT,
+  planting_date DATE,
+  forecast_harvest_date_start DATE NOT NULL,
+  forecast_harvest_date_end DATE NOT NULL,
+  forecast_season TEXT,
+  confidence_level TEXT CHECK (confidence_level IN ('high', 'medium', 'low')),
+  predicted_yield_quantity NUMERIC NOT NULL,
+  predicted_yield_per_hectare NUMERIC,
+  unit_of_measure TEXT NOT NULL DEFAULT 'kg',
+  predicted_quality_grade TEXT,
+  predicted_price_per_unit NUMERIC,
+  predicted_revenue NUMERIC,
+  cost_estimate NUMERIC,
+  profit_estimate NUMERIC,
+  weather_factors JSONB,
+  soil_factors JSONB,
+  historical_basis JSONB,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'completed', 'archived')),
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (forecast_harvest_date_end >= forecast_harvest_date_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_harvest_forecasts_org ON harvest_forecasts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_harvest_forecasts_farm ON harvest_forecasts(farm_id);
+CREATE INDEX IF NOT EXISTS idx_harvest_forecasts_parcel ON harvest_forecasts(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_harvest_forecasts_status ON harvest_forecasts(status);
+CREATE INDEX IF NOT EXISTS idx_harvest_forecasts_dates ON harvest_forecasts(forecast_harvest_date_start, forecast_harvest_date_end);
+
+-- Performance Alerts (Production Intelligence)
+CREATE TABLE IF NOT EXISTS performance_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE CASCADE,
+  alert_type TEXT NOT NULL CHECK (alert_type IN ('yield_underperformance', 'forecast_variance', 'quality_issue', 'cost_overrun', 'revenue_shortfall', 'benchmark_deviation')),
+  severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  yield_history_id UUID,
+  forecast_id UUID REFERENCES harvest_forecasts(id) ON DELETE SET NULL,
+  harvest_id UUID REFERENCES harvest_records(id) ON DELETE SET NULL,
+  metric_name TEXT,
+  actual_value NUMERIC,
+  target_value NUMERIC,
+  variance_percent NUMERIC,
+  recommended_actions TEXT[],
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'resolved', 'dismissed')),
+  acknowledged_by UUID REFERENCES auth.users(id),
+  acknowledged_at TIMESTAMPTZ,
+  resolved_by UUID REFERENCES auth.users(id),
+  resolved_at TIMESTAMPTZ,
+  resolution_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_org ON performance_alerts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_farm ON performance_alerts(farm_id);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_parcel ON performance_alerts(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_type ON performance_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_severity ON performance_alerts(severity);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_status ON performance_alerts(status);
+
 -- Deliveries
 CREATE TABLE IF NOT EXISTS deliveries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1866,6 +2091,39 @@ CREATE INDEX IF NOT EXISTS idx_items_org ON items(organization_id);
 CREATE INDEX IF NOT EXISTS idx_items_group ON items(item_group_id);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL;
 
+-- Generate Item Code per organization, item group, and year
+CREATE OR REPLACE FUNCTION public.generate_item_code(
+  p_item_group_id UUID,
+  p_organization_id UUID,
+  p_prefix TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_seq INT;
+  v_code TEXT;
+  v_year TEXT;
+  v_prefix TEXT;
+BEGIN
+  v_year := TO_CHAR(CURRENT_DATE, 'YYYY');
+  v_prefix := COALESCE(p_prefix, 'ITM');
+
+  -- Compute next sequence within organization + item group for current year
+  SELECT COALESCE(MAX(SPLIT_PART(item_code, '-', 3)::INT), 0) + 1
+    INTO v_seq
+  FROM public.items
+  WHERE organization_id = p_organization_id
+    AND item_group_id = p_item_group_id
+    AND SPLIT_PART(item_code, '-', 2) = v_year;
+
+  v_code := v_prefix || '-' || v_year || '-' || LPAD(v_seq::TEXT, 5, '0');
+  RETURN v_code;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.generate_item_code(UUID, UUID, TEXT) TO anon, authenticated, service_role;
+
 -- Inventory Items
 CREATE TABLE IF NOT EXISTS inventory_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1963,7 +2221,7 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   posted_at TIMESTAMPTZ,
   posted_by UUID REFERENCES auth.users(id),
   journal_entry_id UUID REFERENCES journal_entries(id),
-  reception_batch_id UUID REFERENCES reception_batches(id),
+  reception_batch_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1982,7 +2240,7 @@ CREATE TABLE IF NOT EXISTS stock_entry_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   stock_entry_id UUID NOT NULL REFERENCES stock_entries(id) ON DELETE CASCADE,
   line_number INTEGER DEFAULT 1,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   item_name TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
   unit TEXT NOT NULL,
@@ -2010,7 +2268,7 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   movement_type TEXT NOT NULL,
   movement_date TIMESTAMPTZ DEFAULT NOW(),
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   quantity NUMERIC NOT NULL,
   unit TEXT NOT NULL,
@@ -2144,7 +2402,7 @@ CREATE TABLE IF NOT EXISTS reception_batches (
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   harvest_id UUID REFERENCES harvest_records(id),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
-  crop_id UUID REFERENCES crops(id),
+  crop_id UUID,
   culture_type TEXT,
   batch_code TEXT NOT NULL,
   reception_date DATE NOT NULL,
@@ -2186,6 +2444,12 @@ CREATE INDEX IF NOT EXISTS idx_reception_batches_org ON reception_batches(organi
 CREATE INDEX IF NOT EXISTS idx_reception_batches_warehouse ON reception_batches(warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_reception_batches_parcel ON reception_batches(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_reception_batches_date ON reception_batches(reception_date DESC);
+
+-- Add FK now that both tables exist
+ALTER TABLE IF EXISTS stock_entries
+  ADD CONSTRAINT fk_stock_entries_reception_batch
+  FOREIGN KEY (reception_batch_id)
+  REFERENCES reception_batches(id);
 
 -- =====================================================
 -- 14. SATELLITE DATA TABLES
@@ -2502,6 +2766,12 @@ CREATE TABLE IF NOT EXISTS crops (
 CREATE INDEX IF NOT EXISTS idx_crops_farm ON crops(farm_id);
 CREATE INDEX IF NOT EXISTS idx_crops_parcel ON crops(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_crops_variety ON crops(variety_id);
+
+-- Backfill FK constraints that depend on tables created later
+ALTER TABLE IF EXISTS reception_batches
+  ADD CONSTRAINT fk_reception_batches_crop
+  FOREIGN KEY (crop_id)
+  REFERENCES crops(id);
 
 -- Tree Categories
 CREATE TABLE IF NOT EXISTS tree_categories (
@@ -2983,92 +3253,106 @@ CREATE POLICY "org_delete_work_units" ON work_units
     is_organization_member(organization_id)
   );
 
+-- Harvest Forecasts Policies
+DROP POLICY IF EXISTS "org_read_harvest_forecasts" ON harvest_forecasts;
+CREATE POLICY "org_read_harvest_forecasts" ON harvest_forecasts
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_harvest_forecasts" ON harvest_forecasts;
+CREATE POLICY "org_write_harvest_forecasts" ON harvest_forecasts
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_harvest_forecasts" ON harvest_forecasts;
+CREATE POLICY "org_update_harvest_forecasts" ON harvest_forecasts
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_harvest_forecasts" ON harvest_forecasts;
+CREATE POLICY "org_delete_harvest_forecasts" ON harvest_forecasts
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- Performance Alerts Policies
+DROP POLICY IF EXISTS "org_read_performance_alerts" ON performance_alerts;
+CREATE POLICY "org_read_performance_alerts" ON performance_alerts
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_performance_alerts" ON performance_alerts;
+CREATE POLICY "org_write_performance_alerts" ON performance_alerts
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_performance_alerts" ON performance_alerts;
+CREATE POLICY "org_update_performance_alerts" ON performance_alerts
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_performance_alerts" ON performance_alerts;
+CREATE POLICY "org_delete_performance_alerts" ON performance_alerts
+  FOR DELETE USING (is_organization_member(organization_id));
+
 -- Workers Policies
 ALTER TABLE workers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_workers" ON workers;
 CREATE POLICY "org_read_workers" ON workers
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_workers" ON workers;
 CREATE POLICY "org_write_workers" ON workers
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_workers" ON workers;
 CREATE POLICY "org_update_workers" ON workers
   FOR UPDATE USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Tasks Policies
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_tasks" ON tasks;
 CREATE POLICY "org_read_tasks" ON tasks
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_tasks" ON tasks;
 CREATE POLICY "org_write_tasks" ON tasks
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_tasks" ON tasks;
 CREATE POLICY "org_update_tasks" ON tasks
   FOR UPDATE USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Harvest Records Policies
-ALTER TABLE harvest_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS harvest_records ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_harvest_records" ON harvest_records;
 CREATE POLICY "org_read_harvest_records" ON harvest_records
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_harvest_records" ON harvest_records;
 CREATE POLICY "org_write_harvest_records" ON harvest_records
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Deliveries Policies
-ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS deliveries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_deliveries" ON deliveries;
 CREATE POLICY "org_read_deliveries" ON deliveries
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_deliveries" ON deliveries;
 CREATE POLICY "org_write_deliveries" ON deliveries
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Item Groups Policies
@@ -3122,91 +3406,79 @@ CREATE POLICY "org_delete_items" ON items
   );
 
 -- Inventory Items Policies
-ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inventory_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_inventory_items" ON inventory_items;
 CREATE POLICY "org_read_inventory_items" ON inventory_items
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_inventory_items" ON inventory_items;
 CREATE POLICY "org_write_inventory_items" ON inventory_items
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Stock Entries Policies
-ALTER TABLE stock_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS stock_entries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_stock_entries" ON stock_entries;
 CREATE POLICY "org_read_stock_entries" ON stock_entries
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_stock_entries" ON stock_entries;
 CREATE POLICY "org_write_stock_entries" ON stock_entries
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Reception Batches Policies
-ALTER TABLE reception_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS reception_batches ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_reception_batches" ON reception_batches;
 CREATE POLICY "org_read_reception_batches" ON reception_batches
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_reception_batches" ON reception_batches;
 CREATE POLICY "org_write_reception_batches" ON reception_batches
   FOR INSERT WITH CHECK (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Satellite Tables Policies
-ALTER TABLE satellite_aois ENABLE ROW LEVEL SECURITY;
-ALTER TABLE satellite_files ENABLE ROW LEVEL SECURITY;
-ALTER TABLE satellite_indices_data ENABLE ROW LEVEL SECURITY;
-ALTER TABLE satellite_processing_jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE satellite_processing_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cloud_coverage_checks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_aois ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_indices_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_processing_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_processing_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cloud_coverage_checks ENABLE ROW LEVEL SECURITY;
 
 -- Add similar RLS policies for all satellite tables (following same pattern as above)
 DROP POLICY IF EXISTS "org_read_satellite_aois" ON satellite_aois;
 CREATE POLICY "org_read_satellite_aois" ON satellite_aois
   FOR SELECT USING (
-    organization_id IN (
-      is_organization_member(organization_id)
-    )
+    is_organization_member(organization_id)
   );
 
 -- Enable RLS on all remaining tables
-ALTER TABLE day_laborers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_time_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE task_equipment ENABLE ROW LEVEL SECURITY;
-ALTER TABLE work_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE metayage_settlements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_advances ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_bonuses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_deductions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS harvest_forecasts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS performance_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS day_laborers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_time_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_equipment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS work_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS metayage_settlements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_advances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_bonuses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS payment_deductions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE delivery_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE delivery_tracking ENABLE ROW LEVEL SECURITY;
 ALTER TABLE warehouses ENABLE ROW LEVEL SECURITY;

@@ -408,8 +408,8 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         const url = window.URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = po.po_number
-          ? `purchase-order-${po.po_number}.pdf`
+        anchor.download = po.order_number
+          ? `purchase-order-${po.order_number}.pdf`
           : 'purchase-order.pdf';
         document.body.appendChild(anchor);
         anchor.click();
@@ -572,7 +572,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Purchase Order #{po.po_number ?? ''}
+                Purchase Order #{po.order_number ?? ''}
               </DialogTitle>
               <DialogDescription>
                 View purchase order details and manage status
@@ -771,7 +771,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Order Date:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {po.po_date ? new Date(po.po_date).toLocaleDateString('fr-FR') : '-'}
+                    {po.order_date ? new Date(po.order_date).toLocaleDateString('fr-FR') : '-'}
                   </p>
                 </div>
                 <div>

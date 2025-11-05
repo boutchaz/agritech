@@ -82,18 +82,20 @@ serve(async (req) => {
     // 1. Create user profile
     const firstName = newUser.raw_user_meta_data?.first_name || email?.split('@')[0] || 'User';
     const lastName = newUser.raw_user_meta_data?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'User';
 
-    // Create user profile with email field (without password_set column - it doesn't exist in schema)
+    // Create user profile - user_profiles table has: full_name, email, phone, language, timezone, avatar_url, onboarding_completed, password_set
     const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
         id: userId,
         email: email,
-        first_name: firstName,
-        last_name: lastName,
-        full_name: `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'User',
+        full_name: fullName,
+        phone: newUser.raw_user_meta_data?.phone || null,
         timezone: newUser.raw_user_meta_data?.timezone || 'Africa/Casablanca',
         language: newUser.raw_user_meta_data?.language || 'fr',
+        onboarding_completed: false,
+        password_set: true, // User just signed up, so password is set
       })
       .select();
 
@@ -105,11 +107,11 @@ serve(async (req) => {
         .upsert({
           id: userId,
           email: email,
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'User',
+          full_name: fullName,
+          phone: newUser.raw_user_meta_data?.phone || null,
           timezone: newUser.raw_user_meta_data?.timezone || 'Africa/Casablanca',
           language: newUser.raw_user_meta_data?.language || 'fr',
+          password_set: true,
         }, {
           onConflict: 'id'
         });
@@ -139,9 +141,10 @@ serve(async (req) => {
     });
 
     // Check if user already has organization_users record (created during invitation)
+    // organization_users table has: id, organization_id, user_id, role, is_active, created_at, updated_at
     const { data: existingOrgUsers, error: checkError } = await supabaseAdmin
       .from('organization_users')
-      .select('id, organization_id, role_id')
+      .select('id, organization_id, role')
       .eq('user_id', userId)
       .limit(1);
 
@@ -167,14 +170,14 @@ serve(async (req) => {
       console.log('👥 User was invited to organization:', invitedToOrganization);
 
       // Add user to the organization they were invited to
+      // organization_users table only has: organization_id, user_id, role, is_active
       const { error: orgUserError } = await supabaseAdmin
         .from('organization_users')
         .insert({
           user_id: userId,
           organization_id: invitedToOrganization,
-          role_id: invitedWithRole,
+          role: invitedWithRole, // This should be the role name like 'organization_admin', 'farm_manager', etc.
           is_active: true,
-          invited_by: invitedBy || userId,
         });
 
       if (orgUserError) {
@@ -204,15 +207,17 @@ serve(async (req) => {
     let orgError;
 
     // Try to create organization
+    // organizations table has: name, slug, description, address, city, state, postal_code, country,
+    // phone, email, website, tax_id, currency_code, timezone, logo_url, is_active
+    // Note: no 'owner_id' column - ownership is tracked via organization_users with organization_admin role
     const { data: orgData, error: orgErr } = await supabaseAdmin
       .from('organizations')
       .insert({
         name: orgName,
         slug: orgSlug,
-        owner_id: userId,
-        currency: 'MAD',
+        currency_code: 'MAD',
         timezone: 'Africa/Casablanca',
-        language: 'fr',
+        is_active: true,
       })
       .select()
       .single();
@@ -221,24 +226,43 @@ serve(async (req) => {
     newOrg = orgData;
 
     if (orgError) {
-      // Check if it's a duplicate key error (org already exists)
+      // Check if it's a duplicate key error (org already exists with same slug)
       if (orgError.code === '23505') {
-        console.log('⚠️ Organization already exists, attempting to fetch it');
-        // Try to get existing organization by owner_id
-        const { data: existingOrg, error: fetchError } = await supabaseAdmin
-          .from('organizations')
-          .select('id, name, slug')
-          .eq('owner_id', userId)
-          .limit(1)
-          .single();
+        console.log('⚠️ Organization slug already exists, attempting to fetch it or create with different slug');
+        // Try to find organization where user is admin
+        const { data: userOrgs, error: fetchError } = await supabaseAdmin
+          .from('organization_users')
+          .select('organization_id, organizations(id, name, slug)')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .limit(1);
 
-        if (fetchError || !existingOrg) {
-          console.error('❌ Error fetching existing organization:', fetchError);
-          throw new Error(`Organization creation failed: ${orgError.message}`);
+        if (!fetchError && userOrgs && userOrgs.length > 0 && userOrgs[0].organizations) {
+          newOrg = userOrgs[0].organizations;
+          console.log('✅ Using existing organization:', newOrg.id);
+        } else {
+          // Try with a different slug (add timestamp)
+          const newSlug = `${orgSlug}-${Date.now()}`;
+          const { data: retryOrgData, error: retryError } = await supabaseAdmin
+            .from('organizations')
+            .insert({
+              name: orgName,
+              slug: newSlug,
+              currency_code: 'MAD',
+              timezone: 'Africa/Casablanca',
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (retryError) {
+            console.error('❌ Error creating organization with new slug:', retryError);
+            throw new Error(`Organization creation failed: ${orgError.message} (code: ${orgError.code})`);
+          }
+
+          newOrg = retryOrgData;
+          console.log('✅ Organization created with new slug:', newOrg.id);
         }
-
-        newOrg = existingOrg;
-        console.log('✅ Using existing organization:', newOrg.id);
       } else {
         console.error('❌ Error creating organization:', orgError);
         throw new Error(`Organization creation failed: ${orgError.message} (code: ${orgError.code})`);
@@ -247,30 +271,16 @@ serve(async (req) => {
       console.log('✅ Organization created:', newOrg.id);
     }
 
-    // 4. Get organization_admin role
-    const { data: roles, error: rolesError } = await supabaseAdmin
-      .from('roles')
-      .select('id')
-      .eq('name', 'organization_admin')
-      .limit(1);
-
-    if (rolesError || !roles || roles.length === 0) {
-      console.error('❌ Error fetching roles:', rolesError);
-      throw new Error('organization_admin role not found');
-    }
-
-    const roleId = roles[0].id;
-
-    // 5. Add user to organization with admin role
+    // 4. Add user to organization with admin role
+    // organization_users table only has: organization_id, user_id, role, is_active
+    // The role field should match a role name in the roles table (e.g., 'organization_admin')
     const { error: orgUserError } = await supabaseAdmin
       .from('organization_users')
       .insert({
         user_id: userId,
         organization_id: newOrg.id,
-        role_id: roleId,
-        role: 'admin', // Also set the role text field
+        role: 'organization_admin', // Role name from roles table
         is_active: true,
-        invited_by: userId,
       });
 
     if (orgUserError) {
@@ -281,8 +291,7 @@ serve(async (req) => {
         const { error: updateError } = await supabaseAdmin
           .from('organization_users')
           .update({
-            role_id: roleId,
-            role: 'admin',
+            role: 'organization_admin',
             is_active: true,
           })
           .eq('user_id', userId)

@@ -54,18 +54,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
   other: ['unit', 'pcs', 'kg', 'L']
 };
 
-const UTILITY_ACCOUNT_CODES: Record<Utility['type'], string> = {
-  electricity: '5230', // Utilities expense
-  water: '5140', // Water and irrigation (direct cost)
-  diesel: '5240', // Fuel and oil
-  gas: '5230',
-  internet: '5230',
-  phone: '5230',
-  other: '5360', // Miscellaneous expense
-};
-
-const CASH_ACCOUNT_CODE = '1110';
-const ACCOUNTS_PAYABLE_ACCOUNT_CODE = '2110';
+// No more hardcoded account codes - will be dynamically looked up by account type/subtype
 
 const UtilitiesManagement: React.FC = () => {
   const { currentOrganization, currentFarm, user } = useAuth();
@@ -108,30 +97,49 @@ const UtilitiesManagement: React.FC = () => {
     notes: ''
   });
 
-  const getAccountIdByCode = useCallback(async (accountCode: string) => {
+  /**
+   * Get account ID by account type and subtype (dynamic lookup)
+   * @param accountType - The account type (e.g., 'Expense', 'Asset', 'Liability')
+   * @param accountSubtype - Optional subtype (e.g., 'Utilities', 'Cash', 'Accounts Payable')
+   */
+  const getAccountByType = useCallback(async (
+    accountType: string,
+    accountSubtype?: string
+  ): Promise<string> => {
     if (!currentOrganization?.id) {
       throw new Error('Aucune organisation active pour résoudre les comptes comptables.');
     }
 
-    const cacheKey = `${currentOrganization.id}:${accountCode}`;
+    const cacheKey = `${currentOrganization.id}:${accountType}:${accountSubtype || 'none'}`;
     const cached = accountIdCacheRef.current[cacheKey];
     if (cached) {
       return cached;
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('accounts')
-      .select('id')
+      .select('id, code, name')
       .eq('organization_id', currentOrganization.id)
-      .eq('code', accountCode)
-      .maybeSingle();
+      .eq('account_type', accountType)
+      .eq('is_active', true)
+      .eq('is_group', false);
+
+    if (accountSubtype) {
+      query = query.eq('account_subtype', accountSubtype);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
 
     if (!data?.id) {
-      throw new Error(`Compte comptable ${accountCode} introuvable pour l'organisation.`);
+      const subtypeMsg = accountSubtype ? ` (${accountSubtype})` : '';
+      throw new Error(
+        `Compte comptable de type "${accountType}"${subtypeMsg} introuvable. ` +
+        `Veuillez créer ce compte dans le plan comptable.`
+      );
     }
 
     accountIdCacheRef.current[cacheKey] = data.id;
@@ -298,16 +306,38 @@ const UtilitiesManagement: React.FC = () => {
     }
 
     const entryDate = utility.billing_date ? new Date(utility.billing_date) : new Date();
-    const debitAccountCode = UTILITY_ACCOUNT_CODES[utility.type] ?? UTILITY_ACCOUNT_CODES.other;
     const paymentStatus = utility.payment_status ?? 'pending';
-    const creditAccountCode = paymentStatus === 'paid'
-      ? CASH_ACCOUNT_CODE
-      : ACCOUNTS_PAYABLE_ACCOUNT_CODE;
 
-    const [debitAccountId, creditAccountId] = await Promise.all([
-      getAccountIdByCode(debitAccountCode),
-      getAccountIdByCode(creditAccountCode),
-    ]);
+    // Dynamic account lookup by type/subtype instead of hardcoded codes
+    // Note: We look for utilities by account name "Utilities" within Operating Expenses
+    let debitAccountId: string;
+    try {
+      // First try to find an account with name "Utilities" in Operating Expense
+      const { data: utilityAccount } = await supabase
+        .from('accounts')
+        .select('id')
+        .eq('organization_id', currentOrganization.id)
+        .eq('account_type', 'Expense')
+        .eq('account_subtype', 'Operating Expense')
+        .eq('is_active', true)
+        .eq('is_group', false)
+        .ilike('name', '%Utilities%')
+        .maybeSingle();
+
+      if (utilityAccount?.id) {
+        debitAccountId = utilityAccount.id;
+      } else {
+        // Fallback: any Operating Expense account
+        debitAccountId = await getAccountByType('Expense', 'Operating Expense');
+      }
+    } catch {
+      // Last resort: any Expense account
+      debitAccountId = await getAccountByType('Expense');
+    }
+
+    const creditAccountId = paymentStatus === 'paid'
+      ? await getAccountByType('Asset', 'Cash') // Paid utilities: Credit Cash account
+      : await getAccountByType('Liability', 'Payable'); // Pending utilities: Credit Accounts Payable
 
     const basePayload = {
       entry_date: entryDate,
@@ -503,7 +533,10 @@ const UtilitiesManagement: React.FC = () => {
         }
       } catch (journalError) {
         console.error('Error creating journal entry for utility:', journalError);
-        setError('Charge enregistrée, mais l\'écriture comptable n\'a pas été créée.');
+        const errorMessage = journalError instanceof Error
+          ? journalError.message
+          : 'Erreur inconnue';
+        setError(`Charge enregistrée, mais l'écriture comptable n'a pas été créée: ${errorMessage}`);
       }
 
       setUtilities([createdUtility, ...utilities]);

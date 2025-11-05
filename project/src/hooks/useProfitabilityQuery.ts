@@ -94,6 +94,12 @@ interface ProfitabilityData {
     total_credit: number;
     net_amount: number;
   }>;
+  costCenterBreakdown: Array<{
+    cost_center_name: string;
+    total_expenses: number;
+    total_revenue: number;
+    net_profit: number;
+  }>;
 }
 
 export function useProfitabilityData(
@@ -339,6 +345,57 @@ export function useProfitabilityData(
         accountBreakdown = Array.from(accountMap.values()).sort(
           (a, b) => Math.abs(b.net_amount) - Math.abs(a.net_amount)
         );
+
+        // Cost Center breakdown (from ledger)
+        const costCenterMap = new Map<string, {
+          cost_center_name: string;
+          total_expenses: number;
+          total_revenue: number;
+          net_profit: number;
+        }>();
+
+        [...ledgerExpenses, ...ledgerRevenues].forEach((item) => {
+          const ccName = item.cost_center_name || 'Unassigned';
+          if (!costCenterMap.has(ccName)) {
+            costCenterMap.set(ccName, {
+              cost_center_name: ccName,
+              total_expenses: 0,
+              total_revenue: 0,
+              net_profit: 0,
+            });
+          }
+
+          const cc = costCenterMap.get(ccName);
+          if (cc) {
+            if (item.account_type === 'Expense') {
+              cc.total_expenses += Number(item.debit || 0) - Number(item.credit || 0);
+            } else if (item.account_type === 'Revenue') {
+              cc.total_revenue += Number(item.credit || 0) - Number(item.debit || 0);
+            }
+            cc.net_profit = cc.total_revenue - cc.total_expenses;
+          }
+        });
+
+        const costCenterBreakdown = Array.from(costCenterMap.values()).sort(
+          (a, b) => b.net_profit - a.net_profit
+        );
+
+        return {
+          totalCosts,
+          totalRevenue,
+          netProfit,
+          profitMargin,
+          costs: costs || [],
+          revenues: revenues || [],
+          categoryBreakdown,
+          costTypeBreakdown,
+          revenueTypeBreakdown,
+          monthlyData,
+          ledgerExpenses,
+          ledgerRevenues,
+          accountBreakdown,
+          costCenterBreakdown,
+        };
       } catch (_error) {
         // If ledger view is not available, continue without it
         // Ledger data will remain empty arrays
@@ -358,6 +415,7 @@ export function useProfitabilityData(
         ledgerExpenses,
         ledgerRevenues,
         accountBreakdown,
+        costCenterBreakdown: [],
       };
     },
     enabled: !!parcelId && !!organizationId,

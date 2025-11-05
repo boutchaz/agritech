@@ -87,7 +87,7 @@ export function useStockEntry(entryId: string | null) {
           *,
           items:stock_entry_items(
             *,
-            item:items(id, item_code, item_name, default_unit, item_group:item_groups(name))
+            item:items(id, item_code, item_name, default_unit)
           ),
           from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
           to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
@@ -155,15 +155,15 @@ export function useCreateStockEntry() {
         item_name: item.item_name,
         quantity: item.quantity,
         unit: item.unit,
-        source_warehouse_id: item.source_warehouse_id || null,
-        target_warehouse_id: item.target_warehouse_id || null,
-        batch_number: item.batch_number || null,
-        serial_number: item.serial_number || null,
-        expiry_date: item.expiry_date || null,
-        cost_per_unit: item.cost_per_unit || null,
-        system_quantity: item.system_quantity || null,
-        physical_quantity: item.physical_quantity || null,
-        notes: item.notes || null,
+        source_warehouse_id: item.source_warehouse_id ?? null,
+        target_warehouse_id: item.target_warehouse_id ?? null,
+        batch_number: item.batch_number ?? null,
+        serial_number: item.serial_number ?? null,
+        expiry_date: item.expiry_date ?? null,
+        cost_per_unit: item.cost_per_unit ?? null,
+        system_quantity: item.system_quantity ?? null,
+        physical_quantity: item.physical_quantity ?? null,
+        notes: item.notes ?? null,
       }));
 
       const { error: itemsError } = await supabase

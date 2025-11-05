@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-
-const StockInventoryWarehousesRoute = () => null;
+import WarehouseManagement from '@/components/Inventory/WarehouseManagement';
 
 export const Route = createFileRoute('/stock/inventory/warehouses')({
-  component: StockInventoryWarehousesRoute,
+  component: WarehouseManagement,
 });

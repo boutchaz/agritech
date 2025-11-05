@@ -1,4 +1,3 @@
-Initialising login role...
 export type Json =
   | string
   | number
@@ -46,7 +45,7 @@ export type Database = {
           bank_account_id: string | null
           created_at: string | null
           created_by: string | null
-          currency_code: string
+          currency_code: string | null
           exchange_rate: number | null
           id: string
           journal_entry_id: string | null
@@ -70,7 +69,7 @@ export type Database = {
           bank_account_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          currency_code?: string
+          currency_code?: string | null
           exchange_rate?: number | null
           id?: string
           journal_entry_id?: string | null
@@ -94,7 +93,7 @@ export type Database = {
           bank_account_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          currency_code?: string
+          currency_code?: string | null
           exchange_rate?: number | null
           id?: string
           journal_entry_id?: string | null
@@ -122,13 +121,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "accounting_payments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "accounting_payments_currency_code_fkey"
             columns: ["currency_code"]
             isOneToOne: false
@@ -148,13 +140,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "accounting_payments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -212,13 +197,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "accounts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "accounts_currency_code_fkey"
             columns: ["currency_code"]
             isOneToOne: false
@@ -233,25 +211,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "accounts_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "accounts_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
           },
         ]
       }
@@ -259,35 +223,35 @@ export type Database = {
         Row: {
           analysis_date: string
           analysis_type: Database["public"]["Enums"]["analysis_type"]
-          created_at: string
-          data: Json
+          created_at: string | null
+          data: Json | null
           id: string
           laboratory: string | null
           notes: string | null
           parcel_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           analysis_date: string
           analysis_type: Database["public"]["Enums"]["analysis_type"]
-          created_at?: string
-          data?: Json
+          created_at?: string | null
+          data?: Json | null
           id?: string
           laboratory?: string | null
           notes?: string | null
           parcel_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           analysis_date?: string
           analysis_type?: Database["public"]["Enums"]["analysis_type"]
-          created_at?: string
-          data?: Json
+          created_at?: string | null
+          data?: Json | null
           id?: string
           laboratory?: string | null
           notes?: string | null
           parcel_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -303,38 +267,38 @@ export type Database = {
         Row: {
           action_items: Json | null
           analysis_id: string
-          created_at: string
+          created_at: string | null
           description: string | null
           estimated_cost: number | null
           id: string
           priority: string | null
           recommendation_type: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           action_items?: Json | null
           analysis_id: string
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           estimated_cost?: number | null
           id?: string
           priority?: string | null
           recommendation_type?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           action_items?: Json | null
           analysis_id?: string
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           estimated_cost?: number | null
           id?: string
           priority?: string | null
           recommendation_type?: string | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -349,7 +313,7 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
-          created_at: string
+          created_at: string | null
           id: string
           ip_address: unknown
           new_values: Json | null
@@ -361,7 +325,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           ip_address?: unknown
           new_values?: Json | null
@@ -373,7 +337,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           ip_address?: unknown
           new_values?: Json | null
@@ -383,79 +347,58 @@ export type Database = {
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       bank_accounts: {
         Row: {
           account_name: string
           account_number: string | null
+          account_type: string | null
+          bank_code: string | null
           bank_name: string | null
+          branch_code: string | null
           created_at: string | null
-          created_by: string | null
-          currency_code: string
+          currency_code: string | null
           current_balance: number | null
-          gl_account_id: string
-          iban: string | null
           id: string
           is_active: boolean | null
-          is_default: boolean | null
           opening_balance: number | null
           organization_id: string
-          swift_code: string | null
           updated_at: string | null
         }
         Insert: {
           account_name: string
           account_number?: string | null
+          account_type?: string | null
+          bank_code?: string | null
           bank_name?: string | null
+          branch_code?: string | null
           created_at?: string | null
-          created_by?: string | null
-          currency_code?: string
+          currency_code?: string | null
           current_balance?: number | null
-          gl_account_id: string
-          iban?: string | null
           id?: string
           is_active?: boolean | null
-          is_default?: boolean | null
           opening_balance?: number | null
           organization_id: string
-          swift_code?: string | null
           updated_at?: string | null
         }
         Update: {
           account_name?: string
           account_number?: string | null
+          account_type?: string | null
+          bank_code?: string | null
           bank_name?: string | null
+          branch_code?: string | null
           created_at?: string | null
-          created_by?: string | null
-          currency_code?: string
+          currency_code?: string | null
           current_balance?: number | null
-          gl_account_id?: string
-          iban?: string | null
           id?: string
           is_active?: boolean | null
-          is_default?: boolean | null
           opening_balance?: number | null
           organization_id?: string
-          swift_code?: string | null
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "bank_accounts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "bank_accounts_currency_code_fkey"
             columns: ["currency_code"]
@@ -464,32 +407,11 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "bank_accounts_gl_account_id_fkey"
-            columns: ["gl_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bank_accounts_gl_account_id_fkey"
-            columns: ["gl_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
-          },
-          {
             foreignKeyName: "bank_accounts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bank_accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -500,7 +422,7 @@ export type Database = {
           available_images_count: number | null
           avg_cloud_coverage: number | null
           check_date: string
-          created_at: string
+          created_at: string | null
           date_range_end: string
           date_range_start: string
           farm_id: string | null
@@ -513,7 +435,7 @@ export type Database = {
           parcel_id: string
           recommended_date: string | null
           suitable_images_count: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           all_cloud_percentages?: number[] | null
@@ -521,7 +443,7 @@ export type Database = {
           available_images_count?: number | null
           avg_cloud_coverage?: number | null
           check_date: string
-          created_at?: string
+          created_at?: string | null
           date_range_end: string
           date_range_start: string
           farm_id?: string | null
@@ -534,7 +456,7 @@ export type Database = {
           parcel_id: string
           recommended_date?: string | null
           suitable_images_count?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           all_cloud_percentages?: number[] | null
@@ -542,7 +464,7 @@ export type Database = {
           available_images_count?: number | null
           avg_cloud_coverage?: number | null
           check_date?: string
-          created_at?: string
+          created_at?: string | null
           date_range_end?: string
           date_range_start?: string
           farm_id?: string | null
@@ -555,7 +477,7 @@ export type Database = {
           parcel_id?: string
           recommended_date?: string | null
           suitable_images_count?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -578,13 +500,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cloud_coverage_checks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "cloud_coverage_checks_parcel_id_fkey"
@@ -634,69 +549,46 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "cost_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       cost_centers: {
         Row: {
           code: string
           created_at: string | null
-          created_by: string | null
           description: string | null
           farm_id: string | null
           id: string
           is_active: boolean | null
-          is_group: boolean | null
           name: string
           organization_id: string
           parcel_id: string | null
-          parent_id: string | null
           updated_at: string | null
         }
         Insert: {
           code: string
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           farm_id?: string | null
           id?: string
           is_active?: boolean | null
-          is_group?: boolean | null
           name: string
           organization_id: string
           parcel_id?: string | null
-          parent_id?: string | null
           updated_at?: string | null
         }
         Update: {
           code?: string
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           farm_id?: string | null
           id?: string
           is_active?: boolean | null
-          is_group?: boolean | null
           name?: string
           organization_id?: string
           parcel_id?: string | null
-          parent_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "cost_centers_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "cost_centers_farm_id_fkey"
             columns: ["farm_id"]
@@ -712,24 +604,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cost_centers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "cost_centers_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id"]
           },
         ]
@@ -741,7 +619,7 @@ export type Database = {
           cost_type: string
           created_at: string | null
           created_by: string | null
-          currency: string
+          currency: string | null
           date: string
           description: string | null
           farm_id: string | null
@@ -759,7 +637,7 @@ export type Database = {
           cost_type: string
           created_at?: string | null
           created_by?: string | null
-          currency?: string
+          currency?: string | null
           date: string
           description?: string | null
           farm_id?: string | null
@@ -777,7 +655,7 @@ export type Database = {
           cost_type?: string
           created_at?: string | null
           created_by?: string | null
-          currency?: string
+          currency?: string | null
           date?: string
           description?: string | null
           farm_id?: string | null
@@ -798,13 +676,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "costs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "costs_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -817,13 +688,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "costs_parcel_id_fkey"
@@ -988,6 +852,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "crops_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crops_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crops_variety_id_fkey"
             columns: ["variety_id"]
             isOneToOne: false
@@ -1000,28 +878,117 @@ export type Database = {
         Row: {
           code: string
           created_at: string | null
-          decimal_places: number | null
-          is_active: boolean | null
           name: string
           symbol: string | null
         }
         Insert: {
           code: string
           created_at?: string | null
-          decimal_places?: number | null
-          is_active?: boolean | null
           name: string
           symbol?: string | null
         }
         Update: {
           code?: string
           created_at?: string | null
-          decimal_places?: number | null
-          is_active?: boolean | null
           name?: string
           symbol?: string | null
         }
         Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          city: string | null
+          contact_person: string | null
+          country: string | null
+          created_at: string | null
+          created_by: string | null
+          credit_limit: number | null
+          currency_code: string | null
+          customer_code: string | null
+          customer_type: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          mobile: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          payment_terms: string | null
+          phone: string | null
+          postal_code: string | null
+          price_list: string | null
+          state_province: string | null
+          tax_id: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          contact_person?: string | null
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_limit?: number | null
+          currency_code?: string | null
+          customer_code?: string | null
+          customer_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          mobile?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          payment_terms?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          price_list?: string | null
+          state_province?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          city?: string | null
+          contact_person?: string | null
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_limit?: number | null
+          currency_code?: string | null
+          customer_code?: string | null
+          customer_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          mobile?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          payment_terms?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          price_list?: string | null
+          state_province?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dashboard_settings: {
         Row: {
@@ -1080,20 +1047,6 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "dashboard_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "dashboard_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       day_laborers: {
@@ -1142,7 +1095,15 @@ export type Database = {
           specialties?: string[] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "day_laborers_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deliveries: {
         Row: {
@@ -1177,8 +1138,8 @@ export type Database = {
           signature_image: string | null
           signature_name: string | null
           status: string | null
-          total_amount: number
-          total_quantity: number
+          total_amount: number | null
+          total_quantity: number | null
           updated_at: string | null
           vehicle_info: string | null
         }
@@ -1214,8 +1175,8 @@ export type Database = {
           signature_image?: string | null
           signature_name?: string | null
           status?: string | null
-          total_amount?: number
-          total_quantity?: number
+          total_amount?: number | null
+          total_quantity?: number | null
           updated_at?: string | null
           vehicle_info?: string | null
         }
@@ -1251,40 +1212,12 @@ export type Database = {
           signature_image?: string | null
           signature_name?: string | null
           status?: string | null
-          total_amount?: number
-          total_quantity?: number
+          total_amount?: number | null
+          total_quantity?: number | null
           updated_at?: string | null
           vehicle_info?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "deliveries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
           {
             foreignKeyName: "deliveries_driver_id_fkey"
             columns: ["driver_id"]
@@ -1305,13 +1238,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -1364,24 +1290,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "delivery_items_delivery_id_fkey"
-            columns: ["delivery_id"]
-            isOneToOne: false
-            referencedRelation: "delivery_summary"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "delivery_items_harvest_record_id_fkey"
             columns: ["harvest_record_id"]
             isOneToOne: false
             referencedRelation: "harvest_records"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delivery_items_harvest_record_id_fkey"
-            columns: ["harvest_record_id"]
-            isOneToOne: false
-            referencedRelation: "harvest_summary"
             referencedColumns: ["id"]
           },
         ]
@@ -1430,20 +1342,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "deliveries"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delivery_tracking_delivery_id_fkey"
-            columns: ["delivery_id"]
-            isOneToOne: false
-            referencedRelation: "delivery_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delivery_tracking_recorded_by_fkey"
-            columns: ["recorded_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1499,37 +1397,45 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       farm_management_roles: {
         Row: {
-          created_at: string
+          created_at: string | null
           farm_id: string
           id: string
-          is_active: boolean
+          is_active: boolean | null
           role: string | null
           role_id: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           farm_id: string
           id?: string
-          is_active?: boolean
+          is_active?: boolean | null
           role?: string | null
           role_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           farm_id?: string
           id?: string
-          is_active?: boolean
+          is_active?: boolean | null
           role?: string | null
           role_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1547,13 +1453,6 @@ export type Database = {
             referencedRelation: "roles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "farm_management_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       farms: {
@@ -1569,6 +1468,7 @@ export type Database = {
           established_date: string | null
           id: string
           irrigation_type: string | null
+          is_active: boolean | null
           location: string | null
           manager_email: string | null
           manager_name: string | null
@@ -1595,6 +1495,7 @@ export type Database = {
           established_date?: string | null
           id?: string
           irrigation_type?: string | null
+          is_active?: boolean | null
           location?: string | null
           manager_email?: string | null
           manager_name?: string | null
@@ -1621,6 +1522,7 @@ export type Database = {
           established_date?: string | null
           id?: string
           irrigation_type?: string | null
+          is_active?: boolean | null
           location?: string | null
           manager_email?: string | null
           manager_name?: string | null
@@ -1642,13 +1544,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "farms_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -1701,7 +1596,127 @@ export type Database = {
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      harvest_forecasts: {
+        Row: {
+          confidence_level: string | null
+          cost_estimate: number | null
+          created_at: string | null
+          created_by: string | null
+          crop_type: string
+          farm_id: string
+          forecast_harvest_date_end: string
+          forecast_harvest_date_start: string
+          forecast_season: string | null
+          historical_basis: Json | null
+          id: string
+          notes: string | null
+          organization_id: string
+          parcel_id: string
+          planting_date: string | null
+          predicted_price_per_unit: number | null
+          predicted_quality_grade: string | null
+          predicted_revenue: number | null
+          predicted_yield_per_hectare: number | null
+          predicted_yield_quantity: number
+          profit_estimate: number | null
+          soil_factors: Json | null
+          status: string | null
+          unit_of_measure: string
+          updated_at: string | null
+          variety: string | null
+          weather_factors: Json | null
+        }
+        Insert: {
+          confidence_level?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_type: string
+          farm_id: string
+          forecast_harvest_date_end: string
+          forecast_harvest_date_start: string
+          forecast_season?: string | null
+          historical_basis?: Json | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          parcel_id: string
+          planting_date?: string | null
+          predicted_price_per_unit?: number | null
+          predicted_quality_grade?: string | null
+          predicted_revenue?: number | null
+          predicted_yield_per_hectare?: number | null
+          predicted_yield_quantity: number
+          profit_estimate?: number | null
+          soil_factors?: Json | null
+          status?: string | null
+          unit_of_measure?: string
+          updated_at?: string | null
+          variety?: string | null
+          weather_factors?: Json | null
+        }
+        Update: {
+          confidence_level?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_type?: string
+          farm_id?: string
+          forecast_harvest_date_end?: string
+          forecast_harvest_date_start?: string
+          forecast_season?: string | null
+          historical_basis?: Json | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          parcel_id?: string
+          planting_date?: string | null
+          predicted_price_per_unit?: number | null
+          predicted_quality_grade?: string | null
+          predicted_revenue?: number | null
+          predicted_yield_per_hectare?: number | null
+          predicted_yield_quantity?: number
+          profit_estimate?: number | null
+          soil_factors?: Json | null
+          status?: string | null
+          unit_of_measure?: string
+          updated_at?: string | null
+          variety?: string | null
+          weather_factors?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "harvest_forecasts_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "harvest_forecasts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "harvest_forecasts_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       harvest_records: {
         Row: {
@@ -1732,7 +1747,7 @@ export type Database = {
           temperature: number | null
           unit: string
           updated_at: string | null
-          workers: Json
+          workers: Json | null
         }
         Insert: {
           created_at?: string | null
@@ -1762,7 +1777,7 @@ export type Database = {
           temperature?: number | null
           unit: string
           updated_at?: string | null
-          workers?: Json
+          workers?: Json | null
         }
         Update: {
           created_at?: string | null
@@ -1792,35 +1807,14 @@ export type Database = {
           temperature?: number | null
           unit?: string
           updated_at?: string | null
-          workers?: Json
+          workers?: Json | null
         }
         Relationships: [
-          {
-            foreignKeyName: "harvest_records_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_crop_id_fkey"
-            columns: ["crop_id"]
-            isOneToOne: false
-            referencedRelation: "crops"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "harvest_records_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_harvest_task_id_fkey"
-            columns: ["harvest_task_id"]
-            isOneToOne: false
-            referencedRelation: "task_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1838,46 +1832,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "harvest_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "harvest_records_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_reception_batch_id_fkey"
-            columns: ["reception_batch_id"]
-            isOneToOne: false
-            referencedRelation: "reception_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "harvest_records_supervisor_id_fkey"
@@ -1918,7 +1877,7 @@ export type Database = {
           subcategory_id: string | null
           supplier: string | null
           supplier_id: string | null
-          unit: string
+          unit: string | null
           unit_cost: number | null
           updated_at: string | null
           warehouse_id: string | null
@@ -1952,7 +1911,7 @@ export type Database = {
           subcategory_id?: string | null
           supplier?: string | null
           supplier_id?: string | null
-          unit?: string
+          unit?: string | null
           unit_cost?: number | null
           updated_at?: string | null
           warehouse_id?: string | null
@@ -1986,7 +1945,7 @@ export type Database = {
           subcategory_id?: string | null
           supplier?: string | null
           supplier_id?: string | null
-          unit?: string
+          unit?: string | null
           unit_cost?: number | null
           updated_at?: string | null
           warehouse_id?: string | null
@@ -1997,6 +1956,20 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -2026,8 +1999,8 @@ export type Database = {
         Row: {
           batch_number: string
           cost_per_unit: number | null
-          created_at: string
-          current_quantity: number
+          created_at: string | null
+          current_quantity: number | null
           expiry_date: string | null
           id: string
           initial_quantity: number
@@ -2039,13 +2012,13 @@ export type Database = {
           received_date: string
           status: string | null
           supplier_id: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           batch_number: string
           cost_per_unit?: number | null
-          created_at?: string
-          current_quantity?: number
+          created_at?: string | null
+          current_quantity?: number | null
           expiry_date?: string | null
           id?: string
           initial_quantity: number
@@ -2057,13 +2030,13 @@ export type Database = {
           received_date: string
           status?: string | null
           supplier_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           batch_number?: string
           cost_per_unit?: number | null
-          created_at?: string
-          current_quantity?: number
+          created_at?: string | null
+          current_quantity?: number | null
           expiry_date?: string | null
           id?: string
           initial_quantity?: number
@@ -2075,14 +2048,14 @@ export type Database = {
           received_date?: string
           status?: string | null
           supplier_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "inventory_batches_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -2091,13 +2064,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "inventory_batches_purchase_order_id_fkey"
@@ -2119,7 +2085,7 @@ export type Database = {
         Row: {
           category: string | null
           cost_per_unit: number | null
-          created_at: string
+          created_at: string | null
           enable_batch_tracking: boolean | null
           enable_serial_tracking: boolean | null
           farm_id: string | null
@@ -2130,17 +2096,17 @@ export type Database = {
           name: string
           notes: string | null
           organization_id: string
-          quantity: number
+          quantity: number | null
           shelf_life_days: number | null
           supplier: string | null
           unit: string
-          updated_at: string
+          updated_at: string | null
           valuation_method: string | null
         }
         Insert: {
           category?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           enable_batch_tracking?: boolean | null
           enable_serial_tracking?: boolean | null
           farm_id?: string | null
@@ -2151,17 +2117,17 @@ export type Database = {
           name: string
           notes?: string | null
           organization_id: string
-          quantity?: number
+          quantity?: number | null
           shelf_life_days?: number | null
           supplier?: string | null
           unit: string
-          updated_at?: string
+          updated_at?: string | null
           valuation_method?: string | null
         }
         Update: {
           category?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           enable_batch_tracking?: boolean | null
           enable_serial_tracking?: boolean | null
           farm_id?: string | null
@@ -2172,11 +2138,11 @@ export type Database = {
           name?: string
           notes?: string | null
           organization_id?: string
-          quantity?: number
+          quantity?: number | null
           shelf_life_days?: number | null
           supplier?: string | null
           unit?: string
-          updated_at?: string
+          updated_at?: string | null
           valuation_method?: string | null
         }
         Relationships: [
@@ -2194,19 +2160,12 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_items_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       inventory_serial_numbers: {
         Row: {
           cost_per_unit: number | null
-          created_at: string
+          created_at: string | null
           id: string
           issued_date: string | null
           issued_to: string | null
@@ -2218,13 +2177,13 @@ export type Database = {
           serial_number: string
           status: string | null
           supplier_id: string | null
-          updated_at: string
+          updated_at: string | null
           warehouse_id: string | null
           warranty_expiry_date: string | null
         }
         Insert: {
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           issued_date?: string | null
           issued_to?: string | null
@@ -2236,13 +2195,13 @@ export type Database = {
           serial_number: string
           status?: string | null
           supplier_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           warehouse_id?: string | null
           warranty_expiry_date?: string | null
         }
         Update: {
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           issued_date?: string | null
           issued_to?: string | null
@@ -2254,7 +2213,7 @@ export type Database = {
           serial_number?: string
           status?: string | null
           supplier_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           warehouse_id?: string | null
           warranty_expiry_date?: string | null
         }
@@ -2263,7 +2222,7 @@ export type Database = {
             foreignKeyName: "inventory_serial_numbers_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -2272,13 +2231,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_serial_numbers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "inventory_serial_numbers_purchase_order_id_fkey"
@@ -2305,81 +2257,69 @@ export type Database = {
       }
       invoice_items: {
         Row: {
+          account_id: string | null
           amount: number
           created_at: string | null
           description: string | null
-          expense_account_id: string | null
+          discount_amount: number | null
+          discount_percent: number | null
           id: string
-          income_account_id: string | null
           invoice_id: string
-          item_code: string | null
           item_name: string
+          line_number: number
+          line_total: number
           quantity: number
           tax_amount: number | null
           tax_id: string | null
           tax_rate: number | null
+          unit_of_measure: string | null
           unit_price: number
         }
         Insert: {
+          account_id?: string | null
           amount: number
           created_at?: string | null
           description?: string | null
-          expense_account_id?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          income_account_id?: string | null
           invoice_id: string
-          item_code?: string | null
           item_name: string
+          line_number: number
+          line_total: number
           quantity: number
           tax_amount?: number | null
           tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price: number
         }
         Update: {
+          account_id?: string | null
           amount?: number
           created_at?: string | null
           description?: string | null
-          expense_account_id?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          income_account_id?: string | null
           invoice_id?: string
-          item_code?: string | null
           item_name?: string
+          line_number?: number
+          line_total?: number
           quantity?: number
           tax_amount?: number | null
           tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price?: number
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_items_expense_account_id_fkey"
-            columns: ["expense_account_id"]
+            foreignKeyName: "invoice_items_account_id_fkey"
+            columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_items_expense_account_id_fkey"
-            columns: ["expense_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
-          },
-          {
-            foreignKeyName: "invoice_items_income_account_id_fkey"
-            columns: ["income_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_items_income_account_id_fkey"
-            columns: ["income_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "invoice_items_invoice_id_fkey"
@@ -2387,13 +2327,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_items_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "vw_invoice_aging"
-            referencedColumns: ["invoice_id"]
           },
           {
             foreignKeyName: "invoice_items_tax_id_fkey"
@@ -2406,11 +2339,11 @@ export type Database = {
       }
       invoices: {
         Row: {
-          attachment_url: string | null
           created_at: string | null
           created_by: string | null
-          currency_code: string
-          due_date: string
+          currency_code: string | null
+          discount_amount: number | null
+          due_date: string | null
           exchange_rate: number | null
           farm_id: string | null
           grand_total: number
@@ -2419,26 +2352,29 @@ export type Database = {
           invoice_number: string
           invoice_type: Database["public"]["Enums"]["invoice_type"]
           journal_entry_id: string | null
+          notes: string | null
           organization_id: string
-          outstanding_amount: number
+          outstanding_amount: number | null
+          paid_amount: number | null
           parcel_id: string | null
           party_id: string | null
           party_name: string
           party_type: string | null
-          remarks: string | null
+          payment_terms: string | null
+          purchase_order_id: string | null
+          sales_order_id: string | null
           status: Database["public"]["Enums"]["invoice_status"] | null
           submitted_at: string | null
-          submitted_by: string | null
           subtotal: number
           tax_total: number
           updated_at: string | null
         }
         Insert: {
-          attachment_url?: string | null
           created_at?: string | null
           created_by?: string | null
-          currency_code?: string
-          due_date: string
+          currency_code?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
           exchange_rate?: number | null
           farm_id?: string | null
           grand_total?: number
@@ -2447,26 +2383,29 @@ export type Database = {
           invoice_number: string
           invoice_type: Database["public"]["Enums"]["invoice_type"]
           journal_entry_id?: string | null
+          notes?: string | null
           organization_id: string
-          outstanding_amount?: number
+          outstanding_amount?: number | null
+          paid_amount?: number | null
           parcel_id?: string | null
           party_id?: string | null
           party_name: string
           party_type?: string | null
-          remarks?: string | null
+          payment_terms?: string | null
+          purchase_order_id?: string | null
+          sales_order_id?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           submitted_at?: string | null
-          submitted_by?: string | null
           subtotal?: number
           tax_total?: number
           updated_at?: string | null
         }
         Update: {
-          attachment_url?: string | null
           created_at?: string | null
           created_by?: string | null
-          currency_code?: string
-          due_date?: string
+          currency_code?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
           exchange_rate?: number | null
           farm_id?: string | null
           grand_total?: number
@@ -2475,28 +2414,24 @@ export type Database = {
           invoice_number?: string
           invoice_type?: Database["public"]["Enums"]["invoice_type"]
           journal_entry_id?: string | null
+          notes?: string | null
           organization_id?: string
-          outstanding_amount?: number
+          outstanding_amount?: number | null
+          paid_amount?: number | null
           parcel_id?: string | null
           party_id?: string | null
           party_name?: string
           party_type?: string | null
-          remarks?: string | null
+          payment_terms?: string | null
+          purchase_order_id?: string | null
+          sales_order_id?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           submitted_at?: string | null
-          submitted_by?: string | null
           subtotal?: number
           tax_total?: number
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "invoices_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "invoices_currency_code_fkey"
             columns: ["currency_code"]
@@ -2526,13 +2461,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "invoices_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -2540,11 +2468,339 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_submitted_by_fkey"
-            columns: ["submitted_by"]
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
             isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_groups: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          created_by: string | null
+          default_cost_center_id: string | null
+          default_expense_account_id: string | null
+          default_sales_account_id: string | null
+          default_tax_id: string | null
+          default_warehouse_id: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          parent_group_id: string | null
+          path: string | null
+          sort_order: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_cost_center_id?: string | null
+          default_expense_account_id?: string | null
+          default_sales_account_id?: string | null
+          default_tax_id?: string | null
+          default_warehouse_id?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          parent_group_id?: string | null
+          path?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_cost_center_id?: string | null
+          default_expense_account_id?: string | null
+          default_sales_account_id?: string | null
+          default_tax_id?: string | null
+          default_warehouse_id?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          parent_group_id?: string | null
+          path?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_groups_default_cost_center_id_fkey"
+            columns: ["default_cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_default_expense_account_id_fkey"
+            columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_default_sales_account_id_fkey"
+            columns: ["default_sales_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_default_tax_id_fkey"
+            columns: ["default_tax_id"]
+            isOneToOne: false
+            referencedRelation: "taxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_default_warehouse_id_fkey"
+            columns: ["default_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_parent_group_id_fkey"
+            columns: ["parent_group_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          created_at: string | null
+          created_by: string | null
+          crop_type: string | null
+          default_cost_center_id: string | null
+          default_expense_account_id: string | null
+          default_sales_account_id: string | null
+          default_unit: string
+          default_warehouse_id: string | null
+          description: string | null
+          has_batch_no: boolean | null
+          has_expiry_date: boolean | null
+          has_serial_no: boolean | null
+          height: number | null
+          id: string
+          image_url: string | null
+          images: Json | null
+          inspection_required_before_delivery: boolean | null
+          inspection_required_before_purchase: boolean | null
+          is_active: boolean | null
+          is_purchase_item: boolean | null
+          is_sales_item: boolean | null
+          is_stock_item: boolean | null
+          item_code: string
+          item_group_id: string
+          item_name: string
+          item_tax_template_id: string | null
+          last_purchase_rate: number | null
+          last_sales_rate: number | null
+          length: number | null
+          maintain_stock: boolean | null
+          manufacturer_code: string | null
+          notes: string | null
+          organization_id: string
+          seasonality: string | null
+          shelf_life_days: number | null
+          show_in_website: boolean | null
+          standard_rate: number | null
+          stock_uom: string
+          supplier_part_number: string | null
+          updated_at: string | null
+          updated_by: string | null
+          valuation_method: string | null
+          variety: string | null
+          volume: number | null
+          website_description: string | null
+          website_image_url: string | null
+          weight_per_unit: number | null
+          weight_uom: string | null
+          width: number | null
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_type?: string | null
+          default_cost_center_id?: string | null
+          default_expense_account_id?: string | null
+          default_sales_account_id?: string | null
+          default_unit: string
+          default_warehouse_id?: string | null
+          description?: string | null
+          has_batch_no?: boolean | null
+          has_expiry_date?: boolean | null
+          has_serial_no?: boolean | null
+          height?: number | null
+          id?: string
+          image_url?: string | null
+          images?: Json | null
+          inspection_required_before_delivery?: boolean | null
+          inspection_required_before_purchase?: boolean | null
+          is_active?: boolean | null
+          is_purchase_item?: boolean | null
+          is_sales_item?: boolean | null
+          is_stock_item?: boolean | null
+          item_code: string
+          item_group_id: string
+          item_name: string
+          item_tax_template_id?: string | null
+          last_purchase_rate?: number | null
+          last_sales_rate?: number | null
+          length?: number | null
+          maintain_stock?: boolean | null
+          manufacturer_code?: string | null
+          notes?: string | null
+          organization_id: string
+          seasonality?: string | null
+          shelf_life_days?: number | null
+          show_in_website?: boolean | null
+          standard_rate?: number | null
+          stock_uom: string
+          supplier_part_number?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          valuation_method?: string | null
+          variety?: string | null
+          volume?: number | null
+          website_description?: string | null
+          website_image_url?: string | null
+          weight_per_unit?: number | null
+          weight_uom?: string | null
+          width?: number | null
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          crop_type?: string | null
+          default_cost_center_id?: string | null
+          default_expense_account_id?: string | null
+          default_sales_account_id?: string | null
+          default_unit?: string
+          default_warehouse_id?: string | null
+          description?: string | null
+          has_batch_no?: boolean | null
+          has_expiry_date?: boolean | null
+          has_serial_no?: boolean | null
+          height?: number | null
+          id?: string
+          image_url?: string | null
+          images?: Json | null
+          inspection_required_before_delivery?: boolean | null
+          inspection_required_before_purchase?: boolean | null
+          is_active?: boolean | null
+          is_purchase_item?: boolean | null
+          is_sales_item?: boolean | null
+          is_stock_item?: boolean | null
+          item_code?: string
+          item_group_id?: string
+          item_name?: string
+          item_tax_template_id?: string | null
+          last_purchase_rate?: number | null
+          last_sales_rate?: number | null
+          length?: number | null
+          maintain_stock?: boolean | null
+          manufacturer_code?: string | null
+          notes?: string | null
+          organization_id?: string
+          seasonality?: string | null
+          shelf_life_days?: number | null
+          show_in_website?: boolean | null
+          standard_rate?: number | null
+          stock_uom?: string
+          supplier_part_number?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          valuation_method?: string | null
+          variety?: string | null
+          volume?: number | null
+          website_description?: string | null
+          website_image_url?: string | null
+          weight_per_unit?: number | null
+          weight_uom?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_default_cost_center_id_fkey"
+            columns: ["default_cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_default_expense_account_id_fkey"
+            columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_default_sales_account_id_fkey"
+            columns: ["default_sales_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_default_warehouse_id_fkey"
+            columns: ["default_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_item_group_id_fkey"
+            columns: ["item_group_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2552,88 +2808,55 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          description: string | null
           entry_date: string
           entry_number: string
           id: string
           organization_id: string
           posted_at: string | null
           posted_by: string | null
-          posting_date: string
-          reference_id: string | null
           reference_number: string | null
-          reference_type: string | null
-          remarks: string | null
           status: Database["public"]["Enums"]["journal_entry_status"] | null
-          total_credit: number
-          total_debit: number
-          updated_at: string | null
+          total_credit: number | null
+          total_debit: number | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           entry_date: string
           entry_number: string
           id?: string
           organization_id: string
           posted_at?: string | null
           posted_by?: string | null
-          posting_date: string
-          reference_id?: string | null
           reference_number?: string | null
-          reference_type?: string | null
-          remarks?: string | null
           status?: Database["public"]["Enums"]["journal_entry_status"] | null
-          total_credit?: number
-          total_debit?: number
-          updated_at?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           entry_date?: string
           entry_number?: string
           id?: string
           organization_id?: string
           posted_at?: string | null
           posted_by?: string | null
-          posting_date?: string
-          reference_id?: string | null
           reference_number?: string | null
-          reference_type?: string | null
-          remarks?: string | null
           status?: Database["public"]["Enums"]["journal_entry_status"] | null
-          total_credit?: number
-          total_debit?: number
-          updated_at?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "journal_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "journal_entries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "journal_entries_posted_by_fkey"
-            columns: ["posted_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2649,6 +2872,8 @@ export type Database = {
           id: string
           journal_entry_id: string
           parcel_id: string | null
+          reference_id: string | null
+          reference_type: string | null
         }
         Insert: {
           account_id: string
@@ -2661,6 +2886,8 @@ export type Database = {
           id?: string
           journal_entry_id: string
           parcel_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
         }
         Update: {
           account_id?: string
@@ -2673,6 +2900,8 @@ export type Database = {
           id?: string
           journal_entry_id?: string
           parcel_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
         }
         Relationships: [
           {
@@ -2681,13 +2910,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "journal_items_cost_center_id_fkey"
@@ -2724,7 +2946,7 @@ export type Database = {
           acquired_date: string | null
           age_months: number | null
           breed: string | null
-          count: number
+          count: number | null
           created_at: string | null
           farm_id: string
           health_status: string | null
@@ -2739,7 +2961,7 @@ export type Database = {
           acquired_date?: string | null
           age_months?: number | null
           breed?: string | null
-          count?: number
+          count?: number | null
           created_at?: string | null
           farm_id: string
           health_status?: string | null
@@ -2754,7 +2976,7 @@ export type Database = {
           acquired_date?: string | null
           age_months?: number | null
           breed?: string | null
-          count?: number
+          count?: number | null
           created_at?: string | null
           farm_id?: string
           health_status?: string | null
@@ -2765,7 +2987,15 @@ export type Database = {
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "livestock_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       metayage_settlements: {
         Row: {
@@ -2839,13 +3069,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "metayage_settlements_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "metayage_settlements_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -2863,27 +3086,6 @@ export type Database = {
             foreignKeyName: "metayage_settlements_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "metayage_settlements_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "metayage_settlements_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "metayage_settlements_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -2892,7 +3094,7 @@ export type Database = {
       opening_stock_balances: {
         Row: {
           batch_number: string | null
-          created_at: string
+          created_at: string | null
           created_by: string | null
           id: string
           item_id: string
@@ -2906,13 +3108,13 @@ export type Database = {
           serial_numbers: string[] | null
           status: string | null
           total_value: number | null
-          updated_at: string
+          updated_at: string | null
           valuation_rate: number
           warehouse_id: string
         }
         Insert: {
           batch_number?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           item_id: string
@@ -2926,13 +3128,13 @@ export type Database = {
           serial_numbers?: string[] | null
           status?: string | null
           total_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
           valuation_rate: number
           warehouse_id: string
         }
         Update: {
           batch_number?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           item_id?: string
@@ -2946,23 +3148,16 @@ export type Database = {
           serial_numbers?: string[] | null
           status?: string | null
           total_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
           valuation_rate?: number
           warehouse_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "opening_stock_balances_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "opening_stock_balances_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -2980,20 +3175,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "opening_stock_balances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "opening_stock_balances_posted_by_fkey"
-            columns: ["posted_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "opening_stock_balances_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -3006,44 +3187,31 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          invited_by: string | null
           is_active: boolean | null
-          organization_id: string | null
-          role: string | null
-          role_id: string | null
+          organization_id: string
+          role: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
-          invited_by?: string | null
           is_active?: boolean | null
-          organization_id?: string | null
-          role?: string | null
-          role_id?: string | null
+          organization_id: string
+          role: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          invited_by?: string | null
           is_active?: boolean | null
-          organization_id?: string | null
-          role?: string | null
-          role_id?: string | null
+          organization_id?: string
+          role?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "organization_users_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "organization_users_organization_id_fkey"
             columns: ["organization_id"]
@@ -3051,51 +3219,26 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "organization_users_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_users_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       organizations: {
         Row: {
           address: string | null
           city: string | null
-          contact_person: string | null
           country: string | null
           created_at: string | null
-          currency: string | null
-          currency_symbol: string | null
+          currency_code: string | null
           description: string | null
           email: string | null
           id: string
-          language: string | null
+          is_active: boolean | null
           logo_url: string | null
           name: string
-          onboarding_completed: boolean | null
-          owner_id: string | null
           phone: string | null
           postal_code: string | null
-          slug: string
+          slug: string | null
           state: string | null
-          status: string | null
+          tax_id: string | null
           timezone: string | null
           updated_at: string | null
           website: string | null
@@ -3103,24 +3246,20 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
-          contact_person?: string | null
           country?: string | null
           created_at?: string | null
-          currency?: string | null
-          currency_symbol?: string | null
+          currency_code?: string | null
           description?: string | null
           email?: string | null
           id?: string
-          language?: string | null
+          is_active?: boolean | null
           logo_url?: string | null
           name: string
-          onboarding_completed?: boolean | null
-          owner_id?: string | null
           phone?: string | null
           postal_code?: string | null
-          slug: string
+          slug?: string | null
           state?: string | null
-          status?: string | null
+          tax_id?: string | null
           timezone?: string | null
           updated_at?: string | null
           website?: string | null
@@ -3128,37 +3267,25 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
-          contact_person?: string | null
           country?: string | null
           created_at?: string | null
-          currency?: string | null
-          currency_symbol?: string | null
+          currency_code?: string | null
           description?: string | null
           email?: string | null
           id?: string
-          language?: string | null
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string
-          onboarding_completed?: boolean | null
-          owner_id?: string | null
           phone?: string | null
           postal_code?: string | null
-          slug?: string
+          slug?: string | null
           state?: string | null
-          status?: string | null
+          tax_id?: string | null
           timezone?: string | null
           updated_at?: string | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "organizations_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       parcel_reports: {
         Row: {
@@ -3169,7 +3296,7 @@ export type Database = {
           id: string
           metadata: Json | null
           parcel_id: string
-          status: string
+          status: string | null
           template_id: string
           title: string
           updated_at: string | null
@@ -3182,7 +3309,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           parcel_id: string
-          status?: string
+          status?: string | null
           template_id: string
           title: string
           updated_at?: string | null
@@ -3195,19 +3322,12 @@ export type Database = {
           id?: string
           metadata?: Json | null
           parcel_id?: string
-          status?: string
+          status?: string | null
           template_id?: string
           title?: string
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "parcel_reports_generated_by_fkey"
-            columns: ["generated_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "parcel_reports_parcel_id_fkey"
             columns: ["parcel_id"]
@@ -3228,10 +3348,13 @@ export type Database = {
           crop_type: string | null
           density_per_hectare: number | null
           description: string | null
+          expected_harvest_date: string | null
           farm_id: string | null
           id: string
           irrigation_type: string | null
+          is_active: boolean | null
           name: string
+          notes: string | null
           perimeter: number | null
           plant_count: number | null
           planting_date: string | null
@@ -3257,10 +3380,13 @@ export type Database = {
           crop_type?: string | null
           density_per_hectare?: number | null
           description?: string | null
+          expected_harvest_date?: string | null
           farm_id?: string | null
           id?: string
           irrigation_type?: string | null
+          is_active?: boolean | null
           name: string
+          notes?: string | null
           perimeter?: number | null
           plant_count?: number | null
           planting_date?: string | null
@@ -3286,10 +3412,13 @@ export type Database = {
           crop_type?: string | null
           density_per_hectare?: number | null
           description?: string | null
+          expected_harvest_date?: string | null
           farm_id?: string | null
           id?: string
           irrigation_type?: string | null
+          is_active?: boolean | null
           name?: string
+          notes?: string | null
           perimeter?: number | null
           plant_count?: number | null
           planting_date?: string | null
@@ -3305,7 +3434,15 @@ export type Database = {
           updated_at?: string | null
           variety?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parcels_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_advances: {
         Row: {
@@ -3370,13 +3507,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payment_advances_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "payment_advances_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -3389,41 +3519,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_advances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "payment_advances_paid_by_fkey"
-            columns: ["paid_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_advances_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_advances_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "payment_advances_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "payment_advances_worker_id_fkey"
@@ -3465,17 +3560,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payment_allocations_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "vw_invoice_aging"
-            referencedColumns: ["invoice_id"]
-          },
-          {
             foreignKeyName: "payment_allocations_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: false
-            referencedRelation: "payments"
+            referencedRelation: "accounting_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -3511,13 +3599,6 @@ export type Database = {
             columns: ["payment_record_id"]
             isOneToOne: false
             referencedRelation: "payment_records"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_bonuses_payment_record_id_fkey"
-            columns: ["payment_record_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary"
             referencedColumns: ["id"]
           },
         ]
@@ -3558,13 +3639,6 @@ export type Database = {
             referencedRelation: "payment_records"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "payment_deductions_payment_record_id_fkey"
-            columns: ["payment_record_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary"
-            referencedColumns: ["id"]
-          },
         ]
       }
       payment_records: {
@@ -3573,7 +3647,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           attachments: Json | null
-          base_amount: number
+          base_amount: number | null
           bonuses: number | null
           calculated_at: string | null
           calculated_by: string | null
@@ -3610,7 +3684,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           attachments?: Json | null
-          base_amount?: number
+          base_amount?: number | null
           bonuses?: number | null
           calculated_at?: string | null
           calculated_by?: string | null
@@ -3647,7 +3721,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           attachments?: Json | null
-          base_amount?: number
+          base_amount?: number | null
           bonuses?: number | null
           calculated_at?: string | null
           calculated_by?: string | null
@@ -3681,20 +3755,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payment_records_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_records_calculated_by_fkey"
-            columns: ["calculated_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "payment_records_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -3709,41 +3769,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payment_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "payment_records_paid_by_fkey"
-            columns: ["paid_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
             foreignKeyName: "payment_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -3752,115 +3777,120 @@ export type Database = {
           },
         ]
       }
-      payments: {
+      performance_alerts: {
         Row: {
-          amount: number
-          bank_account_id: string | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          actual_value: number | null
+          alert_type: string
           created_at: string | null
-          created_by: string | null
-          currency_code: string
-          exchange_rate: number | null
+          farm_id: string | null
+          forecast_id: string | null
+          harvest_id: string | null
           id: string
-          journal_entry_id: string | null
+          message: string
+          metric_name: string | null
           organization_id: string
-          party_id: string | null
-          party_name: string
-          party_type: string | null
-          payment_date: string
-          payment_method: Database["public"]["Enums"]["payment_method"]
-          payment_number: string
-          payment_type: Database["public"]["Enums"]["payment_type"]
-          reference_number: string | null
-          remarks: string | null
-          status: Database["public"]["Enums"]["payment_status"] | null
+          parcel_id: string | null
+          recommended_actions: string[] | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string | null
+          target_value: number | null
+          title: string
           updated_at: string | null
+          variance_percent: number | null
+          yield_history_id: string | null
         }
         Insert: {
-          amount: number
-          bank_account_id?: string | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value?: number | null
+          alert_type: string
           created_at?: string | null
-          created_by?: string | null
-          currency_code?: string
-          exchange_rate?: number | null
+          farm_id?: string | null
+          forecast_id?: string | null
+          harvest_id?: string | null
           id?: string
-          journal_entry_id?: string | null
+          message: string
+          metric_name?: string | null
           organization_id: string
-          party_id?: string | null
-          party_name: string
-          party_type?: string | null
-          payment_date: string
-          payment_method: Database["public"]["Enums"]["payment_method"]
-          payment_number: string
-          payment_type: Database["public"]["Enums"]["payment_type"]
-          reference_number?: string | null
-          remarks?: string | null
-          status?: Database["public"]["Enums"]["payment_status"] | null
+          parcel_id?: string | null
+          recommended_actions?: string[] | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          status?: string | null
+          target_value?: number | null
+          title: string
           updated_at?: string | null
+          variance_percent?: number | null
+          yield_history_id?: string | null
         }
         Update: {
-          amount?: number
-          bank_account_id?: string | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value?: number | null
+          alert_type?: string
           created_at?: string | null
-          created_by?: string | null
-          currency_code?: string
-          exchange_rate?: number | null
+          farm_id?: string | null
+          forecast_id?: string | null
+          harvest_id?: string | null
           id?: string
-          journal_entry_id?: string | null
+          message?: string
+          metric_name?: string | null
           organization_id?: string
-          party_id?: string | null
-          party_name?: string
-          party_type?: string | null
-          payment_date?: string
-          payment_method?: Database["public"]["Enums"]["payment_method"]
-          payment_number?: string
-          payment_type?: Database["public"]["Enums"]["payment_type"]
-          reference_number?: string | null
-          remarks?: string | null
-          status?: Database["public"]["Enums"]["payment_status"] | null
+          parcel_id?: string | null
+          recommended_actions?: string[] | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string | null
+          target_value?: number | null
+          title?: string
           updated_at?: string | null
+          variance_percent?: number | null
+          yield_history_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "payments_bank_account_id_fkey"
-            columns: ["bank_account_id"]
+            foreignKeyName: "performance_alerts_farm_id_fkey"
+            columns: ["farm_id"]
             isOneToOne: false
-            referencedRelation: "bank_accounts"
+            referencedRelation: "farms"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "performance_alerts_forecast_id_fkey"
+            columns: ["forecast_id"]
             isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payments_currency_code_fkey"
-            columns: ["currency_code"]
-            isOneToOne: false
-            referencedRelation: "currencies"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "payments_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
+            referencedRelation: "harvest_forecasts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_organization_id_fkey"
+            foreignKeyName: "performance_alerts_harvest_id_fkey"
+            columns: ["harvest_id"]
+            isOneToOne: false
+            referencedRelation: "harvest_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_alerts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "performance_alerts_parcel_id_fkey"
+            columns: ["parcel_id"]
             isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3923,31 +3953,31 @@ export type Database = {
       }
       plantation_types: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           organization_id: string
           spacing: string
           trees_per_ha: number
           type: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           organization_id: string
           spacing: string
           trees_per_ha: number
           type: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           organization_id?: string
           spacing?: string
           trees_per_ha?: number
           type?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -3956,13 +3986,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "plantation_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -4029,52 +4052,52 @@ export type Database = {
         Row: {
           cost_breakdown: Json | null
           created_at: string | null
-          currency: string
+          currency: string | null
           farm_id: string | null
           id: string
-          net_profit: number
+          net_profit: number | null
           organization_id: string
           parcel_id: string | null
           period_end: string
           period_start: string
           profit_margin: number | null
           revenue_breakdown: Json | null
-          total_costs: number
-          total_revenue: number
+          total_costs: number | null
+          total_revenue: number | null
           updated_at: string | null
         }
         Insert: {
           cost_breakdown?: Json | null
           created_at?: string | null
-          currency?: string
+          currency?: string | null
           farm_id?: string | null
           id?: string
-          net_profit?: number
+          net_profit?: number | null
           organization_id: string
           parcel_id?: string | null
           period_end: string
           period_start: string
           profit_margin?: number | null
           revenue_breakdown?: Json | null
-          total_costs?: number
-          total_revenue?: number
+          total_costs?: number | null
+          total_revenue?: number | null
           updated_at?: string | null
         }
         Update: {
           cost_breakdown?: Json | null
           created_at?: string | null
-          currency?: string
+          currency?: string | null
           farm_id?: string | null
           id?: string
-          net_profit?: number
+          net_profit?: number | null
           organization_id?: string
           parcel_id?: string | null
           period_end?: string
           period_start?: string
           profit_margin?: number | null
           revenue_breakdown?: Json | null
-          total_costs?: number
-          total_revenue?: number
+          total_costs?: number | null
+          total_revenue?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4093,13 +4116,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "profitability_snapshots_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "profitability_snapshots_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -4110,58 +4126,72 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
-          created_at: string
+          account_id: string | null
+          amount: number
+          billed_quantity: number | null
+          created_at: string | null
+          description: string | null
+          discount_amount: number | null
+          discount_percent: number | null
           id: string
-          item_description: string | null
-          item_id: string | null
+          inventory_item_id: string | null
           item_name: string
-          line_total: number | null
+          line_number: number
+          line_total: number
           purchase_order_id: string
           quantity: number
-          quantity_received: number | null
+          received_quantity: number | null
           tax_amount: number | null
+          tax_id: string | null
           tax_rate: number | null
+          unit_of_measure: string | null
           unit_price: number
-          updated_at: string
         }
         Insert: {
-          created_at?: string
+          account_id?: string | null
+          amount: number
+          billed_quantity?: number | null
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          item_description?: string | null
-          item_id?: string | null
+          inventory_item_id?: string | null
           item_name: string
-          line_total?: number | null
+          line_number: number
+          line_total: number
           purchase_order_id: string
           quantity: number
-          quantity_received?: number | null
+          received_quantity?: number | null
           tax_amount?: number | null
+          tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price: number
-          updated_at?: string
         }
         Update: {
-          created_at?: string
+          account_id?: string | null
+          amount?: number
+          billed_quantity?: number | null
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          item_description?: string | null
-          item_id?: string | null
+          inventory_item_id?: string | null
           item_name?: string
-          line_total?: number | null
+          line_number?: number
+          line_total?: number
           purchase_order_id?: string
           quantity?: number
-          quantity_received?: number | null
+          received_quantity?: number | null
           tax_amount?: number | null
+          tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price?: number
-          updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "purchase_order_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
@@ -4200,7 +4230,7 @@ export type Database = {
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null
-          order_date?: string
+          order_date: string
           order_number: string
           organization_id: string
           status?: string | null
@@ -4240,31 +4270,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "purchase_orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "purchase_orders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_stock_entry_id_fkey"
-            columns: ["stock_entry_id"]
-            isOneToOne: false
-            referencedRelation: "stock_entries"
             referencedColumns: ["id"]
           },
           {
@@ -4276,14 +4285,229 @@ export type Database = {
           },
         ]
       }
+      quote_items: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string | null
+          description: string | null
+          discount_amount: number | null
+          discount_percent: number | null
+          id: string
+          item_id: string | null
+          item_name: string
+          line_number: number
+          line_total: number
+          quantity: number
+          quote_id: string
+          tax_amount: number | null
+          tax_id: string | null
+          tax_rate: number | null
+          unit_of_measure: string | null
+          unit_price: number
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          id?: string
+          item_id?: string | null
+          item_name: string
+          line_number: number
+          line_total: number
+          quantity: number
+          quote_id: string
+          tax_amount?: number | null
+          tax_id?: string | null
+          tax_rate?: number | null
+          unit_of_measure?: string | null
+          unit_price: number
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          id?: string
+          item_id?: string | null
+          item_name?: string
+          line_number?: number
+          line_total?: number
+          quantity?: number
+          quote_id?: string
+          tax_amount?: number | null
+          tax_id?: string | null
+          tax_rate?: number | null
+          unit_of_measure?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          accepted_at: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          converted_at: string | null
+          converted_by: string | null
+          created_at: string | null
+          created_by: string | null
+          currency_code: string | null
+          customer_id: string | null
+          customer_name: string
+          delivery_terms: string | null
+          discount_amount: number | null
+          exchange_rate: number | null
+          farm_id: string | null
+          grand_total: number
+          id: string
+          notes: string | null
+          organization_id: string
+          parcel_id: string | null
+          payment_terms: string | null
+          quote_date: string
+          quote_number: string
+          reference_number: string | null
+          sales_order_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: Database["public"]["Enums"]["quote_status"] | null
+          subtotal: number
+          tax_total: number
+          terms_and_conditions: string | null
+          updated_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency_code?: string | null
+          customer_id?: string | null
+          customer_name: string
+          delivery_terms?: string | null
+          discount_amount?: number | null
+          exchange_rate?: number | null
+          farm_id?: string | null
+          grand_total?: number
+          id?: string
+          notes?: string | null
+          organization_id: string
+          parcel_id?: string | null
+          payment_terms?: string | null
+          quote_date: string
+          quote_number: string
+          reference_number?: string | null
+          sales_order_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: Database["public"]["Enums"]["quote_status"] | null
+          subtotal?: number
+          tax_total?: number
+          terms_and_conditions?: string | null
+          updated_at?: string | null
+          valid_until: string
+        }
+        Update: {
+          accepted_at?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency_code?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          delivery_terms?: string | null
+          discount_amount?: number | null
+          exchange_rate?: number | null
+          farm_id?: string | null
+          grand_total?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          parcel_id?: string | null
+          payment_terms?: string | null
+          quote_date?: string
+          quote_number?: string
+          reference_number?: string | null
+          sales_order_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: Database["public"]["Enums"]["quote_status"] | null
+          subtotal?: number
+          tax_total?: number
+          terms_and_conditions?: string | null
+          updated_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reception_batches: {
         Row: {
           batch_code: string
-          created_at: string
+          created_at: string | null
           created_by: string | null
           crop_id: string | null
           culture_type: string | null
-          decision: string
+          decision: string | null
           destination_warehouse_id: string | null
           documents: Json | null
           harvest_id: string | null
@@ -4306,23 +4530,23 @@ export type Database = {
           reception_date: string
           reception_time: string | null
           sales_order_id: string | null
-          status: string
+          status: string | null
           stock_entry_id: string | null
           temperature: number | null
           transformation_order_id: string | null
-          updated_at: string
+          updated_at: string | null
           updated_by: string | null
           warehouse_id: string
           weight: number
-          weight_unit: string
+          weight_unit: string | null
         }
         Insert: {
           batch_code: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           crop_id?: string | null
           culture_type?: string | null
-          decision?: string
+          decision?: string | null
           destination_warehouse_id?: string | null
           documents?: Json | null
           harvest_id?: string | null
@@ -4345,23 +4569,23 @@ export type Database = {
           reception_date: string
           reception_time?: string | null
           sales_order_id?: string | null
-          status?: string
+          status?: string | null
           stock_entry_id?: string | null
           temperature?: number | null
           transformation_order_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           updated_by?: string | null
           warehouse_id: string
           weight: number
-          weight_unit?: string
+          weight_unit?: string | null
         }
         Update: {
           batch_code?: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           crop_id?: string | null
           culture_type?: string | null
-          decision?: string
+          decision?: string | null
           destination_warehouse_id?: string | null
           documents?: Json | null
           harvest_id?: string | null
@@ -4384,26 +4608,19 @@ export type Database = {
           reception_date?: string
           reception_time?: string | null
           sales_order_id?: string | null
-          status?: string
+          status?: string | null
           stock_entry_id?: string | null
           temperature?: number | null
           transformation_order_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           updated_by?: string | null
           warehouse_id?: string
           weight?: number
-          weight_unit?: string
+          weight_unit?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "reception_batches_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reception_batches_crop_id_fkey"
+            foreignKeyName: "fk_reception_batches_crop"
             columns: ["crop_id"]
             isOneToOne: false
             referencedRelation: "crops"
@@ -4424,25 +4641,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "reception_batches_harvest_id_fkey"
-            columns: ["harvest_id"]
-            isOneToOne: false
-            referencedRelation: "harvest_summary"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "reception_batches_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reception_batches_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "reception_batches_parcel_id_fkey"
@@ -4455,50 +4658,8 @@ export type Database = {
             foreignKeyName: "reception_batches_quality_checked_by_fkey"
             columns: ["quality_checked_by"]
             isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reception_batches_quality_checked_by_fkey"
-            columns: ["quality_checked_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "reception_batches_quality_checked_by_fkey"
-            columns: ["quality_checked_by"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "reception_batches_quality_checked_by_fkey"
-            columns: ["quality_checked_by"]
-            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reception_batches_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reception_batches_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "reception_batches_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "reception_batches_received_by_fkey"
@@ -4522,13 +4683,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "reception_batches_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "reception_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -4543,7 +4697,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           crop_type: string | null
-          currency: string
+          currency: string | null
           date: string
           description: string | null
           farm_id: string | null
@@ -4562,7 +4716,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crop_type?: string | null
-          currency?: string
+          currency?: string | null
           date: string
           description?: string | null
           farm_id?: string | null
@@ -4581,7 +4735,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crop_type?: string | null
-          currency?: string
+          currency?: string | null
           date?: string
           description?: string | null
           farm_id?: string | null
@@ -4597,13 +4751,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "revenues_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "revenues_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -4616,13 +4763,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "revenues_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "revenues_parcel_id_fkey"
@@ -4669,13 +4809,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "role_assignments_audit_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "role_assignments_audit_new_role_id_fkey"
             columns: ["new_role_id"]
             isOneToOne: false
@@ -4695,20 +4828,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "role_assignments_audit_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "role_assignments_audit_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4758,7 +4877,7 @@ export type Database = {
           is_system_template: boolean | null
           name: string
           organization_id: string | null
-          permissions: Json
+          permissions: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -4770,7 +4889,7 @@ export type Database = {
           is_system_template?: boolean | null
           name: string
           organization_id?: string | null
-          permissions?: Json
+          permissions?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -4782,30 +4901,16 @@ export type Database = {
           is_system_template?: boolean | null
           name?: string
           organization_id?: string | null
-          permissions?: Json
+          permissions?: Json | null
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "role_templates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "role_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "role_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -4844,58 +4949,72 @@ export type Database = {
       }
       sales_order_items: {
         Row: {
-          created_at: string
+          account_id: string | null
+          amount: number
+          created_at: string | null
+          delivered_quantity: number | null
+          description: string | null
+          discount_amount: number | null
+          discount_percent: number | null
           id: string
-          item_description: string | null
-          item_id: string | null
+          invoiced_quantity: number | null
           item_name: string
-          line_total: number | null
+          line_number: number
+          line_total: number
           quantity: number
-          quantity_delivered: number | null
+          quote_item_id: string | null
           sales_order_id: string
           tax_amount: number | null
+          tax_id: string | null
           tax_rate: number | null
+          unit_of_measure: string | null
           unit_price: number
-          updated_at: string
         }
         Insert: {
-          created_at?: string
+          account_id?: string | null
+          amount: number
+          created_at?: string | null
+          delivered_quantity?: number | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          item_description?: string | null
-          item_id?: string | null
+          invoiced_quantity?: number | null
           item_name: string
-          line_total?: number | null
+          line_number: number
+          line_total: number
           quantity: number
-          quantity_delivered?: number | null
+          quote_item_id?: string | null
           sales_order_id: string
           tax_amount?: number | null
+          tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price: number
-          updated_at?: string
         }
         Update: {
-          created_at?: string
+          account_id?: string | null
+          amount?: number
+          created_at?: string | null
+          delivered_quantity?: number | null
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
           id?: string
-          item_description?: string | null
-          item_id?: string | null
+          invoiced_quantity?: number | null
           item_name?: string
-          line_total?: number | null
+          line_number?: number
+          line_total?: number
           quantity?: number
-          quantity_delivered?: number | null
+          quote_item_id?: string | null
           sales_order_id?: string
           tax_amount?: number | null
+          tax_id?: string | null
           tax_rate?: number | null
+          unit_of_measure?: string | null
           unit_price?: number
-          updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "sales_order_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sales_order_items_sales_order_id_fkey"
             columns: ["sales_order_id"]
@@ -4941,7 +5060,7 @@ export type Database = {
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null
-          order_date?: string
+          order_date: string
           order_number: string
           organization_id: string
           shipping_address?: string | null
@@ -4983,11 +5102,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sales_orders_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "sales_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sales_orders_organization_id_fkey"
@@ -4996,26 +5115,12 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "sales_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "sales_orders_stock_entry_id_fkey"
-            columns: ["stock_entry_id"]
-            isOneToOne: false
-            referencedRelation: "stock_entries"
-            referencedColumns: ["id"]
-          },
         ]
       }
       satellite_aois: {
         Row: {
           area_hectares: number | null
-          created_at: string
+          created_at: string | null
           description: string | null
           farm_id: string | null
           geometry_json: Json | null
@@ -5024,11 +5129,11 @@ export type Database = {
           name: string
           organization_id: string
           parcel_id: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           area_hectares?: number | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           farm_id?: string | null
           geometry_json?: Json | null
@@ -5037,11 +5142,11 @@ export type Database = {
           name: string
           organization_id: string
           parcel_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           area_hectares?: number | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           farm_id?: string | null
           geometry_json?: Json | null
@@ -5050,7 +5155,7 @@ export type Database = {
           name?: string
           organization_id?: string
           parcel_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5066,13 +5171,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "satellite_aois_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "satellite_aois_parcel_id_fkey"
@@ -5132,13 +5230,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "satellite_files_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_files_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -5150,7 +5241,7 @@ export type Database = {
       satellite_indices_data: {
         Row: {
           cloud_coverage_percentage: number | null
-          created_at: string
+          created_at: string | null
           date: string
           farm_id: string | null
           geotiff_expires_at: string | null
@@ -5171,11 +5262,11 @@ export type Database = {
           pixel_count: number | null
           processing_job_id: string | null
           std_value: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           cloud_coverage_percentage?: number | null
-          created_at?: string
+          created_at?: string | null
           date: string
           farm_id?: string | null
           geotiff_expires_at?: string | null
@@ -5196,11 +5287,11 @@ export type Database = {
           pixel_count?: number | null
           processing_job_id?: string | null
           std_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           cloud_coverage_percentage?: number | null
-          created_at?: string
+          created_at?: string | null
           date?: string
           farm_id?: string | null
           geotiff_expires_at?: string | null
@@ -5221,7 +5312,7 @@ export type Database = {
           pixel_count?: number | null
           processing_job_id?: string | null
           std_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5239,24 +5330,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "satellite_indices_data_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_indices_data_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "satellite_indices_data_processing_job_id_fkey"
-            columns: ["processing_job_id"]
-            isOneToOne: false
-            referencedRelation: "satellite_processing_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -5266,7 +5343,7 @@ export type Database = {
           cloud_coverage_threshold: number | null
           completed_at: string | null
           completed_tasks: number | null
-          created_at: string
+          created_at: string | null
           date_range_end: string
           date_range_start: string
           error_message: string | null
@@ -5274,22 +5351,22 @@ export type Database = {
           farm_id: string | null
           id: string
           indices: string[]
-          job_type: string
+          job_type: string | null
           organization_id: string
           parcel_id: string | null
           progress_percentage: number | null
           results_summary: Json | null
           scale: number | null
           started_at: string | null
-          status: string
+          status: string | null
           total_tasks: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           cloud_coverage_threshold?: number | null
           completed_at?: string | null
           completed_tasks?: number | null
-          created_at?: string
+          created_at?: string | null
           date_range_end: string
           date_range_start: string
           error_message?: string | null
@@ -5297,22 +5374,22 @@ export type Database = {
           farm_id?: string | null
           id?: string
           indices: string[]
-          job_type?: string
+          job_type?: string | null
           organization_id: string
           parcel_id?: string | null
           progress_percentage?: number | null
           results_summary?: Json | null
           scale?: number | null
           started_at?: string | null
-          status?: string
+          status?: string | null
           total_tasks?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           cloud_coverage_threshold?: number | null
           completed_at?: string | null
           completed_tasks?: number | null
-          created_at?: string
+          created_at?: string | null
           date_range_end?: string
           date_range_start?: string
           error_message?: string | null
@@ -5320,16 +5397,16 @@ export type Database = {
           farm_id?: string | null
           id?: string
           indices?: string[]
-          job_type?: string
+          job_type?: string | null
           organization_id?: string
           parcel_id?: string | null
           progress_percentage?: number | null
           results_summary?: Json | null
           scale?: number | null
           started_at?: string | null
-          status?: string
+          status?: string | null
           total_tasks?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5347,13 +5424,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "satellite_processing_jobs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_processing_jobs_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -5368,7 +5438,7 @@ export type Database = {
           attempts: number | null
           cloud_coverage_threshold: number | null
           completed_at: string | null
-          created_at: string
+          created_at: string | null
           date_range_end: string
           date_range_start: string
           error_message: string | null
@@ -5383,16 +5453,16 @@ export type Database = {
           result_data: Json | null
           scale: number | null
           started_at: string | null
-          status: string
-          task_type: string
-          updated_at: string
+          status: string | null
+          task_type: string | null
+          updated_at: string | null
         }
         Insert: {
           aoi_id?: string | null
           attempts?: number | null
           cloud_coverage_threshold?: number | null
           completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
           date_range_end: string
           date_range_start: string
           error_message?: string | null
@@ -5407,16 +5477,16 @@ export type Database = {
           result_data?: Json | null
           scale?: number | null
           started_at?: string | null
-          status?: string
-          task_type?: string
-          updated_at?: string
+          status?: string | null
+          task_type?: string | null
+          updated_at?: string | null
         }
         Update: {
           aoi_id?: string | null
           attempts?: number | null
           cloud_coverage_threshold?: number | null
           completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
           date_range_end?: string
           date_range_start?: string
           error_message?: string | null
@@ -5431,9 +5501,9 @@ export type Database = {
           result_data?: Json | null
           scale?: number | null
           started_at?: string | null
-          status?: string
-          task_type?: string
-          updated_at?: string
+          status?: string | null
+          task_type?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5458,13 +5528,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "satellite_processing_tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_processing_tasks_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -5482,7 +5545,7 @@ export type Database = {
       }
       soil_analyses: {
         Row: {
-          analysis_date: string
+          analysis_date: string | null
           biological: Json | null
           chemical: Json | null
           created_at: string | null
@@ -5494,7 +5557,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          analysis_date?: string
+          analysis_date?: string | null
           biological?: Json | null
           chemical?: Json | null
           created_at?: string | null
@@ -5506,7 +5569,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          analysis_date?: string
+          analysis_date?: string | null
           biological?: Json | null
           chemical?: Json | null
           created_at?: string | null
@@ -5527,36 +5590,60 @@ export type Database = {
           },
         ]
       }
+      spatial_ref_sys: {
+        Row: {
+          auth_name: string | null
+          auth_srid: number | null
+          proj4text: string | null
+          srid: number
+          srtext: string | null
+        }
+        Insert: {
+          auth_name?: string | null
+          auth_srid?: number | null
+          proj4text?: string | null
+          srid: number
+          srtext?: string | null
+        }
+        Update: {
+          auth_name?: string | null
+          auth_srid?: number | null
+          proj4text?: string | null
+          srid?: number
+          srtext?: string | null
+        }
+        Relationships: []
+      }
       stock_account_mappings: {
         Row: {
-          created_at: string
+          created_at: string | null
           credit_account_id: string
           debit_account_id: string
           entry_type: string
           id: string
           item_category: string | null
           organization_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           credit_account_id: string
           debit_account_id: string
           entry_type: string
           id?: string
           item_category?: string | null
           organization_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           credit_account_id?: string
           debit_account_id?: string
           entry_type?: string
           id?: string
           item_category?: string | null
           organization_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -5567,25 +5654,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_account_mappings_credit_account_id_fkey"
-            columns: ["credit_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
-          },
-          {
             foreignKeyName: "stock_account_mappings_debit_account_id_fkey"
             columns: ["debit_account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_account_mappings_debit_account_id_fkey"
-            columns: ["debit_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "stock_account_mappings_organization_id_fkey"
@@ -5594,19 +5667,12 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "stock_account_mappings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       stock_closing_entries: {
         Row: {
           closing_date: string
-          created_at: string
+          created_at: string | null
           created_by: string | null
           fiscal_period: string | null
           fiscal_year: number
@@ -5618,11 +5684,11 @@ export type Database = {
           status: string | null
           total_quantity: number | null
           total_valuation: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           closing_date: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           fiscal_period?: string | null
           fiscal_year: number
@@ -5634,11 +5700,11 @@ export type Database = {
           status?: string | null
           total_quantity?: number | null
           total_valuation?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           closing_date?: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           fiscal_period?: string | null
           fiscal_year?: number
@@ -5650,35 +5716,14 @@ export type Database = {
           status?: string | null
           total_quantity?: number | null
           total_valuation?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "stock_closing_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "stock_closing_entries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_closing_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_closing_entries_posted_by_fkey"
-            columns: ["posted_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5690,7 +5735,7 @@ export type Database = {
           closing_quantity: number
           closing_rate: number
           closing_value: number | null
-          created_at: string
+          created_at: string | null
           id: string
           item_id: string
           warehouse_id: string
@@ -5701,7 +5746,7 @@ export type Database = {
           closing_quantity: number
           closing_rate: number
           closing_value?: number | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           item_id: string
           warehouse_id: string
@@ -5712,7 +5757,7 @@ export type Database = {
           closing_quantity?: number
           closing_rate?: number
           closing_value?: number | null
-          created_at?: string
+          created_at?: string | null
           id?: string
           item_id?: string
           warehouse_id?: string
@@ -5729,7 +5774,7 @@ export type Database = {
             foreignKeyName: "stock_closing_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -5743,9 +5788,9 @@ export type Database = {
       }
       stock_entries: {
         Row: {
-          created_at: string
+          created_at: string | null
           created_by: string | null
-          entry_date: string
+          entry_date: string | null
           entry_number: string
           entry_type: string
           from_warehouse_id: string | null
@@ -5760,15 +5805,15 @@ export type Database = {
           reference_id: string | null
           reference_number: string | null
           reference_type: string | null
-          status: string
+          status: string | null
           to_warehouse_id: string | null
-          updated_at: string
+          updated_at: string | null
           updated_by: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
-          entry_date?: string
+          entry_date?: string | null
           entry_number: string
           entry_type: string
           from_warehouse_id?: string | null
@@ -5783,15 +5828,15 @@ export type Database = {
           reference_id?: string | null
           reference_number?: string | null
           reference_type?: string | null
-          status?: string
+          status?: string | null
           to_warehouse_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
-          entry_date?: string
+          entry_date?: string | null
           entry_number?: string
           entry_type?: string
           from_warehouse_id?: string | null
@@ -5806,17 +5851,17 @@ export type Database = {
           reference_id?: string | null
           reference_number?: string | null
           reference_type?: string | null
-          status?: string
+          status?: string | null
           to_warehouse_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           updated_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "stock_entries_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "fk_stock_entries_reception_batch"
+            columns: ["reception_batch_id"]
             isOneToOne: false
-            referencedRelation: "user_profiles"
+            referencedRelation: "reception_batches"
             referencedColumns: ["id"]
           },
           {
@@ -5841,38 +5886,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_entries_posted_by_fkey"
-            columns: ["posted_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_entries_reception_batch_id_fkey"
-            columns: ["reception_batch_id"]
-            isOneToOne: false
-            referencedRelation: "reception_batches"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_entries_to_warehouse_id_fkey"
             columns: ["to_warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_entries_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5881,12 +5898,12 @@ export type Database = {
         Row: {
           batch_number: string | null
           cost_per_unit: number | null
-          created_at: string
+          created_at: string | null
           expiry_date: string | null
           id: string
           item_id: string
           item_name: string
-          line_number: number
+          line_number: number | null
           notes: string | null
           physical_quantity: number | null
           quantity: number
@@ -5902,12 +5919,12 @@ export type Database = {
         Insert: {
           batch_number?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           expiry_date?: string | null
           id?: string
           item_id: string
           item_name: string
-          line_number?: number
+          line_number?: number | null
           notes?: string | null
           physical_quantity?: number | null
           quantity: number
@@ -5923,12 +5940,12 @@ export type Database = {
         Update: {
           batch_number?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           expiry_date?: string | null
           id?: string
           item_id?: string
           item_name?: string
-          line_number?: number
+          line_number?: number | null
           notes?: string | null
           physical_quantity?: number | null
           quantity?: number
@@ -5946,7 +5963,7 @@ export type Database = {
             foreignKeyName: "stock_entry_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -5977,11 +5994,11 @@ export type Database = {
           balance_quantity: number
           batch_number: string | null
           cost_per_unit: number | null
-          created_at: string
+          created_at: string | null
           created_by: string | null
           id: string
           item_id: string
-          movement_date: string
+          movement_date: string | null
           movement_type: string
           organization_id: string
           quantity: number
@@ -5996,11 +6013,11 @@ export type Database = {
           balance_quantity: number
           batch_number?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           item_id: string
-          movement_date?: string
+          movement_date?: string | null
           movement_type: string
           organization_id: string
           quantity: number
@@ -6015,11 +6032,11 @@ export type Database = {
           balance_quantity?: number
           batch_number?: string | null
           cost_per_unit?: number | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           item_id?: string
-          movement_date?: string
+          movement_date?: string | null
           movement_type?: string
           organization_id?: string
           quantity?: number
@@ -6032,17 +6049,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "stock_movements_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_movements_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -6051,13 +6061,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "stock_movements_stock_entry_id_fkey"
@@ -6086,46 +6089,46 @@ export type Database = {
         Row: {
           batch_number: string | null
           cost_per_unit: number
-          created_at: string
+          created_at: string | null
           id: string
           item_id: string
           organization_id: string
           quantity: number
-          remaining_quantity: number
+          remaining_quantity: number | null
           serial_number: string | null
           stock_entry_id: string | null
           total_cost: number | null
-          valuation_date: string
+          valuation_date: string | null
           warehouse_id: string
         }
         Insert: {
           batch_number?: string | null
           cost_per_unit: number
-          created_at?: string
+          created_at?: string | null
           id?: string
           item_id: string
           organization_id: string
           quantity: number
-          remaining_quantity?: number
+          remaining_quantity?: number | null
           serial_number?: string | null
           stock_entry_id?: string | null
           total_cost?: number | null
-          valuation_date?: string
+          valuation_date?: string | null
           warehouse_id: string
         }
         Update: {
           batch_number?: string | null
           cost_per_unit?: number
-          created_at?: string
+          created_at?: string | null
           id?: string
           item_id?: string
           organization_id?: string
           quantity?: number
-          remaining_quantity?: number
+          remaining_quantity?: number | null
           serial_number?: string | null
           stock_entry_id?: string | null
           total_cost?: number | null
-          valuation_date?: string
+          valuation_date?: string | null
           warehouse_id?: string
         }
         Relationships: [
@@ -6133,7 +6136,7 @@ export type Database = {
             foreignKeyName: "stock_valuation_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
@@ -6142,13 +6145,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_valuation_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
           {
             foreignKeyName: "stock_valuation_stock_entry_id_fkey"
@@ -6168,13 +6164,13 @@ export type Database = {
       }
       structures: {
         Row: {
-          condition: string
+          condition: string | null
           created_at: string | null
           farm_id: string | null
           id: string
           installation_date: string
           is_active: boolean | null
-          location: Json
+          location: Json | null
           name: string
           notes: string | null
           organization_id: string
@@ -6184,13 +6180,13 @@ export type Database = {
           usage: string | null
         }
         Insert: {
-          condition?: string
+          condition?: string | null
           created_at?: string | null
           farm_id?: string | null
           id?: string
           installation_date: string
           is_active?: boolean | null
-          location?: Json
+          location?: Json | null
           name: string
           notes?: string | null
           organization_id: string
@@ -6200,13 +6196,13 @@ export type Database = {
           usage?: string | null
         }
         Update: {
-          condition?: string
+          condition?: string | null
           created_at?: string | null
           farm_id?: string | null
           id?: string
           installation_date?: string
           is_active?: boolean | null
-          location?: Json
+          location?: Json | null
           name?: string
           notes?: string | null
           organization_id?: string
@@ -6229,13 +6225,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "structures_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -6288,20 +6277,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "subscription_usage_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "subscription_usage_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["subscription_id"]
-          },
-          {
             foreignKeyName: "subscription_usage_subscription_id_fkey"
             columns: ["subscription_id"]
             isOneToOne: false
@@ -6313,79 +6288,34 @@ export type Database = {
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
-          canceled_at: string | null
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
-          has_advanced_reporting: boolean | null
-          has_ai_recommendations: boolean | null
-          has_analytics: boolean | null
-          has_api_access: boolean | null
-          has_priority_support: boolean | null
-          has_sensor_integration: boolean | null
           id: string
-          max_farms: number
-          max_parcels: number
-          max_satellite_reports: number | null
-          max_users: number
-          metadata: Json | null
           organization_id: string
-          plan_type: string
-          polar_customer_id: string | null
-          polar_product_id: string | null
-          polar_subscription_id: string | null
+          plan_id: string | null
           status: string
           updated_at: string | null
         }
         Insert: {
           cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
-          has_advanced_reporting?: boolean | null
-          has_ai_recommendations?: boolean | null
-          has_analytics?: boolean | null
-          has_api_access?: boolean | null
-          has_priority_support?: boolean | null
-          has_sensor_integration?: boolean | null
           id?: string
-          max_farms?: number
-          max_parcels?: number
-          max_satellite_reports?: number | null
-          max_users?: number
-          metadata?: Json | null
           organization_id: string
-          plan_type: string
-          polar_customer_id?: string | null
-          polar_product_id?: string | null
-          polar_subscription_id?: string | null
-          status?: string
+          plan_id?: string | null
+          status: string
           updated_at?: string | null
         }
         Update: {
           cancel_at_period_end?: boolean | null
-          canceled_at?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
-          has_advanced_reporting?: boolean | null
-          has_ai_recommendations?: boolean | null
-          has_analytics?: boolean | null
-          has_api_access?: boolean | null
-          has_priority_support?: boolean | null
-          has_sensor_integration?: boolean | null
           id?: string
-          max_farms?: number
-          max_parcels?: number
-          max_satellite_reports?: number | null
-          max_users?: number
-          metadata?: Json | null
           organization_id?: string
-          plan_type?: string
-          polar_customer_id?: string | null
-          polar_product_id?: string | null
-          polar_subscription_id?: string | null
+          plan_id?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -6393,16 +6323,9 @@ export type Database = {
           {
             foreignKeyName: "subscriptions_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -6410,59 +6333,47 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
-          contact_person: string | null
           country: string | null
           created_at: string | null
           email: string | null
           id: string
           is_active: boolean | null
           name: string
-          notes: string | null
           organization_id: string
-          payment_terms: string | null
           phone: string | null
           postal_code: string | null
           tax_id: string | null
           updated_at: string | null
-          website: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
-          contact_person?: string | null
           country?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           name: string
-          notes?: string | null
           organization_id: string
-          payment_terms?: string | null
           phone?: string | null
           postal_code?: string | null
           tax_id?: string | null
           updated_at?: string | null
-          website?: string | null
         }
         Update: {
           address?: string | null
           city?: string | null
-          contact_person?: string | null
           country?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
-          notes?: string | null
           organization_id?: string
-          payment_terms?: string | null
           phone?: string | null
           postal_code?: string | null
           tax_id?: string | null
           updated_at?: string | null
-          website?: string | null
         }
         Relationships: [
           {
@@ -6471,13 +6382,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "suppliers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -6529,13 +6433,6 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "task_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       task_comments: {
@@ -6577,43 +6474,8 @@ export type Database = {
             foreignKeyName: "task_comments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
             referencedRelation: "tasks"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "task_comments_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "task_comments_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "task_comments_worker_id_fkey"
@@ -6654,21 +6516,7 @@ export type Database = {
             foreignKeyName: "task_dependencies_depends_on_task_id_fkey"
             columns: ["depends_on_task_id"]
             isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_dependencies_depends_on_task_id_fkey"
-            columns: ["depends_on_task_id"]
-            isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_dependencies_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "task_summary"
             referencedColumns: ["id"]
           },
           {
@@ -6724,13 +6572,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "task_equipment_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "task_equipment_task_id_fkey"
             columns: ["task_id"]
@@ -6824,36 +6665,8 @@ export type Database = {
             foreignKeyName: "task_time_logs_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_time_logs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
             referencedRelation: "tasks"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_time_logs_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_time_logs_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "task_time_logs_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "task_time_logs_worker_id_fkey"
@@ -6993,45 +6806,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tasks_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
             foreignKeyName: "tasks_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_crop_id_fkey"
-            columns: ["crop_id"]
-            isOneToOne: false
-            referencedRelation: "crops"
             referencedColumns: ["id"]
           },
           {
@@ -7049,13 +6827,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "tasks_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -7066,43 +6837,8 @@ export type Database = {
             foreignKeyName: "tasks_parent_task_id_fkey"
             columns: ["parent_task_id"]
             isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_parent_task_id_fkey"
-            columns: ["parent_task_id"]
-            isOneToOne: false
             referencedRelation: "tasks"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
           },
           {
             foreignKeyName: "tasks_worker_id_fkey"
@@ -7115,57 +6851,45 @@ export type Database = {
       }
       taxes: {
         Row: {
-          code: string
+          account_id: string | null
           created_at: string | null
-          created_by: string | null
-          description: string | null
           id: string
           is_active: boolean | null
           name: string
           organization_id: string
-          purchase_account_id: string | null
           rate: number
-          sales_account_id: string | null
-          tax_type: Database["public"]["Enums"]["tax_type"]
+          tax_type: Database["public"]["Enums"]["tax_type"] | null
           updated_at: string | null
         }
         Insert: {
-          code: string
+          account_id?: string | null
           created_at?: string | null
-          created_by?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           organization_id: string
-          purchase_account_id?: string | null
           rate: number
-          sales_account_id?: string | null
-          tax_type: Database["public"]["Enums"]["tax_type"]
+          tax_type?: Database["public"]["Enums"]["tax_type"] | null
           updated_at?: string | null
         }
         Update: {
-          code?: string
+          account_id?: string | null
           created_at?: string | null
-          created_by?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           organization_id?: string
-          purchase_account_id?: string | null
           rate?: number
-          sales_account_id?: string | null
-          tax_type?: Database["public"]["Enums"]["tax_type"]
+          tax_type?: Database["public"]["Enums"]["tax_type"] | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "taxes_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "taxes_account_id_fkey"
+            columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "taxes_organization_id_fkey"
@@ -7173,41 +6897,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "taxes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "taxes_purchase_account_id_fkey"
-            columns: ["purchase_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "taxes_purchase_account_id_fkey"
-            columns: ["purchase_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
-          },
-          {
-            foreignKeyName: "taxes_sales_account_id_fkey"
-            columns: ["sales_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "taxes_sales_account_id_fkey"
-            columns: ["sales_account_id"]
-            isOneToOne: false
-            referencedRelation: "vw_account_balances"
-            referencedColumns: ["account_id"]
           },
         ]
       }
@@ -7241,24 +6930,24 @@ export type Database = {
       tree_categories: {
         Row: {
           category: string
-          created_at: string
+          created_at: string | null
           id: string
           organization_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           organization_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           organization_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -7268,36 +6957,29 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tree_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       trees: {
         Row: {
           category_id: string
-          created_at: string
+          created_at: string | null
           id: string
           name: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           name: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           name?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -7314,11 +6996,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           email: string | null
-          first_name: string | null
           full_name: string | null
           id: string
           language: string | null
-          last_name: string | null
+          onboarding_completed: boolean | null
           password_set: boolean | null
           phone: string | null
           timezone: string | null
@@ -7328,11 +7009,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
-          first_name?: string | null
           full_name?: string | null
           id: string
           language?: string | null
-          last_name?: string | null
+          onboarding_completed?: boolean | null
           password_set?: boolean | null
           phone?: string | null
           timezone?: string | null
@@ -7342,25 +7022,16 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
-          first_name?: string | null
           full_name?: string | null
           id?: string
           language?: string | null
-          last_name?: string | null
+          onboarding_completed?: boolean | null
           password_set?: boolean | null
           phone?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       utilities: {
         Row: {
@@ -7427,6 +7098,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "utilities_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "utilities_parcel_id_fkey"
             columns: ["parcel_id"]
@@ -7527,13 +7205,6 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "warehouses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       work_records: {
@@ -7588,7 +7259,84 @@ export type Database = {
           worker_id?: string | null
           worker_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "work_records_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_units: {
+        Row: {
+          allow_decimal: boolean | null
+          base_unit: string | null
+          code: string
+          conversion_factor: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_ar: string | null
+          name_fr: string | null
+          organization_id: string
+          unit_category: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          allow_decimal?: boolean | null
+          base_unit?: string | null
+          code: string
+          conversion_factor?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_ar?: string | null
+          name_fr?: string | null
+          organization_id: string
+          unit_category: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          allow_decimal?: boolean | null
+          base_unit?: string | null
+          code?: string
+          conversion_factor?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_ar?: string | null
+          name_fr?: string | null
+          organization_id?: string
+          unit_category?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_units_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workers: {
         Row: {
@@ -7719,13 +7467,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workers_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "workers_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -7738,1138 +7479,215 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "workers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
           },
         ]
       }
     }
     Views: {
-      active_workers_summary: {
+      geography_columns: {
         Row: {
-          address: string | null
-          bank_account: string | null
-          calculation_basis:
-            | Database["public"]["Enums"]["calculation_basis"]
-            | null
-          certifications: string[] | null
-          cin: string | null
-          cnss_number: string | null
-          created_at: string | null
-          created_by: string | null
-          daily_rate: number | null
-          date_of_birth: string | null
-          documents: Json | null
-          email: string | null
-          end_date: string | null
-          farm_id: string | null
-          farm_name: string | null
-          first_name: string | null
-          hire_date: string | null
-          id: string | null
-          is_active: boolean | null
-          is_cnss_declared: boolean | null
-          last_name: string | null
-          metayage_contract_details: Json | null
-          metayage_percentage: number | null
-          metayage_type: Database["public"]["Enums"]["metayage_type"] | null
-          monthly_salary: number | null
-          notes: string | null
-          organization_id: string | null
-          organization_name: string | null
-          payment_frequency:
-            | Database["public"]["Enums"]["payment_frequency"]
-            | null
-          payment_method: string | null
-          phone: string | null
-          position: string | null
-          specialties: string[] | null
-          total_days_worked: number | null
-          total_paid: number | null
-          total_tasks_completed: number | null
-          updated_at: string | null
-          user_id: string | null
-          work_records_count: number | null
-          worker_type: Database["public"]["Enums"]["worker_type"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workers_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "workers_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "workers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      assignable_users: {
-        Row: {
-          first_name: string | null
-          full_name: string | null
-          last_name: string | null
-          organization_id: string | null
-          role: string | null
-          user_id: string | null
-          user_type: string | null
-          worker_id: string | null
-          worker_position: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      current_session_status: {
-        Row: {
-          access_status: string | null
-          has_access: boolean | null
-          organization_id: string | null
-          organization_name: string | null
-          plan_type: string | null
-          subscription_status: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      delivery_summary: {
-        Row: {
-          arrival_time: string | null
-          created_at: string | null
-          created_by: string | null
-          currency: string | null
-          customer_contact: string | null
-          customer_email: string | null
-          customer_name: string | null
-          delivery_address: string | null
-          delivery_date: string | null
-          delivery_note_number: string | null
-          delivery_type: string | null
-          departure_time: string | null
-          destination_lat: number | null
-          destination_lng: number | null
-          distance_km: number | null
-          driver_id: string | null
-          driver_name: string | null
-          farm_id: string | null
-          farm_name: string | null
-          id: string | null
-          invoice_number: string | null
-          item_count: number | null
-          notes: string | null
-          organization_id: string | null
-          organization_name: string | null
-          payment_date: string | null
-          payment_method: string | null
-          payment_received: number | null
-          payment_status: string | null
-          payment_terms: string | null
-          photos: Json | null
-          signature_date: string | null
-          signature_image: string | null
-          signature_name: string | null
-          status: string | null
-          total_amount: number | null
-          total_quantity: number | null
-          tracking_update_count: number | null
-          updated_at: string | null
-          vehicle_info: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "deliveries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "deliveries_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deliveries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      harvest_summary: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          crop_id: string | null
-          crop_name: string | null
-          delivery_count: number | null
-          documents: Json | null
-          estimated_revenue: number | null
-          expected_price_per_unit: number | null
-          farm_id: string | null
-          farm_name: string | null
-          harvest_date: string | null
-          harvest_task_id: string | null
-          humidity: number | null
-          id: string | null
-          intended_for: string | null
-          notes: string | null
-          organization_id: string | null
-          parcel_id: string | null
-          parcel_name: string | null
-          photos: Json | null
-          quality_grade: string | null
-          quality_notes: string | null
-          quality_score: number | null
-          quantity: number | null
-          quantity_delivered: number | null
-          status: string | null
-          storage_location: string | null
-          supervisor_id: string | null
-          supervisor_name: string | null
-          temperature: number | null
-          unit: string | null
-          updated_at: string | null
-          worker_count: number | null
-          workers: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "harvest_records_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_crop_id_fkey"
-            columns: ["crop_id"]
-            isOneToOne: false
-            referencedRelation: "crops"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_harvest_task_id_fkey"
-            columns: ["harvest_task_id"]
-            isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_harvest_task_id_fkey"
-            columns: ["harvest_task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_parcel_id_fkey"
-            columns: ["parcel_id"]
-            isOneToOne: false
-            referencedRelation: "parcels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "harvest_records_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_summary: {
-        Row: {
-          advance_deduction: number | null
-          approved_at: string | null
-          approved_by: string | null
-          approved_by_email: string | null
-          attachments: Json | null
-          base_amount: number | null
-          bonus_count: number | null
-          bonuses: number | null
-          calculated_at: string | null
-          calculated_by: string | null
-          calculated_by_email: string | null
-          created_at: string | null
-          days_worked: number | null
-          deduction_count: number | null
-          deductions: number | null
-          farm_id: string | null
-          farm_name: string | null
-          gross_revenue: number | null
-          harvest_amount: number | null
-          hours_worked: number | null
-          id: string | null
-          metayage_percentage: number | null
-          net_amount: number | null
-          notes: string | null
-          organization_id: string | null
-          organization_name: string | null
-          overtime_amount: number | null
-          paid_at: string | null
-          paid_by: string | null
-          paid_by_email: string | null
-          payment_date: string | null
-          payment_method: string | null
-          payment_reference: string | null
-          payment_type: string | null
-          period_end: string | null
-          period_start: string | null
-          position: string | null
-          status: string | null
-          tasks_completed: number | null
-          tasks_completed_ids: string[] | null
-          total_charges: number | null
-          updated_at: string | null
-          worker_id: string | null
-          worker_name: string | null
-          worker_type: Database["public"]["Enums"]["worker_type"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_records_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_records_calculated_by_fkey"
-            columns: ["calculated_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_records_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "payment_records_paid_by_fkey"
-            columns: ["paid_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "payment_records_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      subscription_status: {
-        Row: {
-          cancel_at_period_end: boolean | null
-          current_period_end: string | null
-          expiration_status: string | null
-          farms_count: number | null
-          is_valid: boolean | null
-          max_farms: number | null
-          max_parcels: number | null
-          max_users: number | null
-          organization_id: string | null
-          organization_name: string | null
-          parcels_count: number | null
-          plan_type: string | null
-          status: string | null
-          subscription_id: string | null
-          users_count: number | null
+          coord_dimension: number | null
+          f_geography_column: unknown
+          f_table_catalog: unknown
+          f_table_name: unknown
+          f_table_schema: unknown
+          srid: number | null
+          type: string | null
         }
         Relationships: []
       }
-      task_summary: {
+      geometry_columns: {
         Row: {
-          actual_cost: number | null
-          actual_duration: number | null
-          actual_end: string | null
-          actual_start: string | null
-          approved_at: string | null
-          approved_by: string | null
-          assigned_to: string | null
-          attachments: Json | null
-          category_id: string | null
-          category_name: string | null
-          checklist: Json | null
-          comment_count: number | null
-          completed_date: string | null
-          completion_percentage: number | null
-          cost_estimate: number | null
-          created_at: string | null
-          crop_id: string | null
-          description: string | null
-          due_date: string | null
-          equipment_required: string[] | null
-          estimated_duration: number | null
-          farm_id: string | null
-          farm_name: string | null
-          id: string | null
-          location_lat: number | null
-          location_lng: number | null
-          notes: string | null
-          organization_id: string | null
-          parcel_id: string | null
-          parcel_name: string | null
-          parent_task_id: string | null
-          priority: string | null
-          quality_rating: number | null
-          repeat_pattern: Json | null
-          required_skills: string[] | null
-          scheduled_end: string | null
-          scheduled_start: string | null
-          status: string | null
-          task_type: string | null
-          template_id: string | null
-          time_log_count: number | null
-          title: string | null
-          total_hours_logged: number | null
-          updated_at: string | null
-          weather_dependency: boolean | null
-          worker_id: string | null
-          worker_name: string | null
-          worker_type: Database["public"]["Enums"]["worker_type"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_crop_id_fkey"
-            columns: ["crop_id"]
-            isOneToOne: false
-            referencedRelation: "crops"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "tasks_parcel_id_fkey"
-            columns: ["parcel_id"]
-            isOneToOne: false
-            referencedRelation: "parcels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_parent_task_id_fkey"
-            columns: ["parent_task_id"]
-            isOneToOne: false
-            referencedRelation: "task_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_parent_task_id_fkey"
-            columns: ["parent_task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "active_workers_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "tasks_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "workers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vw_account_balances: {
-        Row: {
-          account_code: string | null
-          account_id: string | null
-          account_name: string | null
-          account_type: string | null
-          balance: number | null
-          organization_id: string | null
-          total_credit: number | null
-          total_debit: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      vw_invoice_aging: {
-        Row: {
-          aging_bucket: string | null
-          days_overdue: number | null
-          due_date: string | null
-          grand_total: number | null
-          invoice_date: string | null
-          invoice_id: string | null
-          invoice_number: string | null
-          invoice_type: Database["public"]["Enums"]["invoice_type"] | null
-          organization_id: string | null
-          outstanding_amount: number | null
-          party_name: string | null
-          status: Database["public"]["Enums"]["invoice_status"] | null
+          coord_dimension: number | null
+          f_geometry_column: unknown
+          f_table_catalog: string | null
+          f_table_name: unknown
+          f_table_schema: unknown
+          srid: number | null
+          type: string | null
         }
         Insert: {
-          aging_bucket?: never
-          days_overdue?: never
-          due_date?: string | null
-          grand_total?: number | null
-          invoice_date?: string | null
-          invoice_id?: string | null
-          invoice_number?: string | null
-          invoice_type?: Database["public"]["Enums"]["invoice_type"] | null
-          organization_id?: string | null
-          outstanding_amount?: number | null
-          party_name?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"] | null
+          coord_dimension?: number | null
+          f_geometry_column?: unknown
+          f_table_catalog?: string | null
+          f_table_name?: unknown
+          f_table_schema?: unknown
+          srid?: number | null
+          type?: string | null
         }
         Update: {
-          aging_bucket?: never
-          days_overdue?: never
-          due_date?: string | null
-          grand_total?: number | null
-          invoice_date?: string | null
-          invoice_id?: string | null
-          invoice_number?: string | null
-          invoice_type?: Database["public"]["Enums"]["invoice_type"] | null
-          organization_id?: string | null
-          outstanding_amount?: number | null
-          party_name?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      vw_ledger: {
-        Row: {
-          account_code: string | null
-          account_name: string | null
-          account_type: string | null
-          cost_center_name: string | null
-          created_at: string | null
-          created_by: string | null
-          credit: number | null
-          debit: number | null
-          description: string | null
-          entry_date: string | null
-          farm_name: string | null
-          id: string | null
-          organization_id: string | null
-          parcel_name: string | null
-          posting_date: string | null
-          reference_number: string | null
-          reference_type: string | null
-          status: Database["public"]["Enums"]["journal_entry_status"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "journal_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_status"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      worker_payment_history: {
-        Row: {
-          approved_amount: number | null
-          average_payment: number | null
-          last_payment_date: string | null
-          pending_amount: number | null
-          total_paid: number | null
-          total_payments: number | null
-          worker_id: string | null
-          worker_name: string | null
-          worker_type: Database["public"]["Enums"]["worker_type"] | null
+          coord_dimension?: number | null
+          f_geometry_column?: unknown
+          f_table_catalog?: string | null
+          f_table_name?: unknown
+          f_table_schema?: unknown
+          srid?: number | null
+          type?: string | null
         }
         Relationships: []
       }
     }
     Functions: {
-      add_subscription_check_to_table: {
-        Args: { table_name: string }
+      _postgis_deprecate: {
+        Args: { newname: string; oldname: string; version: string }
         Returns: undefined
       }
-      assign_role_with_audit: {
-        Args: {
-          new_role_id: string
-          reason?: string
-          target_org_id: string
-          target_user_id: string
-        }
-        Returns: boolean
+      _postgis_index_extent: {
+        Args: { col: string; tbl: unknown }
+        Returns: unknown
       }
-      calculate_daily_worker_payment: {
-        Args: {
-          p_period_end: string
-          p_period_start: string
-          p_worker_id: string
-        }
-        Returns: {
-          base_amount: number
-          days_worked: number
-          hours_worked: number
-          overtime_amount: number
-          tasks_completed: number
-        }[]
-      }
-      calculate_fixed_salary_payment: {
-        Args: {
-          p_period_end: string
-          p_period_start: string
-          p_worker_id: string
-        }
-        Returns: {
-          base_amount: number
-          days_worked: number
-          hours_worked: number
-          overtime_amount: number
-          tasks_completed: number
-        }[]
-      }
-      calculate_metayage_share: {
-        Args: {
-          p_gross_revenue: number
-          p_total_charges?: number
-          p_worker_id: string
-        }
+      _postgis_pgsql_version: { Args: never; Returns: string }
+      _postgis_scripts_pgsql_version: { Args: never; Returns: string }
+      _postgis_selectivity: {
+        Args: { att_name: string; geom: unknown; mode?: string; tbl: unknown }
         Returns: number
       }
-      calculate_profitability: {
-        Args: {
-          p_end_date?: string
-          p_organization_id: string
-          p_parcel_id?: string
-          p_start_date?: string
-        }
-        Returns: {
-          cost_breakdown: Json
-          net_profit: number
-          parcel_id: string
-          parcel_name: string
-          profit_margin: number
-          revenue_breakdown: Json
-          total_costs: number
-          total_revenue: number
-        }[]
+      _postgis_stats: {
+        Args: { ""?: string; att_name: string; tbl: unknown }
+        Returns: string
       }
-      can_add_user: { Args: { org_id: string }; Returns: boolean }
-      can_create_farm: { Args: { org_id: string }; Returns: boolean }
-      can_create_parcel: { Args: { org_id: string }; Returns: boolean }
-      can_create_resource: {
-        Args: { p_organization_id: string; p_resource_type: string }
+      _st_3dintersects: {
+        Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
-      can_user_perform_action: {
+      _st_contains: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_containsproperly: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_coveredby:
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      _st_covers:
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      _st_crosses: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_dwithin: {
         Args: {
-          action_name: string
-          org_id: string
-          resource_name: string
-          user_id: string
+          geog1: unknown
+          geog2: unknown
+          tolerance: number
+          use_spheroid?: boolean
         }
         Returns: boolean
       }
-      check_overdue_tasks: { Args: never; Returns: undefined }
-      create_material_issue_from_so: {
+      _st_equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      _st_intersects: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_linecrossingdirection: {
+        Args: { line1: unknown; line2: unknown }
+        Returns: number
+      }
+      _st_longestline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      _st_maxdistance: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      _st_orderingequals: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_overlaps: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_sortablehash: { Args: { geom: unknown }; Returns: number }
+      _st_touches: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      _st_voronoi: {
         Args: {
-          p_issue_date?: string
-          p_sales_order_id: string
-          p_warehouse_id: string
+          clip?: unknown
+          g1: unknown
+          return_polygons?: boolean
+          tolerance?: number
         }
-        Returns: string
+        Returns: unknown
       }
-      create_material_receipt_from_po: {
-        Args: {
-          p_purchase_order_id: string
-          p_receipt_date?: string
-          p_warehouse_id: string
-        }
-        Returns: string
-      }
-      create_role_from_template: {
-        Args: { custom_name?: string; org_id: string; template_id: string }
-        Returns: string
-      }
-      create_sales_order_from_reception_batch: {
-        Args: {
-          p_customer_id: string
-          p_item_id: string
-          p_reception_batch_id: string
-          p_unit_price: number
-        }
-        Returns: string
-      }
-      create_stock_entry_from_reception_batch: {
-        Args: {
-          p_destination_warehouse_id: string
-          p_item_id: string
-          p_reception_batch_id: string
-        }
-        Returns: string
-      }
-      create_stock_journal_entry: {
-        Args: { p_stock_entry_id: string }
-        Returns: string
-      }
-      debug_parcel_access: {
-        Args: { test_org_id: string; test_user_id: string }
-        Returns: {
-          can_see_farms: boolean
-          farm_count: number
-          is_org_member: boolean
-          parcel_count: number
-        }[]
-      }
-      delete_all_users: { Args: never; Returns: undefined }
-      delete_farm_direct: {
-        Args: { p_farm_id: string }
-        Returns: {
-          address: string | null
-          certification_status: string | null
-          city: string | null
-          climate_zone: string | null
-          coordinates: Json | null
-          country: string | null
-          created_at: string | null
-          description: string | null
-          established_date: string | null
-          id: string
-          irrigation_type: string | null
-          location: string | null
-          manager_email: string | null
-          manager_name: string | null
-          manager_phone: string | null
-          name: string
-          organization_id: string | null
-          postal_code: string | null
-          size: number | null
-          size_unit: string | null
-          soil_type: string | null
-          state: string | null
-          status: string | null
-          updated_at: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "farms"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      delete_farm_safe: {
-        Args: { farm_id: string }
-        Returns: {
-          address: string | null
-          certification_status: string | null
-          city: string | null
-          climate_zone: string | null
-          coordinates: Json | null
-          country: string | null
-          created_at: string | null
-          description: string | null
-          established_date: string | null
-          id: string
-          irrigation_type: string | null
-          location: string | null
-          manager_email: string | null
-          manager_name: string | null
-          manager_phone: string | null
-          name: string
-          organization_id: string | null
-          postal_code: string | null
-          size: number | null
-          size_unit: string | null
-          soil_type: string | null
-          state: string | null
-          status: string | null
-          updated_at: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "farms"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      delete_parcel_direct: {
-        Args: { p_parcel_id: string }
-        Returns: {
-          area: number | null
-          area_unit: string | null
-          boundary: Json | null
-          calculated_area: number | null
-          created_at: string | null
-          crop_category: string | null
-          crop_type: string | null
-          density_per_hectare: number | null
-          description: string | null
-          farm_id: string | null
-          id: string
-          irrigation_type: string | null
-          name: string
-          perimeter: number | null
-          plant_count: number | null
-          planting_date: string | null
-          planting_density: number | null
-          planting_system: string | null
-          planting_type: string | null
-          planting_year: number | null
-          rootstock: string | null
-          soil_type: string | null
-          spacing: string | null
-          tree_count: number | null
-          tree_type: string | null
-          updated_at: string | null
-          variety: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "parcels"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      delete_parcel_safe: {
-        Args: { parcel_id: string }
-        Returns: {
-          area: number | null
-          area_unit: string | null
-          boundary: Json | null
-          calculated_area: number | null
-          created_at: string | null
-          crop_category: string | null
-          crop_type: string | null
-          density_per_hectare: number | null
-          description: string | null
-          farm_id: string | null
-          id: string
-          irrigation_type: string | null
-          name: string
-          perimeter: number | null
-          plant_count: number | null
-          planting_date: string | null
-          planting_density: number | null
-          planting_system: string | null
-          planting_type: string | null
-          planting_year: number | null
-          rootstock: string | null
-          soil_type: string | null
-          spacing: string | null
-          tree_count: number | null
-          tree_type: string | null
-          updated_at: string | null
-          variety: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "parcels"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      delete_user_cascade: { Args: { user_uuid: string }; Returns: undefined }
-      enforce_subscription_on_session: { Args: never; Returns: undefined }
+      _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      addauth: { Args: { "": string }; Returns: boolean }
+      addgeometrycolumn:
+        | {
+            Args: {
+              column_name: string
+              new_dim: number
+              new_srid: number
+              new_type: string
+              schema_name: string
+              table_name: string
+              use_typmod?: boolean
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              column_name: string
+              new_dim: number
+              new_srid: number
+              new_type: string
+              table_name: string
+              use_typmod?: boolean
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              catalog_name: string
+              column_name: string
+              new_dim: number
+              new_srid_in: number
+              new_type: string
+              schema_name: string
+              table_name: string
+              use_typmod?: boolean
+            }
+            Returns: string
+          }
+      disablelongtransactions: { Args: never; Returns: string }
+      dropgeometrycolumn:
+        | {
+            Args: {
+              column_name: string
+              schema_name: string
+              table_name: string
+            }
+            Returns: string
+          }
+        | { Args: { column_name: string; table_name: string }; Returns: string }
+        | {
+            Args: {
+              catalog_name: string
+              column_name: string
+              schema_name: string
+              table_name: string
+            }
+            Returns: string
+          }
+      dropgeometrytable:
+        | { Args: { schema_name: string; table_name: string }; Returns: string }
+        | { Args: { table_name: string }; Returns: string }
+        | {
+            Args: {
+              catalog_name: string
+              schema_name: string
+              table_name: string
+            }
+            Returns: string
+          }
+      enablelongtransactions: { Args: never; Returns: string }
+      equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       generate_invoice_number: {
         Args: {
           p_invoice_type: Database["public"]["Enums"]["invoice_type"]
@@ -8877,325 +7695,790 @@ export type Database = {
         }
         Returns: string
       }
+      generate_item_code: {
+        Args: {
+          p_item_group_id: string
+          p_organization_id: string
+          p_prefix: string
+        }
+        Returns: string
+      }
       generate_journal_entry_number: {
         Args: { p_organization_id: string }
         Returns: string
       }
-      generate_payment_number:
-        | {
-            Args: {
-              p_organization_id: string
-              p_payment_type: Database["public"]["Enums"]["payment_type"]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_organization_id: string
-              p_payment_type: Database["public"]["Enums"]["accounting_payment_type"]
-            }
-            Returns: string
-          }
-      generate_reception_batch_code: {
-        Args: {
-          p_culture_type: string
-          p_organization_id: string
-          p_warehouse_id: string
-        }
-        Returns: string
-      }
-      generate_stock_entry_number: {
+      generate_purchase_order_number: {
         Args: { p_organization_id: string }
         Returns: string
       }
-      get_current_user_profile: {
-        Args: never
-        Returns: {
-          email: string
-          first_name: string
-          full_name: string
-          id: string
-          last_name: string
-        }[]
+      generate_quote_number: {
+        Args: { p_organization_id: string }
+        Returns: string
       }
-      get_expiring_items: {
-        Args: { p_days_ahead?: number; p_organization_id: string }
-        Returns: {
-          batch_number: string
-          current_quantity: number
-          days_to_expiry: number
-          expiry_date: string
-          item_id: string
-          item_name: string
-        }[]
+      generate_sales_order_number: {
+        Args: { p_organization_id: string }
+        Returns: string
       }
-      get_farm_hierarchy_tree: {
-        Args: { org_uuid: string; root_farm_id?: string }
-        Returns: {
-          farm_id: string
-          farm_name: string
-          farm_size: number
-          farm_type: string
-          hierarchy_level: number
-          is_active: boolean
-          manager_name: string
-          parent_farm_id: string
-          sub_farms_count: number
-        }[]
+      geometry: { Args: { "": string }; Returns: unknown }
+      geometry_above: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
       }
-      get_farm_structures: {
-        Args: { farm_uuid: string }
-        Returns: {
-          condition: string
-          created_at: string
-          installation_date: string
-          is_active: boolean
-          location: Json
-          notes: string
-          structure_details: Json
-          structure_id: string
-          structure_name: string
-          structure_type: string
-          updated_at: string
-          usage: string
-        }[]
+      geometry_below: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
       }
-      get_harvest_statistics: {
+      geometry_cmp: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      geometry_contained_3d: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_contains: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_contains_3d: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_distance_box: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      geometry_distance_centroid: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      geometry_eq: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_ge: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_gt: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_le: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_left: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_lt: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overabove: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overbelow: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overlaps: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overlaps_3d: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overleft: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_overright: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_right: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_same: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_same_3d: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geometry_within: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_parcel_performance_summary: {
         Args: {
-          p_end_date: string
+          p_farm_id?: string
+          p_from_date?: string
           p_organization_id: string
-          p_start_date: string
+          p_parcel_id?: string
+          p_to_date?: string
         }
         Returns: {
-          average_quality_score: number
-          top_parcel_name: string
-          top_parcel_quantity: number
+          avg_profit_margin: number
+          avg_target_yield: number
+          avg_variance_percent: number
+          avg_yield_per_hectare: number
+          crop_type: string
+          farm_name: string
+          last_harvest_date: string
+          parcel_id: string
+          parcel_name: string
+          performance_rating: string
+          total_cost: number
           total_harvests: number
-          total_quantity: number
+          total_profit: number
           total_revenue: number
         }[]
       }
-      get_item_stock_value: {
-        Args: { p_item_id: string; p_warehouse_id?: string }
-        Returns: number
-      }
-      get_latest_satellite_data: {
-        Args: { index_name_param?: string; parcel_uuid: string }
-        Returns: {
-          cloud_coverage_percentage: number
-          created_at: string
-          date: string
-          geotiff_url: string
-          index_name: string
-          max_value: number
-          mean_value: number
-          median_value: number
-          min_value: number
-          std_value: number
-        }[]
-      }
-      get_low_stock_items: {
+      gettransactionid: { Args: never; Returns: unknown }
+      is_organization_member: {
         Args: { p_organization_id: string }
-        Returns: {
-          current_quantity: number
-          deficit: number
-          item_id: string
-          item_name: string
-          minimum_quantity: number
-        }[]
-      }
-      get_organization_farms: {
-        Args: { org_uuid: string }
-        Returns: {
-          farm_id: string
-          farm_location: string
-          farm_name: string
-          farm_size: number
-          farm_type: string
-          hierarchy_level: number
-          manager_name: string
-          parent_farm_id: string
-          sub_farms_count: number
-        }[]
-      }
-      get_organization_role_hierarchy: {
-        Args: { org_id: string }
-        Returns: {
-          display_name: string
-          level: number
-          permissions_count: number
-          role_id: string
-          role_name: string
-          user_count: number
-        }[]
-      }
-      get_organization_structures: {
-        Args: { org_uuid: string }
-        Returns: {
-          condition: string
-          created_at: string
-          farm_id: string
-          farm_name: string
-          installation_date: string
-          is_active: boolean
-          location: Json
-          notes: string
-          structure_details: Json
-          structure_id: string
-          structure_name: string
-          structure_type: string
-          updated_at: string
-          usage: string
-        }[]
-      }
-      get_parcels_for_satellite_processing: {
-        Args: { org_uuid: string }
-        Returns: {
-          area_hectares: number
-          boundary: Json
-          farm_id: string
-          farm_name: string
-          irrigation_type: string
-          notes: string
-          organization_id: string
-          parcel_id: string
-          parcel_name: string
-          soil_type: string
-        }[]
-      }
-      get_satellite_data_statistics: {
-        Args: {
-          end_date_param: string
-          index_name_param: string
-          parcel_uuid: string
-          start_date_param: string
-        }
-        Returns: {
-          data_points_count: number
-          first_date: string
-          index_name: string
-          last_date: string
-          max_value: number
-          mean_value: number
-          median_value: number
-          min_value: number
-          std_value: number
-        }[]
-      }
-      get_user_effective_permissions: {
-        Args: { org_id: string; user_id: string }
-        Returns: {
-          action: string
-          granted_by_role: string
-          permission_name: string
-          resource: string
-        }[]
-      }
-      get_user_organizations: {
-        Args: { user_uuid: string }
-        Returns: {
-          is_active: boolean
-          organization_id: string
-          organization_name: string
-          organization_slug: string
-          user_role: string
-        }[]
-      }
-      get_user_permissions: {
-        Args: { user_id: string }
-        Returns: {
-          action: string
-          permission_name: string
-          resource: string
-        }[]
-      }
-      get_user_role: {
-        Args: { org_id?: string; user_id: string }
-        Returns: {
-          role_display_name: string
-          role_level: number
-          role_name: string
-        }[]
-      }
-      get_user_role_level: {
-        Args: { org_id: string; user_id: string }
-        Returns: number
-      }
-      get_user_tasks: {
-        Args: { user_uuid: string }
-        Returns: {
-          due_date: string
-          farm_name: string
-          parcel_name: string
-          priority: string
-          scheduled_start: string
-          status: string
-          task_description: string
-          task_id: string
-          task_title: string
-          task_type: string
-        }[]
-      }
-      get_worker_advance_deductions: {
-        Args: { p_payment_date: string; p_worker_id: string }
-        Returns: number
-      }
-      get_worker_availability: {
-        Args: { p_date: string; p_worker_id: string }
-        Returns: {
-          is_available: boolean
-          tasks_count: number
-          total_hours: number
-        }[]
-      }
-      has_feature_access: {
-        Args: { feature_name: string; org_id: string }
         Returns: boolean
       }
-      has_valid_subscription: { Args: { org_id: string }; Returns: boolean }
-      is_active_org_member: {
-        Args: { org_id: string; user_id: string }
-        Returns: boolean
+      longtransactionsenabled: { Args: never; Returns: boolean }
+      populate_geometry_columns:
+        | { Args: { use_typmod?: boolean }; Returns: string }
+        | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
+      postgis_constraint_dims: {
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
+        Returns: number
       }
-      is_system_admin: { Args: { check_user_id: string }; Returns: boolean }
-      is_worker: { Args: { user_uuid: string }; Returns: boolean }
-      normalize_role_name: { Args: { legacy_role: string }; Returns: string }
-      post_opening_stock_balance: {
-        Args: { p_opening_stock_id: string }
+      postgis_constraint_srid: {
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
+        Returns: number
+      }
+      postgis_constraint_type: {
+        Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: string
       }
-      update_expired_subscriptions: { Args: never; Returns: undefined }
-      user_belongs_to_organization: {
-        Args: { p_org_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      user_has_permission: {
-        Args: { permission_name: string; user_id: string }
-        Returns: boolean
-      }
-      user_has_permission_for_org: {
-        Args: { org_id: string; permission_name: string; user_id: string }
-        Returns: boolean
-      }
-      user_has_role: {
+      postgis_extensions_upgrade: { Args: never; Returns: string }
+      postgis_full_version: { Args: never; Returns: string }
+      postgis_geos_version: { Args: never; Returns: string }
+      postgis_lib_build_date: { Args: never; Returns: string }
+      postgis_lib_revision: { Args: never; Returns: string }
+      postgis_lib_version: { Args: never; Returns: string }
+      postgis_libjson_version: { Args: never; Returns: string }
+      postgis_liblwgeom_version: { Args: never; Returns: string }
+      postgis_libprotobuf_version: { Args: never; Returns: string }
+      postgis_libxml_version: { Args: never; Returns: string }
+      postgis_proj_version: { Args: never; Returns: string }
+      postgis_scripts_build_date: { Args: never; Returns: string }
+      postgis_scripts_installed: { Args: never; Returns: string }
+      postgis_scripts_released: { Args: never; Returns: string }
+      postgis_svn_version: { Args: never; Returns: string }
+      postgis_type_name: {
         Args: {
-          p_organization_id: string
-          p_role_names: string[]
-          p_user_id: string
+          coord_dimension: number
+          geomname: string
+          use_new_name?: boolean
+        }
+        Returns: string
+      }
+      postgis_version: { Args: never; Returns: string }
+      postgis_wagyu_version: { Args: never; Returns: string }
+      st_3dclosestpoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_3ddistance: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_3dintersects: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_3dlongestline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_3dmakebox: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_3dmaxdistance: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_3dshortestline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_addpoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_angle:
+        | { Args: { line1: unknown; line2: unknown }; Returns: number }
+        | {
+            Args: { pt1: unknown; pt2: unknown; pt3: unknown; pt4?: unknown }
+            Returns: number
+          }
+      st_area:
+        | { Args: { geog: unknown; use_spheroid?: boolean }; Returns: number }
+        | { Args: { "": string }; Returns: number }
+      st_asencodedpolyline: {
+        Args: { geom: unknown; nprecision?: number }
+        Returns: string
+      }
+      st_asewkt: { Args: { "": string }; Returns: string }
+      st_asgeojson:
+        | {
+            Args: {
+              geom_column?: string
+              maxdecimaldigits?: number
+              pretty_bool?: boolean
+              r: Record<string, unknown>
+            }
+            Returns: string
+          }
+        | {
+            Args: { geom: unknown; maxdecimaldigits?: number; options?: number }
+            Returns: string
+          }
+        | {
+            Args: { geog: unknown; maxdecimaldigits?: number; options?: number }
+            Returns: string
+          }
+        | { Args: { "": string }; Returns: string }
+      st_asgml:
+        | {
+            Args: { geom: unknown; maxdecimaldigits?: number; options?: number }
+            Returns: string
+          }
+        | {
+            Args: {
+              geom: unknown
+              id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+              version: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              geog: unknown
+              id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+              version: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              geog: unknown
+              id?: string
+              maxdecimaldigits?: number
+              nprefix?: string
+              options?: number
+            }
+            Returns: string
+          }
+        | { Args: { "": string }; Returns: string }
+      st_askml:
+        | {
+            Args: { geom: unknown; maxdecimaldigits?: number; nprefix?: string }
+            Returns: string
+          }
+        | {
+            Args: { geog: unknown; maxdecimaldigits?: number; nprefix?: string }
+            Returns: string
+          }
+        | { Args: { "": string }; Returns: string }
+      st_aslatlontext: {
+        Args: { geom: unknown; tmpl?: string }
+        Returns: string
+      }
+      st_asmarc21: { Args: { format?: string; geom: unknown }; Returns: string }
+      st_asmvtgeom: {
+        Args: {
+          bounds: unknown
+          buffer?: number
+          clip_geom?: boolean
+          extent?: number
+          geom: unknown
+        }
+        Returns: unknown
+      }
+      st_assvg:
+        | {
+            Args: { geom: unknown; maxdecimaldigits?: number; rel?: number }
+            Returns: string
+          }
+        | {
+            Args: { geog: unknown; maxdecimaldigits?: number; rel?: number }
+            Returns: string
+          }
+        | { Args: { "": string }; Returns: string }
+      st_astext: { Args: { "": string }; Returns: string }
+      st_astwkb:
+        | {
+            Args: {
+              geom: unknown[]
+              ids: number[]
+              prec?: number
+              prec_m?: number
+              prec_z?: number
+              with_boxes?: boolean
+              with_sizes?: boolean
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              geom: unknown
+              prec?: number
+              prec_m?: number
+              prec_z?: number
+              with_boxes?: boolean
+              with_sizes?: boolean
+            }
+            Returns: string
+          }
+      st_asx3d: {
+        Args: { geom: unknown; maxdecimaldigits?: number; options?: number }
+        Returns: string
+      }
+      st_azimuth:
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: number }
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: number }
+      st_boundingdiagonal: {
+        Args: { fits?: boolean; geom: unknown }
+        Returns: unknown
+      }
+      st_buffer:
+        | {
+            Args: { geom: unknown; options?: string; radius: number }
+            Returns: unknown
+          }
+        | {
+            Args: { geom: unknown; quadsegs: number; radius: number }
+            Returns: unknown
+          }
+      st_centroid: { Args: { "": string }; Returns: unknown }
+      st_clipbybox2d: {
+        Args: { box: unknown; geom: unknown }
+        Returns: unknown
+      }
+      st_closestpoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_collect: { Args: { geom1: unknown; geom2: unknown }; Returns: unknown }
+      st_concavehull: {
+        Args: {
+          param_allow_holes?: boolean
+          param_geom: unknown
+          param_pctconvex: number
+        }
+        Returns: unknown
+      }
+      st_contains: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_containsproperly: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_coorddim: { Args: { geometry: unknown }; Returns: number }
+      st_coveredby:
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_covers:
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_crosses: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_curvetoline: {
+        Args: { flags?: number; geom: unknown; tol?: number; toltype?: number }
+        Returns: unknown
+      }
+      st_delaunaytriangles: {
+        Args: { flags?: number; g1: unknown; tolerance?: number }
+        Returns: unknown
+      }
+      st_difference: {
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
+        Returns: unknown
+      }
+      st_disjoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_distance:
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: number }
+        | {
+            Args: { geog1: unknown; geog2: unknown; use_spheroid?: boolean }
+            Returns: number
+          }
+      st_distancesphere:
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: number }
+        | {
+            Args: { geom1: unknown; geom2: unknown; radius: number }
+            Returns: number
+          }
+      st_distancespheroid: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_dwithin: {
+        Args: {
+          geog1: unknown
+          geog2: unknown
+          tolerance: number
+          use_spheroid?: boolean
         }
         Returns: boolean
       }
-      validate_role_assignment: {
+      st_equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_expand:
+        | {
+            Args: {
+              dm?: number
+              dx: number
+              dy: number
+              dz?: number
+              geom: unknown
+            }
+            Returns: unknown
+          }
+        | {
+            Args: { box: unknown; dx: number; dy: number; dz?: number }
+            Returns: unknown
+          }
+        | { Args: { box: unknown; dx: number; dy: number }; Returns: unknown }
+      st_force3d: { Args: { geom: unknown; zvalue?: number }; Returns: unknown }
+      st_force3dm: {
+        Args: { geom: unknown; mvalue?: number }
+        Returns: unknown
+      }
+      st_force3dz: {
+        Args: { geom: unknown; zvalue?: number }
+        Returns: unknown
+      }
+      st_force4d: {
+        Args: { geom: unknown; mvalue?: number; zvalue?: number }
+        Returns: unknown
+      }
+      st_generatepoints:
+        | { Args: { area: unknown; npoints: number }; Returns: unknown }
+        | {
+            Args: { area: unknown; npoints: number; seed: number }
+            Returns: unknown
+          }
+      st_geogfromtext: { Args: { "": string }; Returns: unknown }
+      st_geographyfromtext: { Args: { "": string }; Returns: unknown }
+      st_geohash:
+        | { Args: { geom: unknown; maxchars?: number }; Returns: string }
+        | { Args: { geog: unknown; maxchars?: number }; Returns: string }
+      st_geomcollfromtext: { Args: { "": string }; Returns: unknown }
+      st_geometricmedian: {
         Args: {
-          new_role_id: string
-          target_org_id: string
-          target_user_id: string
+          fail_if_not_converged?: boolean
+          g: unknown
+          max_iter?: number
+          tolerance?: number
         }
-        Returns: {
-          error_message: string
-          is_valid: boolean
-          warnings: string[]
-        }[]
+        Returns: unknown
+      }
+      st_geometryfromtext: { Args: { "": string }; Returns: unknown }
+      st_geomfromewkt: { Args: { "": string }; Returns: unknown }
+      st_geomfromgeojson:
+        | { Args: { "": Json }; Returns: unknown }
+        | { Args: { "": Json }; Returns: unknown }
+        | { Args: { "": string }; Returns: unknown }
+      st_geomfromgml: { Args: { "": string }; Returns: unknown }
+      st_geomfromkml: { Args: { "": string }; Returns: unknown }
+      st_geomfrommarc21: { Args: { marc21xml: string }; Returns: unknown }
+      st_geomfromtext: { Args: { "": string }; Returns: unknown }
+      st_gmltosql: { Args: { "": string }; Returns: unknown }
+      st_hasarc: { Args: { geometry: unknown }; Returns: boolean }
+      st_hausdorffdistance: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_hexagon: {
+        Args: { cell_i: number; cell_j: number; origin?: unknown; size: number }
+        Returns: unknown
+      }
+      st_hexagongrid: {
+        Args: { bounds: unknown; size: number }
+        Returns: Record<string, unknown>[]
+      }
+      st_interpolatepoint: {
+        Args: { line: unknown; point: unknown }
+        Returns: number
+      }
+      st_intersection: {
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
+        Returns: unknown
+      }
+      st_intersects:
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+        | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
+      st_isvaliddetail: {
+        Args: { flags?: number; geom: unknown }
+        Returns: Database["public"]["CompositeTypes"]["valid_detail"]
+        SetofOptions: {
+          from: "*"
+          to: "valid_detail"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      st_length:
+        | { Args: { geog: unknown; use_spheroid?: boolean }; Returns: number }
+        | { Args: { "": string }; Returns: number }
+      st_letters: { Args: { font?: Json; letters: string }; Returns: unknown }
+      st_linecrossingdirection: {
+        Args: { line1: unknown; line2: unknown }
+        Returns: number
+      }
+      st_linefromencodedpolyline: {
+        Args: { nprecision?: number; txtin: string }
+        Returns: unknown
+      }
+      st_linefromtext: { Args: { "": string }; Returns: unknown }
+      st_linelocatepoint: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_linetocurve: { Args: { geometry: unknown }; Returns: unknown }
+      st_locatealong: {
+        Args: { geometry: unknown; leftrightoffset?: number; measure: number }
+        Returns: unknown
+      }
+      st_locatebetween: {
+        Args: {
+          frommeasure: number
+          geometry: unknown
+          leftrightoffset?: number
+          tomeasure: number
+        }
+        Returns: unknown
+      }
+      st_locatebetweenelevations: {
+        Args: { fromelevation: number; geometry: unknown; toelevation: number }
+        Returns: unknown
+      }
+      st_longestline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_makebox2d: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_makeline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_makevalid: {
+        Args: { geom: unknown; params: string }
+        Returns: unknown
+      }
+      st_maxdistance: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: number
+      }
+      st_minimumboundingcircle: {
+        Args: { inputgeom: unknown; segs_per_quarter?: number }
+        Returns: unknown
+      }
+      st_mlinefromtext: { Args: { "": string }; Returns: unknown }
+      st_mpointfromtext: { Args: { "": string }; Returns: unknown }
+      st_mpolyfromtext: { Args: { "": string }; Returns: unknown }
+      st_multilinestringfromtext: { Args: { "": string }; Returns: unknown }
+      st_multipointfromtext: { Args: { "": string }; Returns: unknown }
+      st_multipolygonfromtext: { Args: { "": string }; Returns: unknown }
+      st_node: { Args: { g: unknown }; Returns: unknown }
+      st_normalize: { Args: { geom: unknown }; Returns: unknown }
+      st_offsetcurve: {
+        Args: { distance: number; line: unknown; params?: string }
+        Returns: unknown
+      }
+      st_orderingequals: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_overlaps: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: boolean
+      }
+      st_perimeter: {
+        Args: { geog: unknown; use_spheroid?: boolean }
+        Returns: number
+      }
+      st_pointfromtext: { Args: { "": string }; Returns: unknown }
+      st_pointm: {
+        Args: {
+          mcoordinate: number
+          srid?: number
+          xcoordinate: number
+          ycoordinate: number
+        }
+        Returns: unknown
+      }
+      st_pointz: {
+        Args: {
+          srid?: number
+          xcoordinate: number
+          ycoordinate: number
+          zcoordinate: number
+        }
+        Returns: unknown
+      }
+      st_pointzm: {
+        Args: {
+          mcoordinate: number
+          srid?: number
+          xcoordinate: number
+          ycoordinate: number
+          zcoordinate: number
+        }
+        Returns: unknown
+      }
+      st_polyfromtext: { Args: { "": string }; Returns: unknown }
+      st_polygonfromtext: { Args: { "": string }; Returns: unknown }
+      st_project: {
+        Args: { azimuth: number; distance: number; geog: unknown }
+        Returns: unknown
+      }
+      st_quantizecoordinates: {
+        Args: {
+          g: unknown
+          prec_m?: number
+          prec_x: number
+          prec_y?: number
+          prec_z?: number
+        }
+        Returns: unknown
+      }
+      st_reduceprecision: {
+        Args: { geom: unknown; gridsize: number }
+        Returns: unknown
+      }
+      st_relate: { Args: { geom1: unknown; geom2: unknown }; Returns: string }
+      st_removerepeatedpoints: {
+        Args: { geom: unknown; tolerance?: number }
+        Returns: unknown
+      }
+      st_segmentize: {
+        Args: { geog: unknown; max_segment_length: number }
+        Returns: unknown
+      }
+      st_setsrid:
+        | { Args: { geom: unknown; srid: number }; Returns: unknown }
+        | { Args: { geog: unknown; srid: number }; Returns: unknown }
+      st_sharedpaths: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_shortestline: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_simplifypolygonhull: {
+        Args: { geom: unknown; is_outer?: boolean; vertex_fraction: number }
+        Returns: unknown
+      }
+      st_split: { Args: { geom1: unknown; geom2: unknown }; Returns: unknown }
+      st_square: {
+        Args: { cell_i: number; cell_j: number; origin?: unknown; size: number }
+        Returns: unknown
+      }
+      st_squaregrid: {
+        Args: { bounds: unknown; size: number }
+        Returns: Record<string, unknown>[]
+      }
+      st_srid:
+        | { Args: { geom: unknown }; Returns: number }
+        | { Args: { geog: unknown }; Returns: number }
+      st_subdivide: {
+        Args: { geom: unknown; gridsize?: number; maxvertices?: number }
+        Returns: unknown[]
+      }
+      st_swapordinates: {
+        Args: { geom: unknown; ords: unknown }
+        Returns: unknown
+      }
+      st_symdifference: {
+        Args: { geom1: unknown; geom2: unknown; gridsize?: number }
+        Returns: unknown
+      }
+      st_symmetricdifference: {
+        Args: { geom1: unknown; geom2: unknown }
+        Returns: unknown
+      }
+      st_tileenvelope: {
+        Args: {
+          bounds?: unknown
+          margin?: number
+          x: number
+          y: number
+          zoom: number
+        }
+        Returns: unknown
+      }
+      st_touches: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_transform:
+        | { Args: { geom: unknown; to_proj: string }; Returns: unknown }
+        | {
+            Args: { from_proj: string; geom: unknown; to_srid: number }
+            Returns: unknown
+          }
+        | {
+            Args: { from_proj: string; geom: unknown; to_proj: string }
+            Returns: unknown
+          }
+      st_triangulatepolygon: { Args: { g1: unknown }; Returns: unknown }
+      st_union:
+        | { Args: { geom1: unknown; geom2: unknown }; Returns: unknown }
+        | {
+            Args: { geom1: unknown; geom2: unknown; gridsize: number }
+            Returns: unknown
+          }
+      st_voronoilines: {
+        Args: { extend_to?: unknown; g1: unknown; tolerance?: number }
+        Returns: unknown
+      }
+      st_voronoipolygons: {
+        Args: { extend_to?: unknown; g1: unknown; tolerance?: number }
+        Returns: unknown
+      }
+      st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      st_wkbtosql: { Args: { wkb: string }; Returns: unknown }
+      st_wkttosql: { Args: { "": string }; Returns: unknown }
+      st_wrapx: {
+        Args: { geom: unknown; move: number; wrap: number }
+        Returns: unknown
+      }
+      unlockrows: { Args: { "": string }; Returns: number }
+      updategeometrysrid: {
+        Args: {
+          catalogn_name: string
+          column_name: string
+          new_srid_in: number
+          schema_name: string
+          table_name: string
+        }
+        Returns: string
       }
     }
     Enums: {
@@ -9212,7 +8495,7 @@ export type Database = {
         | "cancelled"
       accounting_payment_type: "receive" | "pay"
       analysis_type: "soil" | "plant" | "water"
-      calculation_basis: "gross_revenue" | "net_revenue"
+      calculation_basis: "net_revenue" | "gross_revenue"
       invoice_status:
         | "draft"
         | "submitted"
@@ -9224,19 +8507,45 @@ export type Database = {
       journal_entry_status: "draft" | "posted" | "cancelled"
       metayage_type: "khammass" | "rebaa" | "tholth" | "custom"
       payment_frequency: "monthly" | "daily" | "per_task" | "harvest_share"
-      payment_method:
-        | "cash"
-        | "bank_transfer"
-        | "check"
-        | "card"
-        | "mobile_money"
-      payment_status: "draft" | "submitted" | "reconciled" | "cancelled"
-      payment_type: "receive" | "pay"
+      purchase_order_status:
+        | "draft"
+        | "submitted"
+        | "confirmed"
+        | "partially_received"
+        | "received"
+        | "partially_billed"
+        | "billed"
+        | "cancelled"
+      quote_status:
+        | "draft"
+        | "sent"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "converted"
+        | "cancelled"
+      sales_order_status:
+        | "draft"
+        | "confirmed"
+        | "processing"
+        | "partially_delivered"
+        | "delivered"
+        | "partially_invoiced"
+        | "invoiced"
+        | "cancelled"
       tax_type: "sales" | "purchase" | "both"
       worker_type: "fixed_salary" | "daily_worker" | "metayage"
     }
     CompositeTypes: {
-      [_ in never]: never
+      geometry_dump: {
+        path: number[] | null
+        geom: unknown
+      }
+      valid_detail: {
+        valid: boolean | null
+        reason: string | null
+        location: unknown
+      }
     }
   }
 }
@@ -9379,7 +8688,7 @@ export const Constants = {
       ],
       accounting_payment_type: ["receive", "pay"],
       analysis_type: ["soil", "plant", "water"],
-      calculation_basis: ["gross_revenue", "net_revenue"],
+      calculation_basis: ["net_revenue", "gross_revenue"],
       invoice_status: [
         "draft",
         "submitted",
@@ -9392,19 +8701,37 @@ export const Constants = {
       journal_entry_status: ["draft", "posted", "cancelled"],
       metayage_type: ["khammass", "rebaa", "tholth", "custom"],
       payment_frequency: ["monthly", "daily", "per_task", "harvest_share"],
-      payment_method: [
-        "cash",
-        "bank_transfer",
-        "check",
-        "card",
-        "mobile_money",
+      purchase_order_status: [
+        "draft",
+        "submitted",
+        "confirmed",
+        "partially_received",
+        "received",
+        "partially_billed",
+        "billed",
+        "cancelled",
       ],
-      payment_status: ["draft", "submitted", "reconciled", "cancelled"],
-      payment_type: ["receive", "pay"],
+      quote_status: [
+        "draft",
+        "sent",
+        "accepted",
+        "rejected",
+        "expired",
+        "converted",
+        "cancelled",
+      ],
+      sales_order_status: [
+        "draft",
+        "confirmed",
+        "processing",
+        "partially_delivered",
+        "delivered",
+        "partially_invoiced",
+        "invoiced",
+        "cancelled",
+      ],
       tax_type: ["sales", "purchase", "both"],
       worker_type: ["fixed_salary", "daily_worker", "metayage"],
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.54.11 (currently installed v2.47.2)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

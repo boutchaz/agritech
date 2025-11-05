@@ -354,7 +354,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
         supabase.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
         supabase.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('inventory_items').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+        supabase.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', currentOrganization?.id || ''),
         supabase.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
       ]);
 

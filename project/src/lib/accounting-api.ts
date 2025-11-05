@@ -57,6 +57,7 @@ export const accountingApi = {
       .from('accounts')
       .select('*')
       .eq('organization_id', organizationId)
+      .eq('is_active', true)
       .order('code');
 
     if (error) throw error;

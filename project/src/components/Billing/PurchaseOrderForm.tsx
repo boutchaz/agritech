@@ -100,7 +100,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: purchaseOrder ? {
       supplier_id: purchaseOrder.supplier_id || '',
-      order_date: purchaseOrder.po_date || new Date().toISOString().split('T')[0],
+      order_date: purchaseOrder.order_date || new Date().toISOString().split('T')[0],
       expected_delivery_date: purchaseOrder.expected_delivery_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       payment_terms: purchaseOrder.payment_terms || '',
       shipping_address: purchaseOrder.delivery_address || '',
@@ -151,7 +151,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     if (purchaseOrder) {
       reset({
         supplier_id: purchaseOrder.supplier_id || '',
-        order_date: purchaseOrder.po_date || new Date().toISOString().split('T')[0],
+        order_date: purchaseOrder.order_date || new Date().toISOString().split('T')[0],
         expected_delivery_date: purchaseOrder.expected_delivery_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         payment_terms: purchaseOrder.payment_terms || '',
         shipping_address: purchaseOrder.delivery_address || '',
@@ -245,7 +245,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         // Update existing purchase order
         const updateData = {
           poId: purchaseOrder.id,
-          po_date: data.order_date,
+          order_date: data.order_date,
           expected_delivery_date: data.expected_delivery_date,
           payment_terms: data.payment_terms || null,
           delivery_address: data.shipping_address || null,
@@ -265,7 +265,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         // Create new purchase order
         const purchaseOrderData = {
           supplier_id: data.supplier_id,
-          po_date: data.order_date,
+          order_date: data.order_date,
           expected_delivery_date: data.expected_delivery_date,
           payment_terms: data.payment_terms || null,
           notes: data.notes || null,

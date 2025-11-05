@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
 import { useItemSelection } from '@/hooks/useItems';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Drawer,
   DrawerContent,
@@ -150,6 +161,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups();
   const createItem = useCreateItem();
@@ -262,7 +274,46 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     maintain_stock: item?.maintain_stock ?? true,
   });
 
-  // Update formData when itemGroups change
+  // Update formData when item changes (for edit mode) or reset for create mode
+  useEffect(() => {
+    if (item) {
+      // Edit mode: populate with existing item data
+      setFormData({
+        organization_id: currentOrganization?.id || '',
+        item_code: item.item_code || '',
+        item_name: item.item_name || '',
+        description: item.description || '',
+        item_group_id: item.item_group_id || '',
+        default_unit: item.default_unit || '',
+        stock_uom: item.stock_uom || item.default_unit || '',
+        standard_rate: item.standard_rate || undefined,
+        is_active: item.is_active ?? true,
+        is_sales_item: item.is_sales_item ?? true,
+        is_purchase_item: item.is_purchase_item ?? true,
+        is_stock_item: item.is_stock_item ?? true,
+        maintain_stock: item.maintain_stock ?? true,
+      });
+    } else {
+      // Create mode: reset to defaults
+      setFormData({
+        organization_id: currentOrganization?.id || '',
+        item_code: '',
+        item_name: '',
+        description: '',
+        item_group_id: itemGroups[0]?.id || '',
+        default_unit: '',
+        stock_uom: '',
+        standard_rate: undefined,
+        is_active: true,
+        is_sales_item: true,
+        is_purchase_item: true,
+        is_stock_item: true,
+        maintain_stock: true,
+      });
+    }
+  }, [item, currentOrganization?.id, itemGroups]);
+
+  // Update formData when itemGroups change (for create mode)
   useEffect(() => {
     if (!item && itemGroups.length > 0 && !formData.item_group_id) {
       setFormData((prev) => ({ ...prev, item_group_id: itemGroups[0].id }));
@@ -560,7 +611,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   <div className="flex items-baseline justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">{t('items.totalValue')}:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      ₪{itemStockLevel.total_value.toFixed(2)}
+                      {formatCurrency(itemStockLevel.total_value)}
                     </span>
                   </div>
                   {itemStockLevel.warehouses.length > 0 && (
@@ -630,11 +681,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 export default function ItemManagement() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { data: items = [], isLoading } = useItems({ is_active: true });
   const deleteItem = useDeleteItem();
   const [showForm, setShowForm] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
 
   // Fetch stock levels for items
   const { data: stockLevels = [] } = useQuery({
@@ -682,14 +736,19 @@ export default function ItemManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (item: Item) => {
-    if (!confirm(`${t('items.deleteConfirmation')} "${item.item_name}"?`)) {
-      return;
-    }
+  const handleDelete = (item: Item) => {
+    setItemToDelete(item);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
 
     try {
-      await deleteItem.mutateAsync(item.id);
+      await deleteItem.mutateAsync(itemToDelete.id);
       toast.success(t('items.itemDeleted'));
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
     } catch (error: any) {
       toast.error(`Failed to delete item: ${error.message}`);
     }
@@ -770,7 +829,7 @@ export default function ItemManagement() {
                         {item.default_unit}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                        {item.standard_rate ? `₪${item.standard_rate.toFixed(2)}` : '-'}
+                        {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                         {stockLevel ? (
@@ -779,7 +838,7 @@ export default function ItemManagement() {
                               {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
                             </span>
                             <span className="text-xs text-gray-500">
-                              ₪{stockLevel.total_value.toFixed(2)}
+                              {formatCurrency(stockLevel.total_value)}
                             </span>
                           </div>
                         ) : (
@@ -835,6 +894,37 @@ export default function ItemManagement() {
       )}
 
       <ItemForm item={selectedItem} open={showForm} onOpenChange={setShowForm} />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('items.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('items.deleteConfirmation')} <strong>"{itemToDelete?.item_name}"</strong>?
+              <br />
+              <span className="text-red-600 dark:text-red-400">
+                {t('items.deleteWarning')}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteItem.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t('items.deleting')}
+                </>
+              ) : (
+                t('items.delete')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

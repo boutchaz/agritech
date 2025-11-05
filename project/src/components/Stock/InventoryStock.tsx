@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useCurrency } from '@/hooks/useCurrency';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface InventoryStockLevel {
 
 export default function InventoryStock() {
   const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedWarehouse, setSelectedWarehouse] = React.useState<string>('all');
@@ -254,7 +256,7 @@ export default function InventoryStock() {
                     {row.total_quantity.toFixed(3)} {row.default_unit}
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    ₪{row.total_value.toFixed(2)}
+                    {formatCurrency(row.total_value)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_quantity === 0 ? (

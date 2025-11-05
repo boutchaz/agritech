@@ -44,22 +44,22 @@ const stockEntryItemSchema = z.object({
   item_name: z.string().min(1, 'Item name is required'),
   quantity: z.number().min(0.001, 'Quantity must be positive'),
   unit: z.string().min(1, 'Unit is required'),
-  batch_number: z.string().optional(),
-  serial_number: z.string().optional(),
-  expiry_date: z.string().optional(),
+  batch_number: z.string().optional().transform(val => val === '' ? undefined : val),
+  serial_number: z.string().optional().transform(val => val === '' ? undefined : val),
+  expiry_date: z.string().optional().transform(val => val === '' ? undefined : val),
   cost_per_unit: z.number().optional(),
   system_quantity: z.number().optional(),
   physical_quantity: z.number().optional(),
-  notes: z.string().optional(),
+  notes: z.string().optional().transform(val => val === '' ? undefined : val),
 });
 
 const stockEntrySchema = z.object({
   entry_type: z.enum(['Material Receipt', 'Material Issue', 'Stock Transfer', 'Stock Reconciliation']),
   entry_date: z.string().min(1, 'Date is required'),
-  from_warehouse_id: z.string().optional(),
-  to_warehouse_id: z.string().optional(),
-  purpose: z.string().optional(),
-  notes: z.string().optional(),
+  from_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
+  to_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
+  purpose: z.string().optional().transform(val => val === '' ? undefined : val),
+  notes: z.string().optional().transform(val => val === '' ? undefined : val),
   items: z.array(stockEntryItemSchema).min(1, 'At least one item is required'),
 });
 

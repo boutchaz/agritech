@@ -134,14 +134,14 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // });
 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
+  // Note: user_profiles table only has full_name field, not first_name/last_name
+  // Note: organizations table doesn't have onboarding_completed field
   const needsOnboarding = !!(
     user && !loading && (
-      // No profile yet (missing first_name or last_name)
-      !profile || !profile.first_name || !profile.last_name ||
+      // No profile yet (missing full_name)
+      !profile || !profile.full_name ||
       // No organizations yet
-      organizations.length === 0 ||
-      // Has organization but onboarding not completed
-      (organizations.length > 0 && currentOrganization && !currentOrganization.onboarding_completed)
+      organizations.length === 0
     )
   );
 

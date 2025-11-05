@@ -92,7 +92,7 @@ const AppContent: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `purchase-order-${order.po_number}.pdf`;
+        a.download = `purchase-order-${order.order_number}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -385,7 +385,7 @@ const AppContent: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
-                              {order.po_number}
+                              {order.order_number}
                             </span>
                           </div>
                         </td>
@@ -393,7 +393,7 @@ const AppContent: React.FC = () => {
                           {order.supplier_name}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {order.po_date ? new Date(order.po_date).toLocaleDateString('fr-FR') : '-'}
+                          {order.order_date ? new Date(order.order_date).toLocaleDateString('fr-FR') : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR') : '-'}

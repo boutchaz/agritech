@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import { useParcelById, useFarms } from '../hooks/useParcelsQuery'
 import Sidebar from '../components/Sidebar'
@@ -22,6 +23,7 @@ const mockModules: Module[] = [
 ];
 
 const ParcelLayout = () => {
+  const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,12 +40,12 @@ const ParcelLayout = () => {
   });
 
   const tabs = [
-    { id: 'overview', name: 'Vue d\'ensemble', icon: ChartBar, path: `/parcels/${parcelId}` },
-    { id: 'soil', name: 'Analyse Sol', icon: Flask, path: `/parcels/${parcelId}/soil` },
-    { id: 'satellite', name: 'Imagerie', icon: Satellite, path: `/parcels/${parcelId}/satellite` },
-    { id: 'weather', name: 'Météo & Climat', icon: Cloud, path: `/parcels/${parcelId}/weather` },
-    { id: 'profitability', name: 'Rentabilité', icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
-    { id: 'reports', name: 'Rapports', icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
+    { id: 'overview', name: t('farmHierarchy.parcel.detail.tabs.overview'), icon: ChartBar, path: `/parcels/${parcelId}` },
+    { id: 'soil', name: t('farmHierarchy.parcel.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/soil` },
+    { id: 'satellite', name: t('farmHierarchy.parcel.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
+    { id: 'weather', name: t('farmHierarchy.parcel.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
+    { id: 'profitability', name: t('farmHierarchy.parcel.detail.tabs.profitability'), icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
+    { id: 'reports', name: t('farmHierarchy.parcel.detail.tabs.reports'), icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
   ];
 
   if (isLoading) {
@@ -51,7 +53,7 @@ const ParcelLayout = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de la parcelle...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.loading')}</p>
         </div>
       </div>
     );
@@ -61,12 +63,12 @@ const ParcelLayout = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">Parcelle non trouvée</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.notFound')}</p>
           <button
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
             className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
-            Retour aux parcelles
+            {t('farmHierarchy.parcel.detail.backToParcels')}
           </button>
         </div>
       </div>
@@ -90,8 +92,8 @@ const ParcelLayout = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || '', path: '/settings/organization' },
-            { icon: TreePine, label: farm?.name || 'Ferme', path: '/farms' },
-            { icon: MapPin, label: 'Parcelles', path: '/parcels' },
+            { icon: TreePine, label: farm?.name || t('farmHierarchy.parcel.detail.breadcrumbs.farm'), path: '/farms' },
+            { icon: MapPin, label: t('farmHierarchy.parcel.detail.breadcrumbs.parcels'), path: '/parcels' },
             { icon: MapPin, label: parcel.name, isActive: true }
           ]}
           title={parcel.name}
@@ -137,7 +139,7 @@ const ParcelLayout = () => {
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
             className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
           >
-            <span>← Retour à la liste des parcelles</span>
+            <span>← {t('farmHierarchy.parcel.detail.backToParcels')}</span>
           </button>
         </div>
       </main>

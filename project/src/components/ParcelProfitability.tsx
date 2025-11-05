@@ -620,7 +620,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     <h3 className="text-lg font-semibold mb-4">
                       {t('profitability.accounts.title', 'Breakdown by Chart of Accounts')}
                     </h3>
-                    {profitabilityData.accountBreakdown.length === 0 ? (
+                    {profitabilityData?.accountBreakdown?.length === 0 ? (
                       <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                         {t('profitability.accounts.noData', 'No ledger data available for this period')}
                       </p>
@@ -650,7 +650,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                             </tr>
                           </thead>
                           <tbody>
-                            {profitabilityData.accountBreakdown.map((acc) => (
+                            {profitabilityData?.accountBreakdown?.map((acc) => (
                               <tr
                                 key={acc.account_code}
                                 className="border-b border-gray-100 dark:border-gray-800"
@@ -694,13 +694,13 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     <h3 className="text-lg font-semibold mb-4">
                       {t('profitability.costCenters.title', 'Profitability by Cost Center')}
                     </h3>
-                    {profitabilityData.costCenterBreakdown.length === 0 ? (
+                    {profitabilityData?.costCenterBreakdown?.length === 0 ? (
                       <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                         {t('profitability.costCenters.noData', 'No cost center data available')}
                       </p>
                     ) : (
                       <div className="space-y-4">
-                        {profitabilityData.costCenterBreakdown.map((cc) => (
+                        {profitabilityData?.costCenterBreakdown?.map((cc) => (
                           <Card key={cc.cost_center_name} className="border border-gray-200 dark:border-gray-700">
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-3">
@@ -853,13 +853,13 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     <h3 className="text-lg font-semibold mb-4">
                       {t('profitability.trends.title', 'Monthly Profitability Trends')}
                     </h3>
-                    {profitabilityData.monthlyData.length === 0 ? (
+                    {profitabilityData?.monthlyData?.length === 0 ? (
                       <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                         {t('profitability.trends.noData', 'No trend data available')}
                       </p>
                     ) : (
                       <div className="space-y-6">
-                        {profitabilityData.monthlyData.map((monthData) => (
+                        {profitabilityData?.monthlyData?.map((monthData) => (
                           <div key={monthData.month} className="border-b border-gray-200 dark:border-gray-700 pb-4">
                             <div className="flex justify-between items-center mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white">

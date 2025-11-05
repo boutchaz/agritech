@@ -16,6 +16,8 @@
     "db:sync": "./scripts/db-sync.sh",
     "db:reset": "supabase db reset",
     "db:reset:remote": "supabase db reset --linked",
+    "db:seed": "psql $DATABASE_URL -f supabase/seed.sql",
+    "db:seed:remote": "PGPASSWORD=chn6ldl4lnfgsafgmihqvxebojnyz6ut psql -h agritech-supabase-652186-5-75-154-125.traefik.me -U postgres -p 5432 -d postgres -f supabase/seed.sql",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:push": "supabase db push --linked",

@@ -2,11 +2,15 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { FormField } from '@/components/ui/FormField';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +47,29 @@ const mockModules: Module[] = [
   },
 ];
 
+// Zod schema for customer form validation
+const customerSchema = z.object({
+  name: z.string().min(1, 'Customer name is required'),
+  customer_code: z.string().optional(),
+  contact_person: z.string().optional(),
+  email: z.string().email('Invalid email').or(z.literal('')).optional(),
+  phone: z.string().optional(),
+  mobile: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state_province: z.string().optional(),
+  postal_code: z.string().optional(),
+  country: z.string().optional(),
+  website: z.string().url('Invalid URL').or(z.literal('')).optional(),
+  tax_id: z.string().optional(),
+  payment_terms: z.string().optional(),
+  credit_limit: z.string().optional(),
+  customer_type: z.enum(['individual', 'business', 'government', 'other', '']).optional(),
+  notes: z.string().optional(),
+});
+
+type CustomerFormData = z.infer<typeof customerSchema>;
+
 function CustomersPage() {
   const { currentOrganization } = useAuth();
   const { data: customers = [], isLoading } = useCustomers();
@@ -57,24 +84,27 @@ function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [formData, setFormData] = useState({
-    name: '',
-    customer_code: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    address: '',
-    city: '',
-    state_province: '',
-    postal_code: '',
-    country: 'Morocco',
-    website: '',
-    tax_id: '',
-    payment_terms: '',
-    credit_limit: '',
-    customer_type: '',
-    notes: '',
+  const form = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: '',
+      customer_code: '',
+      contact_person: '',
+      email: '',
+      phone: '',
+      mobile: '',
+      address: '',
+      city: '',
+      state_province: '',
+      postal_code: '',
+      country: 'Morocco',
+      website: '',
+      tax_id: '',
+      payment_terms: '',
+      credit_limit: '',
+      customer_type: '',
+      notes: '',
+    },
   });
 
   const toggleTheme = () => {
@@ -85,7 +115,7 @@ function CustomersPage() {
   const handleOpenDialog = (customer?: Customer) => {
     if (customer) {
       setEditingCustomer(customer);
-      setFormData({
+      form.reset({
         name: customer.name,
         customer_code: customer.customer_code || '',
         contact_person: customer.contact_person || '',
@@ -101,12 +131,12 @@ function CustomersPage() {
         tax_id: customer.tax_id || '',
         payment_terms: customer.payment_terms || '',
         credit_limit: customer.credit_limit?.toString() || '',
-        customer_type: customer.customer_type || '',
+        customer_type: (customer.customer_type as any) || '',
         notes: customer.notes || '',
       });
     } else {
       setEditingCustomer(null);
-      setFormData({
+      form.reset({
         name: '',
         customer_code: '',
         contact_person: '',
@@ -134,12 +164,10 @@ function CustomersPage() {
     setEditingCustomer(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = form.handleSubmit(async (formData) => {
     try {
       const customerData = {
-        ...formData,
+        name: formData.name,
         credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : null,
         currency_code: currentOrganization?.currency || 'MAD',
         is_active: true,
@@ -171,10 +199,18 @@ function CustomersPage() {
       }
 
       handleCloseDialog();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save customer');
+    } catch (error: any) {
+      // Parse database constraint errors and set field-specific errors
+      if (error?.message?.includes('customer_type_check')) {
+        form.setError('customer_type', {
+          type: 'manual',
+          message: 'Invalid customer type. Must be one of: individual, business, government, or other',
+        });
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to save customer');
+      }
     }
-  };
+  });
 
   const handleDelete = async (customer: Customer) => {
     if (!confirm(`Are you sure you want to delete ${customer.name}?`)) {
@@ -344,49 +380,54 @@ function CustomersPage() {
                 <div className="space-y-4">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100">Basic Information</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Customer Name *</Label>
+                    <FormField
+                      label="Customer Name *"
+                      error={form.formState.errors.name?.message}
+                    >
                       <Input
                         id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
+                        {...form.register('name')}
+                        className={form.formState.errors.name ? 'border-red-500' : ''}
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="customer_code">Customer Code</Label>
+                    </FormField>
+                    <FormField
+                      label="Customer Code"
+                      error={form.formState.errors.customer_code?.message}
+                    >
                       <Input
                         id="customer_code"
-                        value={formData.customer_code}
-                        onChange={(e) => setFormData({ ...formData, customer_code: e.target.value })}
+                        {...form.register('customer_code')}
                         placeholder="Optional reference code"
                       />
-                    </div>
+                    </FormField>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="customer_type">Customer Type</Label>
+                    <FormField
+                      label="Customer Type"
+                      error={form.formState.errors.customer_type?.message}
+                    >
                       <Select
                         id="customer_type"
-                        value={formData.customer_type}
-                        onChange={(e) => setFormData({ ...formData, customer_type: e.target.value })}
+                        {...form.register('customer_type')}
+                        className={form.formState.errors.customer_type ? 'border-red-500' : ''}
                       >
                         <option value="">Select type</option>
-                        <option value="Retail">Retail</option>
-                        <option value="Wholesale">Wholesale</option>
-                        <option value="Distributor">Distributor</option>
-                        <option value="Corporate">Corporate</option>
+                        <option value="individual">Individual</option>
+                        <option value="business">Business</option>
+                        <option value="government">Government</option>
+                        <option value="other">Other</option>
                       </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="contact_person">Contact Person</Label>
+                    </FormField>
+                    <FormField
+                      label="Contact Person"
+                      error={form.formState.errors.contact_person?.message}
+                    >
                       <Input
                         id="contact_person"
-                        value={formData.contact_person}
-                        onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                        {...form.register('contact_person')}
                       />
-                    </div>
+                    </FormField>
                   </div>
                 </div>
 
@@ -394,44 +435,50 @@ function CustomersPage() {
                 <div className="space-y-4">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100">Contact Details</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
+                    <FormField
+                      label="Email"
+                      error={form.formState.errors.email?.message}
+                    >
                       <Input
                         id="email"
                         type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        {...form.register('email')}
+                        className={form.formState.errors.email ? 'border-red-500' : ''}
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
+                    </FormField>
+                    <FormField
+                      label="Phone"
+                      error={form.formState.errors.phone?.message}
+                    >
                       <Input
                         id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        {...form.register('phone')}
                       />
-                    </div>
+                    </FormField>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="mobile">Mobile</Label>
+                    <FormField
+                      label="Mobile"
+                      error={form.formState.errors.mobile?.message}
+                    >
                       <Input
                         id="mobile"
-                        value={formData.mobile}
-                        onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                        {...form.register('mobile')}
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="website">Website</Label>
+                    </FormField>
+                    <FormField
+                      label="Website"
+                      error={form.formState.errors.website?.message}
+                    >
                       <Input
                         id="website"
                         type="url"
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        {...form.register('website')}
                         placeholder="https://"
+                        className={form.formState.errors.website ? 'border-red-500' : ''}
                       />
-                    </div>
+                    </FormField>
                   </div>
                 </div>
 
@@ -442,8 +489,7 @@ function CustomersPage() {
                     <Label htmlFor="address">Street Address</Label>
                     <Input
                       id="address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      {...form.register('address')}
                     />
                   </div>
 
@@ -452,16 +498,14 @@ function CustomersPage() {
                       <Label htmlFor="city">City</Label>
                       <Input
                         id="city"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        {...form.register('city')}
                       />
                     </div>
                     <div>
                       <Label htmlFor="state_province">State/Province</Label>
                       <Input
                         id="state_province"
-                        value={formData.state_province}
-                        onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
+                        {...form.register('state_province')}
                       />
                     </div>
                   </div>
@@ -471,16 +515,14 @@ function CustomersPage() {
                       <Label htmlFor="postal_code">Postal Code</Label>
                       <Input
                         id="postal_code"
-                        value={formData.postal_code}
-                        onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                        {...form.register('postal_code')}
                       />
                     </div>
                     <div>
                       <Label htmlFor="country">Country</Label>
                       <Input
                         id="country"
-                        value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        {...form.register('country')}
                       />
                     </div>
                   </div>
@@ -494,16 +536,14 @@ function CustomersPage() {
                       <Label htmlFor="tax_id">Tax ID / ICE</Label>
                       <Input
                         id="tax_id"
-                        value={formData.tax_id}
-                        onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                        {...form.register('tax_id')}
                       />
                     </div>
                     <div>
                       <Label htmlFor="payment_terms">Payment Terms</Label>
                       <Select
                         id="payment_terms"
-                        value={formData.payment_terms}
-                        onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
+                        {...form.register('payment_terms')}
                       >
                         <option value="">Select terms</option>
                         <option value="Cash on Delivery">Cash on Delivery</option>
@@ -521,8 +561,7 @@ function CustomersPage() {
                       id="credit_limit"
                       type="number"
                       step="0.01"
-                      value={formData.credit_limit}
-                      onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+                      {...form.register('credit_limit')}
                       placeholder="0.00"
                     />
                   </div>
@@ -533,8 +572,7 @@ function CustomersPage() {
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    {...form.register('notes')}
                     rows={3}
                   />
                 </div>

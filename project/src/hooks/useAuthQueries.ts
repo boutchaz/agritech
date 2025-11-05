@@ -82,10 +82,12 @@ export const useUserOrganizations = (userId: string | undefined) => {
       }
 
       // Then fetch organization details for each org
+      // organizations table has: id, name, slug, description, address, city, state, postal_code,
+      // country, phone, email, website, tax_id, currency_code, timezone, logo_url, is_active
       const orgIds = orgUsers.map(ou => ou.organization_id).filter(Boolean) as string[];
       const { data: orgs, error: orgsError } = await authSupabase
         .from('organizations')
-        .select('id, name, slug, onboarding_completed, currency, timezone, language')
+        .select('id, name, slug, currency_code, timezone, is_active')
         .in('id', orgIds);
 
       console.log('🔍 organizations query result:', { orgs, orgsError, orgIds });
@@ -104,11 +106,9 @@ export const useUserOrganizations = (userId: string | undefined) => {
           slug: org?.slug || org?.name || 'unknown',
           role: ou.role,
           is_active: ou.is_active,
-          onboarding_completed: org?.onboarding_completed,
-          currency: org?.currency,
-          timezone: org?.timezone,
-          language: org?.language,
-        };
+          currency_code: org?.currency_code || 'MAD',
+          timezone: org?.timezone || 'Africa/Casablanca',
+        } as any; // Type will be fixed in Organization interface
       });
     },
     enabled: !!userId,

@@ -27,8 +27,9 @@ const StockInventoryLayout: React.FC = () => {
     router.navigate({ to: tab.to });
   };
 
-  // Don't render StockManagement for stock tab - InventoryStock component handles it
-  const shouldShowStockManagement = activeTab !== 'stock';
+  // Don't render StockManagement for tabs that have their own components
+  // Only render StockManagement for tabs without dedicated route components
+  const shouldShowStockManagement = activeTab !== 'stock' && activeTab !== 'suppliers' && activeTab !== 'warehouses';
 
   return (
     <div className="space-y-6">
