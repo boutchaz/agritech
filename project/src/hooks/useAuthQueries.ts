@@ -22,26 +22,14 @@ export const useUserProfile = (userId: string | undefined) => {
     queryFn: async (): Promise<UserProfile | null> => {
       if (!userId) return null;
 
-      // Try using RPC function first (more reliable with permissions)
-      try {
-        const { data: rpcData, error: rpcError } = await authSupabase
-          .rpc('get_current_user_profile');
-
-        if (!rpcError && rpcData) {
-          return rpcData as UserProfile;
-        }
-      } catch (_e) {
-        console.log('RPC function not available, falling back to direct query');
-      }
-
-      // Fallback to direct query
+      // Direct query to user_profiles table
       const { data, error } = await authSupabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Profile fetch error:', error);
         // Don't throw, return null to trigger onboarding
         return null;
@@ -124,20 +112,18 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
 
+      // Direct query instead of RPC function
       const { data, error } = await authSupabase
-        .rpc('get_organization_farms', { org_uuid: organizationId });
+        .from('farms')
+        .select('id, name, location, size, size_unit, manager_name')
+        .eq('organization_id', organizationId)
+        .order('name');
 
       if (error) {
         throw error;
       }
 
-      return data?.map((farm: any) => ({
-        id: farm.farm_id,
-        name: farm.farm_name,
-        location: farm.farm_location,
-        size: farm.farm_size,
-        manager_name: farm.manager_name
-      })) || [];
+      return data || [];
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes

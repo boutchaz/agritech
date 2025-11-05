@@ -206,14 +206,44 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     }
 
     try {
-      const { data: roleData, error } = await authSupabase
-        .rpc('get_user_role', {
-          user_id: user.id,
-          org_id: currentOrganization.id
-        });
+      // Direct query instead of RPC function
+      // Get role from organization_users and join with roles table
+      const { data: orgUser, error: orgUserError } = await authSupabase
+        .from('organization_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_active', true)
+        .maybeSingle();
 
-      if (error) throw error;
-      setUserRole(roleData?.[0] || null);
+      if (orgUserError) throw orgUserError;
+
+      // If no org user found, user is not part of this organization
+      if (!orgUser) {
+        setUserRole(null);
+        return;
+      }
+
+      // Get role details from roles table
+      const { data: roleDetails, error: roleError } = await authSupabase
+        .from('roles')
+        .select('name, display_name, level')
+        .eq('name', orgUser.role)
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+
+      if (!roleDetails) {
+        console.error('Role not found:', orgUser.role);
+        setUserRole(null);
+        return;
+      }
+
+      setUserRole({
+        role_name: roleDetails.name,
+        role_display_name: roleDetails.display_name,
+        role_level: roleDetails.level
+      });
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole(null);

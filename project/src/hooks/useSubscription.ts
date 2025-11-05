@@ -7,26 +7,11 @@ import type { PlanType } from '../lib/polar';
 export interface Subscription {
   id: string;
   organization_id: string;
-  polar_subscription_id: string | null;
-  polar_customer_id: string | null;
-  polar_product_id: string | null;
-  plan_type: PlanType;
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'paused';
+  plan_id: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
-  canceled_at: string | null;
-  max_farms: number;
-  max_parcels: number;
-  max_users: number;
-  max_satellite_reports: number;
-  has_analytics: boolean;
-  has_sensor_integration: boolean;
-  has_ai_recommendations: boolean;
-  has_advanced_reporting: boolean;
-  has_api_access: boolean;
-  has_priority_support: boolean;
-  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -63,7 +48,7 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
 
       const { data, error } = await authSupabase
         .from('subscriptions')
-        .select('*')
+        .select('id, organization_id, status, plan_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
         .eq('organization_id', orgId)
         .maybeSingle();
 

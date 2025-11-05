@@ -35,25 +35,69 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       setLoading(true);
       setError(null);
 
-      // Get user role
-      const { data: roleData, error: roleError } = await supabase
-        .rpc('get_user_role', {
-          user_id: user.id,
-          org_id: currentOrganization?.id
-        });
+      // Get user role - direct query instead of RPC
+      const { data: orgUser, error: orgUserError } = await supabase
+        .from('organization_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('organization_id', currentOrganization?.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (orgUserError) throw orgUserError;
+
+      // If no org user found, user is not part of this organization
+      if (!orgUser) {
+        setLoading(false);
+        return;
+      }
+
+      // Get role details from roles table
+      const { data: roleDetails, error: roleError } = await supabase
+        .from('roles')
+        .select('id, name, display_name, level')
+        .eq('name', orgUser.role)
+        .maybeSingle();
 
       if (roleError) throw roleError;
 
-      // Get user permissions
+      if (!roleDetails) {
+        console.error('Role not found:', orgUser.role);
+        setLoading(false);
+        return;
+      }
+
+      const roleData = {
+        role_name: roleDetails.name,
+        role_display_name: roleDetails.display_name,
+        role_level: roleDetails.level
+      };
+
+      // Get user permissions - direct query instead of RPC
+      // Query role_permissions joined with permissions table
       const { data: permissionsData, error: permissionsError } = await supabase
-        .rpc('get_user_permissions', {
-          user_id: user.id
-        });
+        .from('role_permissions')
+        .select(`
+          permissions!inner(
+            name,
+            display_name,
+            resource,
+            action
+          )
+        `)
+        .eq('role_id', roleDetails.id);
 
-      if (permissionsError) throw permissionsError;
+      if (permissionsError) {
+        console.warn('Error fetching permissions:', permissionsError);
+        // Continue without permissions
+      }
 
-      setUserRole(roleData?.[0] || null);
-      setUserPermissions(permissionsData || []);
+      setUserRole(roleData);
+      setUserPermissions(permissionsData?.map(rp => ({
+        permission_name: rp.permissions.name,
+        resource: rp.permissions.resource,
+        action: rp.permissions.action
+      })) || []);
     } catch (err) {
       console.error('Error fetching user role and permissions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch role and permissions');

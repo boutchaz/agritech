@@ -106,52 +106,79 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (existingSubscription) {
+    // If organization has an active paid subscription, reject
+    if (existingSubscription && existingSubscription.status === 'active') {
       return new Response(
-        JSON.stringify({ error: 'Organization already has a subscription' }),
+        JSON.stringify({ error: 'Organization already has an active subscription' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Define plan limits
-    const planLimits = {
-      starter: { farms: 5, parcels: 20, users: 3, satelliteReports: 10 },
-      professional: { farms: 20, parcels: 100, users: 10, satelliteReports: 50 },
-      enterprise: { farms: 100, parcels: 500, users: 50, satelliteReports: 200 },
-    };
-
-    const limits = planLimits[plan_type] || planLimits.professional;
 
     // Calculate trial end date (14 days from now)
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 14);
 
-    // Create trial subscription using service role (bypasses RLS)
-    // Use RPC or direct SQL to bypass any potential RLS issues
-    console.log('🔄 Creating subscription with service role for org:', organization_id);
-    
-    const { data: subscription, error: insertError } = await supabaseAdmin
-      .from('subscriptions')
-      .insert({
-        organization_id: organization_id,
-        plan_type: plan_type,
-        status: 'trialing',
-        current_period_start: new Date().toISOString(),
-        current_period_end: trialEndDate.toISOString(),
-        max_farms: limits.farms,
-        max_parcels: limits.parcels,
-        max_users: limits.users,
-        max_satellite_reports: limits.satelliteReports,
-      })
-      .select()
-      .single();
-    
-    console.log('📝 Insert result:', { subscription: subscription?.id, error: insertError });
+    // Map plan_type to plan_id for Polar.sh integration
+    const planIdMap = {
+      starter: 'starter-trial',
+      professional: 'professional-trial',
+      enterprise: 'enterprise-trial',
+    };
 
-    if (insertError) {
-      console.error('❌ Error creating subscription:', insertError);
+    const plan_id = planIdMap[plan_type] || planIdMap.professional;
+
+    // Create or update trial subscription using service role (bypasses RLS)
+    // subscriptions table has: id, organization_id, status, plan_id, current_period_start,
+    // current_period_end, cancel_at_period_end, created_at, updated_at
+    console.log('🔄 Creating/updating subscription with service role for org:', organization_id);
+
+    let subscription;
+    let upsertError;
+
+    if (existingSubscription) {
+      // Update existing subscription
+      console.log('♻️ Updating existing subscription:', existingSubscription.id);
+      const { data: updatedSub, error: updateError } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          plan_id: plan_id,
+          status: 'trialing',
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEndDate.toISOString(),
+          cancel_at_period_end: false,
+        })
+        .eq('id', existingSubscription.id)
+        .select()
+        .single();
+
+      subscription = updatedSub;
+      upsertError = updateError;
+    } else {
+      // Insert new subscription
+      console.log('➕ Creating new subscription');
+      const { data: newSub, error: insertError } = await supabaseAdmin
+        .from('subscriptions')
+        .insert({
+          organization_id: organization_id,
+          plan_id: plan_id,
+          status: 'trialing',
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEndDate.toISOString(),
+          cancel_at_period_end: false,
+        })
+        .select()
+        .single();
+
+      subscription = newSub;
+      upsertError = insertError;
+    }
+
+    console.log('📝 Upsert result:', { subscription: subscription?.id, error: upsertError });
+
+    if (upsertError) {
+      console.error('❌ Error creating/updating subscription:', upsertError);
       return new Response(
-        JSON.stringify({ error: `Failed to create subscription: ${insertError.message}` }),
+        JSON.stringify({ error: `Failed to create subscription: ${upsertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

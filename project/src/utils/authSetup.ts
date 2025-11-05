@@ -138,28 +138,29 @@ export async function setupNewUser({
  */
 export async function checkUserNeedsOnboarding(userId: string): Promise<boolean> {
   try {
-    // Check if user has a profile
+    // Check if user has a profile with full_name
     const { data: profile } = await authSupabase
       .from('user_profiles')
-      .select('id')
+      .select('id, full_name')
       .eq('id', userId)
       .single();
 
-    if (!profile) return true;
+    // User needs onboarding if profile doesn't exist or full_name is missing
+    if (!profile || !profile.full_name) return true;
 
     // Check if user has an organization membership
     const { data: orgUsers } = await authSupabase
       .from('organization_users')
-      .select('organization_id, organizations!inner(onboarding_completed)')
+      .select('organization_id')
       .eq('user_id', userId)
       .eq('is_active', true)
       .limit(1);
 
+    // User needs onboarding if they don't have an organization
     if (!orgUsers || orgUsers.length === 0) return true;
 
-    // Check if organization has completed onboarding
-    const org = orgUsers[0].organizations as { onboarding_completed: boolean };
-    return !org.onboarding_completed;
+    // User has profile and organization - no onboarding needed
+    return false;
   } catch (error) {
     console.error('Error checking user onboarding status:', error);
     return true; // Assume needs onboarding if check fails
