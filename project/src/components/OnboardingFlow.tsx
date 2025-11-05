@@ -106,17 +106,41 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         }
 
         // Check for existing organization
-        const { data: orgData } = await supabase
+        const orgSelect =
+          'organization_id, organizations(id, name, slug, phone, email, onboarding_completed)';
+
+        const { data: orgData, error: orgError } = await supabase
           .from('organization_users')
-          .select('organization_id, organizations(*)')
+          .select(orgSelect)
           .eq('user_id', user.id)
           .single();
 
-        if (orgData?.organizations) {
-          const org = orgData.organizations as any;
+        let resolvedOrgData = orgData;
+
+        if (orgError) {
+          if (orgError.code === '42703') {
+            console.warn('⚠️ organizations(*) selection missing columns, retrying without onboarding_completed');
+            const { data: fallbackOrgData, error: fallbackError } = await supabase
+              .from('organization_users')
+              .select('organization_id, organizations(id, name, slug, phone, email)')
+              .eq('user_id', user.id)
+              .single();
+
+            if (fallbackError) {
+              throw fallbackError;
+            }
+
+            resolvedOrgData = fallbackOrgData;
+          } else {
+            throw orgError;
+          }
+        }
+
+        if (resolvedOrgData?.organizations) {
+          const org = resolvedOrgData.organizations as any;
           orgExists = true;
           setHasExistingOrg(true);
-          setExistingOrgId(orgData.organization_id);
+          setExistingOrgId(resolvedOrgData.organization_id);
           completed.push(2);
           setOrganizationData({
             name: org.name || '',
@@ -129,7 +153,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           const { data: farmsData } = await supabase
             .from('farms')
             .select('id')
-            .eq('organization_id', orgData.organization_id)
+            .eq('organization_id', resolvedOrgData.organization_id)
             .limit(1);
 
           if (farmsData && farmsData.length > 0) {
@@ -143,16 +167,24 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
         // Auto-fix: If org thinks onboarding is complete but user actually needs it
         // (e.g., incomplete profile), reset the onboarding flag automatically
-        if (orgData?.organization_id && orgData.organizations) {
-          const org = orgData.organizations as any;
+        if (resolvedOrgData?.organization_id && resolvedOrgData.organizations) {
+          const org = resolvedOrgData.organizations as any;
           const needsToCompleteSteps = !profileExists || !orgExists || !farmsExist;
-          
-          if (org.onboarding_completed && needsToCompleteSteps) {
+
+          if (org?.onboarding_completed && needsToCompleteSteps) {
             console.log('🔧 Auto-fixing: Resetting onboarding_completed flag due to incomplete data');
-            await supabase
+            const { error: resetError } = await supabase
               .from('organizations')
               .update({ onboarding_completed: false })
-              .eq('id', orgData.organization_id);
+              .eq('id', resolvedOrgData.organization_id);
+
+            if (resetError) {
+              if (resetError.code === '42703') {
+                console.warn('⚠️ onboarding_completed column missing while resetting onboarding flag', resetError);
+              } else {
+                console.warn('⚠️ Unable to reset onboarding flag', resetError);
+              }
+            }
           }
         }
 
@@ -345,7 +377,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           .eq('id', organizationId);
 
         if (updateError) {
-          console.error('Error marking onboarding complete:', updateError);
+          if (updateError.code === '42703') {
+            console.warn('⚠️ onboarding_completed column missing when marking onboarding complete', updateError);
+          } else {
+            console.error('Error marking onboarding complete:', updateError);
+          }
           // Don't throw - onboarding data is saved, just flag update failed
         }
       }

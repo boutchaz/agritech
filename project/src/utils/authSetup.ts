@@ -24,17 +24,25 @@ export async function setupNewUser({
   try {
     console.log('🚀 Starting setupNewUser:', { userId, email, organizationName });
 
-    // 1. Create user profile
-    const defaultFirstName = firstName || email.split('@')[0];
-    console.log('📝 Creating user profile:', { userId, defaultFirstName });
+    // 1. Create or update the user profile with baseline data
+    const defaultFirstName = (firstName || email.split('@')[0]).trim();
+    const defaultLastName = (lastName || '').trim();
+    const fullName = [defaultFirstName, defaultLastName].filter(Boolean).join(' ');
+
+    console.log('📝 Upserting user profile:', { userId, defaultFirstName, defaultLastName });
     const { error: profileError } = await authSupabase
       .from('user_profiles')
-      .insert({
+      .upsert({
         id: userId,
+        email,
         first_name: defaultFirstName,
-        last_name: lastName || '',
-        timezone: 'Africa/Casablanca',
+        last_name: defaultLastName,
+        full_name: fullName || defaultFirstName,
         language: 'fr',
+        timezone: 'Africa/Casablanca',
+        password_set: false,
+        onboarding_completed: false,
+        updated_at: new Date().toISOString(),
       });
 
     if (profileError && profileError.code !== '23505') { // Ignore duplicate key error
@@ -70,10 +78,11 @@ export async function setupNewUser({
       .insert({
         name: defaultOrgName,
         slug: orgSlug,
-        owner_id: userId,
-        currency: 'MAD',
+        email,
+        currency_code: 'MAD',
         timezone: 'Africa/Casablanca',
-        language: 'fr',
+        is_active: true,
+        onboarding_completed: false,
       })
       .select()
       .single();
@@ -84,44 +93,22 @@ export async function setupNewUser({
     }
     console.log('✅ Organization created:', newOrg.id);
 
-    // 4. Get organization_admin role
-    const { data: roles, error: rolesError } = await authSupabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'organization_admin')
-      .limit(1);
-
-    if (rolesError || !roles || roles.length === 0) {
-      console.error('Error fetching roles:', rolesError);
-      throw new Error('organization_admin role not found in database');
-    }
-
-    const roleId = roles[0].id;
-
-    // 5. Add user to organization with admin role
-    console.log('📝 Adding user to organization:', {
-      user_id: userId,
-      organization_id: newOrg.id,
-      role_id: roleId,
-    });
-
-    const { data: orgUserData, error: orgUserError } = await authSupabase
+    // 4. Link user to organization as organization_admin
+    const { error: orgUserError } = await authSupabase
       .from('organization_users')
       .insert({
         user_id: userId,
         organization_id: newOrg.id,
-        role_id: roleId,
+        role: 'organization_admin',
         is_active: true,
-        invited_by: userId,
-      })
-      .select();
+      });
 
-    if (orgUserError) {
+    if (orgUserError && orgUserError.code !== '23505') {
       console.error('❌ Error adding user to organization:', orgUserError);
       throw new Error('Failed to add user to organization');
     }
+    console.log('✅ Organization user created');
 
-    console.log('✅ Organization user created:', orgUserData);
     console.log('✅ User setup completed successfully (subscription auto-created by trigger)');
     return { success: true };
   } catch (error) {

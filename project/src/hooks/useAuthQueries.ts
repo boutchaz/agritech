@@ -73,27 +73,57 @@ export const useUserOrganizations = (userId: string | undefined) => {
       // organizations table has: id, name, slug, description, address, city, state, postal_code,
       // country, phone, email, website, tax_id, currency_code, timezone, logo_url, is_active
       const orgIds = orgUsers.map(ou => ou.organization_id).filter(Boolean) as string[];
+      const selectColumns = 'id, name, slug, currency_code, timezone, is_active';
+      const fallbackColumns = 'id, name, slug, is_active';
+
       const { data: orgs, error: orgsError } = await authSupabase
         .from('organizations')
-        .select('id, name, slug, currency_code, timezone, is_active')
+        .select(selectColumns)
         .in('id', orgIds);
 
       console.log('🔍 organizations query result:', { orgs, orgsError, orgIds });
 
+      let resolvedOrganizations = orgs;
+
       if (orgsError) {
-        console.error('❌ Organizations fetch error:', orgsError);
-        return [];
+        const missingColumn = orgsError.code === '42703';
+
+        if (missingColumn) {
+          console.warn('⚠️ Organizations query missing expected columns, retrying with fallback set.', orgsError);
+          const { data: fallbackOrgs, error: fallbackError } = await authSupabase
+            .from('organizations')
+            .select(fallbackColumns)
+            .in('id', orgIds);
+
+          if (fallbackError) {
+            console.error('❌ Organizations fallback fetch error:', fallbackError);
+            return [];
+          }
+
+          resolvedOrganizations = fallbackOrgs;
+        } else {
+          console.error('❌ Organizations fetch error:', orgsError);
+          return [];
+        }
       }
 
       // Combine the data
       return orgUsers.map(ou => {
-        const org = orgs?.find(o => o.id === ou.organization_id);
+        const org = resolvedOrganizations?.find(o => o.id === ou.organization_id) as {
+          id: string;
+          name?: string | null;
+          slug?: string | null;
+          currency_code?: string | null;
+          timezone?: string | null;
+          is_active?: boolean | null;
+        } | undefined;
+
         return {
           id: ou.organization_id,
           name: org?.name || 'Unknown',
           slug: org?.slug || org?.name || 'unknown',
           role: ou.role,
-          is_active: ou.is_active,
+          is_active: org?.is_active ?? ou.is_active,
           currency_code: org?.currency_code || 'MAD',
           timezone: org?.timezone || 'Africa/Casablanca',
         } as any; // Type will be fixed in Organization interface

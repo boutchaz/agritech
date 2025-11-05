@@ -84,6 +84,21 @@ export const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+const FALLBACK_ROLE_METADATA: Record<string, { display: string; level: number }> = {
+  system_admin: { display: 'System Admin', level: 1 },
+  organization_admin: { display: 'Organization Admin', level: 2 },
+  farm_manager: { display: 'Farm Manager', level: 3 },
+  farm_worker: { display: 'Farm Worker', level: 4 },
+  day_laborer: { display: 'Day Laborer', level: 5 },
+  viewer: { display: 'Viewer', level: 6 },
+};
+
+const toTitleCase = (value: string) =>
+  value
+    .split('_')
+    .map(token => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(' ');
+
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const _navigate = useNavigate();
   const location = useLocation();
@@ -205,6 +220,23 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       return;
     }
 
+    const resolveFallbackRole = (roleName: string | null | undefined) => {
+      if (!roleName) {
+        return null;
+      }
+
+      const fallback = FALLBACK_ROLE_METADATA[roleName] ?? {
+        display: toTitleCase(roleName),
+        level: Number.MAX_SAFE_INTEGER,
+      };
+
+      return {
+        role_name: roleName,
+        role_display_name: fallback.display,
+        role_level: fallback.level,
+      };
+    };
+
     try {
       // Direct query instead of RPC function
       // Get role from organization_users and join with roles table
@@ -224,6 +256,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         return;
       }
 
+      const fallbackRole = resolveFallbackRole(orgUser.role);
+
       // Get role details from roles table
       const { data: roleDetails, error: roleError } = await authSupabase
         .from('roles')
@@ -231,11 +265,14 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         .eq('name', orgUser.role)
         .maybeSingle();
 
-      if (roleError) throw roleError;
+      if (roleError || !roleDetails) {
+        if (roleError) {
+          console.warn('⚠️ Role lookup failed, using fallback metadata', roleError);
+        } else {
+          console.warn('⚠️ Role not found, using fallback metadata', orgUser.role);
+        }
 
-      if (!roleDetails) {
-        console.error('Role not found:', orgUser.role);
-        setUserRole(null);
+        setUserRole(fallbackRole);
         return;
       }
 
@@ -246,7 +283,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       });
     } catch (error) {
       console.error('Error fetching user role:', error);
-      setUserRole(null);
+      setUserRole(resolveFallbackRole(null));
     }
   };
 
