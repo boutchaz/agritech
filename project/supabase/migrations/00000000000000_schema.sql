@@ -974,6 +974,68 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Get farm hierarchy tree for an organization
+CREATE OR REPLACE FUNCTION get_farm_hierarchy_tree(
+  org_uuid UUID,
+  root_farm_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  farm_id UUID,
+  farm_name TEXT,
+  parent_farm_id UUID,
+  farm_type TEXT,
+  farm_size NUMERIC,
+  manager_name TEXT,
+  is_active BOOLEAN,
+  hierarchy_level INTEGER,
+  parcel_count BIGINT,
+  subparcel_count BIGINT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH RECURSIVE farm_tree AS (
+    -- Base case: root farms or specific farm
+    SELECT
+      f.id,
+      f.name,
+      NULL::UUID as parent_farm_id,
+      'main'::TEXT as farm_type,
+      f.size,
+      COALESCE(f.manager_name, 'N/A') as manager,
+      f.is_active,
+      1 as level
+    FROM farms f
+    WHERE f.organization_id = org_uuid
+      AND (root_farm_id IS NULL OR f.id = root_farm_id)
+  )
+  SELECT
+    ft.id,
+    ft.name,
+    ft.parent_farm_id,
+    ft.farm_type,
+    ft.size,
+    ft.manager,
+    ft.is_active,
+    ft.level,
+    COUNT(DISTINCT p.id) as parcel_count,
+    0::BIGINT as subparcel_count
+  FROM farm_tree ft
+  LEFT JOIN parcels p ON p.farm_id = ft.id
+  GROUP BY ft.id, ft.name, ft.parent_farm_id, ft.farm_type, ft.size, ft.manager, ft.is_active, ft.level
+  ORDER BY ft.level, ft.name;
+END;
+$$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO service_role;
+
+COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'Returns hierarchical farm tree for an organization with parcel counts';
+
 -- Analytics: Parcel Performance Summary
 CREATE OR REPLACE FUNCTION get_parcel_performance_summary(
   p_organization_id UUID,
@@ -1228,6 +1290,59 @@ DROP POLICY IF EXISTS "org_delete_suppliers" ON suppliers;
 CREATE POLICY "org_delete_suppliers" ON suppliers
   FOR DELETE USING (
     is_organization_member(organization_id)
+  );
+
+-- Subscriptions Policies
+DROP POLICY IF EXISTS "users_view_org_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "admins_manage_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "org_read_subscriptions" ON subscriptions;
+
+-- Allow users to view subscriptions for organizations they belong to
+CREATE POLICY "org_read_subscriptions" ON subscriptions
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+-- Allow organization admins to insert subscriptions
+CREATE POLICY "org_insert_subscriptions" ON subscriptions
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND ou.role IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
+    )
+  );
+
+-- Allow organization admins to update subscriptions
+CREATE POLICY "org_update_subscriptions" ON subscriptions
+  FOR UPDATE USING (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users
+      WHERE user_id = auth.uid()
+        AND organization_id = subscriptions.organization_id
+        AND role IN ('system_admin', 'organization_admin')
+        AND is_active = true
+    )
+  );
+
+-- Allow organization admins to delete subscriptions
+CREATE POLICY "org_delete_subscriptions" ON subscriptions
+  FOR DELETE USING (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users
+      WHERE user_id = auth.uid()
+        AND organization_id = subscriptions.organization_id
+        AND role IN ('system_admin', 'organization_admin')
+        AND is_active = true
+    )
   );
 
 -- Quotes Policies

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
 import type { User } from '@supabase/supabase-js';
 import type { UserRole } from '../types/auth';
@@ -102,6 +103,7 @@ const toTitleCase = (value: string) =>
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const _navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [currentFarm, setCurrentFarm] = useState<Farm | null>(null);
@@ -121,6 +123,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
   // Pass currentOrganization directly to avoid circular dependency
   const { data: subscription, isLoading: subscriptionLoading } = useSubscription(currentOrganization);
+  console.log('🔍 Subscription:', subscription);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -426,12 +429,28 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }, [loading, profileLoading, user, profile, isOnSetPasswordPage, isPublicRoute, location.pathname]);
 
   // Redirect to trial selection if user has organization but no subscription
+  // Only redirect if subscription query is not loading and has completed (either with data or error)
+  // Don't redirect if subscription query is still loading or has network errors
   useEffect(() => {
-    if (!loading && !subscriptionLoading && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
+    const subscriptionQuery = queryClient.getQueryState(['subscription', currentOrganization?.id || 'none']);
+    const isSubscriptionQueryLoading = subscriptionQuery?.status === 'pending' || subscriptionLoading;
+    const hasSubscriptionError = subscriptionQuery?.error && subscriptionQuery.error instanceof Error && 
+      (subscriptionQuery.error.message?.includes('Failed to fetch') || 
+       subscriptionQuery.error.message?.includes('NetworkError'));
+    
+    // Don't redirect if:
+    // 1. Still loading subscription
+    // 2. Subscription query has network errors (might be temporary)
+    // 3. Already on select-trial page
+    // 4. On public route
+    // 5. On set-password page
+    // 6. Subscription query is still pending
+    if (!loading && !isSubscriptionQueryLoading && !hasSubscriptionError && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
       // User has an organization but no subscription - redirect to trial selection
+      // Only redirect if subscription query has completed without errors
       window.location.href = '/select-trial';
     }
-  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage]);
+  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage, queryClient]);
 
   const value = {
     user,

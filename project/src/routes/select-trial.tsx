@@ -1,25 +1,47 @@
-import { createFileRoute } from '@tanstack/react-router'
-import React, { useState, useEffect } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
 import { authSupabase } from '../lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/select-trial')({
   component: SelectTrialPage,
 })
 
 function SelectTrialPage() {
-  const { currentOrganization, user, loading } = useAuth()
+  const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('professional')
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
+  const setupAttempted = useRef(false)
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  
+  // Use organizations array as fallback if currentOrganization isn't set yet
+  const hasOrganization = currentOrganization || (organizations && organizations.length > 0)
+
+  // Reset setup attempt when organization is successfully loaded
+  useEffect(() => {
+    if (hasOrganization && setupAttempted.current) {
+      console.log('✅ Organization loaded, resetting setup attempt flag')
+      setupAttempted.current = false
+    }
+  }, [hasOrganization])
 
   // If user exists but no organization, call Edge Function to set it up
   useEffect(() => {
     const setupUserIfNeeded = async () => {
-      if (!loading && user && !currentOrganization && !isSettingUp) {
+      // Prevent multiple attempts
+      if (setupAttempted.current) {
+        console.log('⏸️ Setup already attempted, skipping...')
+        return
+      }
+      
+      if (!loading && user && !hasOrganization && !isSettingUp) {
+        setupAttempted.current = true
         setIsSettingUp(true)
         try {
           console.log('🔄 Setting up user organization...', { userId: user.id, email: user.email })
@@ -53,24 +75,76 @@ function SelectTrialPage() {
             console.error('❌ Edge Function error:', error)
             console.error('❌ Edge Function error details:', JSON.stringify(error, null, 2))
             setError(`Setup failed: ${error.message || 'Unknown error'}. Please try again or refresh the page.`)
-            
-            // Still try to reload after a delay in case it partially worked
-            setTimeout(() => {
-              window.location.reload()
-            }, 2000)
+            setupAttempted.current = false // Allow retry on error
             return
           }
 
           console.log('✅ Edge Function setup completed:', data)
           console.log('✅ Edge Function response:', JSON.stringify(data, null, 2))
           
-          // Wait a moment for database to sync, then reload
+          // Wait a moment for database to sync
           await new Promise(resolve => setTimeout(resolve, 1500))
-          window.location.reload()
+          
+          // Wait a bit more for database transaction to complete
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Force a refetch by directly querying the organization_users table first
+          // This ensures we get the latest data even if React Query cache hasn't updated
+          let orgFound = false
+          try {
+            const { data: orgUsers, error: checkError } = await authSupabase
+              .from('organization_users')
+              .select('organization_id, organizations(id, name, slug)')
+              .eq('user_id', user.id)
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle()
+            
+            if (checkError) {
+              console.error('❌ Error checking organization:', checkError)
+            } else if (orgUsers?.organization_id) {
+              console.log('✅ Organization found after creation:', orgUsers.organization_id)
+              orgFound = true
+            } else {
+              console.warn('⚠️ Organization not found in database yet, waiting...')
+            }
+          } catch (checkErr) {
+            console.error('❌ Error checking organization:', checkErr)
+          }
+          
+          // Always refresh user data to ensure React Query cache is updated
+          console.log('🔄 Refreshing user data to load organization...')
+          await refreshUserData()
+          
+          // Wait for React Query to update and component to re-render
+          // The organizations array should now be populated
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          
+          // Double-check that organization exists by querying again
+          if (!orgFound) {
+            console.log('⏳ Organization not found initially, checking again...')
+            const { data: retryOrgUsers } = await authSupabase
+              .from('organization_users')
+              .select('organization_id')
+              .eq('user_id', user.id)
+              .eq('is_active', true)
+              .limit(1)
+              .maybeSingle()
+            
+            if (retryOrgUsers?.organization_id) {
+              console.log('✅ Organization found on retry:', retryOrgUsers.organization_id)
+              // One more refresh to ensure it's loaded
+              await refreshUserData()
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            } else {
+              console.warn('⚠️ Organization still not found after retry')
+            }
+          }
 
         } catch (error) {
           console.error('❌ Error calling Edge Function:', error)
           setError(`Setup error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try refreshing the page.`)
+          setupAttempted.current = false // Allow retry on error
         } finally {
           setIsSettingUp(false)
         }
@@ -78,7 +152,7 @@ function SelectTrialPage() {
     }
 
     setupUserIfNeeded()
-  }, [loading, user, currentOrganization, isSettingUp])
+  }, [loading, user, hasOrganization, isSettingUp, refreshUserData])
 
   // Show loading state while auth data is being fetched or setting up
   if (loading || isSettingUp) {
@@ -98,7 +172,7 @@ function SelectTrialPage() {
   const isEmailConfirmed = user?.email_confirmed_at !== null && user?.email_confirmed_at !== undefined
 
   // Show error if no user or organization after loading (and not currently setting up)
-  if (!loading && !isSettingUp && (!user || !currentOrganization)) {
+  if (!loading && !isSettingUp && (!user || !hasOrganization)) {
     // Check if email is not confirmed
     if (user && !isEmailConfirmed) {
       return (
@@ -209,7 +283,10 @@ function SelectTrialPage() {
   }
 
   const handleStartTrial = async () => {
-    if (!currentOrganization?.id || !user?.id) {
+    // Use currentOrganization if available, otherwise use first organization from array
+    const orgToUse = currentOrganization || (organizations && organizations.length > 0 ? organizations[0] : null)
+    
+    if (!orgToUse?.id || !user?.id) {
       setError('Organization or user not found. Please try again.')
       return
     }
@@ -221,7 +298,7 @@ function SelectTrialPage() {
       // Call Edge Function to create trial subscription (bypasses RLS)
       const { data, error: functionError } = await authSupabase.functions.invoke('create-trial-subscription', {
         body: {
-          organization_id: currentOrganization.id,
+          organization_id: orgToUse.id,
           plan_type: selectedPlan,
         },
       })
@@ -236,8 +313,20 @@ function SelectTrialPage() {
 
       console.log('✅ Trial subscription created:', data.subscription)
 
-      // Redirect to dashboard
-      window.location.href = '/dashboard'
+      // Invalidate subscription query to force refetch
+      await queryClient.invalidateQueries({ queryKey: ['subscription', orgToUse.id] })
+      
+      // Wait a moment for database to sync
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Refetch subscription to ensure it's loaded
+      await queryClient.refetchQueries({ queryKey: ['subscription', orgToUse.id] })
+      
+      // Wait for refetch to complete
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Use React Router navigation instead of window.location.href to preserve state
+      navigate({ to: '/dashboard' })
     } catch (err) {
       console.error('Error creating trial subscription:', err)
       setError(err instanceof Error ? err.message : 'Failed to create trial subscription')

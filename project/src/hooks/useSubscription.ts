@@ -46,24 +46,65 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         return null;
       }
 
-      const { data, error } = await authSupabase
-        .from('subscriptions')
-        .select('id, organization_id, status, plan_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
-        .eq('organization_id', orgId)
-        .maybeSingle();
+      try {
+        const { data, error } = await authSupabase
+          .from('subscriptions')
+          .select('id, organization_id, status, plan_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
+          .eq('organization_id', orgId)
+          .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching subscription:', error);
+        if (error) {
+          // Distinguish between network errors and "no subscription" errors
+          const isNetworkError = error.message?.includes('Failed to fetch') || 
+                                 error.message?.includes('NetworkError') ||
+                                 error.code === 'PGRST301' || // Connection timeout
+                                 error.code === 'PGRST116'; // No rows returned (this is actually OK - means no subscription)
+          
+          if (error.code === 'PGRST116') {
+            // No subscription found - this is expected, not an error
+            return null;
+          }
+          
+          if (isNetworkError) {
+            console.warn('⚠️ Network error fetching subscription, will retry:', error);
+            throw error; // Re-throw to trigger retry
+          }
+          
+          console.error('❌ Error fetching subscription:', error);
+          return null;
+        }
+
+        return data as Subscription | null;
+      } catch (error) {
+        // Re-throw network errors to trigger retry
+        if (error instanceof Error && (
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('NetworkError') ||
+          error.message?.includes('Network request failed')
+        )) {
+          throw error;
+        }
+        // For other errors, return null
+        console.error('❌ Error fetching subscription:', error);
         return null;
       }
-
-      return data as Subscription | null;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error instanceof Error && (
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Network request failed')
+      )) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // Exponential backoff
   });
 
   // Force invalidation and refetch when organization changes

@@ -22,24 +22,64 @@ export const useUserProfile = (userId: string | undefined) => {
     queryFn: async (): Promise<UserProfile | null> => {
       if (!userId) return null;
 
-      // Direct query to user_profiles table
-      const { data, error } = await authSupabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      try {
+        // Direct query to user_profiles table
+        const { data, error } = await authSupabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (error) {
+        if (error) {
+          // Distinguish between network errors and "no profile" errors
+          const isNetworkError = error.message?.includes('Failed to fetch') || 
+                                 error.message?.includes('NetworkError') ||
+                                 error.code === 'PGRST301'; // Connection timeout
+          
+          if (error.code === 'PGRST116') {
+            // No profile found - this is expected for new users, not an error
+            return null;
+          }
+          
+          if (isNetworkError) {
+            console.warn('⚠️ Network error fetching profile, will retry:', error);
+            throw error; // Re-throw to trigger retry
+          }
+          
+          console.error('Profile fetch error:', error);
+          // Don't throw, return null to trigger onboarding
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        // Re-throw network errors to trigger retry
+        if (error instanceof Error && (
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('NetworkError') ||
+          error.message?.includes('Network request failed')
+        )) {
+          throw error;
+        }
+        // For other errors, return null
         console.error('Profile fetch error:', error);
-        // Don't throw, return null to trigger onboarding
         return null;
       }
-
-      return data;
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1, // Reduce retries for 403 errors
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error instanceof Error && (
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Network request failed')
+      )) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // Exponential backoff
   });
 };
 
@@ -50,88 +90,112 @@ export const useUserOrganizations = (userId: string | undefined) => {
     queryFn: async (): Promise<OrganizationWithRole[]> => {
       if (!userId) return [];
 
-      // First, get organization IDs and roles from organization_users
-      const { data: orgUsers, error: orgUsersError } = await authSupabase
-        .from('organization_users')
-        .select('organization_id, role, is_active')
-        .eq('user_id', userId)
-        .eq('is_active', true);
+      try {
+        // Use a JOIN query to get organization details with user role in one go
+        const { data: orgUsers, error: orgUsersError } = await authSupabase
+          .from('organization_users')
+          .select(`
+            organization_id,
+            role,
+            is_active,
+            organizations:organization_id (
+              id,
+              name,
+              slug,
+              description,
+              address,
+              city,
+              state,
+              postal_code,
+              country,
+              phone,
+              email,
+              website,
+              tax_id,
+              currency_code,
+              timezone,
+              logo_url,
+              is_active
+            )
+          `)
+          .eq('user_id', userId)
+          .eq('is_active', true);
 
-      console.log('🔍 organization_users query result:', { orgUsers, orgUsersError });
+        console.log('🔍 organization_users with organizations JOIN result:', { orgUsers, orgUsersError });
 
-      if (orgUsersError) {
-        console.error('❌ Organization users fetch error:', orgUsersError);
-        return [];
-      }
+        if (orgUsersError) {
+          // Distinguish between network errors and "no organizations" errors
+          const isNetworkError = orgUsersError.message?.includes('Failed to fetch') ||
+                                 orgUsersError.message?.includes('NetworkError') ||
+                                 orgUsersError.code === 'PGRST301'; // Connection timeout
 
-      if (!orgUsers || orgUsers.length === 0) {
-        console.log('⚠️ No organization_users found for user');
-        return [];
-      }
-
-      // Then fetch organization details for each org
-      // organizations table has: id, name, slug, description, address, city, state, postal_code,
-      // country, phone, email, website, tax_id, currency_code, timezone, logo_url, is_active
-      const orgIds = orgUsers.map(ou => ou.organization_id).filter(Boolean) as string[];
-      const selectColumns = 'id, name, slug, currency_code, timezone, is_active';
-      const fallbackColumns = 'id, name, slug, is_active';
-
-      const { data: orgs, error: orgsError } = await authSupabase
-        .from('organizations')
-        .select(selectColumns)
-        .in('id', orgIds);
-
-      console.log('🔍 organizations query result:', { orgs, orgsError, orgIds });
-
-      let resolvedOrganizations = orgs;
-
-      if (orgsError) {
-        const missingColumn = orgsError.code === '42703';
-
-        if (missingColumn) {
-          console.warn('⚠️ Organizations query missing expected columns, retrying with fallback set.', orgsError);
-          const { data: fallbackOrgs, error: fallbackError } = await authSupabase
-            .from('organizations')
-            .select(fallbackColumns)
-            .in('id', orgIds);
-
-          if (fallbackError) {
-            console.error('❌ Organizations fallback fetch error:', fallbackError);
-            return [];
+          if (isNetworkError) {
+            console.warn('⚠️ Network error fetching organization users, will retry:', orgUsersError);
+            throw orgUsersError; // Re-throw to trigger retry
           }
 
-          resolvedOrganizations = fallbackOrgs;
-        } else {
-          console.error('❌ Organizations fetch error:', orgsError);
+          console.error('❌ Organization users fetch error:', orgUsersError);
           return [];
         }
+
+        if (!orgUsers || orgUsers.length === 0) {
+          console.log('⚠️ No organization_users found for user');
+          return [];
+        }
+
+        // Map the joined data to the expected format
+        return orgUsers.map((ou: any) => {
+          const org = ou.organizations;
+
+          return {
+            id: ou.organization_id,
+            name: org?.name || 'Unknown',
+            slug: org?.slug || org?.name || 'unknown',
+            description: org?.description || null,
+            address: org?.address || null,
+            city: org?.city || null,
+            state: org?.state || null,
+            postal_code: org?.postal_code || null,
+            country: org?.country || null,
+            phone: org?.phone || null,
+            email: org?.email || null,
+            website: org?.website || null,
+            tax_id: org?.tax_id || null,
+            logo_url: org?.logo_url || null,
+            role: ou.role,
+            is_active: org?.is_active ?? ou.is_active,
+            currency_code: org?.currency_code || 'MAD',
+            timezone: org?.timezone || 'Africa/Casablanca',
+          } as any; // Type will be fixed in Organization interface
+        });
+      } catch (error) {
+        // Re-throw network errors to trigger retry
+        if (error instanceof Error && (
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('NetworkError') ||
+          error.message?.includes('Network request failed')
+        )) {
+          throw error;
+        }
+        // For other errors, return empty array
+        console.error('❌ Error fetching organizations:', error);
+        return [];
       }
-
-      // Combine the data
-      return orgUsers.map(ou => {
-        const org = resolvedOrganizations?.find(o => o.id === ou.organization_id) as {
-          id: string;
-          name?: string | null;
-          slug?: string | null;
-          currency_code?: string | null;
-          timezone?: string | null;
-          is_active?: boolean | null;
-        } | undefined;
-
-        return {
-          id: ou.organization_id,
-          name: org?.name || 'Unknown',
-          slug: org?.slug || org?.name || 'unknown',
-          role: ou.role,
-          is_active: org?.is_active ?? ou.is_active,
-          currency_code: org?.currency_code || 'MAD',
-          timezone: org?.timezone || 'Africa/Casablanca',
-        } as any; // Type will be fixed in Organization interface
-      });
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1, // Reduce retries for 403 errors
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error instanceof Error && (
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Network request failed')
+      )) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // Exponential backoff
   });
 };
 
@@ -184,9 +248,21 @@ export const useRefreshUserData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      // Invalidate all auth queries to trigger refetch
+    mutationFn: async (userId?: string) => {
+      // Invalidate and refetch all auth queries to trigger refetch
+      // This ensures we wait for the refetch to complete
       await queryClient.invalidateQueries({ queryKey: ['auth'] });
+      
+      // Also refetch queries to ensure they complete
+      if (userId) {
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: authKeys.profile(userId) }),
+          queryClient.refetchQueries({ queryKey: authKeys.organizations(userId) }),
+        ]);
+      } else {
+        // Refetch all auth queries
+        await queryClient.refetchQueries({ queryKey: ['auth'] });
+      }
     },
   });
 };
