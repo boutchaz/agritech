@@ -36,9 +36,9 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       setError(null);
 
       // Get user role - direct query instead of RPC
-      const { data: orgUser, error: orgUserError } = await supabase
+      const { data: orgUser, error: orgUserError} = await supabase
         .from('organization_users')
-        .select('role')
+        .select('role_id, role:roles!organization_users_role_id_fkey(id, name, display_name, level)')
         .eq('user_id', user.id)
         .eq('organization_id', currentOrganization?.id)
         .eq('is_active', true)
@@ -47,25 +47,13 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       if (orgUserError) throw orgUserError;
 
       // If no org user found, user is not part of this organization
-      if (!orgUser) {
+      if (!orgUser || !orgUser.role) {
         setLoading(false);
         return;
       }
 
-      // Get role details from roles table
-      const { data: roleDetails, error: roleError } = await supabase
-        .from('roles')
-        .select('id, name, display_name, level')
-        .eq('name', orgUser.role)
-        .maybeSingle();
-
-      if (roleError) throw roleError;
-
-      if (!roleDetails) {
-        console.error('Role not found:', orgUser.role);
-        setLoading(false);
-        return;
-      }
+      // Role details are already joined from the query above
+      const roleDetails = orgUser.role;
 
       const roleData = {
         role_name: roleDetails.name,

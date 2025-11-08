@@ -1,16 +1,20 @@
 /**
  * Shared Invoice Service
- * 
+ *
  * Centralized logic for creating invoices from various sources:
  * - Manual creation (from invoice form)
  * - From sales orders
  * - From purchase orders
- * 
+ *
  * This eliminates duplicate invoice creation logic across the codebase.
+ *
+ * IMPORTANT: All invoice creation automatically creates journal entries
+ * for double-entry bookkeeping via syncInvoiceToLedger.
  */
 
 import { supabase } from './supabase';
 import { calculateInvoiceTotals } from './taxCalculations';
+import { syncInvoiceToLedger, linkJournalEntry } from './ledger-integration';
 
 export interface InvoiceItemInput {
   item_id?: string; // Reference to items table (preferred)
@@ -212,6 +216,33 @@ export async function createInvoiceFromItems(
   // Create invoice items from calculated totals (includes accurate tax per line)
   await createInvoiceItems(invoice.id, items_with_tax, invoice_type);
 
+  // Sync to ledger (create journal entry for double-entry bookkeeping)
+  try {
+    const ledgerResult = await syncInvoiceToLedger(
+      {
+        ...invoice,
+        invoice_items: items_with_tax.map(item => ({
+          ...item,
+          invoice_id: invoice.id,
+          income_account_id: invoice_type === 'sales' ? item.account_id : null,
+          expense_account_id: invoice_type === 'purchase' ? item.account_id : null,
+        })),
+      },
+      user_id
+    );
+
+    if (ledgerResult.success && ledgerResult.journalEntryId) {
+      // Link the journal entry to the invoice
+      await linkJournalEntry('invoices', invoice.id, ledgerResult.journalEntryId);
+      console.log(`✓ Invoice ${invoice.invoice_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
+    } else {
+      console.warn(`⚠ Invoice ${invoice.invoice_number} created but ledger sync failed: ${ledgerResult.error}`);
+    }
+  } catch (ledgerError) {
+    console.error(`Failed to sync invoice ${invoice.invoice_number} to ledger:`, ledgerError);
+    // Don't throw - invoice is already created, ledger sync is supplementary
+  }
+
   return invoice as CreatedInvoice;
 }
 
@@ -292,6 +323,33 @@ export async function createInvoiceFromOrder(
   }));
 
   await createInvoiceItems(invoice.id, invoiceItems, invoice_type);
+
+  // Sync to ledger (create journal entry for double-entry bookkeeping)
+  try {
+    const ledgerResult = await syncInvoiceToLedger(
+      {
+        ...invoice,
+        invoice_items: invoiceItems.map(item => ({
+          ...item,
+          invoice_id: invoice.id,
+          income_account_id: invoice_type === 'sales' ? item.account_id : null,
+          expense_account_id: invoice_type === 'purchase' ? item.account_id : null,
+        })),
+      },
+      user_id
+    );
+
+    if (ledgerResult.success && ledgerResult.journalEntryId) {
+      // Link the journal entry to the invoice
+      await linkJournalEntry('invoices', invoice.id, ledgerResult.journalEntryId);
+      console.log(`✓ Invoice ${invoice.invoice_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
+    } else {
+      console.warn(`⚠ Invoice ${invoice.invoice_number} created but ledger sync failed: ${ledgerResult.error}`);
+    }
+  } catch (ledgerError) {
+    console.error(`Failed to sync invoice ${invoice.invoice_number} to ledger:`, ledgerError);
+    // Don't throw - invoice is already created, ledger sync is supplementary
+  }
 
   return invoice as CreatedInvoice;
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { Database } from '../types/database.types';
+import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
 
 type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
 type AccountingPaymentInsert = Database['public']['Tables']['accounting_payments']['Insert'];
@@ -171,10 +172,28 @@ export function useCreatePayment() {
         .single();
 
       if (error) throw error;
+
+      // Sync to ledger (create journal entry for double-entry bookkeeping)
+      try {
+        const ledgerResult = await syncPaymentToLedger(data, user.user?.id || '');
+
+        if (ledgerResult.success && ledgerResult.journalEntryId) {
+          // Link the journal entry to the payment
+          await linkJournalEntry('accounting_payments', data.id, ledgerResult.journalEntryId);
+          console.log(`✓ Payment ${payment_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
+        } else {
+          console.warn(`⚠ Payment ${payment_number} created but ledger sync failed: ${ledgerResult.error}`);
+        }
+      } catch (ledgerError) {
+        console.error(`Failed to sync payment ${payment_number} to ledger:`, ledgerError);
+        // Don't throw - payment is already created, ledger sync is supplementary
+      }
+
       return data as Payment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
     },
   });
 }

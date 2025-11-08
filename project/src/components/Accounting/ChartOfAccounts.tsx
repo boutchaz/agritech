@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter, Database as DatabaseIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { seedChartOfAccounts, type SupportedCountry } from '@/lib/seed-chart-of-accounts';
 import {
   Table,
   TableBody,
@@ -90,6 +92,7 @@ export const ChartOfAccounts: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [formData, setFormData] = useState<AccountFormData>(
     getInitialFormData(currentOrganization?.currency || 'MAD')
   );
@@ -193,6 +196,36 @@ export const ChartOfAccounts: React.FC = () => {
       setDeletingAccount(null);
     } catch (error) {
       console.error('Failed to delete account:', error);
+    }
+  };
+
+  const handleSeedChartOfAccounts = async () => {
+    if (!currentOrganization) {
+      toast.error('No organization found');
+      return;
+    }
+
+    setIsSeeding(true);
+    try {
+      // Determine country code (default to Morocco)
+      const countryCode: SupportedCountry = 'MAR'; // You can make this dynamic based on org settings
+
+      const result = await seedChartOfAccounts(
+        currentOrganization.id,
+        countryCode,
+        (currentOrganization.currency_code as any) || 'MAD'
+      );
+
+      if (result.success) {
+        toast.success(`Success! ${result.accountsCreated} accounts have been created for your organization.`);
+      } else {
+        toast.error(`Seeding Failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Failed to seed chart of accounts:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to seed chart of accounts');
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -359,8 +392,43 @@ export const ChartOfAccounts: React.FC = () => {
               <TableBody>
                 {accountHierarchy.rootAccounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                      No accounts found. Create your first account to get started.
+                    <TableCell colSpan={6} className="text-center py-12">
+                      {accounts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                          <DatabaseIcon className="h-16 w-16 text-gray-300" />
+                          <div className="space-y-2">
+                            <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                              No Chart of Accounts Found
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                              Get started quickly by seeding a standard chart of accounts for Morocco (Plan Comptable Marocain),
+                              or create accounts manually.
+                            </p>
+                          </div>
+                          <div className="flex gap-3">
+                            <Button
+                              onClick={handleSeedChartOfAccounts}
+                              disabled={isSeeding}
+                              size="lg"
+                            >
+                              <DatabaseIcon className="h-4 w-4 mr-2" />
+                              {isSeeding ? 'Seeding Accounts...' : 'Seed Chart of Accounts (150+ accounts)'}
+                            </Button>
+                            <Button
+                              onClick={handleCreateAccount}
+                              variant="outline"
+                              size="lg"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create Manually
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500">
+                          No accounts match your search criteria.
+                        </p>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (

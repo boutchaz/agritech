@@ -8,6 +8,8 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
@@ -395,7 +397,7 @@ const UtilitiesManagement: React.FC = () => {
       }
     }
     return entry.id;
-  }, [currentOrganization?.id, user?.id, getAccountIdByCode, getUtilityLabel]);
+  }, [currentOrganization?.id, user?.id, getAccountByType, getUtilityLabel]);
 
   // Prepare chart data
   const chartData = useMemo(() => {
@@ -536,7 +538,19 @@ const UtilitiesManagement: React.FC = () => {
         const errorMessage = journalError instanceof Error
           ? journalError.message
           : 'Erreur inconnue';
-        setError(`Charge enregistrée, mais l'écriture comptable n'a pas été créée: ${errorMessage}`);
+
+        // Check if it's a missing account error
+        if (errorMessage.includes('introuvable') || errorMessage.includes('not found')) {
+          setError(
+            `✓ Charge enregistrée avec succès.\n\n` +
+            `⚠️ L'écriture comptable n'a pas pu être créée automatiquement.\n\n` +
+            `Raison: ${errorMessage}\n\n` +
+            `→ Veuillez configurer le plan comptable dans la section Comptabilité > Plan Comptable.\n` +
+            `→ Comptes requis: Charges d'exploitation, Trésorerie, Dettes fournisseurs.`
+          );
+        } else {
+          setError(`Charge enregistrée, mais l'écriture comptable n'a pas été créée: ${errorMessage}`);
+        }
       }
 
       setUtilities([createdUtility, ...utilities]);
@@ -941,8 +955,41 @@ const UtilitiesManagement: React.FC = () => {
       )}
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+        <div className={`p-4 rounded-lg border ${
+          error.includes('✓')
+            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+        }`}>
+          <div className="flex items-start space-x-3">
+            <div className="flex-1">
+              <p className={`text-sm whitespace-pre-line ${
+                error.includes('✓')
+                  ? 'text-yellow-800 dark:text-yellow-300'
+                  : 'text-red-600 dark:text-red-400'
+              }`}>
+                {error}
+              </p>
+              {error.includes('plan comptable') && (
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate({ to: '/accounting-accounts' })}
+                    className="border-yellow-600 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-500 dark:text-yellow-400"
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Ouvrir le Plan Comptable
+                  </Button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -1485,23 +1532,26 @@ const UtilitiesManagement: React.FC = () => {
       )}
 
       {/* Add/Edit Modal */}
-      {(showAddModal || editingUtility) && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingUtility ? 'Modifier la Charge' : 'Nouvelle Charge'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingUtility(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      <Dialog
+        open={showAddModal || !!editingUtility}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowAddModal(false);
+            setEditingUtility(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUtility ? 'Modifier la Charge' : 'Nouvelle Charge'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingUtility
+                ? 'Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.'
+                : 'Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre.'}
+            </DialogDescription>
+          </DialogHeader>
 
             <div className="space-y-4">
               <FormField label="Type de charge" htmlFor="util_type">
@@ -1793,32 +1843,31 @@ const UtilitiesManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingUtility(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={editingUtility ? handleUpdateUtility : handleAddUtility}
-                disabled={uploading}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
-                  uploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {uploading && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                )}
-                <span>{uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingUtility(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={editingUtility ? handleUpdateUtility : handleAddUtility}
+              disabled={uploading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {uploading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              )}
+              {uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

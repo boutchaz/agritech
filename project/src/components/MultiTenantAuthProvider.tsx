@@ -245,7 +245,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       // Get role from organization_users and join with roles table
       const { data: orgUser, error: orgUserError } = await authSupabase
         .from('organization_users')
-        .select('role')
+        .select('role_id')
         .eq('user_id', user.id)
         .eq('organization_id', currentOrganization.id)
         .eq('is_active', true)
@@ -259,23 +259,26 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         return;
       }
 
-      const fallbackRole = resolveFallbackRole(orgUser.role);
-
-      // Get role details from roles table
+      // Get role details from roles table using role_id
       const { data: roleDetails, error: roleError } = await authSupabase
         .from('roles')
-        .select('name, display_name, level')
-        .eq('name', orgUser.role)
+        .select('id, name, display_name, level')
+        .eq('id', orgUser.role_id)
         .maybeSingle();
 
       if (roleError || !roleDetails) {
         if (roleError) {
-          console.warn('⚠️ Role lookup failed, using fallback metadata', roleError);
+          console.warn('⚠️ Role lookup failed', roleError);
         } else {
-          console.warn('⚠️ Role not found, using fallback metadata', orgUser.role);
+          console.warn('⚠️ Role not found for role_id', orgUser.role_id);
         }
 
-        setUserRole(fallbackRole);
+        // Fallback to a default viewer role if role lookup fails
+        setUserRole({
+          role_name: 'viewer',
+          role_display_name: 'Viewer',
+          role_level: 6
+        });
         return;
       }
 

@@ -255,7 +255,6 @@ CREATE TABLE IF NOT EXISTS organization_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role VARCHAR(100) NOT NULL,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -268,6 +267,8 @@ CREATE INDEX IF NOT EXISTS idx_organization_users_user ON organization_users(use
 -- User Profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
   full_name VARCHAR(255),
   email VARCHAR(255),
   phone VARCHAR(50),
@@ -436,8 +437,368 @@ CREATE TABLE IF NOT EXISTS currencies (
 INSERT INTO currencies (code, name, symbol) VALUES
   ('MAD', 'Moroccan Dirham', 'د.م.'),
   ('USD', 'US Dollar', '$'),
-  ('EUR', 'Euro', '€')
+  ('EUR', 'Euro', '€'),
+  ('GBP', 'British Pound', '£'),
+  ('TND', 'Tunisian Dinar', 'د.ت')
 ON CONFLICT (code) DO NOTHING;
+
+-- =====================================================
+-- MULTI-COUNTRY ACCOUNTING SYSTEM
+-- =====================================================
+
+-- Update organizations table with country-specific accounting fields
+DO $$
+BEGIN
+  -- Add country_code column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organizations'
+    AND column_name = 'country_code'
+  ) THEN
+    ALTER TABLE organizations
+    ADD COLUMN country_code VARCHAR(2);  -- ISO 3166-1 alpha-2
+  END IF;
+
+  -- Add accounting_standard column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organizations'
+    AND column_name = 'accounting_standard'
+  ) THEN
+    ALTER TABLE organizations
+    ADD COLUMN accounting_standard VARCHAR(50);
+  END IF;
+
+  -- Set default values for existing organizations (France)
+  UPDATE organizations
+  SET country_code = 'FR',
+      accounting_standard = 'PCG'
+  WHERE country_code IS NULL;
+END $$;
+
+-- Account Templates: Pre-configured chart of accounts for each country/standard
+CREATE TABLE IF NOT EXISTS account_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_code VARCHAR(2) NOT NULL,  -- ISO country code (MA, FR, TN, US, GB)
+  accounting_standard VARCHAR(50) NOT NULL,  -- PCG, PCEC, PCN, GAAP, FRS102
+  template_name VARCHAR(255) NOT NULL,
+  account_code VARCHAR(50) NOT NULL,
+  account_name VARCHAR(255) NOT NULL,
+  account_type VARCHAR(50) NOT NULL,  -- asset, liability, equity, revenue, expense
+  account_subtype VARCHAR(50),
+  parent_code VARCHAR(50),  -- References another account_code in same template
+  description TEXT,
+  is_group BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  display_order INTEGER,
+  metadata JSONB,  -- Flexible field for country-specific attributes
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(country_code, accounting_standard, account_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_templates_country ON account_templates(country_code);
+CREATE INDEX IF NOT EXISTS idx_account_templates_standard ON account_templates(accounting_standard);
+CREATE INDEX IF NOT EXISTS idx_account_templates_code ON account_templates(country_code, accounting_standard, account_code);
+
+COMMENT ON TABLE account_templates IS 'Pre-configured chart of accounts templates for different countries and accounting standards';
+
+-- Account Mappings: Maps business operations to country-specific account codes
+CREATE TABLE IF NOT EXISTS account_mappings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_code VARCHAR(2) NOT NULL,
+  accounting_standard VARCHAR(50) NOT NULL,
+  mapping_type VARCHAR(50) NOT NULL,  -- 'cost_type', 'revenue_type', 'cash', etc.
+  mapping_key VARCHAR(100) NOT NULL,  -- 'labor', 'harvest', 'bank', etc.
+  account_code VARCHAR(50) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(country_code, accounting_standard, mapping_type, mapping_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_mappings_lookup ON account_mappings(country_code, accounting_standard, mapping_type, mapping_key);
+
+COMMENT ON TABLE account_mappings IS 'Maps generic business operations to country-specific account codes for automatic journal entry creation';
+
+-- =====================================================
+-- SEED ACCOUNT TEMPLATES FOR ALL COUNTRIES
+-- =====================================================
+
+-- Morocco (PCEC - Plan Comptable des Établissements de Crédit adapted for agriculture)
+INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
+  -- Class 1: Financement permanent
+  ('MA', 'PCEC', 'Financement permanent', '1', 'Financement permanent', 'equity', true, 10, 'Permanent financing'),
+  ('MA', 'PCEC', 'Capital social', '111', 'Capital social', 'equity', false, 11, 'Share capital'),
+  ('MA', 'PCEC', 'Réserves', '112', 'Réserves', 'equity', false, 12, 'Reserves'),
+  ('MA', 'PCEC', 'Report à nouveau', '116', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
+
+  -- Class 2: Actif immobilisé
+  ('MA', 'PCEC', 'Actif immobilisé', '2', 'Actif immobilisé', 'asset', true, 20, 'Fixed assets'),
+  ('MA', 'PCEC', 'Terrains', '231', 'Terrains', 'asset', false, 21, 'Land'),
+  ('MA', 'PCEC', 'Constructions', '232', 'Constructions', 'asset', false, 22, 'Buildings'),
+  ('MA', 'PCEC', 'Matériel et outillage agricole', '233', 'Matériel et outillage agricole', 'asset', false, 23, 'Agricultural equipment and tools'),
+  ('MA', 'PCEC', 'Autres immobilisations corporelles', '238', 'Autres immobilisations corporelles', 'asset', false, 24, 'Other tangible fixed assets'),
+
+  -- Class 3: Actif circulant
+  ('MA', 'PCEC', 'Actif circulant', '3', 'Actif circulant', 'asset', true, 30, 'Current assets'),
+  ('MA', 'PCEC', 'Stocks de matières premières', '311', 'Stocks de matières premières', 'asset', false, 31, 'Raw materials inventory'),
+  ('MA', 'PCEC', 'Stocks de produits en cours', '313', 'Stocks de produits en cours', 'asset', false, 32, 'Work in progress inventory'),
+  ('MA', 'PCEC', 'Stocks de produits finis', '315', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods inventory'),
+  ('MA', 'PCEC', 'Clients et comptes rattachés', '342', 'Clients et comptes rattachés', 'asset', false, 34, 'Accounts receivable'),
+
+  -- Class 4: Passif circulant
+  ('MA', 'PCEC', 'Passif circulant', '4', 'Passif circulant', 'liability', true, 40, 'Current liabilities'),
+  ('MA', 'PCEC', 'Fournisseurs et comptes rattachés', '441', 'Fournisseurs et comptes rattachés', 'liability', false, 41, 'Accounts payable'),
+  ('MA', 'PCEC', 'Organismes sociaux', '443', 'Organismes sociaux', 'liability', false, 42, 'Social security'),
+  ('MA', 'PCEC', 'État - Impôts et taxes', '445', 'État - Impôts et taxes', 'liability', false, 43, 'State - Taxes'),
+
+  -- Class 5: Trésorerie
+  ('MA', 'PCEC', 'Trésorerie', '5', 'Trésorerie', 'asset', true, 50, 'Cash and cash equivalents'),
+  ('MA', 'PCEC', 'Caisse', '511', 'Caisse', 'asset', false, 51, 'Cash'),
+  ('MA', 'PCEC', 'Banques', '514', 'Banques', 'asset', false, 52, 'Banks'),
+
+  -- Class 6: Charges
+  ('MA', 'PCEC', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
+  ('MA', 'PCEC', 'Achats de matières premières', '611', 'Achats de matières premières', 'expense', false, 61, 'Purchases of raw materials'),
+  ('MA', 'PCEC', 'Achats de fournitures', '612', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
+  ('MA', 'PCEC', 'Achats de produits agricoles', '613', 'Achats de produits agricoles', 'expense', false, 63, 'Purchases of agricultural products'),
+  ('MA', 'PCEC', 'Achats de matériel et outillage', '617', 'Achats de matériel et outillage', 'expense', false, 64, 'Purchases of equipment and tools'),
+  ('MA', 'PCEC', 'Autres achats', '618', 'Autres achats', 'expense', false, 65, 'Other purchases'),
+  ('MA', 'PCEC', 'Charges de personnel', '621', 'Charges de personnel', 'expense', false, 66, 'Staff costs'),
+  ('MA', 'PCEC', 'Cotisations sociales', '622', 'Cotisations sociales', 'expense', false, 67, 'Social security contributions'),
+  ('MA', 'PCEC', 'Impôts et taxes', '631', 'Impôts et taxes', 'expense', false, 68, 'Taxes'),
+  ('MA', 'PCEC', 'Charges d''intérêts', '641', 'Charges d''intérêts', 'expense', false, 69, 'Interest charges'),
+
+  -- Class 7: Produits
+  ('MA', 'PCEC', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
+  ('MA', 'PCEC', 'Ventes de produits agricoles', '711', 'Ventes de produits agricoles', 'revenue', false, 71, 'Sales of agricultural products'),
+  ('MA', 'PCEC', 'Ventes de produits transformés', '712', 'Ventes de produits transformés', 'revenue', false, 72, 'Sales of processed products'),
+  ('MA', 'PCEC', 'Prestations de services', '713', 'Prestations de services', 'revenue', false, 73, 'Services'),
+  ('MA', 'PCEC', 'Autres produits d''exploitation', '718', 'Autres produits d''exploitation', 'revenue', false, 74, 'Other operating income'),
+  ('MA', 'PCEC', 'Subventions d''exploitation', '751', 'Subventions d''exploitation', 'revenue', false, 75, 'Operating subsidies')
+ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
+
+-- Tunisia (PCN - Plan Comptable National)
+INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
+  -- Class 1: Capitaux propres
+  ('TN', 'PCN', 'Capitaux propres', '1', 'Capitaux propres', 'equity', true, 10, 'Equity'),
+  ('TN', 'PCN', 'Capital social', '101', 'Capital social', 'equity', false, 11, 'Share capital'),
+  ('TN', 'PCN', 'Réserves', '106', 'Réserves', 'equity', false, 12, 'Reserves'),
+  ('TN', 'PCN', 'Report à nouveau', '110', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
+
+  -- Class 2: Immobilisations
+  ('TN', 'PCN', 'Immobilisations', '2', 'Immobilisations', 'asset', true, 20, 'Fixed assets'),
+  ('TN', 'PCN', 'Terrains', '221', 'Terrains', 'asset', false, 21, 'Land'),
+  ('TN', 'PCN', 'Constructions', '223', 'Constructions', 'asset', false, 22, 'Buildings'),
+  ('TN', 'PCN', 'Autres immobilisations corporelles', '228', 'Autres immobilisations corporelles', 'asset', false, 23, 'Other tangible assets'),
+  ('TN', 'PCN', 'Matériel agricole', '231', 'Matériel agricole', 'asset', false, 24, 'Agricultural equipment'),
+
+  -- Class 3: Stocks
+  ('TN', 'PCN', 'Stocks', '3', 'Stocks', 'asset', true, 30, 'Inventory'),
+  ('TN', 'PCN', 'Matières premières', '31', 'Matières premières', 'asset', false, 31, 'Raw materials'),
+  ('TN', 'PCN', 'Autres approvisionnements', '32', 'Autres approvisionnements', 'asset', false, 32, 'Other supplies'),
+  ('TN', 'PCN', 'Stocks de produits finis', '35', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods'),
+
+  -- Class 4: Tiers
+  ('TN', 'PCN', 'Tiers', '4', 'Tiers', 'asset', true, 40, 'Third parties'),
+  ('TN', 'PCN', 'Fournisseurs', '401', 'Fournisseurs', 'liability', false, 41, 'Suppliers'),
+  ('TN', 'PCN', 'Clients', '411', 'Clients', 'asset', false, 42, 'Customers'),
+  ('TN', 'PCN', 'Personnel', '421', 'Personnel', 'liability', false, 43, 'Personnel'),
+  ('TN', 'PCN', 'Sécurité sociale', '431', 'Sécurité sociale', 'liability', false, 44, 'Social security'),
+  ('TN', 'PCN', 'État', '441', 'État', 'liability', false, 45, 'State'),
+
+  -- Class 5: Financiers
+  ('TN', 'PCN', 'Financiers', '5', 'Financiers', 'asset', true, 50, 'Financial accounts'),
+  ('TN', 'PCN', 'Banques', '53', 'Banques', 'asset', false, 51, 'Banks'),
+
+  -- Class 6: Charges
+  ('TN', 'PCN', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
+  ('TN', 'PCN', 'Achats de marchandises', '601', 'Achats de marchandises', 'expense', false, 61, 'Purchases of goods'),
+  ('TN', 'PCN', 'Achats de fournitures', '604', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
+  ('TN', 'PCN', 'Autres achats', '608', 'Autres achats', 'expense', false, 63, 'Other purchases'),
+  ('TN', 'PCN', 'Frais de personnel', '621', 'Frais de personnel', 'expense', false, 64, 'Personnel costs'),
+  ('TN', 'PCN', 'Impôts et taxes', '635', 'Impôts et taxes', 'expense', false, 65, 'Taxes'),
+
+  -- Class 7: Produits
+  ('TN', 'PCN', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
+  ('TN', 'PCN', 'Ventes de produits finis', '701', 'Ventes de produits finis', 'revenue', false, 71, 'Sales of finished products'),
+  ('TN', 'PCN', 'Autres produits', '708', 'Autres produits', 'revenue', false, 72, 'Other revenue'),
+  ('TN', 'PCN', 'Subventions d''exploitation', '74', 'Subventions d''exploitation', 'revenue', false, 73, 'Operating subsidies')
+ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
+
+-- USA (GAAP - Generally Accepted Accounting Principles)
+INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
+  -- Assets
+  ('US', 'GAAP', 'Cash', '1000', 'Cash and Cash Equivalents', 'asset', false, 10, 'Cash and cash equivalents'),
+  ('US', 'GAAP', 'Receivables', '1100', 'Accounts Receivable', 'asset', false, 11, 'Accounts receivable'),
+  ('US', 'GAAP', 'Inventory - Raw', '1200', 'Inventory - Raw Materials', 'asset', false, 12, 'Raw materials inventory'),
+  ('US', 'GAAP', 'Inventory - WIP', '1210', 'Inventory - Work in Progress', 'asset', false, 13, 'Work in progress inventory'),
+  ('US', 'GAAP', 'Inventory - Finished', '1220', 'Inventory - Finished Goods', 'asset', false, 14, 'Finished goods inventory'),
+  ('US', 'GAAP', 'Land', '1500', 'Land', 'asset', false, 15, 'Land'),
+  ('US', 'GAAP', 'Buildings', '1510', 'Buildings', 'asset', false, 16, 'Buildings'),
+  ('US', 'GAAP', 'Equipment', '1520', 'Equipment', 'asset', false, 17, 'Equipment'),
+  ('US', 'GAAP', 'Accumulated Depreciation', '1600', 'Accumulated Depreciation', 'asset', false, 18, 'Accumulated depreciation'),
+
+  -- Liabilities
+  ('US', 'GAAP', 'Accounts Payable', '2000', 'Accounts Payable', 'liability', false, 20, 'Accounts payable'),
+  ('US', 'GAAP', 'Accrued Expenses', '2100', 'Accrued Expenses', 'liability', false, 21, 'Accrued expenses'),
+  ('US', 'GAAP', 'Payroll Liabilities', '2200', 'Payroll Liabilities', 'liability', false, 22, 'Payroll liabilities'),
+  ('US', 'GAAP', 'Long-term Debt', '2500', 'Long-term Debt', 'liability', false, 23, 'Long-term debt'),
+
+  -- Equity
+  ('US', 'GAAP', 'Owner Capital', '3000', 'Owner''s Capital', 'equity', false, 30, 'Owner''s capital'),
+  ('US', 'GAAP', 'Retained Earnings', '3100', 'Retained Earnings', 'equity', false, 31, 'Retained earnings'),
+
+  -- Revenue
+  ('US', 'GAAP', 'Sales - Agricultural', '4000', 'Sales Revenue - Agricultural Products', 'revenue', false, 40, 'Sales of agricultural products'),
+  ('US', 'GAAP', 'Sales - Processed', '4100', 'Sales Revenue - Processed Products', 'revenue', false, 41, 'Sales of processed products'),
+  ('US', 'GAAP', 'Service Revenue', '4200', 'Service Revenue', 'revenue', false, 42, 'Service revenue'),
+  ('US', 'GAAP', 'Other Revenue', '4900', 'Other Revenue', 'revenue', false, 43, 'Other revenue'),
+  ('US', 'GAAP', 'Government Subsidies', '4950', 'Government Subsidies', 'revenue', false, 44, 'Government subsidies'),
+
+  -- COGS
+  ('US', 'GAAP', 'COGS', '5000', 'Cost of Goods Sold', 'expense', false, 50, 'Cost of goods sold'),
+
+  -- Expenses
+  ('US', 'GAAP', 'Wages', '6000', 'Wages and Salaries', 'expense', false, 60, 'Wages and salaries'),
+  ('US', 'GAAP', 'Payroll Taxes', '6100', 'Payroll Taxes', 'expense', false, 61, 'Payroll taxes'),
+  ('US', 'GAAP', 'Materials', '6200', 'Materials and Supplies', 'expense', false, 62, 'Materials and supplies'),
+  ('US', 'GAAP', 'Utilities', '6300', 'Utilities', 'expense', false, 63, 'Utilities'),
+  ('US', 'GAAP', 'Equipment Rental', '6400', 'Equipment Rental', 'expense', false, 64, 'Equipment rental'),
+  ('US', 'GAAP', 'Repairs', '6500', 'Repairs and Maintenance', 'expense', false, 65, 'Repairs and maintenance'),
+  ('US', 'GAAP', 'Other Expenses', '6900', 'Other Operating Expenses', 'expense', false, 66, 'Other operating expenses')
+ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
+
+-- UK (FRS 102 - UK Generally Accepted Accounting Practice)
+INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
+  -- Non-current Assets
+  ('GB', 'FRS102', 'Land and Buildings', '0010', 'Land and Buildings', 'asset', false, 10, 'Land and buildings'),
+  ('GB', 'FRS102', 'Plant and Machinery', '0020', 'Plant and Machinery', 'asset', false, 11, 'Plant and machinery'),
+  ('GB', 'FRS102', 'Motor Vehicles', '0030', 'Motor Vehicles', 'asset', false, 12, 'Motor vehicles'),
+  ('GB', 'FRS102', 'Office Equipment', '0040', 'Office Equipment', 'asset', false, 13, 'Office equipment'),
+
+  -- Current Assets
+  ('GB', 'FRS102', 'Stock - Raw', '1000', 'Stock - Raw Materials', 'asset', false, 20, 'Stock of raw materials'),
+  ('GB', 'FRS102', 'Stock - WIP', '1010', 'Stock - Work in Progress', 'asset', false, 21, 'Stock work in progress'),
+  ('GB', 'FRS102', 'Stock - Finished', '1020', 'Stock - Finished Goods', 'asset', false, 22, 'Stock of finished goods'),
+  ('GB', 'FRS102', 'Trade Debtors', '1100', 'Trade Debtors', 'asset', false, 23, 'Trade debtors'),
+  ('GB', 'FRS102', 'Bank Current', '1200', 'Bank Current Account', 'asset', false, 24, 'Bank current account'),
+  ('GB', 'FRS102', 'Bank Deposit', '1210', 'Bank Deposit Account', 'asset', false, 25, 'Bank deposit account'),
+  ('GB', 'FRS102', 'Cash', '1220', 'Cash in Hand', 'asset', false, 26, 'Cash in hand'),
+
+  -- Current Liabilities
+  ('GB', 'FRS102', 'Trade Creditors', '2100', 'Trade Creditors', 'liability', false, 30, 'Trade creditors'),
+  ('GB', 'FRS102', 'PAYE and NI', '2200', 'PAYE and NI', 'liability', false, 31, 'PAYE and National Insurance'),
+  ('GB', 'FRS102', 'VAT', '2210', 'VAT', 'liability', false, 32, 'VAT'),
+  ('GB', 'FRS102', 'Corporation Tax', '2300', 'Corporation Tax', 'liability', false, 33, 'Corporation tax'),
+
+  -- Long-term Liabilities
+  ('GB', 'FRS102', 'Bank Loans', '3000', 'Bank Loans', 'liability', false, 40, 'Bank loans'),
+
+  -- Capital and Reserves
+  ('GB', 'FRS102', 'Share Capital', '4000', 'Share Capital', 'equity', false, 50, 'Share capital'),
+  ('GB', 'FRS102', 'Retained Earnings', '4100', 'Retained Earnings', 'equity', false, 51, 'Retained earnings'),
+
+  -- Sales
+  ('GB', 'FRS102', 'Sales - Agricultural', '5000', 'Sales - Agricultural Products', 'revenue', false, 60, 'Sales of agricultural products'),
+  ('GB', 'FRS102', 'Sales - Processed', '5100', 'Sales - Processed Goods', 'revenue', false, 61, 'Sales of processed goods'),
+  ('GB', 'FRS102', 'Other Income', '5200', 'Other Income', 'revenue', false, 62, 'Other income'),
+  ('GB', 'FRS102', 'Government Grants', '5900', 'Government Grants', 'revenue', false, 63, 'Government grants'),
+
+  -- Direct Costs
+  ('GB', 'FRS102', 'Purchases - Raw', '6000', 'Purchases - Raw Materials', 'expense', false, 70, 'Purchases of raw materials'),
+  ('GB', 'FRS102', 'Purchases - Consumables', '6100', 'Purchases - Consumables', 'expense', false, 71, 'Purchases of consumables'),
+
+  -- Overheads
+  ('GB', 'FRS102', 'Wages', '7000', 'Wages and Salaries', 'expense', false, 80, 'Wages and salaries'),
+  ('GB', 'FRS102', 'Employer NI', '7100', 'Employer''s NI', 'expense', false, 81, 'Employer''s National Insurance'),
+  ('GB', 'FRS102', 'Rent and Rates', '7200', 'Rent and Rates', 'expense', false, 82, 'Rent and rates'),
+  ('GB', 'FRS102', 'Light and Heat', '7300', 'Light and Heat', 'expense', false, 83, 'Light and heat'),
+  ('GB', 'FRS102', 'Motor Expenses', '7400', 'Motor Expenses', 'expense', false, 84, 'Motor expenses'),
+  ('GB', 'FRS102', 'Repairs', '7500', 'Repairs and Renewals', 'expense', false, 85, 'Repairs and renewals'),
+  ('GB', 'FRS102', 'Sundry Expenses', '7900', 'Sundry Expenses', 'expense', false, 86, 'Sundry expenses')
+ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
+
+-- =====================================================
+-- SEED ACCOUNT MAPPINGS FOR ALL COUNTRIES
+-- =====================================================
+
+-- Morocco (PCEC) Mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('MA', 'PCEC', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
+  ('MA', 'PCEC', 'cost_type', 'materials', '611', 'Materials mapped to Raw materials purchases'),
+  ('MA', 'PCEC', 'cost_type', 'utilities', '612', 'Utilities mapped to Supplies purchases'),
+  ('MA', 'PCEC', 'cost_type', 'equipment', '617', 'Equipment mapped to Equipment purchases'),
+  ('MA', 'PCEC', 'cost_type', 'product_application', '612', 'Product application mapped to Supplies'),
+  ('MA', 'PCEC', 'cost_type', 'other', '618', 'Other costs mapped to Other purchases'),
+  ('MA', 'PCEC', 'revenue_type', 'harvest', '711', 'Harvest revenue mapped to Agricultural product sales'),
+  ('MA', 'PCEC', 'revenue_type', 'subsidy', '751', 'Subsidy mapped to Operating subsidies'),
+  ('MA', 'PCEC', 'revenue_type', 'other', '718', 'Other revenue mapped to Other operating income'),
+  ('MA', 'PCEC', 'cash', 'bank', '514', 'Bank account'),
+  ('MA', 'PCEC', 'cash', 'cash', '511', 'Cash account')
+ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+
+-- Tunisia (PCN) Mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('TN', 'PCN', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
+  ('TN', 'PCN', 'cost_type', 'materials', '601', 'Materials mapped to Goods purchases'),
+  ('TN', 'PCN', 'cost_type', 'utilities', '604', 'Utilities mapped to Supplies purchases'),
+  ('TN', 'PCN', 'cost_type', 'equipment', '604', 'Equipment mapped to Supplies purchases'),
+  ('TN', 'PCN', 'cost_type', 'product_application', '604', 'Product application mapped to Supplies'),
+  ('TN', 'PCN', 'cost_type', 'other', '608', 'Other costs mapped to Other purchases'),
+  ('TN', 'PCN', 'revenue_type', 'harvest', '701', 'Harvest revenue mapped to Finished product sales'),
+  ('TN', 'PCN', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
+  ('TN', 'PCN', 'revenue_type', 'other', '708', 'Other revenue mapped to Other revenue'),
+  ('TN', 'PCN', 'cash', 'bank', '53', 'Bank account'),
+  ('TN', 'PCN', 'cash', 'cash', '53', 'Cash account')
+ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+
+-- USA (GAAP) Mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('US', 'GAAP', 'cost_type', 'labor', '6000', 'Labor costs mapped to Wages and Salaries'),
+  ('US', 'GAAP', 'cost_type', 'materials', '6200', 'Materials mapped to Materials and Supplies'),
+  ('US', 'GAAP', 'cost_type', 'utilities', '6300', 'Utilities mapped to Utilities'),
+  ('US', 'GAAP', 'cost_type', 'equipment', '6500', 'Equipment mapped to Repairs and Maintenance'),
+  ('US', 'GAAP', 'cost_type', 'product_application', '6200', 'Product application mapped to Materials and Supplies'),
+  ('US', 'GAAP', 'cost_type', 'other', '6900', 'Other costs mapped to Other Operating Expenses'),
+  ('US', 'GAAP', 'revenue_type', 'harvest', '4000', 'Harvest revenue mapped to Agricultural product sales'),
+  ('US', 'GAAP', 'revenue_type', 'subsidy', '4950', 'Subsidy mapped to Government Subsidies'),
+  ('US', 'GAAP', 'revenue_type', 'other', '4900', 'Other revenue mapped to Other Revenue'),
+  ('US', 'GAAP', 'cash', 'bank', '1000', 'Cash and Cash Equivalents'),
+  ('US', 'GAAP', 'cash', 'cash', '1000', 'Cash and Cash Equivalents')
+ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+
+-- UK (FRS 102) Mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('GB', 'FRS102', 'cost_type', 'labor', '7000', 'Labor costs mapped to Wages and Salaries'),
+  ('GB', 'FRS102', 'cost_type', 'materials', '6000', 'Materials mapped to Raw Materials purchases'),
+  ('GB', 'FRS102', 'cost_type', 'utilities', '7300', 'Utilities mapped to Light and Heat'),
+  ('GB', 'FRS102', 'cost_type', 'equipment', '7500', 'Equipment mapped to Repairs and Renewals'),
+  ('GB', 'FRS102', 'cost_type', 'product_application', '6100', 'Product application mapped to Consumables'),
+  ('GB', 'FRS102', 'cost_type', 'other', '7900', 'Other costs mapped to Sundry Expenses'),
+  ('GB', 'FRS102', 'revenue_type', 'harvest', '5000', 'Harvest revenue mapped to Agricultural product sales'),
+  ('GB', 'FRS102', 'revenue_type', 'subsidy', '5900', 'Subsidy mapped to Government Grants'),
+  ('GB', 'FRS102', 'revenue_type', 'other', '5200', 'Other revenue mapped to Other Income'),
+  ('GB', 'FRS102', 'cash', 'bank', '1200', 'Bank Current Account'),
+  ('GB', 'FRS102', 'cash', 'cash', '1220', 'Cash in Hand')
+ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+
+-- France (PCG) Mappings - Migrate existing hard-coded mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('FR', 'PCG', 'cost_type', 'labor', '641', 'Labor costs mapped to Staff remuneration'),
+  ('FR', 'PCG', 'cost_type', 'materials', '601', 'Materials mapped to Raw materials purchases'),
+  ('FR', 'PCG', 'cost_type', 'utilities', '606', 'Utilities mapped to Non-stored materials and supplies'),
+  ('FR', 'PCG', 'cost_type', 'equipment', '615', 'Equipment mapped to Maintenance and repairs'),
+  ('FR', 'PCG', 'cost_type', 'product_application', '604', 'Product application mapped to Studies and services purchases'),
+  ('FR', 'PCG', 'cost_type', 'other', '628', 'Other costs mapped to Other external charges'),
+  ('FR', 'PCG', 'revenue_type', 'harvest', '701', 'Harvest revenue mapped to Finished product sales'),
+  ('FR', 'PCG', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
+  ('FR', 'PCG', 'revenue_type', 'other', '708', 'Other revenue mapped to Ancillary activities products'),
+  ('FR', 'PCG', 'cash', 'bank', '512', 'Banks'),
+  ('FR', 'PCG', 'cash', 'cash', '531', 'Cash')
+ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
 
 -- Quotes
 CREATE TABLE IF NOT EXISTS quotes (
@@ -682,6 +1043,70 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE INDEX IF NOT EXISTS idx_accounts_org ON accounts(organization_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_parent ON accounts(parent_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
+
+-- Drop legacy columns from accounts table if they exist
+DO $$
+BEGIN
+  -- Drop description_fr column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'description_fr'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN description_fr;
+  END IF;
+
+  -- Drop description_ar column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'description_ar'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN description_ar;
+  END IF;
+
+  -- Drop description_en column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'description_en'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN description_en;
+  END IF;
+
+  -- Drop name_fr column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'name_fr'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN name_fr;
+  END IF;
+
+  -- Drop name_ar column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'name_ar'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN name_ar;
+  END IF;
+
+  -- Drop name_en column if it exists (legacy from old schema)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'accounts'
+    AND column_name = 'name_en'
+  ) THEN
+    ALTER TABLE accounts DROP COLUMN name_en;
+  END IF;
+END $$;
 
 -- Taxes
 CREATE TABLE IF NOT EXISTS taxes (
@@ -975,6 +1400,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Get farm hierarchy tree for an organization
+-- Updated to handle NULL org_uuid and ensure proper column aliases match RETURNS TABLE
+-- Uses SECURITY DEFINER to bypass RLS when querying farms and parcels
 CREATE OR REPLACE FUNCTION get_farm_hierarchy_tree(
   org_uuid UUID,
   root_farm_id UUID DEFAULT NULL
@@ -996,6 +1423,12 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- Return empty result if org_uuid is NULL
+  IF org_uuid IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- SECURITY DEFINER bypasses RLS, so we can directly query farms and parcels
   RETURN QUERY
   WITH RECURSIVE farm_tree AS (
     -- Base case: root farms or specific farm
@@ -1008,23 +1441,23 @@ BEGIN
       COALESCE(f.manager_name, 'N/A') as manager,
       f.is_active,
       1 as level
-    FROM farms f
+    FROM public.farms f
     WHERE f.organization_id = org_uuid
       AND (root_farm_id IS NULL OR f.id = root_farm_id)
   )
   SELECT
-    ft.id,
-    ft.name,
-    ft.parent_farm_id,
-    ft.farm_type,
-    ft.size,
-    ft.manager,
-    ft.is_active,
-    ft.level,
-    COUNT(DISTINCT p.id) as parcel_count,
+    ft.id::UUID as farm_id,
+    ft.name::TEXT as farm_name,
+    ft.parent_farm_id::UUID,
+    ft.farm_type::TEXT,
+    ft.size::NUMERIC as farm_size,
+    ft.manager::TEXT as manager_name,
+    ft.is_active::BOOLEAN,
+    ft.level::INTEGER as hierarchy_level,
+    COUNT(DISTINCT p.id)::BIGINT as parcel_count,
     0::BIGINT as subparcel_count
   FROM farm_tree ft
-  LEFT JOIN parcels p ON p.farm_id = ft.id
+  LEFT JOIN public.parcels p ON p.farm_id = ft.id
   GROUP BY ft.id, ft.name, ft.parent_farm_id, ft.farm_type, ft.size, ft.manager, ft.is_active, ft.level
   ORDER BY ft.level, ft.name;
 END;
@@ -1035,6 +1468,51 @@ GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO service_role;
 
 COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'Returns hierarchical farm tree for an organization with parcel counts';
+
+-- =====================================================
+-- SUBSCRIPTION VALIDATION FUNCTION
+-- =====================================================
+-- This function checks if an organization has a valid subscription
+-- Required by delete-farm and delete-parcel edge functions
+-- Returns true if subscription status is 'active' or 'trialing' and not expired
+-- =====================================================
+
+-- Check if organization has a valid subscription
+CREATE OR REPLACE FUNCTION has_valid_subscription(org_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  sub_record RECORD;
+BEGIN
+  -- Check if subscription exists
+  SELECT * INTO sub_record
+  FROM public.subscriptions
+  WHERE organization_id = org_id
+  LIMIT 1;
+
+  -- If no subscription found, return false
+  IF sub_record IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Check if subscription is active or trialing and not expired
+  RETURN sub_record.status IN ('active', 'trialing')
+    AND (
+      sub_record.current_period_end IS NULL
+      OR sub_record.current_period_end >= CURRENT_DATE
+    );
+END;
+$$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION has_valid_subscription(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION has_valid_subscription(UUID) TO service_role;
+
+COMMENT ON FUNCTION has_valid_subscription IS 'Checks if an organization has a valid subscription (active or trialing and not expired)';
 
 -- Analytics: Parcel Performance Summary
 CREATE OR REPLACE FUNCTION get_parcel_performance_summary(
@@ -1156,9 +1634,17 @@ CREATE TRIGGER trg_purchase_orders_updated_at
 -- =====================================================
 -- 10. RLS POLICIES
 -- =====================================================
+-- NOTE: All RLS policies have been updated to handle NULL organization_id cases
+-- and to properly check organization membership through related tables (farms, etc.)
+-- This fixes "new row violates row-level security policy" errors for:
+-- - farms table
+-- - farm_management_roles table  
+-- - parcels table (checks organization through farm relationship)
+-- =====================================================
 
 -- Helper function to check organization membership (bypasses RLS to avoid recursion)
 -- This function uses SECURITY DEFINER to run with elevated privileges and bypass RLS
+-- Updated to handle NULL organization_id by returning false
 CREATE OR REPLACE FUNCTION is_organization_member(p_organization_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -1166,14 +1652,18 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
+  -- Return false if organization_id is NULL
   -- Direct query without RLS check (SECURITY DEFINER bypasses RLS)
-  SELECT EXISTS (
-    SELECT 1 
-    FROM public.organization_users 
-    WHERE user_id = auth.uid() 
-      AND organization_id = p_organization_id
-      AND is_active = true
-  );
+  SELECT CASE 
+    WHEN p_organization_id IS NULL THEN false
+    ELSE EXISTS (
+      SELECT 1 
+      FROM public.organization_users 
+      WHERE user_id = auth.uid() 
+        AND organization_id = p_organization_id
+        AND is_active = true
+    )
+  END;
 $$;
 
 -- Enable RLS on all tables
@@ -1293,9 +1783,17 @@ CREATE POLICY "org_delete_suppliers" ON suppliers
   );
 
 -- Subscriptions Policies
-DROP POLICY IF EXISTS "users_view_org_subscription" ON subscriptions;
-DROP POLICY IF EXISTS "admins_manage_subscription" ON subscriptions;
-DROP POLICY IF EXISTS "org_read_subscriptions" ON subscriptions;
+-- Use DO block to ensure policies are dropped before creating them
+DO $$
+BEGIN
+  -- Drop all existing subscription policies
+  DROP POLICY IF EXISTS "users_view_org_subscription" ON subscriptions;
+  DROP POLICY IF EXISTS "admins_manage_subscription" ON subscriptions;
+  DROP POLICY IF EXISTS "org_read_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_insert_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_update_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_delete_subscriptions" ON subscriptions;
+END $$;
 
 -- Allow users to view subscriptions for organizations they belong to
 CREATE POLICY "org_read_subscriptions" ON subscriptions
@@ -1310,9 +1808,10 @@ CREATE POLICY "org_insert_subscriptions" ON subscriptions
     EXISTS (
       SELECT 1
       FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
       WHERE ou.user_id = auth.uid()
         AND ou.organization_id = subscriptions.organization_id
-        AND ou.role IN ('system_admin', 'organization_admin')
+        AND r.name IN ('system_admin', 'organization_admin')
         AND ou.is_active = true
     )
   );
@@ -1323,11 +1822,12 @@ CREATE POLICY "org_update_subscriptions" ON subscriptions
     is_organization_member(organization_id) AND
     EXISTS (
       SELECT 1
-      FROM public.organization_users
-      WHERE user_id = auth.uid()
-        AND organization_id = subscriptions.organization_id
-        AND role IN ('system_admin', 'organization_admin')
-        AND is_active = true
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND r.name IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
     )
   );
 
@@ -1337,11 +1837,12 @@ CREATE POLICY "org_delete_subscriptions" ON subscriptions
     is_organization_member(organization_id) AND
     EXISTS (
       SELECT 1
-      FROM public.organization_users
-      WHERE user_id = auth.uid()
-        AND organization_id = subscriptions.organization_id
-        AND role IN ('system_admin', 'organization_admin')
-        AND is_active = true
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND r.name IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
     )
   );
 
@@ -1448,8 +1949,188 @@ CREATE POLICY "org_update_accounts" ON accounts
     is_organization_member(organization_id)
   );
 
--- Similar policies for other accounting tables (journal_entries, invoices, etc.)
--- (Following the same pattern as above)
+DROP POLICY IF EXISTS "org_delete_accounts" ON accounts;
+CREATE POLICY "org_delete_accounts" ON accounts
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Cost Centers Policies
+DROP POLICY IF EXISTS "org_read_cost_centers" ON cost_centers;
+CREATE POLICY "org_read_cost_centers" ON cost_centers
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_cost_centers" ON cost_centers;
+CREATE POLICY "org_write_cost_centers" ON cost_centers
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_cost_centers" ON cost_centers;
+CREATE POLICY "org_update_cost_centers" ON cost_centers
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_cost_centers" ON cost_centers;
+CREATE POLICY "org_delete_cost_centers" ON cost_centers
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Taxes Policies
+DROP POLICY IF EXISTS "org_read_taxes" ON taxes;
+CREATE POLICY "org_read_taxes" ON taxes
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_taxes" ON taxes;
+CREATE POLICY "org_write_taxes" ON taxes
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_taxes" ON taxes;
+CREATE POLICY "org_update_taxes" ON taxes
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_taxes" ON taxes;
+CREATE POLICY "org_delete_taxes" ON taxes
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Bank Accounts Policies
+DROP POLICY IF EXISTS "org_read_bank_accounts" ON bank_accounts;
+CREATE POLICY "org_read_bank_accounts" ON bank_accounts
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_bank_accounts" ON bank_accounts;
+CREATE POLICY "org_write_bank_accounts" ON bank_accounts
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_bank_accounts" ON bank_accounts;
+CREATE POLICY "org_update_bank_accounts" ON bank_accounts
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_bank_accounts" ON bank_accounts;
+CREATE POLICY "org_delete_bank_accounts" ON bank_accounts
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Journal Entries Policies
+DROP POLICY IF EXISTS "org_read_journal_entries" ON journal_entries;
+CREATE POLICY "org_read_journal_entries" ON journal_entries
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_journal_entries" ON journal_entries;
+CREATE POLICY "org_write_journal_entries" ON journal_entries
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_journal_entries" ON journal_entries;
+CREATE POLICY "org_update_journal_entries" ON journal_entries
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_journal_entries" ON journal_entries;
+CREATE POLICY "org_delete_journal_entries" ON journal_entries
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Journal Items Policies
+DROP POLICY IF EXISTS "org_access_journal_items" ON journal_items;
+CREATE POLICY "org_access_journal_items" ON journal_items
+  FOR ALL USING (
+    journal_entry_id IN (
+      SELECT id FROM journal_entries WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Invoices Policies
+DROP POLICY IF EXISTS "org_read_invoices" ON invoices;
+CREATE POLICY "org_read_invoices" ON invoices
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_invoices" ON invoices;
+CREATE POLICY "org_write_invoices" ON invoices
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_invoices" ON invoices;
+CREATE POLICY "org_update_invoices" ON invoices
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_invoices" ON invoices;
+CREATE POLICY "org_delete_invoices" ON invoices
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Invoice Items Policies
+DROP POLICY IF EXISTS "org_access_invoice_items" ON invoice_items;
+CREATE POLICY "org_access_invoice_items" ON invoice_items
+  FOR ALL USING (
+    invoice_id IN (
+      SELECT id FROM invoices WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Accounting Payments Policies
+DROP POLICY IF EXISTS "org_read_accounting_payments" ON accounting_payments;
+CREATE POLICY "org_read_accounting_payments" ON accounting_payments
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_accounting_payments" ON accounting_payments;
+CREATE POLICY "org_write_accounting_payments" ON accounting_payments
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_accounting_payments" ON accounting_payments;
+CREATE POLICY "org_update_accounting_payments" ON accounting_payments
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_accounting_payments" ON accounting_payments;
+CREATE POLICY "org_delete_accounting_payments" ON accounting_payments
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Payment Allocations Policies
+DROP POLICY IF EXISTS "org_access_payment_allocations" ON payment_allocations;
+CREATE POLICY "org_access_payment_allocations" ON payment_allocations
+  FOR ALL USING (
+    payment_id IN (
+      SELECT id FROM accounting_payments WHERE is_organization_member(organization_id)
+    )
+  );
 
 -- =====================================================
 -- 11. WORKERS & TASK MANAGEMENT TABLES
@@ -2561,6 +3242,22 @@ CREATE INDEX IF NOT EXISTS idx_reception_batches_parcel ON reception_batches(par
 CREATE INDEX IF NOT EXISTS idx_reception_batches_date ON reception_batches(reception_date DESC);
 
 -- Add FK now that both tables exist
+-- Use DO block to ensure constraint is dropped before creating it
+DO $$
+BEGIN
+  -- Drop the constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.conname = 'fk_stock_entries_reception_batch' 
+    AND t.relname = 'stock_entries'
+    AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+  ) THEN
+    ALTER TABLE IF EXISTS stock_entries
+      DROP CONSTRAINT fk_stock_entries_reception_batch;
+  END IF;
+END $$;
+
 ALTER TABLE IF EXISTS stock_entries
   ADD CONSTRAINT fk_stock_entries_reception_batch
   FOREIGN KEY (reception_batch_id)
@@ -2883,6 +3580,22 @@ CREATE INDEX IF NOT EXISTS idx_crops_parcel ON crops(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_crops_variety ON crops(variety_id);
 
 -- Backfill FK constraints that depend on tables created later
+-- Use DO block to ensure constraint is dropped before creating it
+DO $$
+BEGIN
+  -- Drop the constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.conname = 'fk_reception_batches_crop' 
+    AND t.relname = 'reception_batches'
+    AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+  ) THEN
+    ALTER TABLE IF EXISTS reception_batches
+      DROP CONSTRAINT fk_reception_batches_crop;
+  END IF;
+END $$;
+
 ALTER TABLE IF EXISTS reception_batches
   ADD CONSTRAINT fk_reception_batches_crop
   FOREIGN KEY (crop_id)
@@ -3237,6 +3950,34 @@ CREATE TABLE IF NOT EXISTS farm_management_roles (
 CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
 CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
 
+-- Add role_id column and foreign key constraint from organization_users to roles
+-- This is added here after roles table is created to avoid dependency issues
+DO $$
+BEGIN
+  -- Add the role_id column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role_id'
+  ) THEN
+    ALTER TABLE organization_users ADD COLUMN role_id UUID;
+  END IF;
+
+  -- Add the foreign key constraint if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_id_fkey'
+  ) THEN
+    ALTER TABLE organization_users
+    ADD CONSTRAINT organization_users_role_id_fkey
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Add index for the role_id column
+CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
+
 -- =====================================================
 -- 21. AUDIT & LOGGING TABLES
 -- =====================================================
@@ -3422,6 +4163,12 @@ CREATE POLICY "org_update_workers" ON workers
     is_organization_member(organization_id)
   );
 
+DROP POLICY IF EXISTS "org_delete_workers" ON workers;
+CREATE POLICY "org_delete_workers" ON workers
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Tasks Policies
 ALTER TABLE IF EXISTS tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_tasks" ON tasks;
@@ -3442,6 +4189,12 @@ CREATE POLICY "org_update_tasks" ON tasks
     is_organization_member(organization_id)
   );
 
+DROP POLICY IF EXISTS "org_delete_tasks" ON tasks;
+CREATE POLICY "org_delete_tasks" ON tasks
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Harvest Records Policies
 ALTER TABLE IF EXISTS harvest_records ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_harvest_records" ON harvest_records;
@@ -3456,6 +4209,18 @@ CREATE POLICY "org_write_harvest_records" ON harvest_records
     is_organization_member(organization_id)
   );
 
+DROP POLICY IF EXISTS "org_update_harvest_records" ON harvest_records;
+CREATE POLICY "org_update_harvest_records" ON harvest_records
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_harvest_records" ON harvest_records;
+CREATE POLICY "org_delete_harvest_records" ON harvest_records
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Deliveries Policies
 ALTER TABLE IF EXISTS deliveries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_deliveries" ON deliveries;
@@ -3467,6 +4232,18 @@ CREATE POLICY "org_read_deliveries" ON deliveries
 DROP POLICY IF EXISTS "org_write_deliveries" ON deliveries;
 CREATE POLICY "org_write_deliveries" ON deliveries
   FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_deliveries" ON deliveries;
+CREATE POLICY "org_update_deliveries" ON deliveries
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_deliveries" ON deliveries;
+CREATE POLICY "org_delete_deliveries" ON deliveries
+  FOR DELETE USING (
     is_organization_member(organization_id)
   );
 
@@ -3704,6 +4481,209 @@ ON CONFLICT (name) DO UPDATE SET
   level = EXCLUDED.level,
   is_active = EXCLUDED.is_active,
   updated_at = NOW();
+
+-- Seed permissions
+INSERT INTO permissions (name, display_name, resource, action, description) VALUES
+  -- User management permissions
+  ('users.read', 'View Users', 'users', 'read', 'View users in the organization'),
+  ('users.create', 'Create Users', 'users', 'create', 'Invite new users to the organization'),
+  ('users.update', 'Update Users', 'users', 'update', 'Update user roles and information'),
+  ('users.delete', 'Delete Users', 'users', 'delete', 'Remove users from the organization'),
+  ('users.manage', 'Manage Users', 'users', 'manage', 'Full user management access'),
+
+  -- Farm management permissions
+  ('farms.read', 'View Farms', 'farms', 'read', 'View farm information'),
+  ('farms.create', 'Create Farms', 'farms', 'create', 'Create new farms'),
+  ('farms.update', 'Update Farms', 'farms', 'update', 'Update farm information'),
+  ('farms.delete', 'Delete Farms', 'farms', 'delete', 'Delete farms'),
+  ('farms.manage', 'Manage Farms', 'farms', 'manage', 'Full farm management access'),
+
+  -- Parcel management permissions
+  ('parcels.read', 'View Parcels', 'parcels', 'read', 'View parcel information'),
+  ('parcels.create', 'Create Parcels', 'parcels', 'create', 'Create new parcels'),
+  ('parcels.update', 'Update Parcels', 'parcels', 'update', 'Update parcel information'),
+  ('parcels.delete', 'Delete Parcels', 'parcels', 'delete', 'Delete parcels'),
+  ('parcels.manage', 'Manage Parcels', 'parcels', 'manage', 'Full parcel management access'),
+
+  -- Stock management permissions
+  ('stock.read', 'View Stock', 'stock', 'read', 'View inventory and stock'),
+  ('stock.create', 'Create Stock Entries', 'stock', 'create', 'Create new stock entries'),
+  ('stock.update', 'Update Stock', 'stock', 'update', 'Update stock information'),
+  ('stock.delete', 'Delete Stock', 'stock', 'delete', 'Delete stock entries'),
+  ('stock.manage', 'Manage Stock', 'stock', 'manage', 'Full stock management access'),
+
+  -- Organization permissions
+  ('organizations.read', 'View Organization', 'organizations', 'read', 'View organization information'),
+  ('organizations.update', 'Update Organization', 'organizations', 'update', 'Update organization settings'),
+  ('organizations.manage', 'Manage Organization', 'organizations', 'manage', 'Full organization management'),
+
+  -- Report permissions
+  ('reports.read', 'View Reports', 'reports', 'read', 'View and generate reports')
+ON CONFLICT (name) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  resource = EXCLUDED.resource,
+  action = EXCLUDED.action,
+  description = EXCLUDED.description;
+
+-- Seed role_permissions mapping
+-- This maps each role to their permissions
+DO $$
+DECLARE
+  v_system_admin_id UUID;
+  v_org_admin_id UUID;
+  v_farm_manager_id UUID;
+  v_farm_worker_id UUID;
+  v_day_laborer_id UUID;
+  v_viewer_id UUID;
+BEGIN
+  -- Get role IDs
+  SELECT id INTO v_system_admin_id FROM roles WHERE name = 'system_admin';
+  SELECT id INTO v_org_admin_id FROM roles WHERE name = 'organization_admin';
+  SELECT id INTO v_farm_manager_id FROM roles WHERE name = 'farm_manager';
+  SELECT id INTO v_farm_worker_id FROM roles WHERE name = 'farm_worker';
+  SELECT id INTO v_day_laborer_id FROM roles WHERE name = 'day_laborer';
+  SELECT id INTO v_viewer_id FROM roles WHERE name = 'viewer';
+
+  -- Clear existing role_permissions to avoid duplicates
+  DELETE FROM role_permissions;
+
+  -- System Admin: manage all resources
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_system_admin_id, id FROM permissions WHERE action = 'manage';
+
+  -- Organization Admin: manage users, farms, parcels, stock, organization
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_org_admin_id, id FROM permissions
+  WHERE resource IN ('users', 'farms', 'parcels', 'stock', 'organizations', 'reports');
+
+  -- Farm Manager: read users, manage farms, parcels, stock
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_farm_manager_id, id FROM permissions
+  WHERE (resource = 'users' AND action = 'read')
+     OR (resource IN ('farms', 'parcels', 'stock') AND action IN ('read', 'create', 'update', 'manage'))
+     OR (resource = 'reports' AND action = 'read');
+
+  -- Farm Worker: read most resources, create/update parcels
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_farm_worker_id, id FROM permissions
+  WHERE (resource IN ('farms', 'parcels', 'stock', 'users') AND action = 'read')
+     OR (resource = 'parcels' AND action IN ('create', 'update'));
+
+  -- Day Laborer: very limited, read-only on tasks
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_day_laborer_id, id FROM permissions
+  WHERE resource = 'reports' AND action = 'read';
+
+  -- Viewer: read-only access
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_viewer_id, id FROM permissions
+  WHERE action = 'read';
+
+END $$;
+
+-- Populate role_id for existing users based on their role text
+-- This maps the text role to the actual roles table
+DO $$
+BEGIN
+  -- Only run if the role column still exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    -- Update organization_users with role_id based on role text
+    UPDATE organization_users ou
+    SET role_id = r.id
+    FROM roles r
+    WHERE ou.role = r.name
+    AND ou.role_id IS NULL;
+  END IF;
+END $$;
+
+-- Add first_name and last_name columns to user_profiles if they don't exist
+DO $$
+BEGIN
+  -- Add first_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'first_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
+  END IF;
+
+  -- Add last_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'last_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
+  END IF;
+
+  -- Populate first_name and last_name from full_name if they are empty
+  UPDATE user_profiles
+  SET
+    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
+    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
+  WHERE full_name IS NOT NULL
+  AND (first_name IS NULL OR last_name IS NULL);
+END $$;
+
+-- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
+DO $$
+DECLARE
+  default_viewer_role_id UUID;
+BEGIN
+  -- Get the viewer role ID as a fallback
+  SELECT id INTO default_viewer_role_id FROM roles WHERE name = 'viewer';
+
+  -- Set default viewer role for any users with NULL role_id
+  IF default_viewer_role_id IS NOT NULL THEN
+    UPDATE organization_users
+    SET role_id = default_viewer_role_id
+    WHERE role_id IS NULL;
+  END IF;
+
+  -- First, ensure role_id is NOT NULL (it should be populated by now)
+  -- If any row still has NULL role_id, this will fail and alert us
+  IF EXISTS (SELECT 1 FROM organization_users WHERE role_id IS NULL) THEN
+    RAISE EXCEPTION 'Cannot drop role column: some users still have NULL role_id even after applying default viewer role.';
+  END IF;
+
+  -- Drop the foreign key constraint on role VARCHAR if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_fkey'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_fkey;
+  END IF;
+
+  -- Drop the CHECK constraint on role if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_check'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_check;
+  END IF;
+
+  -- Make role_id NOT NULL now that we've confirmed it's populated
+  ALTER TABLE organization_users ALTER COLUMN role_id SET NOT NULL;
+
+  -- Drop the role VARCHAR column
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    ALTER TABLE organization_users DROP COLUMN role;
+  END IF;
+END $$;
+
 -- Fix the stock entry posting trigger to use SECURITY DEFINER to bypass RLS
 DROP FUNCTION IF EXISTS process_stock_entry_posting() CASCADE;
 
@@ -3924,3 +4904,3053 @@ CREATE TRIGGER stock_entry_posting_trigger
 -- Add comment
 COMMENT ON FUNCTION process_stock_entry_posting() IS
   'Automatically creates stock movements and updates inventory when a stock entry is posted. Uses SECURITY DEFINER to bypass RLS.';
+
+-- =====================================================
+-- DATA SEEDING & FIXES
+-- =====================================================
+-- This section ensures user profiles and organizations exist for existing auth users
+
+-- Create user profiles for all auth users that don't have one
+DO $$
+DECLARE
+    v_user RECORD;
+BEGIN
+    FOR v_user IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
+        INSERT INTO user_profiles (
+            id,
+            email,
+            full_name,
+            language,
+            timezone,
+            onboarding_completed,
+            password_set
+        )
+        VALUES (
+            v_user.id,
+            v_user.email,
+            COALESCE(
+                NULLIF(TRIM(COALESCE(v_user.raw_user_meta_data->>'full_name', '')), ''),
+                COALESCE(v_user.raw_user_meta_data->>'first_name', '') || ' ' || COALESCE(v_user.raw_user_meta_data->>'last_name', ''),
+                split_part(v_user.email, '@', 1)
+            ),
+            'fr',
+            'Africa/Casablanca',
+            true,
+            true
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            onboarding_completed = true,
+            password_set = true,
+            updated_at = NOW();
+    END LOOP;
+    
+    RAISE NOTICE '✅ User profiles synced for all auth users';
+END $$;
+
+-- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_exists boolean;
+BEGIN
+    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
+    
+    IF NOT v_org_exists THEN
+        INSERT INTO organizations (
+            id,
+            name,
+            slug,
+            email,
+            currency_code,
+            timezone,
+            is_active
+        )
+        VALUES (
+            v_org_id,
+            'AgriTech Organization',
+            'agritech-org',
+            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
+            'MAD',
+            'Africa/Casablanca',
+            true
+        );
+        RAISE NOTICE '✅ Created organization: AgriTech Organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already exists';
+    END IF;
+END $$;
+
+-- Link all auth users to the default organization as admins if they don't have an organization
+DO $$
+DECLARE
+    v_user RECORD;
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_linked_count integer := 0;
+BEGIN
+    FOR v_user IN 
+        SELECT u.id 
+        FROM auth.users u
+        WHERE NOT EXISTS (
+            SELECT 1 FROM organization_users ou 
+            WHERE ou.user_id = u.id AND ou.is_active = true
+        )
+    LOOP
+        INSERT INTO organization_users (
+            user_id,
+            organization_id,
+            role,
+            is_active
+        )
+        VALUES (
+            v_user.id,
+            v_org_id,
+            'organization_admin',
+            true
+        )
+        ON CONFLICT (user_id, organization_id) 
+        DO UPDATE SET 
+            is_active = true,
+            role = 'organization_admin',
+            updated_at = NOW();
+        
+        v_linked_count := v_linked_count + 1;
+    END LOOP;
+    
+    IF v_linked_count > 0 THEN
+        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
+    ELSE
+        RAISE NOTICE 'ℹ️  All users already linked to organizations';
+    END IF;
+END $$;
+
+-- Create a trial subscription for the organization if it doesn't have one
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_sub_exists boolean;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 FROM subscriptions 
+        WHERE organization_id = v_org_id 
+        AND status IN ('trialing', 'active')
+    ) INTO v_sub_exists;
+    
+    IF NOT v_sub_exists THEN
+        INSERT INTO subscriptions (
+            organization_id,
+            status,
+            plan_id,
+            current_period_start,
+            current_period_end,
+            cancel_at_period_end
+        )
+        VALUES (
+            v_org_id,
+            'trialing',
+            'basic',
+            NOW(),
+            NOW() + INTERVAL '30 days',
+            false
+        )
+        ON CONFLICT DO NOTHING;
+        
+        RAISE NOTICE '✅ Created trial subscription for organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
+    END IF;
+END $$;
+
+-- Final verification and summary
+DO $$
+DECLARE
+    v_user_count integer;
+    v_profile_count integer;
+    v_org_count integer;
+    v_org_user_count integer;
+    v_sub_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_user_count FROM auth.users;
+    SELECT COUNT(*) INTO v_profile_count FROM user_profiles;
+    SELECT COUNT(*) INTO v_org_count FROM organizations;
+    SELECT COUNT(*) INTO v_org_user_count FROM organization_users WHERE is_active = true;
+    SELECT COUNT(*) INTO v_sub_count FROM subscriptions WHERE status IN ('trialing', 'active');
+    
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'DATABASE INITIALIZATION SUMMARY';
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'Auth users: %', v_user_count;
+    RAISE NOTICE 'User profiles: %', v_profile_count;
+    RAISE NOTICE 'Organizations: %', v_org_count;
+    RAISE NOTICE 'Active organization memberships: %', v_org_user_count;
+    RAISE NOTICE 'Active subscriptions: %', v_sub_count;
+    RAISE NOTICE '================================================';
+    RAISE NOTICE '✅ Schema initialization complete!';
+    RAISE NOTICE '================================================';
+END $$;
+
+-- =====================================================
+-- COMPREHENSIVE RLS POLICIES FIX
+-- Added: 2025-11-06
+-- Fix for onboarding issue where these tables had RLS enabled but no policies
+-- Tables fixed: user_profiles, organizations, dashboard_settings
+-- =====================================================
+
+-- =====================================================
+-- USER_PROFILES RLS POLICIES
+-- =====================================================
+DROP POLICY IF EXISTS "user_read_own_profile" ON user_profiles;
+DROP POLICY IF EXISTS "user_write_own_profile" ON user_profiles;
+DROP POLICY IF EXISTS "user_update_own_profile" ON user_profiles;
+DROP POLICY IF EXISTS "user_all_own_profile" ON user_profiles;
+
+-- Single policy for all operations (supports upsert in onboarding)
+CREATE POLICY "user_all_own_profile" ON user_profiles
+  FOR ALL USING (
+    id = auth.uid()
+  )
+  WITH CHECK (
+    id = auth.uid()
+  );
+
+-- =====================================================
+-- ORGANIZATIONS RLS POLICIES
+-- =====================================================
+DROP POLICY IF EXISTS "org_read_organizations" ON organizations;
+DROP POLICY IF EXISTS "org_write_organizations" ON organizations;
+DROP POLICY IF EXISTS "org_update_organizations" ON organizations;
+DROP POLICY IF EXISTS "org_delete_organizations" ON organizations;
+
+-- Read: Users can see organizations they're members of
+CREATE POLICY "org_read_organizations" ON organizations
+  FOR SELECT USING (
+    is_organization_member(id)
+  );
+
+-- Insert: Any authenticated user can create an organization
+CREATE POLICY "org_write_organizations" ON organizations
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+  );
+
+-- Update: Organization members can update
+CREATE POLICY "org_update_organizations" ON organizations
+  FOR UPDATE USING (
+    is_organization_member(id)
+  );
+
+-- Delete: Organization members can delete
+CREATE POLICY "org_delete_organizations" ON organizations
+  FOR DELETE USING (
+    is_organization_member(id)
+  );
+
+-- =====================================================
+-- DASHBOARD_SETTINGS RLS POLICIES
+-- =====================================================
+DROP POLICY IF EXISTS "user_read_own_dashboard_settings" ON dashboard_settings;
+DROP POLICY IF EXISTS "user_write_own_dashboard_settings" ON dashboard_settings;
+DROP POLICY IF EXISTS "user_update_own_dashboard_settings" ON dashboard_settings;
+DROP POLICY IF EXISTS "user_delete_own_dashboard_settings" ON dashboard_settings;
+
+CREATE POLICY "user_read_own_dashboard_settings" ON dashboard_settings
+  FOR SELECT USING (
+    user_id = auth.uid() AND
+    is_organization_member(organization_id)
+  );
+
+CREATE POLICY "user_write_own_dashboard_settings" ON dashboard_settings
+  FOR INSERT WITH CHECK (
+    user_id = auth.uid() AND
+    is_organization_member(organization_id)
+  );
+
+CREATE POLICY "user_update_own_dashboard_settings" ON dashboard_settings
+  FOR UPDATE USING (
+    user_id = auth.uid() AND
+    is_organization_member(organization_id)
+  );
+
+CREATE POLICY "user_delete_own_dashboard_settings" ON dashboard_settings
+  FOR DELETE USING (
+    user_id = auth.uid()
+  );
+
+-- =====================================================
+-- FARMS RLS POLICIES
+-- =====================================================
+-- Updated to handle NULL organization_id and require authentication for INSERT
+-- Users can access farms with NULL organization_id or farms from organizations they're members of
+-- =====================================================
+DROP POLICY IF EXISTS "org_read_farms" ON farms;
+DROP POLICY IF EXISTS "org_write_farms" ON farms;
+DROP POLICY IF EXISTS "org_update_farms" ON farms;
+DROP POLICY IF EXISTS "org_delete_farms" ON farms;
+
+-- Read: Users can see farms from organizations they're members of, or farms with NULL organization_id
+CREATE POLICY "org_read_farms" ON farms
+  FOR SELECT USING (
+    organization_id IS NULL OR is_organization_member(organization_id)
+  );
+
+-- Insert: Authenticated users can create farms for organizations they're members of, or farms with NULL organization_id
+CREATE POLICY "org_write_farms" ON farms
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (organization_id IS NULL OR is_organization_member(organization_id))
+  );
+
+-- Update: Users can update farms from organizations they're members of, or farms with NULL organization_id
+CREATE POLICY "org_update_farms" ON farms
+  FOR UPDATE USING (
+    organization_id IS NULL OR is_organization_member(organization_id)
+  );
+
+-- Delete: Users can delete farms from organizations they're members of, or farms with NULL organization_id
+CREATE POLICY "org_delete_farms" ON farms
+  FOR DELETE USING (
+    organization_id IS NULL OR is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- FARM_MANAGEMENT_ROLES RLS POLICIES
+-- =====================================================
+-- Updated to check organization through farm relationship
+-- Users can access their own roles or roles for farms they have access to
+-- =====================================================
+DROP POLICY IF EXISTS "org_read_farm_roles" ON farm_management_roles;
+DROP POLICY IF EXISTS "org_write_farm_roles" ON farm_management_roles;
+DROP POLICY IF EXISTS "org_update_farm_roles" ON farm_management_roles;
+DROP POLICY IF EXISTS "org_delete_farm_roles" ON farm_management_roles;
+
+-- Read: Users can see farm roles for farms they have access to
+CREATE POLICY "org_read_farm_roles" ON farm_management_roles
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_management_roles.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Insert: Authenticated users can create farm roles for farms they have access to, or for themselves
+CREATE POLICY "org_write_farm_roles" ON farm_management_roles
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (
+      user_id = auth.uid() OR
+      EXISTS (
+        SELECT 1 FROM farms
+        WHERE farms.id = farm_management_roles.farm_id
+          AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      )
+    )
+  );
+
+-- Update: Users can update farm roles for farms they have access to, or their own roles
+CREATE POLICY "org_update_farm_roles" ON farm_management_roles
+  FOR UPDATE USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_management_roles.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Delete: Users can delete farm roles for farms they have access to, or their own roles
+CREATE POLICY "org_delete_farm_roles" ON farm_management_roles
+  FOR DELETE USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = farm_management_roles.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- =====================================================
+-- PARCELS RLS POLICIES
+-- =====================================================
+-- Updated to check organization through farm relationship (parcels don't have organization_id)
+-- Users can access parcels from farms they have access to
+-- =====================================================
+DROP POLICY IF EXISTS "org_read_parcels" ON parcels;
+DROP POLICY IF EXISTS "org_write_parcels" ON parcels;
+DROP POLICY IF EXISTS "org_update_parcels" ON parcels;
+DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
+
+-- Read: Users can see parcels from farms they have access to
+CREATE POLICY "org_read_parcels" ON parcels
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Insert: Authenticated users can create parcels for farms they have access to
+CREATE POLICY "org_write_parcels" ON parcels
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Update: Users can update parcels from farms they have access to
+CREATE POLICY "org_update_parcels" ON parcels
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Delete: Users can delete parcels from farms they have access to
+CREATE POLICY "org_delete_parcels" ON parcels
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- =====================================================
+-- ADDITIONAL RLS POLICIES FOR ALL TABLES WITH RLS ENABLED
+-- =====================================================
+-- This section ensures all tables with RLS enabled have proper policies
+-- =====================================================
+
+-- =====================================================
+-- WORKER & TASK MANAGEMENT TABLES
+-- =====================================================
+
+-- Day Laborers Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_day_laborers" ON day_laborers;
+CREATE POLICY "org_read_day_laborers" ON day_laborers
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = day_laborers.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_day_laborers" ON day_laborers;
+CREATE POLICY "org_write_day_laborers" ON day_laborers
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = day_laborers.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_day_laborers" ON day_laborers;
+CREATE POLICY "org_update_day_laborers" ON day_laborers
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = day_laborers.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_day_laborers" ON day_laborers;
+CREATE POLICY "org_delete_day_laborers" ON day_laborers
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = day_laborers.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Employees Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_employees" ON employees;
+CREATE POLICY "org_read_employees" ON employees
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = employees.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_employees" ON employees;
+CREATE POLICY "org_write_employees" ON employees
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = employees.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_employees" ON employees;
+CREATE POLICY "org_update_employees" ON employees
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = employees.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_employees" ON employees;
+CREATE POLICY "org_delete_employees" ON employees
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = employees.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Task Categories Policies
+DROP POLICY IF EXISTS "org_read_task_categories" ON task_categories;
+CREATE POLICY "org_read_task_categories" ON task_categories
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_task_categories" ON task_categories;
+CREATE POLICY "org_write_task_categories" ON task_categories
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_task_categories" ON task_categories;
+CREATE POLICY "org_update_task_categories" ON task_categories
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_categories" ON task_categories;
+CREATE POLICY "org_delete_task_categories" ON task_categories
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Task Templates Policies (check through category relationship)
+DROP POLICY IF EXISTS "org_read_task_templates" ON task_templates;
+CREATE POLICY "org_read_task_templates" ON task_templates
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM task_categories
+      WHERE task_categories.id = task_templates.category_id
+        AND is_organization_member(task_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_templates" ON task_templates;
+CREATE POLICY "org_write_task_templates" ON task_templates
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM task_categories
+      WHERE task_categories.id = task_templates.category_id
+        AND is_organization_member(task_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_task_templates" ON task_templates;
+CREATE POLICY "org_update_task_templates" ON task_templates
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM task_categories
+      WHERE task_categories.id = task_templates.category_id
+        AND is_organization_member(task_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_templates" ON task_templates;
+CREATE POLICY "org_delete_task_templates" ON task_templates
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM task_categories
+      WHERE task_categories.id = task_templates.category_id
+        AND is_organization_member(task_categories.organization_id)
+    )
+  );
+
+-- Task Comments Policies (check through task relationship)
+DROP POLICY IF EXISTS "org_read_task_comments" ON task_comments;
+CREATE POLICY "org_read_task_comments" ON task_comments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_comments.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_comments" ON task_comments;
+CREATE POLICY "org_write_task_comments" ON task_comments
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    user_id = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_comments.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_task_comments" ON task_comments;
+CREATE POLICY "org_update_task_comments" ON task_comments
+  FOR UPDATE USING (
+    user_id = auth.uid() AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_comments.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_comments" ON task_comments;
+CREATE POLICY "org_delete_task_comments" ON task_comments
+  FOR DELETE USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_comments.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+-- Task Time Logs Policies (check through task relationship)
+DROP POLICY IF EXISTS "org_read_task_time_logs" ON task_time_logs;
+CREATE POLICY "org_read_task_time_logs" ON task_time_logs
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_time_logs.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_time_logs" ON task_time_logs;
+CREATE POLICY "org_write_task_time_logs" ON task_time_logs
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_time_logs.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_task_time_logs" ON task_time_logs;
+CREATE POLICY "org_update_task_time_logs" ON task_time_logs
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_time_logs.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_time_logs" ON task_time_logs;
+CREATE POLICY "org_delete_task_time_logs" ON task_time_logs
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_time_logs.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+-- Task Dependencies Policies (check through task relationship)
+DROP POLICY IF EXISTS "org_read_task_dependencies" ON task_dependencies;
+CREATE POLICY "org_read_task_dependencies" ON task_dependencies
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_dependencies.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_dependencies" ON task_dependencies;
+CREATE POLICY "org_write_task_dependencies" ON task_dependencies
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_dependencies.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_task_dependencies" ON task_dependencies;
+CREATE POLICY "org_update_task_dependencies" ON task_dependencies
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_dependencies.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_dependencies" ON task_dependencies;
+CREATE POLICY "org_delete_task_dependencies" ON task_dependencies
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_dependencies.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+-- Task Equipment Policies (check through task relationship)
+DROP POLICY IF EXISTS "org_read_task_equipment" ON task_equipment;
+CREATE POLICY "org_read_task_equipment" ON task_equipment
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_equipment.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_equipment" ON task_equipment;
+CREATE POLICY "org_write_task_equipment" ON task_equipment
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_equipment.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_task_equipment" ON task_equipment;
+CREATE POLICY "org_update_task_equipment" ON task_equipment
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_equipment.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_equipment" ON task_equipment;
+CREATE POLICY "org_delete_task_equipment" ON task_equipment
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_equipment.task_id
+        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+    )
+  );
+
+-- Work Records Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_work_records" ON work_records;
+CREATE POLICY "org_read_work_records" ON work_records
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = work_records.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
+CREATE POLICY "org_write_work_records" ON work_records
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = work_records.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_work_records" ON work_records;
+CREATE POLICY "org_update_work_records" ON work_records
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = work_records.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_work_records" ON work_records;
+CREATE POLICY "org_delete_work_records" ON work_records
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = work_records.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Metayage Settlements Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = metayage_settlements.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = metayage_settlements.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_update_metayage_settlements" ON metayage_settlements
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = metayage_settlements.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_delete_metayage_settlements" ON metayage_settlements
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = metayage_settlements.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Payment Records Policies
+DROP POLICY IF EXISTS "org_read_payment_records" ON payment_records;
+CREATE POLICY "org_read_payment_records" ON payment_records
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_payment_records" ON payment_records;
+CREATE POLICY "org_write_payment_records" ON payment_records
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_payment_records" ON payment_records;
+CREATE POLICY "org_update_payment_records" ON payment_records
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_payment_records" ON payment_records;
+CREATE POLICY "org_delete_payment_records" ON payment_records
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Payment Advances Policies
+DROP POLICY IF EXISTS "org_read_payment_advances" ON payment_advances;
+CREATE POLICY "org_read_payment_advances" ON payment_advances
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_payment_advances" ON payment_advances;
+CREATE POLICY "org_write_payment_advances" ON payment_advances
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_payment_advances" ON payment_advances;
+CREATE POLICY "org_update_payment_advances" ON payment_advances
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_payment_advances" ON payment_advances;
+CREATE POLICY "org_delete_payment_advances" ON payment_advances
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Payment Bonuses Policies (check through payment_records relationship)
+DROP POLICY IF EXISTS "org_access_payment_bonuses" ON payment_bonuses;
+CREATE POLICY "org_access_payment_bonuses" ON payment_bonuses
+  FOR ALL USING (
+    payment_record_id IN (
+      SELECT id FROM payment_records WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Payment Deductions Policies (check through payment_records relationship)
+DROP POLICY IF EXISTS "org_access_payment_deductions" ON payment_deductions;
+CREATE POLICY "org_access_payment_deductions" ON payment_deductions
+  FOR ALL USING (
+    payment_record_id IN (
+      SELECT id FROM payment_records WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- =====================================================
+-- DELIVERY MANAGEMENT TABLES
+-- =====================================================
+
+-- Delivery Items Policies (check through delivery relationship)
+DROP POLICY IF EXISTS "org_access_delivery_items" ON delivery_items;
+CREATE POLICY "org_access_delivery_items" ON delivery_items
+  FOR ALL USING (
+    delivery_id IN (
+      SELECT id FROM deliveries WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Delivery Tracking Policies (check through delivery relationship)
+DROP POLICY IF EXISTS "org_read_delivery_tracking" ON delivery_tracking;
+CREATE POLICY "org_read_delivery_tracking" ON delivery_tracking
+  FOR SELECT USING (
+    delivery_id IN (
+      SELECT id FROM deliveries WHERE is_organization_member(organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_delivery_tracking" ON delivery_tracking;
+CREATE POLICY "org_write_delivery_tracking" ON delivery_tracking
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    delivery_id IN (
+      SELECT id FROM deliveries WHERE is_organization_member(organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_delivery_tracking" ON delivery_tracking;
+CREATE POLICY "org_update_delivery_tracking" ON delivery_tracking
+  FOR UPDATE USING (
+    delivery_id IN (
+      SELECT id FROM deliveries WHERE is_organization_member(organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_delivery_tracking" ON delivery_tracking;
+CREATE POLICY "org_delete_delivery_tracking" ON delivery_tracking
+  FOR DELETE USING (
+    delivery_id IN (
+      SELECT id FROM deliveries WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- =====================================================
+-- INVENTORY & STOCK MANAGEMENT TABLES
+-- =====================================================
+
+-- Warehouses Policies
+DROP POLICY IF EXISTS "org_read_warehouses" ON warehouses;
+CREATE POLICY "org_read_warehouses" ON warehouses
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_warehouses" ON warehouses;
+CREATE POLICY "org_write_warehouses" ON warehouses
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_warehouses" ON warehouses;
+CREATE POLICY "org_update_warehouses" ON warehouses
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_warehouses" ON warehouses;
+CREATE POLICY "org_delete_warehouses" ON warehouses
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Inventory Batches Policies
+DROP POLICY IF EXISTS "org_read_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_read_inventory_batches" ON inventory_batches
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_write_inventory_batches" ON inventory_batches
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_update_inventory_batches" ON inventory_batches
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_delete_inventory_batches" ON inventory_batches
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Inventory Serial Numbers Policies
+DROP POLICY IF EXISTS "org_read_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_read_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_write_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_update_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_delete_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Stock Entry Items Policies (check through stock_entry relationship)
+DROP POLICY IF EXISTS "org_access_stock_entry_items" ON stock_entry_items;
+CREATE POLICY "org_access_stock_entry_items" ON stock_entry_items
+  FOR ALL USING (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Stock Movements Policies
+DROP POLICY IF EXISTS "org_read_stock_movements" ON stock_movements;
+CREATE POLICY "org_read_stock_movements" ON stock_movements
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_stock_movements" ON stock_movements;
+CREATE POLICY "org_write_stock_movements" ON stock_movements
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_stock_movements" ON stock_movements;
+CREATE POLICY "org_update_stock_movements" ON stock_movements
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_stock_movements" ON stock_movements;
+CREATE POLICY "org_delete_stock_movements" ON stock_movements
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Stock Valuation Policies
+DROP POLICY IF EXISTS "org_read_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_read_stock_valuation" ON stock_valuation
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_write_stock_valuation" ON stock_valuation
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_update_stock_valuation" ON stock_valuation
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_delete_stock_valuation" ON stock_valuation
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Opening Stock Balances Policies
+DROP POLICY IF EXISTS "org_read_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_read_opening_stock_balances" ON opening_stock_balances
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_write_opening_stock_balances" ON opening_stock_balances
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_update_opening_stock_balances" ON opening_stock_balances
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_delete_opening_stock_balances" ON opening_stock_balances
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Stock Closing Entries Policies
+DROP POLICY IF EXISTS "org_read_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_read_stock_closing_entries" ON stock_closing_entries
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_write_stock_closing_entries" ON stock_closing_entries
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_update_stock_closing_entries" ON stock_closing_entries
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_delete_stock_closing_entries" ON stock_closing_entries
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Stock Closing Items Policies (check through stock_closing_entries relationship)
+DROP POLICY IF EXISTS "org_access_stock_closing_items" ON stock_closing_items;
+CREATE POLICY "org_access_stock_closing_items" ON stock_closing_items
+  FOR ALL USING (
+    closing_id IN (
+      SELECT id FROM stock_closing_entries WHERE is_organization_member(organization_id)
+    )
+  );
+
+-- Stock Account Mappings Policies
+DROP POLICY IF EXISTS "org_read_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_read_stock_account_mappings" ON stock_account_mappings
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_write_stock_account_mappings" ON stock_account_mappings
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_update_stock_account_mappings" ON stock_account_mappings
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_delete_stock_account_mappings" ON stock_account_mappings
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- ANALYSES & REPORTS TABLES
+-- =====================================================
+
+-- Analyses Policies (check through parcel relationship)
+DROP POLICY IF EXISTS "org_read_analyses" ON analyses;
+CREATE POLICY "org_read_analyses" ON analyses
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_analyses" ON analyses;
+CREATE POLICY "org_write_analyses" ON analyses
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_analyses" ON analyses;
+CREATE POLICY "org_update_analyses" ON analyses
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_analyses" ON analyses;
+CREATE POLICY "org_delete_analyses" ON analyses
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+-- Analysis Recommendations Policies (check through analysis relationship)
+DROP POLICY IF EXISTS "org_access_analysis_recommendations" ON analysis_recommendations;
+CREATE POLICY "org_access_analysis_recommendations" ON analysis_recommendations
+  FOR ALL USING (
+    analysis_id IN (
+      SELECT a.id FROM analyses a
+      JOIN parcels p ON p.id = a.parcel_id
+      JOIN farms f ON f.id = p.farm_id
+      WHERE (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+-- Soil Analyses Policies (check through parcel relationship)
+DROP POLICY IF EXISTS "org_read_soil_analyses" ON soil_analyses;
+CREATE POLICY "org_read_soil_analyses" ON soil_analyses
+  FOR SELECT USING (
+    parcel_id IS NULL OR EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = soil_analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_soil_analyses" ON soil_analyses;
+CREATE POLICY "org_write_soil_analyses" ON soil_analyses
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (parcel_id IS NULL OR EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = soil_analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    ))
+  );
+
+DROP POLICY IF EXISTS "org_update_soil_analyses" ON soil_analyses;
+CREATE POLICY "org_update_soil_analyses" ON soil_analyses
+  FOR UPDATE USING (
+    parcel_id IS NULL OR EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = soil_analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_soil_analyses" ON soil_analyses;
+CREATE POLICY "org_delete_soil_analyses" ON soil_analyses
+  FOR DELETE USING (
+    parcel_id IS NULL OR EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = soil_analyses.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+-- Test Types Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_test_types" ON test_types;
+CREATE POLICY "org_read_test_types" ON test_types
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_test_types" ON test_types;
+CREATE POLICY "org_write_test_types" ON test_types
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_test_types" ON test_types;
+CREATE POLICY "org_update_test_types" ON test_types
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_test_types" ON test_types;
+CREATE POLICY "org_delete_test_types" ON test_types
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Parcel Reports Policies (check through parcel relationship)
+DROP POLICY IF EXISTS "org_read_parcel_reports" ON parcel_reports;
+CREATE POLICY "org_read_parcel_reports" ON parcel_reports
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = parcel_reports.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_parcel_reports" ON parcel_reports;
+CREATE POLICY "org_write_parcel_reports" ON parcel_reports
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = parcel_reports.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_parcel_reports" ON parcel_reports;
+CREATE POLICY "org_update_parcel_reports" ON parcel_reports
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = parcel_reports.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_parcel_reports" ON parcel_reports;
+CREATE POLICY "org_delete_parcel_reports" ON parcel_reports
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM parcels p
+      JOIN farms f ON f.id = p.farm_id
+      WHERE p.id = parcel_reports.parcel_id
+        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+    )
+  );
+
+-- =====================================================
+-- CROP MANAGEMENT TABLES
+-- =====================================================
+
+-- Crop Types Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_crop_types" ON crop_types;
+CREATE POLICY "org_read_crop_types" ON crop_types
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_crop_types" ON crop_types;
+CREATE POLICY "org_write_crop_types" ON crop_types
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_crop_types" ON crop_types;
+CREATE POLICY "org_update_crop_types" ON crop_types
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_crop_types" ON crop_types;
+CREATE POLICY "org_delete_crop_types" ON crop_types
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Crop Categories Policies (check through crop_types relationship)
+DROP POLICY IF EXISTS "org_read_crop_categories" ON crop_categories;
+CREATE POLICY "org_read_crop_categories" ON crop_categories
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_crop_categories" ON crop_categories;
+CREATE POLICY "org_write_crop_categories" ON crop_categories
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_crop_categories" ON crop_categories;
+CREATE POLICY "org_update_crop_categories" ON crop_categories
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_crop_categories" ON crop_categories;
+CREATE POLICY "org_delete_crop_categories" ON crop_categories
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Crop Varieties Policies (check through crop_categories relationship)
+DROP POLICY IF EXISTS "org_read_crop_varieties" ON crop_varieties;
+CREATE POLICY "org_read_crop_varieties" ON crop_varieties
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_crop_varieties" ON crop_varieties;
+CREATE POLICY "org_write_crop_varieties" ON crop_varieties
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_crop_varieties" ON crop_varieties;
+CREATE POLICY "org_update_crop_varieties" ON crop_varieties
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_crop_varieties" ON crop_varieties;
+CREATE POLICY "org_delete_crop_varieties" ON crop_varieties
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Crops Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_crops" ON crops;
+CREATE POLICY "org_read_crops" ON crops
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = crops.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_crops" ON crops;
+CREATE POLICY "org_write_crops" ON crops
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = crops.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_crops" ON crops;
+CREATE POLICY "org_update_crops" ON crops
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = crops.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_crops" ON crops;
+CREATE POLICY "org_delete_crops" ON crops
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = crops.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Tree Categories Policies
+DROP POLICY IF EXISTS "org_read_tree_categories" ON tree_categories;
+CREATE POLICY "org_read_tree_categories" ON tree_categories
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_tree_categories" ON tree_categories;
+CREATE POLICY "org_write_tree_categories" ON tree_categories
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_tree_categories" ON tree_categories;
+CREATE POLICY "org_update_tree_categories" ON tree_categories
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_tree_categories" ON tree_categories;
+CREATE POLICY "org_delete_tree_categories" ON tree_categories
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Trees Policies (check through tree_categories relationship)
+DROP POLICY IF EXISTS "org_read_trees" ON trees;
+CREATE POLICY "org_read_trees" ON trees
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tree_categories
+      WHERE tree_categories.id = trees.category_id
+        AND is_organization_member(tree_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_trees" ON trees;
+CREATE POLICY "org_write_trees" ON trees
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tree_categories
+      WHERE tree_categories.id = trees.category_id
+        AND is_organization_member(tree_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_trees" ON trees;
+CREATE POLICY "org_update_trees" ON trees
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM tree_categories
+      WHERE tree_categories.id = trees.category_id
+        AND is_organization_member(tree_categories.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_trees" ON trees;
+CREATE POLICY "org_delete_trees" ON trees
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tree_categories
+      WHERE tree_categories.id = trees.category_id
+        AND is_organization_member(tree_categories.organization_id)
+    )
+  );
+
+-- Plantation Types Policies
+DROP POLICY IF EXISTS "org_read_plantation_types" ON plantation_types;
+CREATE POLICY "org_read_plantation_types" ON plantation_types
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_plantation_types" ON plantation_types;
+CREATE POLICY "org_write_plantation_types" ON plantation_types
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_plantation_types" ON plantation_types;
+CREATE POLICY "org_update_plantation_types" ON plantation_types
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_plantation_types" ON plantation_types;
+CREATE POLICY "org_delete_plantation_types" ON plantation_types
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- PRODUCT & INVENTORY CATEGORIES TABLES
+-- =====================================================
+
+-- Product Categories Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_product_categories" ON product_categories;
+CREATE POLICY "org_read_product_categories" ON product_categories
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_product_categories" ON product_categories;
+CREATE POLICY "org_write_product_categories" ON product_categories
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_product_categories" ON product_categories;
+CREATE POLICY "org_update_product_categories" ON product_categories
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_product_categories" ON product_categories;
+CREATE POLICY "org_delete_product_categories" ON product_categories
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Product Subcategories Policies (check through product_categories relationship)
+DROP POLICY IF EXISTS "org_read_product_subcategories" ON product_subcategories;
+CREATE POLICY "org_read_product_subcategories" ON product_subcategories
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_product_subcategories" ON product_subcategories;
+CREATE POLICY "org_write_product_subcategories" ON product_subcategories
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_product_subcategories" ON product_subcategories;
+CREATE POLICY "org_update_product_subcategories" ON product_subcategories
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_product_subcategories" ON product_subcategories;
+CREATE POLICY "org_delete_product_subcategories" ON product_subcategories
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Inventory (legacy table) Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_inventory" ON inventory;
+CREATE POLICY "org_read_inventory" ON inventory
+  FOR SELECT USING (
+    farm_id IS NULL OR EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = inventory.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    ) OR
+    (organization_id IS NOT NULL AND is_organization_member(organization_id))
+  );
+
+DROP POLICY IF EXISTS "org_write_inventory" ON inventory;
+CREATE POLICY "org_write_inventory" ON inventory
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (
+      (farm_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM farms
+        WHERE farms.id = inventory.farm_id
+          AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      )) OR
+      (organization_id IS NOT NULL AND is_organization_member(organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_inventory" ON inventory;
+CREATE POLICY "org_update_inventory" ON inventory
+  FOR UPDATE USING (
+    farm_id IS NULL OR EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = inventory.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    ) OR
+    (organization_id IS NOT NULL AND is_organization_member(organization_id))
+  );
+
+DROP POLICY IF EXISTS "org_delete_inventory" ON inventory;
+CREATE POLICY "org_delete_inventory" ON inventory
+  FOR DELETE USING (
+    farm_id IS NULL OR EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = inventory.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    ) OR
+    (organization_id IS NOT NULL AND is_organization_member(organization_id))
+  );
+
+-- =====================================================
+-- COSTS & REVENUES TABLES
+-- =====================================================
+
+-- Cost Categories Policies
+DROP POLICY IF EXISTS "org_read_cost_categories" ON cost_categories;
+CREATE POLICY "org_read_cost_categories" ON cost_categories
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_cost_categories" ON cost_categories;
+CREATE POLICY "org_write_cost_categories" ON cost_categories
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_cost_categories" ON cost_categories;
+CREATE POLICY "org_update_cost_categories" ON cost_categories
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_cost_categories" ON cost_categories;
+CREATE POLICY "org_delete_cost_categories" ON cost_categories
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Costs Policies
+DROP POLICY IF EXISTS "org_read_costs" ON costs;
+CREATE POLICY "org_read_costs" ON costs
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_costs" ON costs;
+CREATE POLICY "org_write_costs" ON costs
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_costs" ON costs;
+CREATE POLICY "org_update_costs" ON costs
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_costs" ON costs;
+CREATE POLICY "org_delete_costs" ON costs
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Revenues Policies
+DROP POLICY IF EXISTS "org_read_revenues" ON revenues;
+CREATE POLICY "org_read_revenues" ON revenues
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_revenues" ON revenues;
+CREATE POLICY "org_write_revenues" ON revenues
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_revenues" ON revenues;
+CREATE POLICY "org_update_revenues" ON revenues
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_revenues" ON revenues;
+CREATE POLICY "org_delete_revenues" ON revenues
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Profitability Snapshots Policies
+DROP POLICY IF EXISTS "org_read_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_read_profitability_snapshots" ON profitability_snapshots
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_write_profitability_snapshots" ON profitability_snapshots
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_update_profitability_snapshots" ON profitability_snapshots
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_delete_profitability_snapshots" ON profitability_snapshots
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- INFRASTRUCTURE & STRUCTURES TABLES
+-- =====================================================
+
+-- Structures Policies
+DROP POLICY IF EXISTS "org_read_structures" ON structures;
+CREATE POLICY "org_read_structures" ON structures
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_structures" ON structures;
+CREATE POLICY "org_write_structures" ON structures
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_structures" ON structures;
+CREATE POLICY "org_update_structures" ON structures
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_structures" ON structures;
+CREATE POLICY "org_delete_structures" ON structures
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Utilities Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_utilities" ON utilities;
+CREATE POLICY "org_read_utilities" ON utilities
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = utilities.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_utilities" ON utilities;
+CREATE POLICY "org_write_utilities" ON utilities
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = utilities.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_utilities" ON utilities;
+CREATE POLICY "org_update_utilities" ON utilities
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = utilities.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_utilities" ON utilities;
+CREATE POLICY "org_delete_utilities" ON utilities
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = utilities.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- =====================================================
+-- ROLES & PERMISSIONS TABLES
+-- =====================================================
+
+-- Roles Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_roles" ON roles;
+CREATE POLICY "org_read_roles" ON roles
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_roles" ON roles;
+CREATE POLICY "org_write_roles" ON roles
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_roles" ON roles;
+CREATE POLICY "org_update_roles" ON roles
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_roles" ON roles;
+CREATE POLICY "org_delete_roles" ON roles
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Permissions Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_permissions" ON permissions;
+CREATE POLICY "org_read_permissions" ON permissions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_permissions" ON permissions;
+CREATE POLICY "org_write_permissions" ON permissions
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_permissions" ON permissions;
+CREATE POLICY "org_update_permissions" ON permissions
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_permissions" ON permissions;
+CREATE POLICY "org_delete_permissions" ON permissions
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Role Permissions Policies (check through roles relationship)
+DROP POLICY IF EXISTS "org_read_role_permissions" ON role_permissions;
+CREATE POLICY "org_read_role_permissions" ON role_permissions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_role_permissions" ON role_permissions;
+CREATE POLICY "org_write_role_permissions" ON role_permissions
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_role_permissions" ON role_permissions;
+CREATE POLICY "org_update_role_permissions" ON role_permissions
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_role_permissions" ON role_permissions;
+CREATE POLICY "org_delete_role_permissions" ON role_permissions
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Role Templates Policies
+DROP POLICY IF EXISTS "org_read_role_templates" ON role_templates;
+CREATE POLICY "org_read_role_templates" ON role_templates
+  FOR SELECT USING (
+    organization_id IS NULL OR is_organization_member(organization_id) OR is_system_template = true
+  );
+
+DROP POLICY IF EXISTS "org_write_role_templates" ON role_templates;
+CREATE POLICY "org_write_role_templates" ON role_templates
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (organization_id IS NULL OR is_organization_member(organization_id))
+  );
+
+DROP POLICY IF EXISTS "org_update_role_templates" ON role_templates;
+CREATE POLICY "org_update_role_templates" ON role_templates
+  FOR UPDATE USING (
+    (organization_id IS NULL OR is_organization_member(organization_id)) OR is_system_template = true
+  );
+
+DROP POLICY IF EXISTS "org_delete_role_templates" ON role_templates;
+CREATE POLICY "org_delete_role_templates" ON role_templates
+  FOR DELETE USING (
+    (organization_id IS NULL OR is_organization_member(organization_id)) AND is_system_template = false
+  );
+
+-- Role Assignments Audit Policies
+DROP POLICY IF EXISTS "org_read_role_assignments_audit" ON role_assignments_audit;
+CREATE POLICY "org_read_role_assignments_audit" ON role_assignments_audit
+  FOR SELECT USING (
+    is_organization_member(organization_id) OR user_id = auth.uid()
+  );
+
+DROP POLICY IF EXISTS "org_write_role_assignments_audit" ON role_assignments_audit;
+CREATE POLICY "org_write_role_assignments_audit" ON role_assignments_audit
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+-- Permission Groups Policies (no organization_id - allow all authenticated users to read)
+DROP POLICY IF EXISTS "org_read_permission_groups" ON permission_groups;
+CREATE POLICY "org_read_permission_groups" ON permission_groups
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_write_permission_groups" ON permission_groups;
+CREATE POLICY "org_write_permission_groups" ON permission_groups
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_update_permission_groups" ON permission_groups;
+CREATE POLICY "org_update_permission_groups" ON permission_groups
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "org_delete_permission_groups" ON permission_groups;
+CREATE POLICY "org_delete_permission_groups" ON permission_groups
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- =====================================================
+-- AUDIT & LOGGING TABLES
+-- =====================================================
+
+-- Audit Logs Policies (allow users to see their own audit logs or org members to see org logs)
+DROP POLICY IF EXISTS "org_read_audit_logs" ON audit_logs;
+CREATE POLICY "org_read_audit_logs" ON audit_logs
+  FOR SELECT USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM organization_users
+      WHERE user_id = auth.uid()
+        AND is_active = true
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
+CREATE POLICY "org_write_audit_logs" ON audit_logs
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Financial Transactions Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_financial_transactions" ON financial_transactions;
+CREATE POLICY "org_read_financial_transactions" ON financial_transactions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = financial_transactions.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_financial_transactions" ON financial_transactions;
+CREATE POLICY "org_write_financial_transactions" ON financial_transactions
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = financial_transactions.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_financial_transactions" ON financial_transactions;
+CREATE POLICY "org_update_financial_transactions" ON financial_transactions
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = financial_transactions.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_financial_transactions" ON financial_transactions;
+CREATE POLICY "org_delete_financial_transactions" ON financial_transactions
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = financial_transactions.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Livestock Policies (check through farm relationship)
+DROP POLICY IF EXISTS "org_read_livestock" ON livestock;
+CREATE POLICY "org_read_livestock" ON livestock
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = livestock.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_livestock" ON livestock;
+CREATE POLICY "org_write_livestock" ON livestock
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = livestock.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_update_livestock" ON livestock;
+CREATE POLICY "org_update_livestock" ON livestock
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = livestock.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_livestock" ON livestock;
+CREATE POLICY "org_delete_livestock" ON livestock
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM farms
+      WHERE farms.id = livestock.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+    )
+  );
+
+-- Subscription Usage Policies
+DROP POLICY IF EXISTS "org_read_subscription_usage" ON subscription_usage;
+CREATE POLICY "org_read_subscription_usage" ON subscription_usage
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_subscription_usage" ON subscription_usage;
+CREATE POLICY "org_write_subscription_usage" ON subscription_usage
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_subscription_usage" ON subscription_usage;
+CREATE POLICY "org_update_subscription_usage" ON subscription_usage
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_subscription_usage" ON subscription_usage;
+CREATE POLICY "org_delete_subscription_usage" ON subscription_usage
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- SATELLITE DATA TABLES
+-- =====================================================
+
+-- Satellite AOIs Policies
+DROP POLICY IF EXISTS "org_read_satellite_aois" ON satellite_aois;
+CREATE POLICY "org_read_satellite_aois" ON satellite_aois
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_satellite_aois" ON satellite_aois;
+CREATE POLICY "org_write_satellite_aois" ON satellite_aois
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_satellite_aois" ON satellite_aois;
+CREATE POLICY "org_update_satellite_aois" ON satellite_aois
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_satellite_aois" ON satellite_aois;
+CREATE POLICY "org_delete_satellite_aois" ON satellite_aois
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Satellite Files Policies
+DROP POLICY IF EXISTS "org_read_satellite_files" ON satellite_files;
+CREATE POLICY "org_read_satellite_files" ON satellite_files
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_satellite_files" ON satellite_files;
+CREATE POLICY "org_write_satellite_files" ON satellite_files
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_satellite_files" ON satellite_files;
+CREATE POLICY "org_update_satellite_files" ON satellite_files
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_satellite_files" ON satellite_files;
+CREATE POLICY "org_delete_satellite_files" ON satellite_files
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Satellite Indices Data Policies
+DROP POLICY IF EXISTS "org_read_satellite_indices_data" ON satellite_indices_data;
+CREATE POLICY "org_read_satellite_indices_data" ON satellite_indices_data
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_satellite_indices_data" ON satellite_indices_data;
+CREATE POLICY "org_write_satellite_indices_data" ON satellite_indices_data
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_satellite_indices_data" ON satellite_indices_data;
+CREATE POLICY "org_update_satellite_indices_data" ON satellite_indices_data
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_satellite_indices_data" ON satellite_indices_data;
+CREATE POLICY "org_delete_satellite_indices_data" ON satellite_indices_data
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Satellite Processing Jobs Policies
+DROP POLICY IF EXISTS "org_read_satellite_processing_jobs" ON satellite_processing_jobs;
+CREATE POLICY "org_read_satellite_processing_jobs" ON satellite_processing_jobs
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_satellite_processing_jobs" ON satellite_processing_jobs;
+CREATE POLICY "org_write_satellite_processing_jobs" ON satellite_processing_jobs
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_satellite_processing_jobs" ON satellite_processing_jobs;
+CREATE POLICY "org_update_satellite_processing_jobs" ON satellite_processing_jobs
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_satellite_processing_jobs" ON satellite_processing_jobs;
+CREATE POLICY "org_delete_satellite_processing_jobs" ON satellite_processing_jobs
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Satellite Processing Tasks Policies
+DROP POLICY IF EXISTS "org_read_satellite_processing_tasks" ON satellite_processing_tasks;
+CREATE POLICY "org_read_satellite_processing_tasks" ON satellite_processing_tasks
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_satellite_processing_tasks" ON satellite_processing_tasks;
+CREATE POLICY "org_write_satellite_processing_tasks" ON satellite_processing_tasks
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_satellite_processing_tasks" ON satellite_processing_tasks;
+CREATE POLICY "org_update_satellite_processing_tasks" ON satellite_processing_tasks
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_satellite_processing_tasks" ON satellite_processing_tasks;
+CREATE POLICY "org_delete_satellite_processing_tasks" ON satellite_processing_tasks
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Cloud Coverage Checks Policies
+DROP POLICY IF EXISTS "org_read_cloud_coverage_checks" ON cloud_coverage_checks;
+CREATE POLICY "org_read_cloud_coverage_checks" ON cloud_coverage_checks
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_cloud_coverage_checks" ON cloud_coverage_checks;
+CREATE POLICY "org_write_cloud_coverage_checks" ON cloud_coverage_checks
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_cloud_coverage_checks" ON cloud_coverage_checks;
+CREATE POLICY "org_update_cloud_coverage_checks" ON cloud_coverage_checks
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_cloud_coverage_checks" ON cloud_coverage_checks;
+CREATE POLICY "org_delete_cloud_coverage_checks" ON cloud_coverage_checks
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- =====================================================
+-- INTERNATIONAL CHART OF ACCOUNTS SEEDING FUNCTIONS
+-- =====================================================
+
+-- =====================================================
+-- MOROCCAN CHART OF ACCOUNTS (Plan Comptable Marocain - CGNC)
+-- =====================================================
+-- Currency: MAD (Moroccan Dirham)
+-- Standard: Code Général de Normalisation Comptable (CGNC)
+-- Suitable for: Agricultural businesses in Morocco
+-- =====================================================
+
+-- This function creates the complete Moroccan chart of accounts for an organization
+CREATE OR REPLACE FUNCTION seed_moroccan_chart_of_accounts(p_org_id UUID)
+RETURNS TABLE(
+  accounts_created INTEGER,
+  success BOOLEAN,
+  message TEXT
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  -- Verify organization exists
+  IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
+    RETURN QUERY SELECT 0, false, 'Organization not found'::TEXT;
+    RETURN;
+  END IF;
+
+  -- =====================================================
+  -- CLASS 1: FIXED ASSETS (IMMOBILISATIONS)
+  -- =====================================================
+
+  -- Main Groups
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code, description_fr, description_ar)
+  VALUES
+    (p_org_id, '2100', 'Immobilisations en non-valeurs', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Frais préliminaires et charges à répartir', 'أصول غير ملموسة'),
+    (p_org_id, '2200', 'Immobilisations incorporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Brevets, marques, fonds commercial', 'أصول غير ملموسة'),
+    (p_org_id, '2300', 'Immobilisations corporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Terrains, constructions, matériel', 'أصول ملموسة'),
+    (p_org_id, '2400', 'Immobilisations financières', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Titres de participation, prêts', 'استثمارات مالية')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- Fixed Assets Detail
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_code, currency_code)
+  VALUES
+    -- Land and Buildings
+    (p_org_id, '2310', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2311', 'Terrains bâtis', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2321', 'Bâtiments agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2323', 'Installations agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+
+    -- Equipment and Machinery
+    (p_org_id, '2330', 'Matériel et outillage', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2331', 'Tracteurs et machines agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2332', 'Système d''irrigation', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2340', 'Matériel de transport', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2350', 'Mobilier, matériel de bureau', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2355', 'Matériel informatique', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+
+    -- Biological Assets
+    (p_org_id, '2361', 'Cheptel (animaux d''élevage)', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2362', 'Plantations permanentes', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- Depreciation Accounts
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_code, currency_code)
+  VALUES
+    (p_org_id, '2800', 'Amortissements', 'Asset', 'Accumulated Depreciation', true, true, NULL, 'MAD'),
+    (p_org_id, '2832', 'Amortissements bâtiments', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
+    (p_org_id, '2833', 'Amortissements installations', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
+    (p_org_id, '2834', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
+    (p_org_id, '2835', 'Amortissements transport', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- =====================================================
+  -- CLASS 3: CURRENT ASSETS (STOCKS)
+  -- =====================================================
+
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    -- Inventory Groups
+    (p_org_id, '3100', 'Stocks matières premières', 'Asset', 'Inventory', true, true, 'MAD'),
+    (p_org_id, '3110', 'Semences et plants', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3111', 'Engrais et amendements', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3112', 'Produits phytosanitaires', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3113', 'Aliments pour bétail', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3114', 'Carburants et lubrifiants', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3115', 'Emballages', 'Asset', 'Inventory', false, true, 'MAD'),
+
+    -- Work in Progress
+    (p_org_id, '3130', 'Produits en cours', 'Asset', 'Inventory', true, true, 'MAD'),
+    (p_org_id, '3131', 'Cultures en cours', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3132', 'Élevage en cours', 'Asset', 'Inventory', false, true, 'MAD'),
+
+    -- Finished Goods
+    (p_org_id, '3500', 'Produits finis', 'Asset', 'Inventory', true, true, 'MAD'),
+    (p_org_id, '3510', 'Récoltes', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3511', 'Fruits et légumes', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3512', 'Céréales', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3513', 'Produits d''origine animale', 'Asset', 'Inventory', false, true, 'MAD'),
+    (p_org_id, '3514', 'Produits transformés', 'Asset', 'Inventory', false, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- =====================================================
+  -- CLASS 4: THIRD-PARTY ACCOUNTS (CRÉANCES ET DETTES)
+  -- =====================================================
+
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    -- Suppliers
+    (p_org_id, '4410', 'Fournisseurs', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4411', 'Fournisseurs - intrants agricoles', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4412', 'Fournisseurs - équipements', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4415', 'Fournisseurs - effets à payer', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4417', 'Fournisseurs - retenues de garantie', 'Liability', 'Payable', false, true, 'MAD'),
+
+    -- Customers
+    (p_org_id, '3420', 'Clients', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3421', 'Clients - ventes agricoles', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3422', 'Clients - exportations', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3425', 'Clients - effets à recevoir', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3427', 'Clients - retenues de garantie', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3428', 'Clients douteux', 'Asset', 'Receivable', false, true, 'MAD'),
+
+    -- Advances
+    (p_org_id, '3490', 'Avances aux employés', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '4410', 'Avances aux fournisseurs', 'Asset', 'Receivable', false, true, 'MAD'),
+
+    -- Social Security and Taxes
+    (p_org_id, '4430', 'Sécurité sociale (CNSS)', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4432', 'Retraite (RCAR/CMR)', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4433', 'Assurance maladie (AMO)', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4441', 'État - Impôt sur les sociétés (IS)', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4443', 'Retenue à la source', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4455', 'TVA due', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4456', 'TVA déductible', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '4457', 'TVA collectée', 'Liability', 'Payable', false, true, 'MAD'),
+
+    -- Personnel
+    (p_org_id, '4430', 'Rémunérations dues au personnel', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4432', 'Saisies et oppositions', 'Liability', 'Payable', false, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- =====================================================
+  -- CLASS 5: FINANCIAL ACCOUNTS (TRÉSORERIE)
+  -- =====================================================
+
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '5141', 'Banque - Compte courant', 'Asset', 'Cash', false, true, 'MAD'),
+    (p_org_id, '5142', 'Banque - Compte USD', 'Asset', 'Cash', false, true, 'USD'),
+    (p_org_id, '5143', 'Banque - Compte EUR', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5146', 'Chèques postaux', 'Asset', 'Cash', false, true, 'MAD'),
+    (p_org_id, '5161', 'Caisse principale', 'Asset', 'Cash', false, true, 'MAD'),
+    (p_org_id, '5162', 'Caisse ferme', 'Asset', 'Cash', false, true, 'MAD'),
+    (p_org_id, '5165', 'Régies d''avances', 'Asset', 'Cash', false, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- =====================================================
+  -- CLASS 6: EXPENSES (CHARGES)
+  -- =====================================================
+
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    -- Operating Expenses
+    (p_org_id, '6000', 'Charges d''exploitation', 'Expense', 'Operating Expense', true, true, 'MAD'),
+
+    -- Agricultural Supplies
+    (p_org_id, '6110', 'Achats de semences et plants', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6111', 'Achats d''engrais', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6112', 'Achats de produits phytosanitaires', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6113', 'Achats d''aliments pour bétail', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6114', 'Achats d''animaux', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6115', 'Achats d''emballages', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Consumables
+    (p_org_id, '6121', 'Eau d''irrigation', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6124', 'Carburants et lubrifiants', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6125', 'Entretien et réparations', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6126', 'Pièces de rechange', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Services
+    (p_org_id, '6131', 'Locations machines agricoles', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6132', 'Redevances de crédit-bail', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6133', 'Entretien et réparations', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6134', 'Primes d''assurances', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6141', 'Services agricoles externes', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6142', 'Services vétérinaires', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6143', 'Analyses de laboratoire', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6144', 'Transport sur achats', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6145', 'Transport sur ventes', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Utilities (Services publics)
+    (p_org_id, '6167', 'Électricité', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6061', 'Eau', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6065', 'Gaz', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6227', 'Téléphone', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6228', 'Internet', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Personnel Costs
+    (p_org_id, '6171', 'Salaires permanents', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6172', 'Salaires journaliers', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6173', 'Salaires saisonniers', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6174', 'Primes et gratifications', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6175', 'Indemnités', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6176', 'Charges sociales - CNSS', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6177', 'Charges sociales - AMO', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6178', 'Formation du personnel', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Taxes and Fees
+    (p_org_id, '6161', 'Impôts et taxes agricoles', 'Expense', 'Operating Expense', false, true, 'MAD'),
+    (p_org_id, '6165', 'Taxes locales', 'Expense', 'Operating Expense', false, true, 'MAD'),
+
+    -- Financial Expenses
+    (p_org_id, '6311', 'Intérêts des emprunts', 'Expense', 'Financial Expense', false, true, 'MAD'),
+    (p_org_id, '6313', 'Frais bancaires', 'Expense', 'Financial Expense', false, true, 'MAD'),
+
+    -- Depreciation
+    (p_org_id, '6193', 'Dotations aux amortissements', 'Expense', 'Depreciation', false, true, 'MAD'),
+    (p_org_id, '6196', 'Dotations aux provisions', 'Expense', 'Operating Expense', false, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- =====================================================
+  -- CLASS 7: REVENUES (PRODUITS)
+  -- =====================================================
+
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '7000', 'Produits d''exploitation', 'Revenue', 'Operating Revenue', true, true, 'MAD'),
+
+    -- Sales of Agricultural Products
+    (p_org_id, '7111', 'Ventes fruits et légumes', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7112', 'Ventes céréales', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7113', 'Ventes plantes aromatiques', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7114', 'Ventes produits d''élevage', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7115', 'Ventes lait et produits laitiers', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7116', 'Ventes œufs', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7117', 'Ventes animaux', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7118', 'Ventes produits transformés', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7119', 'Ventes exportations', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+
+    -- Services
+    (p_org_id, '7121', 'Prestations de services agricoles', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7122', 'Location de matériel', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+
+    -- Subsidies and Grants
+    (p_org_id, '7130', 'Subventions d''exploitation', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7131', 'Subventions agricoles', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7132', 'Aides de l''État', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7133', 'Fonds de développement agricole', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+
+    -- Other Operating Revenue
+    (p_org_id, '7180', 'Autres produits d''exploitation', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+    (p_org_id, '7181', 'Indemnités d''assurances', 'Revenue', 'Operating Revenue', false, true, 'MAD'),
+
+    -- Financial Revenue
+    (p_org_id, '7381', 'Intérêts et produits assimilés', 'Revenue', 'Financial Revenue', false, true, 'MAD'),
+    (p_org_id, '7385', 'Gains de change', 'Revenue', 'Financial Revenue', false, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- Get count of created accounts
+  SELECT COUNT(*)::INTEGER INTO v_count
+  FROM accounts
+  WHERE organization_id = p_org_id;
+
+  RETURN QUERY SELECT v_count, true, 'Chart of accounts created successfully'::TEXT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN QUERY SELECT 0, false, SQLERRM::TEXT;
+END;
+$$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION seed_moroccan_chart_of_accounts TO authenticated;
+
+COMMENT ON FUNCTION seed_moroccan_chart_of_accounts IS
+'Seeds complete Moroccan chart of accounts (CGNC) for an organization. Returns count of accounts created.';
+
+-- =====================================================
+-- GENERIC MULTI-COUNTRY CHART OF ACCOUNTS SEEDING
+-- =====================================================
+
+-- Generic function to seed chart of accounts from templates
+CREATE OR REPLACE FUNCTION seed_chart_of_accounts(
+  p_org_id UUID,
+  p_country_code VARCHAR(2) DEFAULT NULL,
+  p_accounting_standard VARCHAR(50) DEFAULT NULL
+)
+RETURNS TABLE(
+  accounts_created INTEGER,
+  success BOOLEAN,
+  message TEXT
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_country_code VARCHAR(2);
+  v_accounting_standard VARCHAR(50);
+  v_accounts_created INTEGER := 0;
+  v_template_rec RECORD;
+  v_parent_id UUID;
+BEGIN
+  -- Validate organization exists
+  IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
+    RETURN QUERY SELECT 0, false, 'Organization not found'::TEXT;
+    RETURN;
+  END IF;
+
+  -- Get organization's country and standard if not provided
+  IF p_country_code IS NULL OR p_accounting_standard IS NULL THEN
+    SELECT country_code, accounting_standard
+    INTO v_country_code, v_accounting_standard
+    FROM organizations
+    WHERE id = p_org_id;
+
+    -- Use provided values if available
+    v_country_code := COALESCE(p_country_code, v_country_code);
+    v_accounting_standard := COALESCE(p_accounting_standard, v_accounting_standard);
+
+    IF v_country_code IS NULL THEN
+      RETURN QUERY SELECT 0, false, 'Organization country_code not set and not provided'::TEXT;
+      RETURN;
+    END IF;
+
+    IF v_accounting_standard IS NULL THEN
+      RETURN QUERY SELECT 0, false, 'Organization accounting_standard not set and not provided'::TEXT;
+      RETURN;
+    END IF;
+  ELSE
+    v_country_code := p_country_code;
+    v_accounting_standard := p_accounting_standard;
+  END IF;
+
+  -- Check if template exists
+  IF NOT EXISTS (
+    SELECT 1 FROM account_templates
+    WHERE country_code = v_country_code
+    AND accounting_standard = v_accounting_standard
+  ) THEN
+    RETURN QUERY SELECT 0, false,
+      ('No account template found for country: ' || v_country_code ||
+       ' standard: ' || v_accounting_standard)::TEXT;
+    RETURN;
+  END IF;
+
+  -- Clear existing accounts for this org
+  DELETE FROM accounts WHERE organization_id = p_org_id;
+
+  -- Insert accounts from template in correct order (parents first)
+  FOR v_template_rec IN
+    SELECT * FROM account_templates
+    WHERE country_code = v_country_code
+    AND accounting_standard = v_accounting_standard
+    ORDER BY
+      CASE WHEN parent_code IS NULL THEN 0 ELSE 1 END,  -- Parents first
+      display_order NULLS LAST,
+      account_code
+  LOOP
+    -- Find parent_id if parent_code exists
+    v_parent_id := NULL;
+    IF v_template_rec.parent_code IS NOT NULL THEN
+      SELECT id INTO v_parent_id
+      FROM accounts
+      WHERE organization_id = p_org_id
+      AND code = v_template_rec.parent_code;
+    END IF;
+
+    -- Insert account
+    INSERT INTO accounts (
+      organization_id,
+      code,
+      name,
+      account_type,
+      account_subtype,
+      parent_id,
+      description,
+      is_group,
+      is_active
+    ) VALUES (
+      p_org_id,
+      v_template_rec.account_code,
+      v_template_rec.account_name,
+      v_template_rec.account_type,
+      v_template_rec.account_subtype,
+      v_parent_id,
+      v_template_rec.description,
+      v_template_rec.is_group,
+      v_template_rec.is_active
+    );
+
+    v_accounts_created := v_accounts_created + 1;
+  END LOOP;
+
+  RETURN QUERY SELECT v_accounts_created, true,
+    ('Successfully created ' || v_accounts_created || ' accounts for ' ||
+     v_country_code || ' - ' || v_accounting_standard)::TEXT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN QUERY SELECT 0, false, SQLERRM::TEXT;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION seed_chart_of_accounts TO authenticated;
+
+COMMENT ON FUNCTION seed_chart_of_accounts IS
+'Generic function to seed chart of accounts from templates based on organization country and accounting standard. Supports MA/PCEC, TN/PCN, FR/PCG, US/GAAP, GB/FRS102.';
+
+-- =====================================================
+-- FRANCE CHART OF ACCOUNTS
+-- =====================================================
+
+-- =====================================================
+-- FRENCH CHART OF ACCOUNTS (Plan Comptable Général - PCG)
+-- =====================================================
+-- Currency: EUR (Euro)
+-- Standard: Plan Comptable Général (PCG 2014)
+-- Suitable for: Agricultural businesses in France
+-- DEPRECATED: Use seed_chart_of_accounts() instead
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION seed_french_chart_of_accounts(p_org_id UUID)
+RETURNS TABLE(
+  accounts_created INTEGER,
+  success BOOLEAN,
+  message TEXT
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
+    RETURN QUERY SELECT 0, false, 'Organization not found'::TEXT;
+    RETURN;
+  END IF;
+
+  -- CLASS 1: CAPITAL (CAPITAUX PROPRES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '101', 'Capital social', 'Equity', 'Capital', false, true, 'EUR'),
+    (p_org_id, '106', 'Réserves', 'Equity', 'Retained Earnings', false, true, 'EUR'),
+    (p_org_id, '120', 'Résultat de l''exercice', 'Equity', 'Current Year Earnings', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 2: FIXED ASSETS (IMMOBILISATIONS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '211', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '213', 'Constructions agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '215', 'Installations techniques', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2154', 'Matériel agricole', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2155', 'Tracteurs et véhicules', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '218', 'Autres immobilisations corporelles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2181', 'Cheptel reproducteur', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2182', 'Plantations pérennes', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2813', 'Amortissements constructions', 'Asset', 'Accumulated Depreciation', false, true, 'EUR'),
+    (p_org_id, '2815', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 3: INVENTORY (STOCKS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '311', 'Semences et plants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '312', 'Engrais et amendements', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '313', 'Produits phytosanitaires', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '314', 'Aliments pour le bétail', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '315', 'Combustibles et carburants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '321', 'Cultures en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '322', 'Élevage en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '355', 'Produits agricoles finis', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3551', 'Céréales', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3552', 'Fruits et légumes', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3553', 'Vin et produits viticoles', 'Asset', 'Inventory', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 4: THIRD PARTIES (TIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '401', 'Fournisseurs', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4011', 'Fournisseurs - intrants', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4081', 'Fournisseurs - factures non parvenues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '411', 'Clients', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4111', 'Clients - ventes agricoles', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '416', 'Clients douteux', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4181', 'Clients - factures à établir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '421', 'Personnel - rémunérations dues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '431', 'Sécurité sociale', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '437', 'Autres organismes sociaux', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4424', 'Impôt sur les sociétés', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '443', 'Opérations avec l''État', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4431', 'Subventions à recevoir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44551', 'TVA à décaisser', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '44562', 'TVA déductible sur immobilisations', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44566', 'TVA déductible sur autres biens', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44571', 'TVA collectée', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '467', 'Autres comptes débiteurs ou créditeurs', 'Asset', 'Receivable', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 5: FINANCIAL ACCOUNTS (COMPTES FINANCIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '512', 'Banque', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5121', 'Banque - Compte principal', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5124', 'Banque - Compte agricole', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '531', 'Caisse', 'Asset', 'Cash', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 6: EXPENSES (CHARGES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '601', 'Achats stockés - Matières premières', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6011', 'Achats semences et plants', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6012', 'Achats engrais', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6013', 'Achats produits phytosanitaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6014', 'Achats aliments pour bétail', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6015', 'Achats animaux', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '602', 'Achats stockés - Autres approvisionnements', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6021', 'Achats combustibles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6022', 'Achats produits d''entretien', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Achats non stockés', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Fournitures non stockables (eau)', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '611', 'Sous-traitance générale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6111', 'Travaux agricoles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '613', 'Locations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6132', 'Locations matériel agricole', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '615', 'Entretien et réparations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6151', 'Entretien bâtiments', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6155', 'Entretien matériel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '616', 'Primes d''assurances', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6161', 'Assurances multirisque', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '622', 'Rémunérations d''intermédiaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6226', 'Honoraires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6227', 'Frais vétérinaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '624', 'Transports de biens', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6241', 'Transports sur achats', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6242', 'Transports sur ventes', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '625', 'Déplacements, missions', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '626', 'Frais postaux et télécommunications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6261', 'Téléphone', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6262', 'Internet', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Eau et électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Eau', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6063', 'Électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '641', 'Rémunérations du personnel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6411', 'Salaires permanents', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6412', 'Salaires saisonniers', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6413', 'Primes et gratifications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '645', 'Charges de sécurité sociale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6451', 'Cotisations URSSAF', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6452', 'Cotisations MSA', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '661', 'Charges d''intérêts', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6611', 'Intérêts emprunts bancaires', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '666', 'Pertes de change', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6811', 'Dotations aux amortissements', 'Expense', 'Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 7: REVENUES (PRODUITS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '701', 'Ventes de produits finis', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7011', 'Ventes céréales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7012', 'Ventes fruits et légumes', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7013', 'Ventes vin', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7014', 'Ventes lait', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7015', 'Ventes viande', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7016', 'Ventes animaux vivants', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7017', 'Ventes œufs', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '706', 'Prestations de services', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7061', 'Travaux agricoles', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '74', 'Subventions d''exploitation', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '741', 'Aides PAC', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7411', 'Aides aux surfaces', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7412', 'Aides animales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7413', 'Aides découplées', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '748', 'Autres subventions', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '758', 'Produits divers de gestion courante', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7581', 'Indemnités d''assurance', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '763', 'Revenus des créances', 'Revenue', 'Financial Revenue', false, true, 'EUR'),
+    (p_org_id, '766', 'Gains de change', 'Revenue', 'Financial Revenue', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  SELECT COUNT(*)::INTEGER INTO v_count FROM accounts WHERE organization_id = p_org_id;
+  RETURN QUERY SELECT v_count, true, 'French chart of accounts created successfully'::TEXT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN QUERY SELECT 0, false, SQLERRM::TEXT;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION seed_french_chart_of_accounts TO authenticated;
+
+COMMENT ON FUNCTION seed_french_chart_of_accounts IS
+'Seeds complete French chart of accounts (PCG) for an organization';
+
+-- =====================================================
+-- COST AND REVENUE LEDGER INTEGRATION
+-- =====================================================
+
+-- Helper function to get account ID by code (backward compatibility)
+CREATE OR REPLACE FUNCTION get_account_id_by_code(
+  p_org_id UUID,
+  p_code TEXT
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_account_id UUID;
+BEGIN
+  SELECT id INTO v_account_id
+  FROM accounts
+  WHERE organization_id = p_org_id
+    AND code = p_code
+    AND is_active = true
+  LIMIT 1;
+
+  RETURN v_account_id;
+END;
+$$;
+
+-- New helper function to get account ID using mapping system
+CREATE OR REPLACE FUNCTION get_account_id_by_mapping(
+  p_org_id UUID,
+  p_mapping_type VARCHAR(50),  -- 'cost_type', 'revenue_type', 'cash'
+  p_mapping_key VARCHAR(100)   -- 'labor', 'harvest', 'bank', etc.
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_account_id UUID;
+  v_account_code VARCHAR(50);
+  v_country_code VARCHAR(2);
+  v_accounting_standard VARCHAR(50);
+BEGIN
+  -- Get organization's country and standard
+  SELECT country_code, accounting_standard
+  INTO v_country_code, v_accounting_standard
+  FROM organizations
+  WHERE id = p_org_id;
+
+  -- If no country/standard, return NULL
+  IF v_country_code IS NULL OR v_accounting_standard IS NULL THEN
+    RAISE NOTICE 'Organization % has no country_code or accounting_standard set', p_org_id;
+    RETURN NULL;
+  END IF;
+
+  -- Get mapped account code
+  SELECT account_code INTO v_account_code
+  FROM account_mappings
+  WHERE country_code = v_country_code
+    AND accounting_standard = v_accounting_standard
+    AND mapping_type = p_mapping_type
+    AND mapping_key = p_mapping_key;
+
+  -- If no mapping found, return NULL
+  IF v_account_code IS NULL THEN
+    RAISE NOTICE 'No account mapping found for org % type % key % (country: %, standard: %)',
+      p_org_id, p_mapping_type, p_mapping_key, v_country_code, v_accounting_standard;
+    RETURN NULL;
+  END IF;
+
+  -- Get account ID
+  SELECT id INTO v_account_id
+  FROM accounts
+  WHERE organization_id = p_org_id
+    AND code = v_account_code
+    AND is_active = true;
+
+  -- If account not found, log warning
+  IF v_account_id IS NULL THEN
+    RAISE NOTICE 'Account code % not found for organization %', v_account_code, p_org_id;
+  END IF;
+
+  RETURN v_account_id;
+END;
+$$;
+
+-- Trigger function to create journal entry when cost is inserted
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_cost_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_expense_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
+
+  -- Get expense account using mapping system (works for all countries)
+  v_expense_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cost_type',
+    NEW.cost_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_expense_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'expense',
+      COALESCE(NEW.description, 'Cost entry: ' || NEW.cost_type),
+      NEW.id,
+      'cost',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit expense, credit cash)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_expense_account_id, NEW.amount, 0, NEW.description),
+      (v_journal_entry_id, v_cash_account_id, 0, NEW.amount, 'Payment for ' || NEW.cost_type);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for cost % - missing account mappings (expense: %, cash: %)',
+      NEW.id, v_expense_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger function to create journal entry when revenue is inserted
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_revenue_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_revenue_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
+
+  -- Get revenue account using mapping system (works for all countries)
+  v_revenue_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'revenue_type',
+    NEW.revenue_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_revenue_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'revenue',
+      COALESCE(NEW.description, 'Revenue entry: ' || NEW.revenue_type),
+      NEW.id,
+      'revenue',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit cash, credit revenue)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_cash_account_id, NEW.amount, 0, 'Receipt for ' || NEW.revenue_type),
+      (v_journal_entry_id, v_revenue_account_id, 0, NEW.amount, NEW.description);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for revenue % - missing account mappings (revenue: %, cash: %)',
+      NEW.id, v_revenue_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Create triggers
+DROP TRIGGER IF EXISTS trg_cost_create_journal_entry ON costs;
+CREATE TRIGGER trg_cost_create_journal_entry
+  AFTER INSERT ON costs
+  FOR EACH ROW
+  EXECUTE FUNCTION create_cost_journal_entry();
+
+DROP TRIGGER IF EXISTS trg_revenue_create_journal_entry ON revenues;
+CREATE TRIGGER trg_revenue_create_journal_entry
+  AFTER INSERT ON revenues
+  FOR EACH ROW
+  EXECUTE FUNCTION create_revenue_journal_entry();
+
+-- Create sequence for journal entry numbers if it doesn't exist
+CREATE SEQUENCE IF NOT EXISTS journal_entry_seq START 1;

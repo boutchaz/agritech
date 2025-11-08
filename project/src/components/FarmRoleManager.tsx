@@ -84,24 +84,13 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
 
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email')
         .in('id', userIds);
 
-      // Fetch emails from auth
-      const emailPromises = userIds.map(async (userId) => {
-        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
-        return { id: userId, email: user?.email };
-      });
-      const emailResults = await Promise.all(emailPromises);
-      const emailMap = new Map(emailResults.map(r => [r.id, r.email]));
-
-      // Merge profiles and emails
+      // Merge profiles with roles
       const rolesWithProfiles = data?.map(role => ({
         ...role,
-        user_profile: {
-          ...profiles?.find(p => p.id === role.user_id),
-          email: emailMap.get(role.user_id)
-        }
+        user_profile: profiles?.find(p => p.id === role.user_id)
       })) || [];
 
       setRoles(rolesWithProfiles);
@@ -156,24 +145,13 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
 
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email')
         .in('id', userIds);
 
-      // Fetch emails from auth
-      const emailPromises = userIds.map(async (userId) => {
-        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
-        return { id: userId, email: user?.email };
-      });
-      const emailResults = await Promise.all(emailPromises);
-      const emailMap = new Map(emailResults.map(r => [r.id, r.email]));
-
-      // Merge profiles and emails
+      // Merge profiles with users
       const usersWithProfiles = data?.map(user => ({
         ...user,
-        user_profile: {
-          ...profiles?.find(p => p.id === user.user_id),
-          email: emailMap.get(user.user_id)
-        }
+        user_profile: profiles?.find(p => p.id === user.user_id)
       })) || [];
 
       setOrganizationUsers(usersWithProfiles);

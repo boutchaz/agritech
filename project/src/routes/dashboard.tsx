@@ -78,9 +78,9 @@ const AppContent: React.FC = () => {
         .select('*')
         .eq('user_id', user.id)
         .eq('organization_id', currentOrganization.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching dashboard settings:', error);
         return defaultDashboardSettings;
       }

@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
-import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
-import { Can } from '../lib/casl';
+import { Can, useCan } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
 
 interface OrganizationUser {
@@ -38,8 +37,8 @@ interface InviteUser {
 }
 
 const UsersSettings: React.FC = () => {
-  const { currentOrganization, user: currentUser } = useAuth();
-  const { hasPermission, userRole } = useRoleBasedAccess();
+  const { currentOrganization, user: currentUser, userRole } = useAuth();
+  const { can } = useCan();
 
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -65,7 +64,7 @@ const UsersSettings: React.FC = () => {
         .from('organization_users')
         .select(`
           *,
-          role:roles(
+          role:roles!organization_users_role_id_fkey(
             name,
             display_name,
             level
@@ -88,27 +87,16 @@ const UsersSettings: React.FC = () => {
         return;
       }
 
-      // Fetch profiles
+      // Fetch profiles with email (email is already in user_profiles)
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('id, first_name, last_name, avatar_url')
+        .select('id, first_name, last_name, email, avatar_url')
         .in('id', validUserIds);
 
-      // Fetch auth emails for specific users only
-      const emailPromises = validUserIds.map(async (userId) => {
-        const { data: { user } } = await supabase.auth.admin.getUserById(userId);
-        return { id: userId, email: user?.email };
-      });
-      const emailResults = await Promise.all(emailPromises);
-      const emailMap = new Map(emailResults.map(r => [r.id, r.email]));
-
-      // Merge profiles and emails into users
+      // Merge profiles into users
       const usersWithProfiles = data?.map(user => ({
         ...user,
-        profile: {
-          ...profiles?.find(p => p.id === user.user_id),
-          email: emailMap.get(user.user_id)
-        }
+        profile: profiles?.find(p => p.id === user.user_id)
       })) || [];
 
       setUsers(usersWithProfiles);
@@ -292,7 +280,7 @@ const UsersSettings: React.FC = () => {
     }
   };
 
-  if (!hasPermission('users', 'read')) {
+  if (!can('read', 'User')) {
     return (
       <div className="p-6">
         <div className="text-center py-12">
@@ -331,15 +319,13 @@ const UsersSettings: React.FC = () => {
             </div>
           }
         >
-          <PermissionGuard resource="users" action="create">
-            <button
-              onClick={() => setShowInviteUser(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Inviter un utilisateur</span>
-            </button>
-          </PermissionGuard>
+          <button
+            onClick={() => setShowInviteUser(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Inviter un utilisateur</span>
+          </button>
         </Can>
       </div>
 
@@ -405,7 +391,7 @@ const UsersSettings: React.FC = () => {
               {users.map((user) => {
                 const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || 'Utilisateur';
                 const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
-                const canModify = hasPermission('users', 'update') &&
+                const canModify = can('update', 'User') &&
                   (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
                 return (
@@ -493,17 +479,15 @@ const UsersSettings: React.FC = () => {
                           </>
                         )}
 
-                        <PermissionGuard resource="users" action="delete">
-                          {user.user_id !== currentUser?.id && (
-                            <button
-                              onClick={() => handleRemoveUser(user.user_id)}
-                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
-                              title="Retirer de l'organisation"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </PermissionGuard>
+                        {can('remove', 'User') && user.user_id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleRemoveUser(user.user_id)}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
+                            title="Retirer de l'organisation"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

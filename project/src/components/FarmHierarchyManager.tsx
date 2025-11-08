@@ -165,7 +165,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
       // Get organization membership to determine basic role
       const { data: orgUser, error: orgError } = await supabase
         .from('organization_users')
-        .select('role')
+        .select('role_id, role:roles!organization_users_role_id_fkey(name)')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUserId)
         .single();
@@ -180,16 +180,16 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
       const basicRoles: FarmRole[] = farms.map(farm => ({
         farm_id: farm.farm_id,
         farm_name: farm.farm_name,
-        role: orgUser.role === 'admin' ? 'main_manager' :
-              orgUser.role === 'manager' ? 'sub_manager' : 'supervisor',
+        role: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin' ? 'main_manager' :
+              orgUser.role?.name === 'manager' || orgUser.role?.name === 'farm_manager' ? 'sub_manager' : 'supervisor',
         permissions: {
-          manage_farms: orgUser.role === 'admin',
-          manage_sub_farms: orgUser.role !== 'member',
-          manage_users: orgUser.role === 'admin',
+          manage_farms: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin',
+          manage_sub_farms: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
+          manage_users: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin',
           view_reports: true,
           manage_crops: true,
-          manage_parcels: orgUser.role !== 'member',
-          manage_inventory: orgUser.role !== 'member',
+          manage_parcels: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
+          manage_inventory: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
           manage_activities: true
         },
         assigned_at: new Date().toISOString(),

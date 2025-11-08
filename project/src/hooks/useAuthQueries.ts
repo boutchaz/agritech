@@ -96,8 +96,14 @@ export const useUserOrganizations = (userId: string | undefined) => {
           .from('organization_users')
           .select(`
             organization_id,
-            role,
+            role_id,
             is_active,
+            role:roles!organization_users_role_id_fkey (
+              id,
+              name,
+              display_name,
+              level
+            ),
             organizations:organization_id (
               id,
               name,
@@ -146,6 +152,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
         // Map the joined data to the expected format
         return orgUsers.map((ou: any) => {
           const org = ou.organizations;
+          const roleData = ou.role;
 
           return {
             id: ou.organization_id,
@@ -162,7 +169,9 @@ export const useUserOrganizations = (userId: string | undefined) => {
             website: org?.website || null,
             tax_id: org?.tax_id || null,
             logo_url: org?.logo_url || null,
-            role: ou.role,
+            role: roleData?.name || 'viewer', // Use role name from joined roles table
+            role_display_name: roleData?.display_name || 'Viewer',
+            role_level: roleData?.level || 6,
             is_active: org?.is_active ?? ou.is_active,
             currency_code: org?.currency_code || 'MAD',
             timezone: org?.timezone || 'Africa/Casablanca',

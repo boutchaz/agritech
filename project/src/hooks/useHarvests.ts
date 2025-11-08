@@ -26,7 +26,7 @@ export function useHarvests(organizationId: string, filters?: HarvestFilters) {
     queryKey: ['harvests', organizationId, filters],
     queryFn: async () => {
       let query = supabase
-        .from('harvest_summary')
+        .from('harvest_records')
         .select('*')
         .eq('organization_id', organizationId);
 
@@ -80,7 +80,7 @@ export function useHarvest(harvestId: string | null) {
     queryKey: ['harvest', harvestId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('harvest_summary')
+        .from('harvest_records')
         .select('*')
         .eq('id', harvestId!)
         .single();
@@ -119,7 +119,7 @@ export function useDeliveries(organizationId: string, filters?: DeliveryFilters)
     queryKey: ['deliveries', organizationId, filters],
     queryFn: async () => {
       let query = supabase
-        .from('delivery_summary')
+        .from('deliveries')
         .select('*')
         .eq('organization_id', organizationId);
 
@@ -174,7 +174,7 @@ export function useDelivery(deliveryId: string | null) {
     queryKey: ['delivery', deliveryId],
     queryFn: async () => {
       const [deliveryResult, itemsResult, trackingResult] = await Promise.all([
-        supabase.from('delivery_summary').select('*').eq('id', deliveryId!).single(),
+        supabase.from('deliveries').select('*').eq('id', deliveryId!).single(),
         supabase.from('delivery_items').select(`
           *,
           harvest:harvest_record_id(harvest_date, crop_id, parcel_id)

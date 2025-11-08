@@ -302,37 +302,42 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         throw new Error(`Erreur lors de la création du profil: ${profileError.message}`);
       }
 
-      // 2. Create organization if not exists
+      // 2. Create organization and farm using atomic database function
       if (!organizationId) {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert(organizationData)
-          .select()
-          .single();
-
-        if (orgError) {
-          console.error('Organization creation error:', orgError);
-          throw new Error(`Erreur lors de la création de l'organisation: ${orgError.message}`);
-        }
-        organizationId = orgData.id;
-
-        // 3. Add user as organization admin
-        const { error: userOrgError } = await supabase
-          .from('organization_users')
-          .insert({
-            organization_id: organizationId,
-            user_id: user.id,
-            role: 'admin'
+        // Use the database function to create everything atomically
+        // This bypasses RLS and avoids timing issues
+        const { data: result, error: functionError } = await supabase
+          .rpc('create_organization_with_farm', {
+            p_user_id: user.id,
+            p_user_email: user.email,
+            p_first_name: profileData.first_name,
+            p_last_name: profileData.last_name,
+            p_organization_name: organizationData.name,
+            p_organization_slug: organizationData.slug,
+            p_organization_phone: organizationData.phone || null,
+            p_organization_email: organizationData.email || user.email,
+            p_farm_name: farmData.name,
+            p_farm_location: farmData.location,
+            p_farm_size: farmData.size,
+            p_farm_size_unit: farmData.size_unit,
+            p_farm_description: farmData.description || null
           });
 
-        if (userOrgError) {
-          console.error('Organization user creation error:', userOrgError);
-          throw new Error(`Erreur lors de l'ajout à l'organisation: ${userOrgError.message}`);
+        if (functionError) {
+          console.error('Onboarding function error:', functionError);
+          throw new Error(`Erreur lors de la création: ${functionError.message}`);
         }
-      }
 
-      // 4. Create farm only if no farms exist yet
-      if (!hasExistingFarms) {
+        // Check if the function returned an error
+        if (result && !result.success) {
+          console.error('Onboarding function returned error:', result);
+          throw new Error(`Erreur: ${result.error || 'Unknown error'}`);
+        }
+
+        organizationId = result?.organization_id;
+        console.log('✅ Organization and farm created successfully:', result);
+      } else if (!hasExistingFarms) {
+        // Organization exists but no farms - create farm only
         const { data: createdFarm, error: farmError } = await supabase
           .from('farms')
           .insert({
@@ -367,10 +372,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           console.error('Role assignment error:', roleError);
           // Don't throw error here as farm creation succeeded
         }
-      }
 
-      // Mark organization onboarding as completed
-      if (organizationId) {
+        // Mark organization onboarding as completed
         const { error: updateError } = await supabase
           .from('organizations')
           .update({ onboarding_completed: true })
@@ -382,7 +385,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           } else {
             console.error('Error marking onboarding complete:', updateError);
           }
-          // Don't throw - onboarding data is saved, just flag update failed
         }
       }
 
