@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { seedChartOfAccounts, type SupportedCountry } from '@/lib/seed-chart-of-accounts';
 import {
   Table,
@@ -83,6 +84,7 @@ const accountTypeIcons: Record<AccountType, string> = {
 export const ChartOfAccounts: React.FC = () => {
   const { currentOrganization, user } = useAuth();
   const { data: accounts = [], isLoading, createAccount, updateAccount, deleteAccount } = useAccounts();
+  const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<AccountType | 'all'>('all');
@@ -217,6 +219,8 @@ export const ChartOfAccounts: React.FC = () => {
       );
 
       if (result.success) {
+        // Invalidate accounts query to refetch the data
+        await queryClient.invalidateQueries({ queryKey: ['accounts', currentOrganization.id] });
         toast.success(`Success! ${result.accountsCreated} accounts have been created for your organization.`);
       } else {
         toast.error(`Seeding Failed: ${result.message}`);

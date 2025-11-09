@@ -528,7 +528,6 @@ export const accountingApi = {
       .insert({
         ...entryData,
         entry_date: entryData.entry_date.toISOString().split('T')[0],
-        posting_date: entryData.posting_date.toISOString().split('T')[0],
         organization_id: organizationId,
         created_by: userId,
         entry_number: entryNumber as string,
@@ -562,9 +561,6 @@ export const accountingApi = {
     const entryUpdates: any = { ...updates };
     if (updates.entry_date) {
       entryUpdates.entry_date = updates.entry_date.toISOString().split('T')[0];
-    }
-    if (updates.posting_date) {
-      entryUpdates.posting_date = updates.posting_date.toISOString().split('T')[0];
     }
 
     const { error: updateError } = await supabase

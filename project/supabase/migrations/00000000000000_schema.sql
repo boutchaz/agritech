@@ -1150,7 +1150,9 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   entry_number VARCHAR(100) NOT NULL,
   entry_date DATE NOT NULL,
   reference_number VARCHAR(100),
-  description TEXT,
+  reference_type VARCHAR(50),
+  reference_id UUID,
+  remarks TEXT,
   status journal_entry_status DEFAULT 'draft',
   total_debit DECIMAL(15, 2) DEFAULT 0,
   total_credit DECIMAL(15, 2) DEFAULT 0,
@@ -1164,6 +1166,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
 CREATE INDEX IF NOT EXISTS idx_journal_entries_org ON journal_entries(organization_id);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_status ON journal_entries(status);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_reference ON journal_entries(reference_type, reference_id);
 
 -- Journal Items
 CREATE TABLE IF NOT EXISTS journal_items (

@@ -39,6 +39,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_mappings: {
+        Row: {
+          account_code: string
+          accounting_standard: string
+          country_code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          mapping_key: string
+          mapping_type: string
+        }
+        Insert: {
+          account_code: string
+          accounting_standard: string
+          country_code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          mapping_key: string
+          mapping_type: string
+        }
+        Update: {
+          account_code?: string
+          accounting_standard?: string
+          country_code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          mapping_key?: string
+          mapping_type?: string
+        }
+        Relationships: []
+      }
+      account_templates: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_subtype: string | null
+          account_type: string
+          accounting_standard: string
+          country_code: string
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_group: boolean | null
+          metadata: Json | null
+          parent_code: string | null
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_subtype?: string | null
+          account_type: string
+          accounting_standard: string
+          country_code: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_group?: boolean | null
+          metadata?: Json | null
+          parent_code?: string | null
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_subtype?: string | null
+          account_type?: string
+          accounting_standard?: string
+          country_code?: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_group?: boolean | null
+          metadata?: Json | null
+          parent_code?: string | null
+          template_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       accounting_payments: {
         Row: {
           amount: number
@@ -2055,7 +2145,7 @@ export type Database = {
             foreignKeyName: "inventory_batches_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "items"
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
           {
@@ -2222,7 +2312,7 @@ export type Database = {
             foreignKeyName: "inventory_serial_numbers_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "items"
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
           {
@@ -2808,14 +2898,16 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
-          description: string | null
           entry_date: string
           entry_number: string
           id: string
           organization_id: string
           posted_at: string | null
           posted_by: string | null
+          reference_id: string | null
           reference_number: string | null
+          reference_type: string | null
+          remarks: string | null
           status: Database["public"]["Enums"]["journal_entry_status"] | null
           total_credit: number | null
           total_debit: number | null
@@ -2823,14 +2915,16 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
-          description?: string | null
           entry_date: string
           entry_number: string
           id?: string
           organization_id: string
           posted_at?: string | null
           posted_by?: string | null
+          reference_id?: string | null
           reference_number?: string | null
+          reference_type?: string | null
+          remarks?: string | null
           status?: Database["public"]["Enums"]["journal_entry_status"] | null
           total_credit?: number | null
           total_debit?: number | null
@@ -2838,14 +2932,16 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
-          description?: string | null
           entry_date?: string
           entry_number?: string
           id?: string
           organization_id?: string
           posted_at?: string | null
           posted_by?: string | null
+          reference_id?: string | null
           reference_number?: string | null
+          reference_type?: string | null
+          remarks?: string | null
           status?: Database["public"]["Enums"]["journal_entry_status"] | null
           total_credit?: number | null
           total_debit?: number | null
@@ -3157,7 +3253,7 @@ export type Database = {
             foreignKeyName: "opening_stock_balances_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "items"
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
           {
@@ -3189,7 +3285,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           organization_id: string
-          role: string
+          role_id: string
           updated_at: string | null
           user_id: string
         }
@@ -3198,7 +3294,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           organization_id: string
-          role: string
+          role_id: string
           updated_at?: string | null
           user_id: string
         }
@@ -3207,7 +3303,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           organization_id?: string
-          role?: string
+          role_id?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -3219,13 +3315,22 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organizations: {
         Row: {
+          accounting_standard: string | null
           address: string | null
           city: string | null
           country: string | null
+          country_code: string | null
           created_at: string | null
           currency_code: string | null
           description: string | null
@@ -3244,9 +3349,11 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          accounting_standard?: string | null
           address?: string | null
           city?: string | null
           country?: string | null
+          country_code?: string | null
           created_at?: string | null
           currency_code?: string | null
           description?: string | null
@@ -3265,9 +3372,11 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          accounting_standard?: string | null
           address?: string | null
           city?: string | null
           country?: string | null
+          country_code?: string | null
           created_at?: string | null
           currency_code?: string | null
           description?: string | null
@@ -5774,7 +5883,7 @@ export type Database = {
             foreignKeyName: "stock_closing_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "items"
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
           {
@@ -6136,7 +6245,7 @@ export type Database = {
             foreignKeyName: "stock_valuation_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "items"
+            referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
           {
@@ -6996,9 +7105,11 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           email: string | null
+          first_name: string | null
           full_name: string | null
           id: string
           language: string | null
+          last_name: string | null
           onboarding_completed: boolean | null
           password_set: boolean | null
           phone: string | null
@@ -7009,9 +7120,11 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id: string
           language?: string | null
+          last_name?: string | null
           onboarding_completed?: boolean | null
           password_set?: boolean | null
           phone?: string | null
@@ -7022,9 +7135,11 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
           language?: string | null
+          last_name?: string | null
           onboarding_completed?: boolean | null
           password_set?: boolean | null
           phone?: string | null
@@ -7817,6 +7932,33 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_account_id_by_code: {
+        Args: { p_code: string; p_org_id: string }
+        Returns: string
+      }
+      get_account_id_by_mapping: {
+        Args: {
+          p_mapping_key: string
+          p_mapping_type: string
+          p_org_id: string
+        }
+        Returns: string
+      }
+      get_farm_hierarchy_tree: {
+        Args: { org_uuid: string; root_farm_id?: string }
+        Returns: {
+          farm_id: string
+          farm_name: string
+          farm_size: number
+          farm_type: string
+          hierarchy_level: number
+          is_active: boolean
+          manager_name: string
+          parcel_count: number
+          parent_farm_id: string
+          subparcel_count: number
+        }[]
+      }
       get_parcel_performance_summary: {
         Args: {
           p_farm_id?: string
@@ -7843,6 +7985,7 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      has_valid_subscription: { Args: { org_id: string }; Returns: boolean }
       is_organization_member: {
         Args: { p_organization_id: string }
         Returns: boolean
@@ -7888,6 +8031,34 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      seed_chart_of_accounts: {
+        Args: {
+          p_accounting_standard?: string
+          p_country_code?: string
+          p_org_id: string
+        }
+        Returns: {
+          accounts_created: number
+          message: string
+          success: boolean
+        }[]
+      }
+      seed_french_chart_of_accounts: {
+        Args: { p_org_id: string }
+        Returns: {
+          accounts_created: number
+          message: string
+          success: boolean
+        }[]
+      }
+      seed_moroccan_chart_of_accounts: {
+        Args: { p_org_id: string }
+        Returns: {
+          accounts_created: number
+          message: string
+          success: boolean
+        }[]
+      }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

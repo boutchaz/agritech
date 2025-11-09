@@ -126,7 +126,6 @@ export const journalItemSchema = z.object({
 
 export const journalEntrySchema = z.object({
   entry_date: z.date({ required_error: 'Entry date is required' }),
-  posting_date: z.date({ required_error: 'Posting date is required' }),
   reference_number: z.string().max(100).optional(),
   reference_type: z.string().max(50).optional(),
   reference_id: z.string().uuid().nullable().optional(),

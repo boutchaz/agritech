@@ -225,7 +225,6 @@ export async function syncSalesInvoiceToLedger(
     const entry = await accountingApi.createJournalEntry(
       {
         entry_date: new Date(invoice.invoice_date),
-        posting_date: new Date(invoice.invoice_date),
         reference_type: 'sales_invoice',
         reference_id: invoice.id,
         remarks: `Sales Invoice ${invoice.invoice_number}${
@@ -337,7 +336,6 @@ export async function syncPurchaseInvoiceToLedger(
     const entry = await accountingApi.createJournalEntry(
       {
         entry_date: new Date(invoice.invoice_date),
-        posting_date: new Date(invoice.invoice_date),
         reference_type: 'purchase_invoice',
         reference_id: invoice.id,
         remarks: `Purchase Invoice ${invoice.invoice_number}${
@@ -426,7 +424,6 @@ export async function syncCustomerPaymentToLedger(
     const entry = await accountingApi.createJournalEntry(
       {
         entry_date: new Date(payment.payment_date),
-        posting_date: new Date(payment.payment_date),
         reference_type: 'customer_payment',
         reference_id: payment.id,
         remarks: `Customer Payment ${payment.payment_number} - ${payment.payment_method}`,
@@ -502,7 +499,6 @@ export async function syncSupplierPaymentToLedger(
     const entry = await accountingApi.createJournalEntry(
       {
         entry_date: new Date(payment.payment_date),
-        posting_date: new Date(payment.payment_date),
         reference_type: 'supplier_payment',
         reference_id: payment.id,
         remarks: `Supplier Payment ${payment.payment_number} - ${payment.payment_method}`,

@@ -130,7 +130,8 @@ const UtilitiesManagement: React.FC = () => {
       query = query.eq('account_subtype', accountSubtype);
     }
 
-    const { data, error } = await query.maybeSingle();
+    // Order by code and take the first match to handle multiple accounts
+    const { data, error } = await query.order('code', { ascending: true }).limit(1).single();
 
     if (error) {
       throw new Error(error.message);
@@ -343,7 +344,6 @@ const UtilitiesManagement: React.FC = () => {
 
     const basePayload = {
       entry_date: entryDate,
-      posting_date: entryDate,
       reference_type: 'utilities',
       reference_id: utility.id,
       remarks: utility.notes || `Utility expense (${getUtilityLabel(utility.type)})`,
