@@ -29,12 +29,15 @@ ENV VITE_POLAR_PROFESSIONAL_PRODUCT_ID=$VITE_POLAR_PROFESSIONAL_PRODUCT_ID
 ENV VITE_POLAR_ENTERPRISE_PRODUCT_ID=$VITE_POLAR_ENTERPRISE_PRODUCT_ID
 ENV VITE_APP_URL=$VITE_APP_URL
 
+# Prevent Playwright from downloading browsers during install to keep builds fast
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 # Copy package files
 COPY package*.json ./
 COPY yarn.lock ./
 
 # Install dependencies
-RUN yarn install
+RUN yarn install --frozen-lockfile
 
 # Copy all project files
 COPY . .
