@@ -3,10 +3,12 @@ import { useNavigate } from '@tanstack/react-router';
 import { MapPin, TrendingUp, ChevronRight, Layers } from 'lucide-react';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useFarms, useParcelsByFarms } from '../../hooks/useParcelsQuery';
+import { useTranslation } from 'react-i18next';
 
 const ParcelsOverviewWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentOrganization, currentFarm } = useAuth();
+  const { t } = useTranslation();
 
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const farmIds = currentFarm?.id ? [currentFarm.id] : farms.map(f => f.id);
@@ -15,7 +17,7 @@ const ParcelsOverviewWidget: React.FC = () => {
   // Calculate statistics
   const totalArea = parcels.reduce((sum, p) => sum + (p.calculated_area || p.area || 0), 0);
   const parcelsByCrop = parcels.reduce((acc, p) => {
-    const cropType = p.crop_type || 'Non spécifié';
+    const cropType = p.crop_type || t('dashboard.widgets.parcels.unspecifiedCrop');
     acc[cropType] = (acc[cropType] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -48,14 +50,14 @@ const ParcelsOverviewWidget: React.FC = () => {
             <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Parcelles
+            {t('dashboard.widgets.parcels.title')}
           </h3>
         </div>
         <button
           onClick={handleViewParcels}
           className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
@@ -66,14 +68,14 @@ const ParcelsOverviewWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Total</span>
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">{t('dashboard.widgets.parcels.total')}</span>
               <Layers className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {parcels.length}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              parcelles
+              {t('dashboard.widgets.parcels.parcels')}
             </div>
           </div>
         </div>
@@ -82,14 +84,14 @@ const ParcelsOverviewWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Surface</span>
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{t('dashboard.widgets.parcels.surface')}</span>
               <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {totalArea.toFixed(1)}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              hectares
+              {t('dashboard.widgets.parcels.hectares')}
             </div>
           </div>
         </div>
@@ -99,7 +101,7 @@ const ParcelsOverviewWidget: React.FC = () => {
       {topCrops.length > 0 && (
         <div>
           <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-            Principales cultures
+            {t('dashboard.widgets.parcels.topCrops')}
           </h4>
           <div className="space-y-2">
             {topCrops.map(([crop, count]) => (
@@ -109,7 +111,7 @@ const ParcelsOverviewWidget: React.FC = () => {
                 </span>
                 <span className="text-sm font-bold text-green-600 dark:text-green-400 ml-2 flex items-center gap-1">
                   {count}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">parcelles</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">{t('dashboard.widgets.parcels.parcels')}</span>
                 </span>
               </div>
             ))}
@@ -123,14 +125,14 @@ const ParcelsOverviewWidget: React.FC = () => {
             <MapPin className="h-8 w-8 text-gray-300 dark:text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
-            Aucune parcelle créée
+            {t('dashboard.widgets.parcels.empty')}
           </p>
           <button
             onClick={handleViewParcels}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-lg transition-colors"
           >
             <MapPin className="h-4 w-4" />
-            Créer une parcelle
+            {t('dashboard.widgets.parcels.create')}
           </button>
         </div>
       )}

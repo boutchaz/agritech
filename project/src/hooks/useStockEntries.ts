@@ -94,9 +94,10 @@ export function useStockEntry(entryId: string | null) {
         `)
         .eq('id', entryId)
         .eq('organization_id', currentOrganization?.id || '')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Stock entry not found');
       return data as StockEntryWithItems;
     },
     enabled: !!entryId && !!currentOrganization?.id,
@@ -189,18 +190,31 @@ export function useUpdateStockEntry() {
 
   return useMutation({
     mutationFn: async ({ entryId, input }: { entryId: string; input: UpdateStockEntryInput }) => {
+      console.log('🔵 NEW CODE LOADED - useUpdateStockEntry called with ID:', entryId);
+
       if (!currentOrganization?.id || !user?.id) {
         throw new Error('No organization or user');
       }
 
-      // Check if entry is in Draft status
-      const { data: entry } = await supabase
+      // Check if entry exists and is in Draft status
+      const { data: entry, error: fetchError } = await supabase
         .from('stock_entries')
-        .select('status')
+        .select('status, organization_id')
         .eq('id', entryId)
-        .single();
+        .eq('organization_id', currentOrganization.id)
+        .maybeSingle();
 
-      if (entry?.status !== 'Draft') {
+      if (fetchError) {
+        console.error('Error fetching stock entry for update:', fetchError);
+        throw fetchError;
+      }
+
+      if (!entry) {
+        console.warn(`Stock entry ${entryId} not found for organization ${currentOrganization.id}`);
+        throw new Error('Stock entry not found or access denied');
+      }
+
+      if (entry.status !== 'Draft') {
         throw new Error('Only draft entries can be updated');
       }
 
@@ -209,11 +223,12 @@ export function useUpdateStockEntry() {
         .update({
           ...input,
           updated_by: user.id,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', entryId)
         .eq('organization_id', currentOrganization.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as StockEntry;
@@ -244,13 +259,15 @@ export function usePostStockEntry() {
         .from('stock_entries')
         .update({
           status: 'Posted',
+          posted_at: new Date().toISOString(),
         })
         .eq('id', entryId)
         .eq('organization_id', currentOrganization.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Stock entry not found or already posted');
       return data as StockEntry;
     },
     onSuccess: (_, entryId) => {
@@ -279,13 +296,15 @@ export function useCancelStockEntry() {
         .from('stock_entries')
         .update({
           status: 'Cancelled',
+          updated_at: new Date().toISOString(),
         })
         .eq('id', entryId)
         .eq('organization_id', currentOrganization.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Stock entry not found or cannot be cancelled');
       return data as StockEntry;
     },
     onSuccess: (_, entryId) => {

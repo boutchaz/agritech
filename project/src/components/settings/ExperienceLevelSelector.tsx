@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '@/types/experience-level';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 /**
  * ExperienceLevelSelector - Allows users to change their UI complexity level
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
  */
 export const ExperienceLevelSelector: React.FC = () => {
   const { level: currentLevel, setLevel, config } = useExperienceLevel();
+  const { t } = useTranslation();
   const [selectedLevel, setSelectedLevel] = React.useState(currentLevel);
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -26,15 +28,15 @@ export const ExperienceLevelSelector: React.FC = () => {
       await setLevel(selectedLevel);
 
       // Show success toast
-      const levelConfig = EXPERIENCE_LEVELS[selectedLevel];
-      toast.success('Niveau d\'expérience mis à jour', {
-        description: `Vous êtes maintenant au niveau ${levelConfig.label}. Les fonctionnalités de l'interface ont été ajustées.`,
+      const levelLabel = t(`preferences.experienceLevel.levels.${selectedLevel}.label`);
+      toast.success(t('preferences.experienceLevel.success'), {
+        description: t('preferences.experienceLevel.successDescription', { level: levelLabel }),
         duration: 4000,
       });
     } catch (error) {
       // Show error toast
-      toast.error('Erreur lors de la mise à jour', {
-        description: 'Impossible de sauvegarder votre niveau d\'expérience. Veuillez réessayer.',
+      toast.error(t('preferences.experienceLevel.error'), {
+        description: t('preferences.experienceLevel.errorDescription'),
         duration: 4000,
       });
       console.error('Failed to update experience level:', error);
@@ -43,15 +45,26 @@ export const ExperienceLevelSelector: React.FC = () => {
     }
   };
 
+  const getLevelLabel = (level: ExperienceLevel) => {
+    return t(`preferences.experienceLevel.levels.${level}.label`);
+  };
+
+  const getLevelDescription = (level: ExperienceLevel) => {
+    return t(`preferences.experienceLevel.levels.${level}.description`);
+  };
+
+  const getFeatureLabel = (featureKey: string) => {
+    return t(`preferences.experienceLevel.features.${featureKey}`);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Niveau d'expérience
+          {t('preferences.experienceLevel.title')}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Choisissez le niveau de complexité de l'interface qui vous convient le mieux.
-          Vous pouvez le modifier à tout moment.
+          {t('preferences.experienceLevel.subtitle')}
         </p>
       </div>
 
@@ -59,6 +72,7 @@ export const ExperienceLevelSelector: React.FC = () => {
         {Object.entries(EXPERIENCE_LEVELS).map(([key, levelConfig]) => {
           const isSelected = selectedLevel === key;
           const isCurrent = currentLevel === key;
+          const level = key as ExperienceLevel;
 
           return (
             <Card
@@ -68,7 +82,7 @@ export const ExperienceLevelSelector: React.FC = () => {
                   ? 'border-green-500 dark:border-green-600 ring-2 ring-green-200 dark:ring-green-800'
                   : 'hover:border-gray-400 dark:hover:border-gray-600'
               }`}
-              onClick={() => setSelectedLevel(key as ExperienceLevel)}
+              onClick={() => setSelectedLevel(level)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
@@ -79,13 +93,13 @@ export const ExperienceLevelSelector: React.FC = () => {
                       }`}
                     />
                     <div className="font-semibold text-gray-900 dark:text-white">
-                      {levelConfig.label}
+                      {getLevelLabel(level)}
                     </div>
                   </div>
                   {isCurrent && (
                     <div className="flex items-center space-x-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">
                       <Check className="h-3 w-3" />
-                      <span>Actuel</span>
+                      <span>{t('preferences.experienceLevel.current')}</span>
                     </div>
                   )}
                   {isSelected && !isCurrent && (
@@ -96,60 +110,60 @@ export const ExperienceLevelSelector: React.FC = () => {
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  {levelConfig.description}
+                  {getLevelDescription(level)}
                 </p>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-gray-500 dark:text-gray-500">
-                    Fonctionnalités :
+                    {t('preferences.experienceLevel.featuresLabel')} :
                   </Label>
                   <ul className="space-y-1">
                     {levelConfig.features.showAdvancedFilters && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-green-500" />
-                        Filtres avancés
+                        {getFeatureLabel('advancedFilters')}
                       </li>
                     )}
                     {levelConfig.features.showAnalytics && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-green-500" />
-                        Analyses détaillées
+                        {getFeatureLabel('analytics')}
                       </li>
                     )}
                     {levelConfig.features.showBulkActions && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-green-500" />
-                        Actions en masse
+                        {getFeatureLabel('bulkActions')}
                       </li>
                     )}
                     {levelConfig.features.enableGuidedTours && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-blue-500" />
-                        Visites guidées
+                        {getFeatureLabel('guidedTours')}
                       </li>
                     )}
                     {levelConfig.features.showContextualHelp && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-blue-500" />
-                        Aide contextuelle
+                        {getFeatureLabel('contextualHelp')}
                       </li>
                     )}
                     {levelConfig.features.showDataExport && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-green-500" />
-                        Export de données
+                        {getFeatureLabel('dataExport')}
                       </li>
                     )}
                     {levelConfig.features.enableKeyboardShortcuts && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-purple-500" />
-                        Raccourcis clavier
+                        {getFeatureLabel('keyboardShortcuts')}
                       </li>
                     )}
                     {levelConfig.features.showApiAccess && (
                       <li className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
                         <Check className="h-3 w-3 mr-1 text-purple-500" />
-                        Accès API
+                        {getFeatureLabel('apiAccess')}
                       </li>
                     )}
                   </ul>
@@ -163,7 +177,7 @@ export const ExperienceLevelSelector: React.FC = () => {
       {selectedLevel !== currentLevel && (
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isSaving} className="min-w-32">
-            {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            {isSaving ? t('preferences.saving') : t('preferences.save')}
           </Button>
         </div>
       )}

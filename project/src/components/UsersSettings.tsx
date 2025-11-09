@@ -8,6 +8,8 @@ import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
 import { Can, useCan } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 interface OrganizationUser {
   id: string;
@@ -39,6 +41,7 @@ interface InviteUser {
 const UsersSettings: React.FC = () => {
   const { currentOrganization, user: currentUser, userRole } = useAuth();
   const { can } = useCan();
+  const { t, i18n } = useTranslation();
 
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -102,7 +105,7 @@ const UsersSettings: React.FC = () => {
       setUsers(usersWithProfiles);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to load users');
+      setError(t('users.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -176,9 +179,12 @@ const UsersSettings: React.FC = () => {
 
       // Show success message
       if (result.message.includes('Invitation email sent')) {
-        alert(`Invitation email sent to ${inviteUser.email}. They will be added to the organization once they accept the invitation.`);
+        toast.success(t('users.invite.success'), {
+          description: t('users.invite.successDescription', { email: inviteUser.email }),
+          duration: 5000,
+        });
       } else {
-        alert(result.message);
+        toast.success(result.message);
       }
 
       setShowInviteUser(false);
@@ -186,7 +192,11 @@ const UsersSettings: React.FC = () => {
       await fetchUsers();
     } catch (err) {
       console.error('Error inviting user:', err);
-      setError(err instanceof Error ? err.message : 'Failed to invite user');
+      setError(err instanceof Error ? err.message : t('users.invite.failed'));
+      toast.error(t('users.invite.failed'), {
+        description: err instanceof Error ? err.message : t('users.invite.failedDescription'),
+        duration: 4000,
+      });
     } finally {
       setLoading(false);
     }
@@ -205,9 +215,11 @@ const UsersSettings: React.FC = () => {
 
       if (error) throw error;
       await fetchUsers();
+      toast.success(t('users.updateRole.success'));
     } catch (err) {
       console.error('Error updating user role:', err);
-      setError('Failed to update user role');
+      setError(t('users.updateRole.failed'));
+      toast.error(t('users.updateRole.failed'));
     }
   };
 
@@ -224,9 +236,13 @@ const UsersSettings: React.FC = () => {
 
       if (error) throw error;
       await fetchUsers();
+      toast.success(t('users.updateStatus.success', { 
+        status: !isActive ? t('users.status.active') : t('users.status.inactive')
+      }));
     } catch (err) {
       console.error('Error updating user status:', err);
-      setError('Failed to update user status');
+      setError(t('users.updateStatus.failed'));
+      toast.error(t('users.updateStatus.failed'));
     }
   };
 
@@ -234,7 +250,7 @@ const UsersSettings: React.FC = () => {
   const handleRemoveUser = async (userId: string) => {
     if (!currentOrganization?.id || userId === currentUser?.id) return;
 
-    if (!confirm('Are you sure you want to remove this user from the organization?')) return;
+    if (!confirm(t('users.remove.confirm'))) return;
 
     try {
       const { error } = await supabase
@@ -245,9 +261,11 @@ const UsersSettings: React.FC = () => {
 
       if (error) throw error;
       await fetchUsers();
+      toast.success(t('users.remove.success'));
     } catch (err) {
       console.error('Error removing user:', err);
-      setError('Failed to remove user');
+      setError(t('users.remove.failed'));
+      toast.error(t('users.remove.failed'));
     }
   };
 
@@ -286,10 +304,10 @@ const UsersSettings: React.FC = () => {
         <div className="text-center py-12">
           <UserX className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-            Accès refusé
+            {t('users.accessDenied.title')}
           </h3>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Vous n'avez pas les permissions nécessaires pour gérer les utilisateurs.
+            {t('users.accessDenied.description')}
           </p>
         </div>
       </div>
@@ -302,7 +320,7 @@ const UsersSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Users className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Utilisateurs
+            {t('users.title')}
           </h2>
           {currentOrganization && (
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -315,7 +333,7 @@ const UsersSettings: React.FC = () => {
           a="User"
           fallback={
             <div className="text-sm text-gray-500 italic">
-              Upgrade to invite more users
+              {t('users.upgradeToInvite')}
             </div>
           }
         >
@@ -324,7 +342,7 @@ const UsersSettings: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
             <Plus className="h-4 w-4" />
-            <span>Inviter un utilisateur</span>
+            <span>{t('users.invite.button')}</span>
           </button>
         </Can>
       </div>
@@ -337,10 +355,10 @@ const UsersSettings: React.FC = () => {
 
       <div className="flex items-center justify-between">
         <p className="text-gray-600 dark:text-gray-400">
-          Gérez les utilisateurs de votre organisation. Contrôlez les accès et les permissions.
+          {t('users.description')}
         </p>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          {users.length} utilisateur{users.length !== 1 ? 's' : ''}
+          {t('users.count', { count: users.length })}
         </div>
       </div>
 
@@ -358,10 +376,10 @@ const UsersSettings: React.FC = () => {
         <div className="text-center py-12">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-            Aucun utilisateur
+            {t('users.empty.title')}
           </h3>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Commencez par inviter des utilisateurs dans votre organisation.
+            {t('users.empty.description')}
           </p>
         </div>
       ) : (
@@ -371,25 +389,25 @@ const UsersSettings: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Utilisateur
+                  {t('users.table.user')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Rôle
+                  {t('users.table.role')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Statut
+                  {t('users.table.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Rejoint le
+                  {t('users.table.joinedOn')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
+                  {t('users.table.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((user) => {
-                const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || 'Utilisateur';
+                const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
                 const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
                 const canModify = can('update', 'User') &&
                   (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
@@ -415,7 +433,7 @@ const UsersSettings: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
                             {fullName}
                             {user.user_id === currentUser?.id && (
-                              <span className="ml-2 text-xs text-gray-500">(Vous)</span>
+                              <span className="ml-2 text-xs text-gray-500">({t('users.you')})</span>
                             )}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -437,11 +455,11 @@ const UsersSettings: React.FC = () => {
                         ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                           'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
                       >
-                        {user.is_active ? 'Actif' : 'Inactif'}
+                        {user.is_active ? t('users.status.active') : t('users.status.inactive')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(user.created_at).toLocaleDateString('fr-FR', {
+                      {new Date(user.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
@@ -471,7 +489,7 @@ const UsersSettings: React.FC = () => {
                               className={`p-1 rounded ${user.is_active ?
                                 'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400' :
                                 'text-green-600 hover:text-green-800 dark:text-green-400'}`}
-                              title={user.is_active ? 'Désactiver' : 'Activer'}
+                              title={user.is_active ? t('users.actions.deactivate') : t('users.actions.activate')}
                               disabled={user.user_id === currentUser?.id}
                             >
                               {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
@@ -483,7 +501,7 @@ const UsersSettings: React.FC = () => {
                           <button
                             onClick={() => handleRemoveUser(user.user_id)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
-                            title="Retirer de l'organisation"
+                            title={t('users.actions.remove')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -506,7 +524,7 @@ const UsersSettings: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-green-600" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Inviter un utilisateur
+                  {t('users.invite.title')}
                 </h3>
               </div>
               <button
@@ -522,49 +540,51 @@ const UsersSettings: React.FC = () => {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Invitez un utilisateur existant à rejoindre votre organisation.
+              {t('users.invite.description')}
             </p>
 
             <div className="space-y-4">
               <div>
-                <FormField label="Adresse email *" htmlFor="invite_email" required>
+                <FormField label={t('users.invite.fields.email')} htmlFor="invite_email" required>
                   <Input
                     id="invite_email"
                     type="email"
                     value={inviteUser.email}
                     onChange={(e) => setInviteUser({ ...inviteUser, email: e.target.value })}
-                    placeholder="utilisateur@exemple.com"
+                    placeholder={t('users.invite.placeholders.email')}
                   />
                 </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Prénom" htmlFor="invite_first_name">
+                <FormField label={t('users.invite.fields.firstName')} htmlFor="invite_first_name">
                   <Input
                     id="invite_first_name"
                     type="text"
                     value={inviteUser.first_name}
                     onChange={(e) => setInviteUser({ ...inviteUser, first_name: e.target.value })}
+                    placeholder={t('users.invite.placeholders.firstName')}
                   />
                 </FormField>
-                <FormField label="Nom" htmlFor="invite_last_name">
+                <FormField label={t('users.invite.fields.lastName')} htmlFor="invite_last_name">
                   <Input
                     id="invite_last_name"
                     type="text"
                     value={inviteUser.last_name}
                     onChange={(e) => setInviteUser({ ...inviteUser, last_name: e.target.value })}
+                    placeholder={t('users.invite.placeholders.lastName')}
                   />
                 </FormField>
               </div>
 
               <div>
-                <FormField label="Rôle *" htmlFor="invite_role" required>
+                <FormField label={t('users.invite.fields.role')} htmlFor="invite_role" required>
                   <Select
                     id="invite_role"
                     value={inviteUser.role_id}
                     onChange={(e) => setInviteUser({ ...inviteUser, role_id: e.target.value })}
                   >
-                    <option value="">Sélectionner un rôle</option>
+                    <option value="">{t('users.invite.placeholders.selectRole')}</option>
                     {getAvailableRoles().map(role => (
                       <option key={role.id} value={role.id}>
                         {role.display_name}
@@ -590,14 +610,14 @@ const UsersSettings: React.FC = () => {
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
-                Annuler
+                {t('users.invite.cancel')}
               </button>
               <button
                 onClick={handleInviteUser}
                 disabled={!inviteUser.email || !inviteUser.role_id || loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Invitation...' : 'Inviter'}
+                {loading ? t('users.invite.inviting') : t('users.invite.invite')}
               </button>
             </div>
           </div>

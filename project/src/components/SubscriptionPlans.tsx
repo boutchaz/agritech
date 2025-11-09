@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Zap, Building2, TrendingUp } from 'lucide-react';
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar';
 import { useSubscription } from '../hooks/useSubscription';
+import { useTranslation } from 'react-i18next';
 
 interface SubscriptionPlansProps {
   onSelectPlan: (planType: PlanType) => void;
@@ -9,6 +10,7 @@ interface SubscriptionPlansProps {
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) => {
   const { data: subscription } = useSubscription();
+  const { t } = useTranslation();
 
   const getPlanIcon = (planType: PlanType) => {
     switch (planType) {
@@ -36,10 +38,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
     <div className="py-12">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Choose Your Plan
+          {t('subscription.plans.title')}
         </h2>
         <p className="text-lg text-gray-600 dark:text-gray-400">
-          Select the perfect plan for your agricultural operations
+          {t('subscription.plans.subtitle')}
         </p>
       </div>
 
@@ -58,13 +60,13 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             >
               {isHighlighted && (
                 <div className="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 text-sm font-semibold">
-                  Most Popular
+                  {t('subscription.plans.mostPopular')}
                 </div>
               )}
 
               {isCurrentPlan && (
                 <div className="absolute top-0 left-0 bg-green-500 text-white px-4 py-1 text-sm font-semibold">
-                  Current Plan
+                  {t('subscription.plans.currentPlan')}
                 </div>
               )}
 
@@ -85,7 +87,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                     {plan.price}
                   </span>
                   {plan.priceAmount > 0 && (
-                    <span className="text-gray-600 dark:text-gray-400 ml-2">/month</span>
+                    <span className="text-gray-600 dark:text-gray-400 ml-2">{t('subscription.perMonth')}</span>
                   )}
                 </div>
 
@@ -99,10 +101,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                   }`}
                 >
                   {isCurrentPlan
-                    ? 'Current Plan'
+                    ? t('subscription.plans.currentPlan')
                     : plan.id === 'enterprise'
-                    ? 'Contact Sales'
-                    : 'Get Started'}
+                    ? t('subscription.plans.contactSales')
+                    : t('subscription.plans.getStarted')}
                 </button>
 
                 <div className="mt-8 space-y-3">

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
+import { useTranslation } from 'react-i18next';
 
 interface OrganizationData {
   id: string;
@@ -27,6 +28,7 @@ interface OrganizationData {
 
 const OrganizationSettings: React.FC = () => {
   const { currentOrganization, user } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,14 +54,14 @@ const OrganizationSettings: React.FC = () => {
         setOrgData(data);
       } catch (err) {
         console.error('Error fetching organization data:', err);
-        setError('Erreur lors du chargement des données de l\'organisation');
+        setError(t('organization.errors.loadError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrganizationData();
-  }, [currentOrganization]);
+  }, [currentOrganization, t]);
 
   const handleSave = async () => {
     if (!orgData || !currentOrganization) return;
@@ -108,7 +110,7 @@ const OrganizationSettings: React.FC = () => {
       }, 1000);
     } catch (err) {
       console.error('Error updating organization:', err);
-      setError('Erreur lors de la sauvegarde des modifications');
+      setError(t('organization.errors.saveError'));
     } finally {
       setSaving(false);
     }
@@ -140,7 +142,7 @@ const OrganizationSettings: React.FC = () => {
     return (
       <div className="p-6">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">Organisation non trouvée</p>
+          <p className="text-red-600 dark:text-red-400">{t('organization.errors.notFound')}</p>
         </div>
       </div>
     );
@@ -152,7 +154,7 @@ const OrganizationSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <Building className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Paramètres de l'Organisation
+            {t('organization.title')}
           </h2>
         </div>
         <button
@@ -165,7 +167,7 @@ const OrganizationSettings: React.FC = () => {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+          <span>{saving ? t('organization.saving') : t('organization.save')}</span>
         </button>
       </div>
 
@@ -181,7 +183,7 @@ const OrganizationSettings: React.FC = () => {
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
           <p className="text-green-600 dark:text-green-400">
-            Paramètres sauvegardés avec succès
+            {t('organization.success')}
           </p>
         </div>
       )}
@@ -190,48 +192,48 @@ const OrganizationSettings: React.FC = () => {
         {/* Basic Information */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Informations de base
+            {t('organization.sections.basicInfo')}
           </h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nom de l'organisation *
+                {t('organization.fields.name')} *
               </label>
               <input
                 type="text"
                 value={orgData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Nom de votre organisation"
+                placeholder={t('organization.placeholders.name')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Slug (identifiant unique)
+                {t('organization.fields.slug')}
               </label>
               <input
                 type="text"
                 value={orgData.slug}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                placeholder="slug-organisation"
+                placeholder={t('organization.placeholders.slug')}
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Le slug ne peut pas être modifié après la création
+                {t('organization.fields.slugHelper')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                {t('organization.fields.description')}
               </label>
               <textarea
                 value={orgData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Description de votre organisation"
+                placeholder={t('organization.placeholders.description')}
               />
             </div>
           </div>
@@ -240,61 +242,61 @@ const OrganizationSettings: React.FC = () => {
         {/* Contact Information */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Informations de contact
+            {t('organization.sections.contactInfo')}
           </h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Personne de contact
+                {t('organization.fields.contactPerson')}
               </label>
               <input
                 type="text"
                 value={orgData.contact_person || ''}
                 onChange={(e) => handleInputChange('contact_person', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Nom de la personne de contact"
+                placeholder={t('organization.placeholders.contactPerson')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <Mail className="inline h-4 w-4 mr-1" />
-                Email
+                {t('organization.fields.email')}
               </label>
               <input
                 type="email"
                 value={orgData.email || ''}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="contact@organisation.com"
+                placeholder={t('organization.placeholders.email')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <Phone className="inline h-4 w-4 mr-1" />
-                Téléphone
+                {t('organization.fields.phone')}
               </label>
               <input
                 type="tel"
                 value={orgData.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="+212 6XX XXX XXX"
+                placeholder={t('organization.placeholders.phone')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <Globe className="inline h-4 w-4 mr-1" />
-                Site web
+                {t('organization.fields.website')}
               </label>
               <input
                 type="url"
                 value={orgData.website || ''}
                 onChange={(e) => handleInputChange('website', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="https://www.organisation.com"
+                placeholder={t('organization.placeholders.website')}
               />
             </div>
           </div>
@@ -304,76 +306,76 @@ const OrganizationSettings: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <MapPin className="inline h-5 w-5 mr-2" />
-            Adresse
+            {t('organization.sections.address')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Adresse
+                {t('organization.fields.address')}
               </label>
               <input
                 type="text"
                 value={orgData.address || ''}
                 onChange={(e) => handleInputChange('address', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Rue, numéro, quartier"
+                placeholder={t('organization.placeholders.address')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Ville
+                {t('organization.fields.city')}
               </label>
               <input
                 type="text"
                 value={orgData.city || ''}
                 onChange={(e) => handleInputChange('city', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Ville"
+                placeholder={t('organization.placeholders.city')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Région/Province
+                {t('organization.fields.state')}
               </label>
               <input
                 type="text"
                 value={orgData.state || ''}
                 onChange={(e) => handleInputChange('state', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Région ou Province"
+                placeholder={t('organization.placeholders.state')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Code postal
+                {t('organization.fields.postalCode')}
               </label>
               <input
                 type="text"
                 value={orgData.postal_code || ''}
                 onChange={(e) => handleInputChange('postal_code', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Code postal"
+                placeholder={t('organization.placeholders.postalCode')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pays
+                {t('organization.fields.country')}
               </label>
               <select
                 value={orgData.country || ''}
                 onChange={(e) => handleInputChange('country', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
               >
-                <option value="">Sélectionner un pays</option>
-                <option value="Morocco">Maroc</option>
-                <option value="France">France</option>
-                <option value="Spain">Espagne</option>
-                <option value="Tunisia">Tunisie</option>
-                <option value="Algeria">Algérie</option>
+                <option value="">{t('organization.placeholders.selectCountry')}</option>
+                <option value="Morocco">{t('organization.countries.morocco')}</option>
+                <option value="France">{t('organization.countries.france')}</option>
+                <option value="Spain">{t('organization.countries.spain')}</option>
+                <option value="Tunisia">{t('organization.countries.tunisia')}</option>
+                <option value="Algeria">{t('organization.countries.algeria')}</option>
               </select>
             </div>
           </div>
@@ -382,7 +384,7 @@ const OrganizationSettings: React.FC = () => {
         {/* Regional Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Paramètres régionaux
+            {t('organization.sections.regionalSettings')}
           </h3>
           <CurrencySelector
             value={orgData.currency || 'MAD'}
@@ -394,7 +396,7 @@ const OrganizationSettings: React.FC = () => {
         {/* Organization Status */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Statut de l'organisation
+            {t('organization.sections.status')}
           </h3>
           <div className="flex items-center space-x-4">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -404,12 +406,12 @@ const OrganizationSettings: React.FC = () => {
                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
             }`}>
-              {orgData.status === 'active' && 'Actif'}
-              {orgData.status === 'inactive' && 'Inactif'}
-              {orgData.status === 'suspended' && 'Suspendu'}
+              {orgData.status === 'active' && t('organization.status.active')}
+              {orgData.status === 'inactive' && t('organization.status.inactive')}
+              {orgData.status === 'suspended' && t('organization.status.suspended')}
             </span>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Contactez le support pour modifier le statut de l'organisation
+              {t('organization.status.contactSupport')}
             </p>
           </div>
         </div>

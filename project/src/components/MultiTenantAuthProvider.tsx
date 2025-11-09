@@ -123,7 +123,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
   // Pass currentOrganization directly to avoid circular dependency
   const { data: subscription, isLoading: subscriptionLoading } = useSubscription(currentOrganization);
-  console.log('🔍 Subscription:', subscription);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 

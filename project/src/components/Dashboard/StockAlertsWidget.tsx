@@ -2,9 +2,11 @@ import React, { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Package, AlertTriangle, ChevronRight, TrendingDown, CheckCircle } from 'lucide-react';
 import { useInventory, type InventoryItem } from '../../hooks/useInventory';
+import { useTranslation } from 'react-i18next';
 
 const StockAlertsWidget: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: inventory = [], isLoading } = useInventory();
 
   // Calculate stock alerts
@@ -46,14 +48,14 @@ const StockAlertsWidget: React.FC = () => {
             <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Stock & Inventaire
+            {t('dashboard.widgets.stock.title')}
           </h3>
         </div>
         <button
           onClick={handleViewStock}
           className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
@@ -64,14 +66,14 @@ const StockAlertsWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-amber-200/20 dark:bg-amber-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Alertes</span>
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">{t('dashboard.widgets.stock.alerts')}</span>
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {lowStockItems.length}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              stock faible
+              {t('dashboard.widgets.stock.lowStock')}
             </div>
           </div>
         </div>
@@ -80,14 +82,14 @@ const StockAlertsWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">OK</span>
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">{t('dashboard.widgets.stock.ok')}</span>
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {healthyStock}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              en stock
+              {t('dashboard.widgets.stock.inStock')}
             </div>
           </div>
         </div>
@@ -101,7 +103,7 @@ const StockAlertsWidget: React.FC = () => {
               <TrendingDown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
             <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-              Stock faible
+              {t('dashboard.widgets.stock.lowStock')}
             </h4>
           </div>
           <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
@@ -125,11 +127,11 @@ const StockAlertsWidget: React.FC = () => {
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
                   <div className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                    {item.quantity || 0} {item.unit || 'units'}
+                    {item.quantity || 0} {item.unit || t('dashboard.widgets.stock.units')}
                   </div>
                   {item.min_stock_level && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      Min: {item.min_stock_level}
+                      {t('dashboard.widgets.stock.min')}: {item.min_stock_level}
                     </div>
                   )}
                 </div>
@@ -141,7 +143,7 @@ const StockAlertsWidget: React.FC = () => {
               onClick={handleViewStock}
               className="mt-3 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
             >
-              +{lowStockItems.length - 5} autres articles en stock faible
+              {t('dashboard.widgets.stock.moreItems', { count: lowStockItems.length - 5 })}
             </button>
           )}
         </div>
@@ -151,7 +153,7 @@ const StockAlertsWidget: React.FC = () => {
             <CheckCircle className="h-8 w-8 text-green-500 dark:text-green-400" />
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            Tous les stocks sont au niveau optimal
+            {t('dashboard.widgets.stock.allOptimal')}
           </p>
         </div>
       )}
@@ -159,7 +161,7 @@ const StockAlertsWidget: React.FC = () => {
       {/* Footer Stats */}
       <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Total produits</span>
+          <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.widgets.stock.totalProducts')}</span>
           <span className="text-lg font-bold text-gray-900 dark:text-white">{totalItems}</span>
         </div>
       </div>

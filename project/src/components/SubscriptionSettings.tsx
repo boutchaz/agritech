@@ -16,10 +16,12 @@ import { useSubscription } from '../hooks/useSubscription';
 import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
 import SubscriptionPlans from './SubscriptionPlans';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useTranslation } from 'react-i18next';
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
   const { currentOrganization } = useAuth();
+  const { t } = useTranslation();
   const [showPlans, setShowPlans] = React.useState(false);
 
   // Query actual usage counts
@@ -77,7 +79,7 @@ const SubscriptionSettings: React.FC = () => {
     }
 
     if (!currentOrganization?.id) {
-      alert('No organization selected. Please select an organization first.');
+      alert(t('subscription.errors.noOrganization'));
       return;
     }
 
@@ -87,7 +89,7 @@ const SubscriptionSettings: React.FC = () => {
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Failed to get checkout URL:', error);
-      alert('Failed to start checkout process. Please check configuration.');
+      alert(t('subscription.errors.checkoutFailed'));
     }
   };
 
@@ -106,7 +108,7 @@ const SubscriptionSettings: React.FC = () => {
           onClick={() => setShowPlans(false)}
           className="mb-6 text-green-600 hover:text-green-700 font-medium"
         >
-          ← Back to Subscription Details
+          ← {t('subscription.backToDetails')}
         </button>
         <SubscriptionPlans onSelectPlan={handleSelectPlan} />
       </div>
@@ -121,7 +123,7 @@ const SubscriptionSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <CreditCard className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Subscription & Billing
+            {t('subscription.title')}
           </h2>
         </div>
 
@@ -129,7 +131,7 @@ const SubscriptionSettings: React.FC = () => {
           onClick={() => setShowPlans(true)}
           className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
-          Change Plan
+          {t('subscription.changePlan')}
         </button>
       </div>
 
@@ -139,14 +141,14 @@ const SubscriptionSettings: React.FC = () => {
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
               <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                Trial Period Active
+                {t('subscription.trial.active')}
               </h3>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Your trial ends on{' '}
-                {subscription.current_period_end
-                  ? new Date(subscription.current_period_end).toLocaleDateString()
-                  : 'N/A'}
-                . Upgrade to continue using premium features.
+                {t('subscription.trial.description', {
+                  endDate: subscription.current_period_end
+                    ? new Date(subscription.current_period_end).toLocaleDateString()
+                    : 'N/A'
+                })}
               </p>
             </div>
           </div>
@@ -157,7 +159,7 @@ const SubscriptionSettings: React.FC = () => {
         {/* Current Plan */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Current Plan
+            {t('subscription.currentPlan')}
           </h3>
 
           {plan && (
@@ -174,7 +176,7 @@ const SubscriptionSettings: React.FC = () => {
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-bold text-green-600">{plan.price}</span>
                 {plan.priceAmount > 0 && (
-                  <span className="text-gray-600 dark:text-gray-400">/month</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
                 )}
               </div>
 
@@ -182,8 +184,8 @@ const SubscriptionSettings: React.FC = () => {
                 <div className="flex items-center space-x-2 text-sm">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-700 dark:text-gray-300">
-                    Status:{' '}
-                    <span className="font-medium capitalize">{subscription?.status}</span>
+                    {t('subscription.status')}:{' '}
+                    <span className="font-medium capitalize">{t(`subscription.statuses.${subscription?.status || 'unknown'}`)}</span>
                   </span>
                 </div>
 
@@ -191,7 +193,7 @@ const SubscriptionSettings: React.FC = () => {
                   <div className="flex items-center space-x-2 text-sm mt-2">
                     <Calendar className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-700 dark:text-gray-300">
-                      Renews on:{' '}
+                      {t('subscription.renewsOn')}:{' '}
                       {new Date(subscription.current_period_end).toLocaleDateString()}
                     </span>
                   </div>
@@ -204,27 +206,27 @@ const SubscriptionSettings: React.FC = () => {
         {/* Usage Limits */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Usage & Limits
+            {t('subscription.usageAndLimits')}
           </h3>
 
           <div className="space-y-4">
             <UsageBar
               icon={<Building2 className="h-5 w-5 text-gray-500" />}
-              label="Farms"
+              label={t('subscription.usage.farms')}
               current={usage?.farms_count || 0}
               limit={subscription?.max_farms || 0}
             />
 
             <UsageBar
               icon={<MapPin className="h-5 w-5 text-gray-500" />}
-              label="Parcels"
+              label={t('subscription.usage.parcels')}
               current={usage?.parcels_count || 0}
               limit={subscription?.max_parcels || 0}
             />
 
             <UsageBar
               icon={<Users className="h-5 w-5 text-gray-500" />}
-              label="Users"
+              label={t('subscription.usage.users')}
               current={usage?.users_count || 0}
               limit={subscription?.max_users || 0}
             />
@@ -232,7 +234,7 @@ const SubscriptionSettings: React.FC = () => {
             {subscription && subscription.max_satellite_reports > 0 && (
               <UsageBar
                 icon={<Satellite className="h-5 w-5 text-gray-500" />}
-                label="Satellite Reports"
+                label={t('subscription.usage.satelliteReports')}
                 current={usage?.satellite_reports_count || 0}
                 limit={subscription.max_satellite_reports}
               />
@@ -243,7 +245,7 @@ const SubscriptionSettings: React.FC = () => {
         {/* Features */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Your Features
+            {t('subscription.features')}
           </h3>
 
           {plan && (
@@ -263,12 +265,11 @@ const SubscriptionSettings: React.FC = () => {
         {/* Billing Portal */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Billing Management
+            {t('subscription.billingManagement')}
           </h3>
 
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Manage your payment methods, view invoices, and update billing information
-            through our secure billing portal.
+            {t('subscription.billingDescription')}
           </p>
 
           <a
@@ -277,7 +278,7 @@ const SubscriptionSettings: React.FC = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            <span>Open Billing Portal</span>
+            <span>{t('subscription.openBillingPortal')}</span>
             <ExternalLink className="h-4 w-4" />
           </a>
         </div>

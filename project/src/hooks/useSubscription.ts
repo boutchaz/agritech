@@ -9,6 +9,7 @@ export interface Subscription {
   organization_id: string;
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'paused';
   plan_id: string | null;
+  plan_type: 'essential' | 'professional' | 'enterprise' | null;
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
@@ -49,7 +50,7 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
       try {
         const { data, error } = await authSupabase
           .from('subscriptions')
-          .select('id, organization_id, status, plan_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
+          .select('id, organization_id, status, plan_id, plan_type, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
           .eq('organization_id', orgId)
           .maybeSingle();
 

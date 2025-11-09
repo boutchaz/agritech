@@ -141,29 +141,29 @@ export function getPlanDetails(planType: PlanType): PlanDetails {
 }
 
 export function canAccessFeature(
-  subscription: { plan_type: PlanType } | null,
+  subscription: { plan_type: PlanType | null } | null,
   feature: keyof PlanDetails['capabilities']
 ): boolean {
-  if (!subscription) return false;
+  if (!subscription || !subscription.plan_type) return false;
   const plan = getPlanDetails(subscription.plan_type);
   return plan.capabilities[feature];
 }
 
 export function hasReachedLimit(
-  subscription: { plan_type: PlanType } | null,
+  subscription: { plan_type: PlanType | null } | null,
   usage: number,
   limitType: keyof PlanDetails['limits']
 ): boolean {
-  if (!subscription) return true;
+  if (!subscription || !subscription.plan_type) return true;
   const plan = getPlanDetails(subscription.plan_type);
   return usage >= plan.limits[limitType];
 }
 
 export function isModuleAvailable(
-  subscription: { plan_type: PlanType } | null,
+  subscription: { plan_type: PlanType | null } | null,
   moduleId: string
 ): boolean {
-  if (!subscription) return false;
+  if (!subscription || !subscription.plan_type) return false;
   const plan = getPlanDetails(subscription.plan_type);
 
   // Check if plan has all modules

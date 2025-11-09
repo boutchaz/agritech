@@ -4,12 +4,28 @@ import { TestTube, TrendingUp, ChevronRight, AlertCircle, CheckCircle } from 'lu
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useSoilAnalyses } from '../../hooks/useSoilAnalyses';
 import { format, parseISO } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { fr } from 'date-fns/locale';
+import { ar } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 const SoilAnalysisWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentFarm } = useAuth();
+  const { t, i18n } = useTranslation();
   const { analyses, loading } = useSoilAnalyses(currentFarm?.id || '');
+
+  // Get locale for date formatting
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -68,13 +84,13 @@ const SoilAnalysisWidget: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <TestTube className="h-5 w-5 text-teal-600" />
-          Analyses du Sol
+          {t('dashboard.widgets.soil.title')}
         </h3>
         <button
           onClick={handleViewAnalyses}
           className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -85,27 +101,27 @@ const SoilAnalysisWidget: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-teal-50 dark:bg-teal-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Total</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.widgets.soil.total')}</span>
                 <TestTube className="h-4 w-4 text-teal-600" />
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.total}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                analyses
+                {t('dashboard.widgets.soil.analyses')}
               </div>
             </div>
 
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Récentes</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.widgets.soil.recent')}</span>
                 <TrendingUp className="h-4 w-4 text-blue-600" />
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.recent}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                derniers 30j
+                {t('dashboard.widgets.soil.last30Days')}
               </div>
             </div>
           </div>
@@ -117,10 +133,10 @@ const SoilAnalysisWidget: React.FC = () => {
                 <AlertCircle className="h-5 w-5 text-amber-600" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                    {stats.needsAttention} parcelle{stats.needsAttention > 1 ? 's' : ''} nécessite{stats.needsAttention > 1 ? 'nt' : ''} une attention
+                    {t('dashboard.widgets.soil.needsAttention', { count: stats.needsAttention })}
                   </p>
                   <p className="text-xs text-amber-700 dark:text-amber-300">
-                    pH ou niveaux de nutriments hors norme
+                    {t('dashboard.widgets.soil.outOfNorm')}
                   </p>
                 </div>
               </div>
@@ -131,16 +147,16 @@ const SoilAnalysisWidget: React.FC = () => {
           {stats.latestAnalysis && (
             <div>
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Dernière analyse
+                {t('dashboard.widgets.soil.latestAnalysis')}
               </h4>
               <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {stats.latestAnalysis.parcel_name || 'Parcelle'}
+                      {stats.latestAnalysis.parcel_name || t('dashboard.widgets.soil.parcel')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {format(parseISO(stats.latestAnalysis.analysis_date), 'dd MMMM yyyy', { locale: fr })}
+                      {format(parseISO(stats.latestAnalysis.analysis_date), 'dd MMMM yyyy', { locale: getLocale() })}
                     </p>
                   </div>
                   {stats.latestAnalysis.ph_level && (
@@ -187,7 +203,7 @@ const SoilAnalysisWidget: React.FC = () => {
           {stats.needsAttention === 0 && stats.total > 0 && (
             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
               <CheckCircle className="h-4 w-4" />
-              <span>Toutes les analyses sont dans les normes</span>
+              <span>{t('dashboard.widgets.soil.allInNorm')}</span>
             </div>
           )}
         </>
@@ -195,13 +211,13 @@ const SoilAnalysisWidget: React.FC = () => {
         <div className="text-center py-6">
           <TestTube className="h-12 w-12 mx-auto mb-2 text-gray-300" />
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Aucune analyse du sol
+            {t('dashboard.widgets.soil.empty')}
           </p>
           <button
             onClick={handleViewAnalyses}
             className="mt-2 text-sm text-green-600 hover:text-green-700 dark:text-green-400"
           >
-            Ajouter une analyse
+            {t('dashboard.widgets.soil.addAnalysis')}
           </button>
         </div>
       )}

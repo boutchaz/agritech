@@ -50,7 +50,23 @@
     "productApplications": "تطبيقات المنتجات",
     "expenses": "التكاليف",
     "personnel": "الموظفون",
-    "tasks": "المهام"
+    "tasks": "المهام",
+    "productionIntelligence": "ذكاء الإنتاج",
+    "accountingBilling": "المحاسبة والفوترة",
+    "chartOfAccounts": "دليل الحسابات",
+    "salesProcess": "عملية المبيعات",
+    "quotes": "عروض الأسعار",
+    "salesOrders": "أوامر المبيعات",
+    "purchaseOrders": "أوامر الشراء",
+    "financialRecords": "السجلات المالية",
+    "invoices": "الفواتير",
+    "payments": "المدفوعات",
+    "journal": "اليومية",
+    "setupReports": "الإعداد والتقارير",
+    "customers": "العملاء",
+    "agriculture": "الزراعة",
+    "elevage": "تربية المواشي",
+    "alerts": "التنبيهات"
   },
   "stock": {
     "title": "إدارة المخزون",
@@ -69,6 +85,8 @@
     "loading": "جاري تحميل المنظمة...",
     "heroTitle": "إدارة عمليات المزرعة الزراعية",
     "quickActions": "إجراءات سريعة",
+    "pageTitle": "لوحة القيادة",
+    "metaDescription": "قم بإدارة مزارعك: تصور القطع والمهام والتحليلات والمحاسبة في واجهة واحدة.",
     "keyFeatures": {
       "title": "الميزات الرئيسية للمنصة",
       "subtitle": "قم بتفعيل الوحدات التي تدعم أهدافك اليومية والوصول بسرعة إلى الإجراءات الاستراتيجية",
@@ -96,6 +114,45 @@
     "unifiedView": {
       "title": "عرض تشغيلي موحد",
       "subtitle": "راقب مؤشراتك الرئيسية مباشرةً: المهام ذات الأولوية وبيانات الطقس والأداء المالي"
+    },
+    "structuredData": {
+      "platformName": "منصة إدارة زراعية",
+      "description": "حل موحد لإدارة الزراعة: المزارع والقطع والمهام والمحاسبة والتحليلات.",
+      "services": {
+        "parcels": "إدارة القطع",
+        "tasks": "تخطيط المهام",
+        "accounting": "المحاسبة الزراعية",
+        "analyses": "تحليلات المختبر"
+      }
+    },
+    "commands": {
+      "sections": {
+        "navigation": "التنقل",
+        "modules": "الوحدات",
+        "preferences": "التفضيلات"
+      },
+      "navigation": {
+        "dashboard": "الانتقال إلى لوحة القيادة",
+        "dashboardKeywords": "لوحة القيادة الرئيسية",
+        "analyses": "فتح التحليلات",
+        "analysesKeywords": "تحليلات التربة تقرير",
+        "parcels": "عرض القطع",
+        "parcelsKeywords": "قطع حقول خريطة",
+        "stock": "الوصول إلى المخزون",
+        "stockKeywords": "مخزون جرد",
+        "infrastructure": "عرض البنية التحتية",
+        "infrastructureKeywords": "بنية تحتية ري معدات",
+        "settings": "فتح الإعدادات",
+        "settingsKeywords": "إعدادات منظمة"
+      },
+      "modules": {
+        "subtitle": "الوحدات المتاحة"
+      },
+      "preferences": {
+        "lightMode": "التبديل إلى الوضع الفاتح",
+        "darkMode": "التبديل إلى الوضع الداكن",
+        "themeKeywords": "مظهر داكن فاتح وضع"
+      }
     },
     "widgets": {
       "noFarmSelected": "حدد مزرعة لعرض القطع والبيانات المرتبطة",
@@ -139,7 +196,167 @@
       "alerts": {
         "title": "تنبيهات المخزون",
         "lowStock": "مخزون منخفض"
+      },
+      "viewAll": "عرض الكل",
+      "parcels": {
+        "title": "القطع",
+        "total": "الإجمالي",
+        "parcels": "قطع",
+        "surface": "المساحة",
+        "hectares": "هكتار",
+        "topCrops": "المحاصيل الرئيسية",
+        "empty": "لم يتم إنشاء أي قطعة",
+        "create": "إنشاء قطعة",
+        "unspecifiedCrop": "غير محدد"
+      },
+      "workers": {
+        "title": "نشاط العمال",
+        "active": "نشط",
+        "outOfTotal": "من أصل {{total}} إجمالي",
+        "today": "اليوم",
+        "activeToday": "نشط",
+        "tasksInProgress": "المهام قيد التنفيذ",
+        "tasksScheduledToday": "{{count}} مهمة مجدولة اليوم",
+        "tasksScheduledToday_plural": "{{count}} مهام مجدولة اليوم",
+        "mostActive": "الأكثر نشاطاً",
+        "tasks": "مهام",
+        "empty": "لا يوجد عمال مسجلون",
+        "addWorkers": "إضافة عمال"
+      },
+      "stock": {
+        "title": "المخزون والمخزون",
+        "alerts": "التنبيهات",
+        "lowStock": "مخزون منخفض",
+        "ok": "حسناً",
+        "inStock": "في المخزون",
+        "units": "وحدات",
+        "min": "الحد الأدنى",
+        "moreItems": "+{{count}} عناصر أخرى في المخزون المنخفض",
+        "allOptimal": "جميع المخزونات في المستوى الأمثل",
+        "totalProducts": "إجمالي المنتجات"
+      },
+      "harvests": {
+        "title": "الحصاد",
+        "thisMonth": "هذا الشهر",
+        "harvests": "حصاد",
+        "quantity": "الكمية",
+        "kgThisMonth": "كجم هذا الشهر",
+        "lastHarvest": "آخر حصاد",
+        "parcel": "القطعة",
+        "quality": "الجودة",
+        "kg": "كجم",
+        "totalHarvests": "إجمالي الحصاد",
+        "empty": "لا يوجد حصاد مسجل",
+        "record": "تسجيل حصاد"
+      },
+      "tasks": {
+        "title": "المهام القادمة",
+        "noTasks": "لا توجد مهام مجدولة",
+        "upcomingSummary": "{{count}} مهمة قادمة في الثلاثين يوماً القادمة",
+        "upcomingSummary_plural": "{{count}} مهام قادمة في الثلاثين يوماً القادمة",
+        "priority": {
+          "low": "منخفضة",
+          "medium": "متوسطة",
+          "high": "عالية",
+          "urgent": "عاجلة"
+        },
+        "status": {
+          "pending": "قيد الانتظار",
+          "assigned": "مُعيَّنة",
+          "inProgress": "قيد التنفيذ",
+          "completed": "مكتملة",
+          "cancelled": "ملغاة",
+          "paused": "متوقفة"
+        }
+      },
+      "soil": {
+        "title": "تحليلات التربة",
+        "total": "الإجمالي",
+        "analyses": "تحليلات",
+        "recent": "حديثة",
+        "last30Days": "آخر 30 يوم",
+        "needsAttention": "{{count}} قطعة تحتاج إلى انتباه",
+        "needsAttention_plural": "{{count}} قطع تحتاج إلى انتباه",
+        "outOfNorm": "الأس الهيدروجيني أو مستويات العناصر الغذائية خارج المعيار",
+        "latestAnalysis": "آخر تحليل",
+        "parcel": "القطعة",
+        "allInNorm": "جميع التحليلات ضمن المعايير",
+        "empty": "لا يوجد تحليل للتربة",
+        "addAnalysis": "إضافة تحليل"
       }
+    },
+    "title": "لوحة التحكم",
+    "description": "قم بتخصيص عرض لوحة التحكم الخاصة بك عن طريق اختيار البيانات المراد عرضها وتخطيطها.",
+    "saving": "جاري الحفظ...",
+    "sections": {
+      "dataDisplay": "البيانات المراد عرضها",
+      "alerts": "التنبيهات والإشعارات",
+      "layout": "تخطيط لوحة التحكم"
+    },
+    "data": {
+      "soil": {
+        "title": "بيانات التربة",
+        "description": "الرطوبة، الأس الهيدروجيني، العناصر الغذائية"
+      },
+      "climate": {
+        "title": "البيانات المناخية",
+        "description": "درجة الحرارة، الرطوبة، هطول الأمطار"
+      },
+      "irrigation": {
+        "title": "بيانات الري",
+        "description": "استهلاك المياه، الجدولة"
+      },
+      "maintenance": {
+        "title": "بيانات الصيانة",
+        "description": "حالة المعدات، التدخلات"
+      },
+      "production": {
+        "title": "بيانات الإنتاج",
+        "description": "المحاصيل، الحصاد، الجودة"
+      },
+      "financial": {
+        "title": "البيانات المالية",
+        "description": "التكاليف، الإيرادات، الربحية"
+      }
+    },
+    "alerts": {
+      "stock": {
+        "title": "تنبيهات المخزون",
+        "description": "مخزون منخفض، نقص، انتهاء الصلاحية"
+      },
+      "tasks": {
+        "title": "تنبيهات المهام",
+        "description": "مهام متأخرة، مواعيد نهائية"
+      }
+    },
+    "layout": {
+      "topRow": "الصف العلوي",
+      "middleRow": "الصف الأوسط",
+      "bottomRow": "الصف السفلي",
+      "helper": "اضغط على Ctrl/Cmd لتحديد خيارات متعددة"
+    },
+    "layoutOptions": {
+      "soil": "بيانات التربة",
+      "climate": "البيانات المناخية",
+      "irrigation": "الري",
+      "maintenance": "الصيانة",
+      "production": "الإنتاج",
+      "financial": "المالية",
+      "stock": "المخزون",
+      "alerts": "التنبيهات",
+      "tasks": "المهام",
+      "weather": "الطقس"
+    },
+    "preview": {
+      "title": "معاينة التخطيط"
+    },
+    "save": {
+      "success": "تم حفظ الإعدادات بنجاح",
+      "failed": "فشل حفظ الإعدادات",
+      "failedDescription": "حدث خطأ أثناء حفظ الإعدادات."
+    },
+    "errors": {
+      "userOrOrgNotFound": "المستخدم أو المنظمة غير موجود"
     }
   },
   "profitability": {
@@ -705,6 +922,502 @@
       "goToSettings": "الانتقال إلى إعدادات وحدات العمل",
       "noUnitsFound": "لم يتم العثور على وحدات عمل. أنشئ وحدات في الإعدادات أولاً.",
       "loadingUnits": "جاري تحميل الوحدات..."
+    }
+  },
+  "subscriptionBanner": {
+    "trialPeriod": "أنت في فترة تجريبية.",
+    "days": "أيام",
+    "remaining": "متبقية",
+    "trialEndingSoon": "تنتهي الفترة التجريبية قريباً!",
+    "pastDue": "دفعة اشتراكك متأخرة. يرجى تحديث طريقة الدفع الخاصة بك.",
+    "canceled": "تم إلغاء اشتراكك. قم بإعادة التفعيل للمتابعة في استخدام الميزات المميزة.",
+    "upgradeNow": "ترقية الآن",
+    "manageSubscription": "إدارة الاشتراك"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "subtitle": "إدارة تفضيلاتك وإعداداتك",
+    "loading": "جاري تحميل المنظمة...",
+    "menu": {
+      "profile": "ملفي الشخصي",
+      "profileDescription": "إدارة معلوماتك الشخصية",
+      "preferences": "التفضيلات",
+      "preferencesDescription": "إعدادات التطبيق",
+      "organization": "المنظمة",
+      "organizationDescription": "إعدادات المنظمة",
+      "subscription": "الاشتراك",
+      "subscriptionDescription": "إدارة اشتراكك",
+      "modules": "الوحدات",
+      "modulesDescription": "تفعيل/تعطيل الوحدات",
+      "users": "المستخدمون",
+      "usersDescription": "إدارة المستخدمين",
+      "workUnits": "وحدات العمل",
+      "workUnitsDescription": "إدارة الوحدات للدفع بالقطعة",
+      "dashboard": "لوحة التحكم",
+      "dashboardDescription": "تكوين لوحة التحكم",
+      "documents": "قوالب المستندات",
+      "documentsDescription": "تخصيص الرؤوس والتذييلات"
+    }
+  },
+  "profile": {
+    "title": "ملفي الشخصي",
+    "save": "حفظ",
+    "saving": "جاري الحفظ...",
+    "success": "تم حفظ الملف الشخصي بنجاح",
+    "cancel": "إلغاء",
+    "changePhoto": "تغيير الصورة",
+    "photoFormats": "الصيغ المقبولة: JPG، PNG (حد أقصى 2MB)",
+    "sections": {
+      "personalInfo": "المعلومات الشخصية",
+      "preferences": "التفضيلات",
+      "security": "الأمان"
+    },
+    "fields": {
+      "fullName": "الاسم الكامل",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "emailHelper": "لا يمكن تغيير البريد الإلكتروني هنا",
+      "role": "الدور",
+      "roleHelper": "الدور في {{orgName}}",
+      "roleHelperOrg": "الدور في المنظمة",
+      "phone": "الهاتف",
+      "timezone": "المنطقة الزمنية",
+      "language": "اللغة",
+      "profilePhoto": "صورة الملف الشخصي"
+    },
+    "placeholders": {
+      "fullName": "اسمك الكامل",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "phone": "+212 6XX XXX XXX"
+    },
+    "timezones": {
+      "utc": "UTC (التوقيت العالمي المنسق)",
+      "morocco": "المغرب (GMT+1)",
+      "france": "فرنسا (GMT+1)",
+      "spain": "إسبانيا (GMT+1)",
+      "tunisia": "تونس (GMT+1)",
+      "algeria": "الجزائر (GMT+1)"
+    },
+    "roles": {
+      "admin": "المدير",
+      "manager": "المدير",
+      "worker": "الموظف",
+      "laborer": "العامل اليومي",
+      "other": "آخر"
+    },
+    "password": {
+      "title": "كلمة المرور",
+      "lastModified": "آخر تعديل: منذ بضعة أيام",
+      "change": "تغيير كلمة المرور",
+      "changing": "جاري التغيير...",
+      "current": "كلمة المرور الحالية",
+      "new": "كلمة المرور الجديدة",
+      "confirm": "تأكيد كلمة المرور الجديدة",
+      "currentPlaceholder": "كلمة المرور الحالية",
+      "newPlaceholder": "كلمة المرور الجديدة",
+      "confirmPlaceholder": "تأكيد كلمة المرور الجديدة"
+    },
+    "errors": {
+      "notFound": "الملف الشخصي غير موجود",
+      "loadError": "خطأ في تحميل الملف الشخصي",
+      "saveError": "خطأ في حفظ الملف الشخصي",
+      "passwordMismatch": "كلمات المرور الجديدة غير متطابقة",
+      "passwordTooShort": "يجب أن تحتوي كلمة المرور الجديدة على 6 أحرف على الأقل",
+      "passwordChangeError": "خطأ في تغيير كلمة المرور"
+    }
+  },
+  "preferences": {
+    "title": "التفضيلات",
+    "subtitle": "خصص تجربتك مع التطبيق وفقًا لتفضيلاتك.",
+    "loading": "جاري تحميل التفضيلات...",
+    "save": "حفظ",
+    "saving": "جاري الحفظ...",
+    "success": "تم حفظ التفضيلات",
+    "successDescription": "تم تحديث تفضيلاتك بنجاح.",
+    "sections": {
+      "interface": "واجهة المستخدم",
+      "notifications": "الإشعارات",
+      "dataPrivacy": "البيانات والخصوصية"
+    },
+    "fields": {
+      "language": "اللغة",
+      "timezone": "المنطقة الزمنية"
+    },
+    "timezones": {
+      "utc": "UTC (التوقيت العالمي المنسق)",
+      "morocco": "المغرب (GMT+1)",
+      "france": "فرنسا (GMT+1)",
+      "spain": "إسبانيا (GMT+1)",
+      "tunisia": "تونس (GMT+1)",
+      "algeria": "الجزائر (GMT+1)"
+    },
+    "notifications": {
+      "email": {
+        "title": "إشعارات البريد الإلكتروني",
+        "description": "تلقي إشعارات مهمة عبر البريد الإلكتروني"
+      },
+      "push": {
+        "title": "الإشعارات الفورية",
+        "description": "تلقي الإشعارات في المتصفح"
+      },
+      "alerts": {
+        "title": "تنبيهات النظام",
+        "description": "تنبيهات حرجة وتحذيرات مهمة"
+      },
+      "reports": {
+        "title": "التقارير الدورية",
+        "description": "تلقي تقارير أسبوعية وشهرية"
+      }
+    },
+    "dataPrivacy": {
+      "analytics": {
+        "title": "تحليلات الاستخدام",
+        "description": "المساعدة في تحسين التطبيق من خلال مشاركة بيانات الاستخدام المجهولة"
+      },
+      "privacyNote": "بياناتك محمية وفقًا لسياسة الخصوصية الخاصة بنا. يمكنك تعديل هذه الإعدادات في أي وقت."
+    },
+    "errors": {
+      "notLoggedIn": "خطأ",
+      "notLoggedInDescription": "يجب أن تكون مسجلاً الدخول لحفظ تفضيلاتك.",
+      "saveError": "خطأ في الحفظ",
+      "saveErrorDescription": "تعذر حفظ تفضيلاتك. يرجى المحاولة مرة أخرى."
+    },
+    "experienceLevel": {
+      "title": "مستوى الخبرة",
+      "subtitle": "اختر مستوى تعقيد الواجهة الذي يناسبك. يمكنك تعديله في أي وقت.",
+      "current": "الحالي",
+      "featuresLabel": "الميزات",
+      "success": "تم تحديث مستوى الخبرة",
+      "successDescription": "أنت الآن في مستوى {{level}}. تم تعديل ميزات الواجهة.",
+      "error": "خطأ في التحديث",
+      "errorDescription": "تعذر حفظ مستوى خبرتك. يرجى المحاولة مرة أخرى.",
+      "levels": {
+        "basic": {
+          "label": "أساسي",
+          "description": "واجهة مبسطة مع إرشادات وقيم افتراضية ذكية"
+        },
+        "medium": {
+          "label": "متوسط",
+          "description": "ميزات متقدمة مع مساعدة سياقية متاحة"
+        },
+        "expert": {
+          "label": "خبير",
+          "description": "وصول كامل مع جميع الميزات المتقدمة"
+        }
+      },
+      "features": {
+        "advancedFilters": "مرشحات متقدمة",
+        "analytics": "تحليلات مفصلة",
+        "bulkActions": "إجراءات مجمعة",
+        "guidedTours": "جولات إرشادية",
+        "contextualHelp": "مساعدة سياقية",
+        "dataExport": "تصدير البيانات",
+        "keyboardShortcuts": "اختصارات لوحة المفاتيح",
+        "apiAccess": "الوصول إلى API"
+      }
+    }
+  },
+  "organization": {
+    "title": "إعدادات المنظمة",
+    "save": "حفظ",
+    "saving": "جاري الحفظ...",
+    "success": "تم حفظ الإعدادات بنجاح",
+    "sections": {
+      "basicInfo": "المعلومات الأساسية",
+      "contactInfo": "معلومات الاتصال",
+      "address": "العنوان",
+      "regionalSettings": "الإعدادات الإقليمية",
+      "status": "حالة المنظمة"
+    },
+    "fields": {
+      "name": "اسم المنظمة",
+      "slug": "المعرف الفريد",
+      "slugHelper": "لا يمكن تعديل المعرف بعد الإنشاء",
+      "description": "الوصف",
+      "contactPerson": "الشخص المسؤول",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "website": "الموقع الإلكتروني",
+      "address": "العنوان",
+      "city": "المدينة",
+      "state": "المنطقة/المحافظة",
+      "postalCode": "الرمز البريدي",
+      "country": "البلد"
+    },
+    "placeholders": {
+      "name": "اسم منظمتك",
+      "slug": "معرف-المنظمة",
+      "description": "وصف منظمتك",
+      "contactPerson": "اسم الشخص المسؤول",
+      "email": "contact@organization.com",
+      "phone": "+212 6XX XXX XXX",
+      "website": "https://www.organization.com",
+      "address": "الشارع، الرقم، الحي",
+      "city": "المدينة",
+      "state": "المنطقة أو المحافظة",
+      "postalCode": "الرمز البريدي",
+      "selectCountry": "اختر بلدًا"
+    },
+    "countries": {
+      "morocco": "المغرب",
+      "france": "فرنسا",
+      "spain": "إسبانيا",
+      "tunisia": "تونس",
+      "algeria": "الجزائر"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "suspended": "معلق",
+      "contactSupport": "اتصل بالدعم لتعديل حالة المنظمة"
+    },
+    "errors": {
+      "notFound": "المنظمة غير موجودة",
+      "loadError": "خطأ في تحميل بيانات المنظمة",
+      "saveError": "خطأ في حفظ التعديلات"
+    }
+  },
+  "subscription": {
+    "title": "الاشتراك والفوترة",
+    "changePlan": "تغيير الخطة",
+    "backToDetails": "العودة إلى تفاصيل الاشتراك",
+    "currentPlan": "الخطة الحالية",
+    "perMonth": "/شهر",
+    "status": "الحالة",
+    "renewsOn": "تجديد في",
+    "usageAndLimits": "الاستخدام والحدود",
+    "features": "ميزاتك",
+    "billingManagement": "إدارة الفوترة",
+    "billingDescription": "إدارة طرق الدفع الخاصة بك، وعرض الفواتير، وتحديث معلومات الفوترة من خلال بوابة الفوترة الآمنة.",
+    "openBillingPortal": "فتح بوابة الفوترة",
+    "trial": {
+      "active": "فترة التجربة نشطة",
+      "description": "تنتهي فترة التجربة في {{endDate}}. قم بالترقية للاستمرار في استخدام الميزات المميزة."
+    },
+    "statuses": {
+      "active": "نشط",
+      "trialing": "في التجربة",
+      "past_due": "متأخر",
+      "canceled": "ملغي",
+      "incomplete": "غير مكتمل",
+      "incomplete_expired": "غير مكتمل منتهي الصلاحية",
+      "unpaid": "غير مدفوع",
+      "unknown": "غير معروف"
+    },
+    "usage": {
+      "farms": "المزارع",
+      "parcels": "القطع",
+      "users": "المستخدمون",
+      "satelliteReports": "تقارير الأقمار الصناعية"
+    },
+    "plans": {
+      "title": "اختر خطتك",
+      "subtitle": "اختر الخطة المثالية لعملياتك الزراعية",
+      "mostPopular": "الأكثر شعبية",
+      "currentPlan": "الخطة الحالية",
+      "contactSales": "اتصل بالمبيعات",
+      "getStarted": "ابدأ"
+    },
+    "errors": {
+      "noOrganization": "لم يتم اختيار منظمة. يرجى اختيار منظمة أولاً.",
+      "checkoutFailed": "فشل بدء عملية الدفع. يرجى التحقق من الإعدادات."
+    }
+  },
+  "users": {
+    "title": "المستخدمون",
+    "description": "إدارة مستخدمي منظمتك. تحكم في الوصول والأذونات.",
+    "count": "{{count}} مستخدم",
+    "count_plural": "{{count}} مستخدمين",
+    "defaultName": "مستخدم",
+    "you": "أنت",
+    "upgradeToInvite": "قم بالترقية لدعوة المزيد من المستخدمين",
+    "accessDenied": {
+      "title": "تم رفض الوصول",
+      "description": "ليس لديك الصلاحيات اللازمة لإدارة المستخدمين."
+    },
+    "empty": {
+      "title": "لا يوجد مستخدمون",
+      "description": "ابدأ بدعوة المستخدمين إلى منظمتك."
+    },
+    "table": {
+      "user": "المستخدم",
+      "role": "الدور",
+      "status": "الحالة",
+      "joinedOn": "انضم في",
+      "actions": "الإجراءات"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "actions": {
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "remove": "إزالة من المنظمة"
+    },
+    "invite": {
+      "title": "دعوة مستخدم",
+      "description": "قم بدعوة مستخدم موجود للانضمام إلى منظمتك.",
+      "button": "دعوة مستخدم",
+      "cancel": "إلغاء",
+      "invite": "دعوة",
+      "inviting": "جاري الإرسال...",
+      "success": "تم إرسال الدعوة",
+      "successDescription": "تم إرسال بريد دعوة إلى {{email}}. سيتم إضافتهم إلى المنظمة بمجرد قبول الدعوة.",
+      "failed": "فشل دعوة المستخدم",
+      "failedDescription": "حدث خطأ أثناء إرسال الدعوة.",
+      "fields": {
+        "email": "عنوان البريد الإلكتروني",
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "role": "الدور"
+      },
+      "placeholders": {
+        "email": "user@example.com",
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "selectRole": "اختر دورًا"
+      }
+    },
+    "updateRole": {
+      "success": "تم تحديث دور المستخدم بنجاح",
+      "failed": "فشل تحديث دور المستخدم"
+    },
+    "updateStatus": {
+      "success": "تم تحديث حالة المستخدم إلى {{status}}",
+      "failed": "فشل تحديث حالة المستخدم"
+    },
+    "remove": {
+      "confirm": "هل أنت متأكد من أنك تريد إزالة هذا المستخدم من المنظمة؟",
+      "success": "تم إزالة المستخدم بنجاح",
+      "failed": "فشل إزالة المستخدم"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل المستخدمين"
+    }
+  },
+  "workUnits": {
+    "title": "وحدات العمل",
+    "description": "إدارة الوحدات لتتبع الدفع بالقطعة (شجرة، صندوق، كجم، لتر، إلخ)",
+    "accessDenied": "تحتاج إلى أذونات المسؤول لإدارة وحدات العمل.",
+    "addUnit": "إضافة وحدة",
+    "loadDefaults": "تحميل الوحدات الافتراضية",
+    "searchPlaceholder": "البحث عن الوحدات...",
+    "allCategories": "جميع الفئات",
+    "loading": "جاري تحميل الوحدات...",
+    "empty": "لم يتم العثور على وحدات عمل.",
+    "emptyHint": "انقر فوق \"تحميل الوحدات الافتراضية\" للبدء.",
+    "inactive": "غير نشط",
+    "code": "الرمز",
+    "used": "تم استخدامه {{count}} مرة",
+    "used_plural": "تم استخدامه {{count}} مرة",
+    "cancel": "إلغاء",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "categories": {
+      "count": "العدد (وحدات، أشجار، صناديق)",
+      "weight": "الوزن (كجم، أطنان)",
+      "volume": "الحجم (لترات، م³)",
+      "area": "المساحة (هكتارات، م²)",
+      "length": "الطول (أمتار، كم)"
+    },
+    "stats": {
+      "totalUnits": "إجمالي الوحدات",
+      "active": "نشط",
+      "categories": "الفئات"
+    },
+    "dialog": {
+      "createTitle": "إنشاء وحدة عمل",
+      "editTitle": "تعديل وحدة عمل"
+    },
+    "form": {
+      "code": "الرمز",
+      "codePlaceholder": "مثال: شجرة، كجم",
+      "category": "الفئة",
+      "nameEn": "الاسم (الإنجليزية)",
+      "nameEnPlaceholder": "مثال: Tree, Kilogram",
+      "nameFr": "الاسم (الفرنسية)",
+      "nameFrPlaceholder": "مثال: Arbre, Kilogramme",
+      "nameAr": "الاسم (العربية)",
+      "nameArPlaceholder": "مثال: شجرة، كيلوغرام",
+      "allowDecimal": "السماح بالقيم العشرية",
+      "active": "نشط"
+    },
+    "validation": {
+      "codeRequired": "الرمز مطلوب",
+      "codeMaxLength": "يجب أن يكون الرمز 20 حرفًا أو أقل",
+      "nameRequired": "الاسم مطلوب",
+      "nameMaxLength": "يجب أن يكون الاسم 100 حرف أو أقل"
+    },
+    "create": {
+      "success": "تم إنشاء وحدة العمل بنجاح",
+      "failed": "فشل إنشاء وحدة العمل",
+      "failedDescription": "حدث خطأ أثناء إنشاء وحدة العمل."
+    },
+    "update": {
+      "success": "تم تحديث وحدة العمل بنجاح",
+      "failed": "فشل تحديث وحدة العمل",
+      "failedDescription": "حدث خطأ أثناء تحديث وحدة العمل."
+    },
+    "delete": {
+      "confirm": "هل أنت متأكد من أنك تريد حذف وحدة العمل هذه؟ لا يمكن التراجع عن هذا الإجراء.",
+      "success": "تم حذف وحدة العمل بنجاح",
+      "failed": "فشل حذف وحدة العمل",
+      "failedDescription": "حدث خطأ أثناء حذف وحدة العمل."
+    },
+    "seed": {
+      "success": "تم تحميل الوحدات الافتراضية بنجاح",
+      "failed": "فشل تحميل الوحدات الافتراضية",
+      "failedDescription": "حدث خطأ أثناء تحميل الوحدات الافتراضية."
+    },
+    "errors": {
+      "noOrganization": "لم يتم اختيار منظمة"
+    }
+  },
+  "documents": {
+    "title": "قوالب المستندات",
+    "description": "قم بتخصيص رؤوس وتذييلات المستندات الخاصة بك",
+    "create": "إنشاء قالب",
+    "cancel": "إلغاء",
+    "default": "افتراضي",
+    "header": "الرأس",
+    "footer": "التذييل",
+    "enabled": "مفعل",
+    "disabled": "معطل",
+    "types": {
+      "invoice": "الفواتير",
+      "quote": "عروض الأسعار",
+      "salesOrder": "أوامر البيع",
+      "purchaseOrder": "أوامر الشراء",
+      "report": "التقارير",
+      "general": "عام"
+    },
+    "templates": {
+      "title": "قوالب {{type}}",
+      "description": "إدارة قوالب المستندات لـ {{type}}"
+    },
+    "empty": {
+      "title": "لا توجد قوالب بعد",
+      "description": "قم بإنشاء قالبك الأول لتخصيص رؤوس وتذييلات المستندات"
+    },
+    "actions": {
+      "preview": "معاينة",
+      "setDefault": "تعيين كافتراضي",
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "delete": {
+      "title": "حذف القالب",
+      "confirm": "هل أنت متأكد من أنك تريد حذف هذا القالب؟ لا يمكن التراجع عن هذا الإجراء.",
+      "action": "حذف",
+      "success": "تم حذف القالب بنجاح",
+      "failed": "فشل حذف القالب"
+    },
+    "setDefault": {
+      "success": "تم تحديث القالب الافتراضي",
+      "failed": "فشل تعيين القالب الافتراضي"
     }
   }
 }

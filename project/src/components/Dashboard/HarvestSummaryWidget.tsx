@@ -4,12 +4,28 @@ import { TrendingUp, ChevronRight, Calendar, Package as PackageIcon } from 'luci
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useHarvests } from '../../hooks/useHarvests';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { fr } from 'date-fns/locale';
+import { ar } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 const HarvestSummaryWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
+  const { t, i18n } = useTranslation();
   const { data: harvests = [], isLoading } = useHarvests(currentOrganization?.id || '');
+
+  // Get locale for date formatting
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -65,14 +81,14 @@ const HarvestSummaryWidget: React.FC = () => {
             <PackageIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Récoltes
+            {t('dashboard.widgets.harvests.title')}
           </h3>
         </div>
         <button
           onClick={handleViewHarvests}
           className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
@@ -85,14 +101,14 @@ const HarvestSummaryWidget: React.FC = () => {
               <div className="absolute top-0 right-0 w-20 h-20 bg-orange-200/20 dark:bg-orange-400/10 rounded-full blur-2xl"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wider">Ce mois</span>
+                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.thisMonth')}</span>
                   <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
                   {stats.thisMonth}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  récoltes
+                  {t('dashboard.widgets.harvests.harvests')}
                 </div>
               </div>
             </div>
@@ -101,14 +117,14 @@ const HarvestSummaryWidget: React.FC = () => {
               <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Quantité</span>
+                  <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.quantity')}</span>
                   <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
                   {stats.thisMonthQuantity.toFixed(0)}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  kg ce mois
+                  {t('dashboard.widgets.harvests.kgThisMonth')}
                 </div>
               </div>
             </div>
@@ -118,16 +134,16 @@ const HarvestSummaryWidget: React.FC = () => {
           {stats.lastHarvest && (
             <div>
               <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                Dernière récolte
+                {t('dashboard.widgets.harvests.lastHarvest')}
               </h4>
               <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 dark:from-gray-900/50 dark:to-gray-900/20 rounded-lg hover:from-orange-50 hover:to-orange-50/50 dark:hover:from-orange-900/20 dark:hover:to-orange-900/10 transition-all duration-200">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                      {stats.lastHarvest.parcel_name || 'Parcelle'}
+                      {stats.lastHarvest.parcel_name || t('dashboard.widgets.harvests.parcel')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      {format(parseISO(stats.lastHarvest.harvest_date), 'dd MMMM yyyy', { locale: fr })}
+                      {format(parseISO(stats.lastHarvest.harvest_date), 'dd MMMM yyyy', { locale: getLocale() })}
                     </p>
                     {stats.lastHarvest.crop_name && (
                       <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-1">
@@ -140,14 +156,14 @@ const HarvestSummaryWidget: React.FC = () => {
                       {stats.lastHarvest.quantity?.toFixed(0) || 0}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      {stats.lastHarvest.unit || 'kg'}
+                      {stats.lastHarvest.unit || t('dashboard.widgets.harvests.kg')}
                     </div>
                   </div>
                 </div>
 
                 {stats.lastHarvest.quality_grade && (
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Qualité:</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.widgets.harvests.quality')}:</span>
                     <span className="text-xs font-bold px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">
                       {stats.lastHarvest.quality_grade}
                     </span>
@@ -160,7 +176,7 @@ const HarvestSummaryWidget: React.FC = () => {
           {/* Total Stats */}
           <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Total récoltes</span>
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.totalHarvests')}</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">{stats.total}</span>
             </div>
           </div>
@@ -171,14 +187,14 @@ const HarvestSummaryWidget: React.FC = () => {
             <PackageIcon className="h-8 w-8 text-gray-300 dark:text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
-            Aucune récolte enregistrée
+            {t('dashboard.widgets.harvests.empty')}
           </p>
           <button
             onClick={handleViewHarvests}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 rounded-lg transition-colors"
           >
             <PackageIcon className="h-4 w-4" />
-            Enregistrer une récolte
+            {t('dashboard.widgets.harvests.record')}
           </button>
         </div>
       )}

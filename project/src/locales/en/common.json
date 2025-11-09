@@ -50,7 +50,23 @@
     "productApplications": "Product Applications",
     "expenses": "Expenses",
     "personnel": "Personnel",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "productionIntelligence": "Production Intelligence",
+    "accountingBilling": "Accounting & Billing",
+    "chartOfAccounts": "Chart of Accounts",
+    "salesProcess": "Sales Process",
+    "quotes": "Quotes",
+    "salesOrders": "Sales Orders",
+    "purchaseOrders": "Purchase Orders",
+    "financialRecords": "Financial Records",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "journal": "Journal",
+    "setupReports": "Setup & Reports",
+    "customers": "Customers",
+    "agriculture": "Agriculture",
+    "elevage": "Livestock",
+    "alerts": "Alerts"
   },
   "stock": {
     "title": "Stock Management",
@@ -69,6 +85,8 @@
     "loading": "Loading organization...",
     "heroTitle": "Farm operations management",
     "quickActions": "Quick actions",
+    "pageTitle": "Dashboard",
+    "metaDescription": "Manage your farms: visualize parcels, tasks, analyses and accounting in a single interface.",
     "keyFeatures": {
       "title": "Platform key features",
       "subtitle": "Activate the modules that support your daily goals and quickly access strategic actions",
@@ -96,6 +114,45 @@
     "unifiedView": {
       "title": "Unified operational view",
       "subtitle": "Monitor your key indicators live: priority tasks, weather data and financial performance"
+    },
+    "structuredData": {
+      "platformName": "agricultural management platform",
+      "description": "Unified agricultural management solution: farms, parcels, tasks, accounting and analyses.",
+      "services": {
+        "parcels": "Parcel management",
+        "tasks": "Task planning",
+        "accounting": "Agricultural accounting",
+        "analyses": "Laboratory analyses"
+      }
+    },
+    "commands": {
+      "sections": {
+        "navigation": "Navigation",
+        "modules": "Modules",
+        "preferences": "Preferences"
+      },
+      "navigation": {
+        "dashboard": "Go to dashboard",
+        "dashboardKeywords": "dashboard home",
+        "analyses": "Open analyses",
+        "analysesKeywords": "analyses soil report",
+        "parcels": "View parcels",
+        "parcelsKeywords": "parcels fields map",
+        "stock": "Access stock",
+        "stockKeywords": "stock inventory",
+        "infrastructure": "View infrastructure",
+        "infrastructureKeywords": "infrastructure irrigation equipment",
+        "settings": "Open settings",
+        "settingsKeywords": "settings organization"
+      },
+      "modules": {
+        "subtitle": "Available modules"
+      },
+      "preferences": {
+        "lightMode": "Switch to light mode",
+        "darkMode": "Switch to dark mode",
+        "themeKeywords": "theme dark light mode"
+      }
     },
     "widgets": {
       "noFarmSelected": "Select a farm to display parcels and associated data",
@@ -139,7 +196,167 @@
       "alerts": {
         "title": "Stock alerts",
         "lowStock": "Low stock"
+      },
+      "viewAll": "View all",
+      "parcels": {
+        "title": "Parcels",
+        "total": "Total",
+        "parcels": "parcels",
+        "surface": "Surface",
+        "hectares": "hectares",
+        "topCrops": "Top crops",
+        "empty": "No parcels created",
+        "create": "Create a parcel",
+        "unspecifiedCrop": "Unspecified"
+      },
+      "workers": {
+        "title": "Worker Activity",
+        "active": "Active",
+        "outOfTotal": "out of {{total}} total",
+        "today": "Today",
+        "activeToday": "active",
+        "tasksInProgress": "Tasks in progress",
+        "tasksScheduledToday": "{{count}} tasks scheduled today",
+        "tasksScheduledToday_plural": "{{count}} tasks scheduled today",
+        "mostActive": "Most active",
+        "tasks": "tasks",
+        "empty": "No workers registered",
+        "addWorkers": "Add workers"
+      },
+      "stock": {
+        "title": "Stock & Inventory",
+        "alerts": "Alerts",
+        "lowStock": "low stock",
+        "ok": "OK",
+        "inStock": "in stock",
+        "units": "units",
+        "min": "Min",
+        "moreItems": "+{{count}} more items in low stock",
+        "allOptimal": "All stocks are at optimal level",
+        "totalProducts": "Total products"
+      },
+      "harvests": {
+        "title": "Harvests",
+        "thisMonth": "This month",
+        "harvests": "harvests",
+        "quantity": "Quantity",
+        "kgThisMonth": "kg this month",
+        "lastHarvest": "Last harvest",
+        "parcel": "Parcel",
+        "quality": "Quality",
+        "kg": "kg",
+        "totalHarvests": "Total harvests",
+        "empty": "No harvest recorded",
+        "record": "Record a harvest"
+      },
+      "tasks": {
+        "title": "Upcoming Tasks",
+        "noTasks": "No tasks scheduled",
+        "upcomingSummary": "{{count}} task coming in the next 30 days",
+        "upcomingSummary_plural": "{{count}} tasks coming in the next 30 days",
+        "priority": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "status": {
+          "pending": "Pending",
+          "assigned": "Assigned",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "paused": "Paused"
+        }
+      },
+      "soil": {
+        "title": "Soil Analysis",
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Recent",
+        "last30Days": "last 30 days",
+        "needsAttention": "{{count}} parcel needs attention",
+        "needsAttention_plural": "{{count}} parcels need attention",
+        "outOfNorm": "pH or nutrient levels out of norm",
+        "latestAnalysis": "Latest analysis",
+        "parcel": "Parcel",
+        "allInNorm": "All analyses are within norms",
+        "empty": "No soil analysis",
+        "addAnalysis": "Add an analysis"
       }
+    },
+    "title": "Dashboard",
+    "description": "Customize your dashboard display by choosing which data to show and their layout.",
+    "saving": "Saving...",
+    "sections": {
+      "dataDisplay": "Data to Display",
+      "alerts": "Alerts and Notifications",
+      "layout": "Dashboard Layout"
+    },
+    "data": {
+      "soil": {
+        "title": "Soil Data",
+        "description": "Moisture, pH, nutrients"
+      },
+      "climate": {
+        "title": "Climate Data",
+        "description": "Temperature, humidity, rainfall"
+      },
+      "irrigation": {
+        "title": "Irrigation Data",
+        "description": "Water consumption, scheduling"
+      },
+      "maintenance": {
+        "title": "Maintenance Data",
+        "description": "Equipment status, interventions"
+      },
+      "production": {
+        "title": "Production Data",
+        "description": "Yields, harvests, quality"
+      },
+      "financial": {
+        "title": "Financial Data",
+        "description": "Costs, revenue, profitability"
+      }
+    },
+    "alerts": {
+      "stock": {
+        "title": "Stock Alerts",
+        "description": "Low stock, shortages, expirations"
+      },
+      "tasks": {
+        "title": "Task Alerts",
+        "description": "Overdue tasks, deadlines"
+      }
+    },
+    "layout": {
+      "topRow": "Top Row",
+      "middleRow": "Middle Row",
+      "bottomRow": "Bottom Row",
+      "helper": "Hold Ctrl/Cmd to select multiple options"
+    },
+    "layoutOptions": {
+      "soil": "Soil Data",
+      "climate": "Climate Data",
+      "irrigation": "Irrigation",
+      "maintenance": "Maintenance",
+      "production": "Production",
+      "financial": "Financial",
+      "stock": "Stock",
+      "alerts": "Alerts",
+      "tasks": "Tasks",
+      "weather": "Weather"
+    },
+    "preview": {
+      "title": "Layout Preview"
+    },
+    "save": {
+      "success": "Settings saved successfully",
+      "failed": "Failed to save settings",
+      "failedDescription": "An error occurred while saving the settings."
+    },
+    "errors": {
+      "userOrOrgNotFound": "User or organization not found"
     }
   },
   "profitability": {
@@ -785,6 +1002,502 @@
       "goToSettings": "Go to Work Units Settings",
       "noUnitsFound": "No work units found. Create units in settings first.",
       "loadingUnits": "Loading units..."
+    }
+  },
+  "subscriptionBanner": {
+    "trialPeriod": "You're on a trial period.",
+    "days": "days",
+    "remaining": "remaining",
+    "trialEndingSoon": "Trial ending soon!",
+    "pastDue": "Your subscription payment is past due. Please update your payment method.",
+    "canceled": "Your subscription has been canceled. Reactivate to continue using premium features.",
+    "upgradeNow": "Upgrade Now",
+    "manageSubscription": "Manage Subscription"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your preferences and settings",
+    "loading": "Loading organization...",
+    "menu": {
+      "profile": "My Profile",
+      "profileDescription": "Manage your personal information",
+      "preferences": "Preferences",
+      "preferencesDescription": "Application settings",
+      "organization": "Organization",
+      "organizationDescription": "Organization settings",
+      "subscription": "Subscription",
+      "subscriptionDescription": "Manage your subscription",
+      "modules": "Modules",
+      "modulesDescription": "Enable/disable modules",
+      "users": "Users",
+      "usersDescription": "Manage users",
+      "workUnits": "Work Units",
+      "workUnitsDescription": "Manage units for piece-work payment",
+      "dashboard": "Dashboard",
+      "dashboardDescription": "Dashboard configuration",
+      "documents": "Document Templates",
+      "documentsDescription": "Customize headers and footers"
+    }
+  },
+  "profile": {
+    "title": "My Profile",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Profile saved successfully",
+    "cancel": "Cancel",
+    "changePhoto": "Change photo",
+    "photoFormats": "Accepted formats: JPG, PNG (max 2MB)",
+    "sections": {
+      "personalInfo": "Personal Information",
+      "preferences": "Preferences",
+      "security": "Security"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "emailHelper": "Email cannot be changed here",
+      "role": "Role",
+      "roleHelper": "Role in {{orgName}}",
+      "roleHelperOrg": "Role in the organization",
+      "phone": "Phone",
+      "timezone": "Timezone",
+      "language": "Language",
+      "profilePhoto": "Profile Photo"
+    },
+    "placeholders": {
+      "fullName": "Your full name",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phone": "+212 6XX XXX XXX"
+    },
+    "timezones": {
+      "utc": "UTC (Coordinated Universal Time)",
+      "morocco": "Morocco (GMT+1)",
+      "france": "France (GMT+1)",
+      "spain": "Spain (GMT+1)",
+      "tunisia": "Tunisia (GMT+1)",
+      "algeria": "Algeria (GMT+1)"
+    },
+    "roles": {
+      "admin": "Administrator",
+      "manager": "Manager",
+      "worker": "Employee",
+      "laborer": "Day Laborer",
+      "other": "Other"
+    },
+    "password": {
+      "title": "Password",
+      "lastModified": "Last modified: a few days ago",
+      "change": "Change password",
+      "changing": "Changing...",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "currentPlaceholder": "Current password",
+      "newPlaceholder": "New password",
+      "confirmPlaceholder": "Confirm new password"
+    },
+    "errors": {
+      "notFound": "Profile not found",
+      "loadError": "Error loading profile",
+      "saveError": "Error saving profile",
+      "passwordMismatch": "New passwords do not match",
+      "passwordTooShort": "New password must contain at least 6 characters",
+      "passwordChangeError": "Error changing password"
+    }
+  },
+  "preferences": {
+    "title": "Preferences",
+    "subtitle": "Customize your application experience according to your preferences.",
+    "loading": "Loading preferences...",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Preferences saved",
+    "successDescription": "Your preferences have been updated successfully.",
+    "sections": {
+      "interface": "User Interface",
+      "notifications": "Notifications",
+      "dataPrivacy": "Data & Privacy"
+    },
+    "fields": {
+      "language": "Language",
+      "timezone": "Timezone"
+    },
+    "timezones": {
+      "utc": "UTC (Coordinated Universal Time)",
+      "morocco": "Morocco (GMT+1)",
+      "france": "France (GMT+1)",
+      "spain": "Spain (GMT+1)",
+      "tunisia": "Tunisia (GMT+1)",
+      "algeria": "Algeria (GMT+1)"
+    },
+    "notifications": {
+      "email": {
+        "title": "Email notifications",
+        "description": "Receive important notifications by email"
+      },
+      "push": {
+        "title": "Push notifications",
+        "description": "Receive notifications in the browser"
+      },
+      "alerts": {
+        "title": "System alerts",
+        "description": "Critical alerts and important warnings"
+      },
+      "reports": {
+        "title": "Periodic reports",
+        "description": "Receive weekly and monthly reports"
+      }
+    },
+    "dataPrivacy": {
+      "analytics": {
+        "title": "Usage analytics",
+        "description": "Help improve the application by sharing anonymous usage data"
+      },
+      "privacyNote": "Your data is protected according to our privacy policy. You can modify these settings at any time."
+    },
+    "errors": {
+      "notLoggedIn": "Error",
+      "notLoggedInDescription": "You must be logged in to save your preferences.",
+      "saveError": "Error saving",
+      "saveErrorDescription": "Unable to save your preferences. Please try again."
+    },
+    "experienceLevel": {
+      "title": "Experience Level",
+      "subtitle": "Choose the interface complexity level that suits you best. You can modify it at any time.",
+      "current": "Current",
+      "featuresLabel": "Features",
+      "success": "Experience level updated",
+      "successDescription": "You are now at {{level}} level. Interface features have been adjusted.",
+      "error": "Update error",
+      "errorDescription": "Unable to save your experience level. Please try again.",
+      "levels": {
+        "basic": {
+          "label": "Basic",
+          "description": "Simplified interface with guidance and smart defaults"
+        },
+        "medium": {
+          "label": "Intermediate",
+          "description": "Advanced features with contextual help available"
+        },
+        "expert": {
+          "label": "Expert",
+          "description": "Full access with all advanced features"
+        }
+      },
+      "features": {
+        "advancedFilters": "Advanced filters",
+        "analytics": "Detailed analytics",
+        "bulkActions": "Bulk actions",
+        "guidedTours": "Guided tours",
+        "contextualHelp": "Contextual help",
+        "dataExport": "Data export",
+        "keyboardShortcuts": "Keyboard shortcuts",
+        "apiAccess": "API access"
+      }
+    }
+  },
+  "organization": {
+    "title": "Organization Settings",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Settings saved successfully",
+    "sections": {
+      "basicInfo": "Basic Information",
+      "contactInfo": "Contact Information",
+      "address": "Address",
+      "regionalSettings": "Regional Settings",
+      "status": "Organization Status"
+    },
+    "fields": {
+      "name": "Organization Name",
+      "slug": "Slug (unique identifier)",
+      "slugHelper": "The slug cannot be modified after creation",
+      "description": "Description",
+      "contactPerson": "Contact Person",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "address": "Address",
+      "city": "City",
+      "state": "Region/Province",
+      "postalCode": "Postal Code",
+      "country": "Country"
+    },
+    "placeholders": {
+      "name": "Your organization name",
+      "slug": "organization-slug",
+      "description": "Description of your organization",
+      "contactPerson": "Contact person name",
+      "email": "contact@organization.com",
+      "phone": "+212 6XX XXX XXX",
+      "website": "https://www.organization.com",
+      "address": "Street, number, district",
+      "city": "City",
+      "state": "Region or Province",
+      "postalCode": "Postal code",
+      "selectCountry": "Select a country"
+    },
+    "countries": {
+      "morocco": "Morocco",
+      "france": "France",
+      "spain": "Spain",
+      "tunisia": "Tunisia",
+      "algeria": "Algeria"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "contactSupport": "Contact support to modify the organization status"
+    },
+    "errors": {
+      "notFound": "Organization not found",
+      "loadError": "Error loading organization data",
+      "saveError": "Error saving changes"
+    }
+  },
+  "subscription": {
+    "title": "Subscription & Billing",
+    "changePlan": "Change Plan",
+    "backToDetails": "Back to Subscription Details",
+    "currentPlan": "Current Plan",
+    "perMonth": "/month",
+    "status": "Status",
+    "renewsOn": "Renews on",
+    "usageAndLimits": "Usage & Limits",
+    "features": "Your Features",
+    "billingManagement": "Billing Management",
+    "billingDescription": "Manage your payment methods, view invoices, and update billing information through our secure billing portal.",
+    "openBillingPortal": "Open Billing Portal",
+    "trial": {
+      "active": "Trial Period Active",
+      "description": "Your trial ends on {{endDate}}. Upgrade to continue using premium features."
+    },
+    "statuses": {
+      "active": "Active",
+      "trialing": "Trialing",
+      "past_due": "Past Due",
+      "canceled": "Canceled",
+      "incomplete": "Incomplete",
+      "incomplete_expired": "Incomplete Expired",
+      "unpaid": "Unpaid",
+      "unknown": "Unknown"
+    },
+    "usage": {
+      "farms": "Farms",
+      "parcels": "Parcels",
+      "users": "Users",
+      "satelliteReports": "Satellite Reports"
+    },
+    "plans": {
+      "title": "Choose Your Plan",
+      "subtitle": "Select the perfect plan for your agricultural operations",
+      "mostPopular": "Most Popular",
+      "currentPlan": "Current Plan",
+      "contactSales": "Contact Sales",
+      "getStarted": "Get Started"
+    },
+    "errors": {
+      "noOrganization": "No organization selected. Please select an organization first.",
+      "checkoutFailed": "Failed to start checkout process. Please check configuration."
+    }
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage your organization's users. Control access and permissions.",
+    "count": "{{count}} user",
+    "count_plural": "{{count}} users",
+    "defaultName": "User",
+    "you": "You",
+    "upgradeToInvite": "Upgrade to invite more users",
+    "accessDenied": {
+      "title": "Access Denied",
+      "description": "You do not have the necessary permissions to manage users."
+    },
+    "empty": {
+      "title": "No Users",
+      "description": "Start by inviting users to your organization."
+    },
+    "table": {
+      "user": "User",
+      "role": "Role",
+      "status": "Status",
+      "joinedOn": "Joined On",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "remove": "Remove from organization"
+    },
+    "invite": {
+      "title": "Invite User",
+      "description": "Invite an existing user to join your organization.",
+      "button": "Invite User",
+      "cancel": "Cancel",
+      "invite": "Invite",
+      "inviting": "Inviting...",
+      "success": "Invitation sent",
+      "successDescription": "Invitation email sent to {{email}}. They will be added to the organization once they accept the invitation.",
+      "failed": "Failed to invite user",
+      "failedDescription": "An error occurred while sending the invitation.",
+      "fields": {
+        "email": "Email Address",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "role": "Role"
+      },
+      "placeholders": {
+        "email": "user@example.com",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "selectRole": "Select a role"
+      }
+    },
+    "updateRole": {
+      "success": "User role updated successfully",
+      "failed": "Failed to update user role"
+    },
+    "updateStatus": {
+      "success": "User status updated to {{status}}",
+      "failed": "Failed to update user status"
+    },
+    "remove": {
+      "confirm": "Are you sure you want to remove this user from the organization?",
+      "success": "User removed successfully",
+      "failed": "Failed to remove user"
+    },
+    "errors": {
+      "loadFailed": "Failed to load users"
+    }
+  },
+  "workUnits": {
+    "title": "Work Units",
+    "description": "Manage units for piece-work payment tracking (Arbre, Caisse, Kg, Litre, etc.)",
+    "accessDenied": "You need administrator permissions to manage work units.",
+    "addUnit": "Add Unit",
+    "loadDefaults": "Load Default Units",
+    "searchPlaceholder": "Search units...",
+    "allCategories": "All Categories",
+    "loading": "Loading units...",
+    "empty": "No work units found.",
+    "emptyHint": "Click \"Load Default Units\" to get started.",
+    "inactive": "Inactive",
+    "code": "Code",
+    "used": "Used {{count}} times",
+    "used_plural": "Used {{count}} times",
+    "cancel": "Cancel",
+    "create": "Create",
+    "update": "Update",
+    "categories": {
+      "count": "Count (units, trees, boxes)",
+      "weight": "Weight (kg, tons)",
+      "volume": "Volume (liters, m³)",
+      "area": "Area (hectares, m²)",
+      "length": "Length (meters, km)"
+    },
+    "stats": {
+      "totalUnits": "Total Units",
+      "active": "Active",
+      "categories": "Categories"
+    },
+    "dialog": {
+      "createTitle": "Create Work Unit",
+      "editTitle": "Edit Work Unit"
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g., TREE, KG",
+      "category": "Category",
+      "nameEn": "Name (English)",
+      "nameEnPlaceholder": "e.g., Tree, Kilogram",
+      "nameFr": "Name (French)",
+      "nameFrPlaceholder": "e.g., Arbre, Kilogramme",
+      "nameAr": "Name (Arabic)",
+      "nameArPlaceholder": "e.g., شجرة، كيلوغرام",
+      "allowDecimal": "Allow Decimal Values",
+      "active": "Active"
+    },
+    "validation": {
+      "codeRequired": "Code is required",
+      "codeMaxLength": "Code must be 20 characters or less",
+      "nameRequired": "Name is required",
+      "nameMaxLength": "Name must be 100 characters or less"
+    },
+    "create": {
+      "success": "Work unit created successfully",
+      "failed": "Failed to create work unit",
+      "failedDescription": "An error occurred while creating the work unit."
+    },
+    "update": {
+      "success": "Work unit updated successfully",
+      "failed": "Failed to update work unit",
+      "failedDescription": "An error occurred while updating the work unit."
+    },
+    "delete": {
+      "confirm": "Are you sure you want to delete this work unit? This cannot be undone.",
+      "success": "Work unit deleted successfully",
+      "failed": "Failed to delete work unit",
+      "failedDescription": "An error occurred while deleting the work unit."
+    },
+    "seed": {
+      "success": "Default units loaded successfully",
+      "failed": "Failed to load default units",
+      "failedDescription": "An error occurred while loading default units."
+    },
+    "errors": {
+      "noOrganization": "No organization selected"
+    }
+  },
+  "documents": {
+    "title": "Document Templates",
+    "description": "Customize headers and footers for your documents",
+    "create": "Create Template",
+    "cancel": "Cancel",
+    "default": "Default",
+    "header": "Header",
+    "footer": "Footer",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "types": {
+      "invoice": "Invoices",
+      "quote": "Quotes",
+      "salesOrder": "Sales Orders",
+      "purchaseOrder": "Purchase Orders",
+      "report": "Reports",
+      "general": "General"
+    },
+    "templates": {
+      "title": "{{type}} Templates",
+      "description": "Manage document templates for {{type}}"
+    },
+    "empty": {
+      "title": "No templates yet",
+      "description": "Create your first template to customize document headers and footers"
+    },
+    "actions": {
+      "preview": "Preview",
+      "setDefault": "Set Default",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete Template",
+      "confirm": "Are you sure you want to delete this template? This action cannot be undone.",
+      "action": "Delete",
+      "success": "Template deleted successfully",
+      "failed": "Failed to delete template"
+    },
+    "setDefault": {
+      "success": "Default template updated",
+      "failed": "Failed to set default template"
     }
   }
 }

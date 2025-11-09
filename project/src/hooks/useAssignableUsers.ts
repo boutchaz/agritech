@@ -46,14 +46,15 @@ export const useAssignableUsers = (organizationId: string | null) => {
         console.warn('assignable_users view not found, using fallback query:', err);
       }
 
-          // Fallback: Query organization users directly
+          // Fallback: Query organization users directly with roles joined
           console.log('useAssignableUsers: Using fallback query for organization_users');
           const { data: orgUsers, error: orgError } = await authSupabase
             .from('organization_users')
             .select(`
               user_id,
-              role,
-              organization_id
+              organization_id,
+              role_id,
+              roles!inner(name, display_name)
             `)
             .eq('organization_id', organizationId)
             .eq('is_active', true);
@@ -93,12 +94,17 @@ export const useAssignableUsers = (organizationId: string | null) => {
             workersMap = new Map(workers?.map(w => [w.user_id, w]) || []);
           }
 
-          // Combine the data - use actual roles from the database
+          // Combine the data - filter by actual role names from roles table
           const assignableUsers: AssignableUser[] = (orgUsers || [])
-            .filter(ou => ['admin', 'manager', 'member'].includes(ou.role)) // Use actual roles from schema
+            .filter(ou => {
+              const roleName = ou.roles?.name;
+              // Allow assignment for all roles except viewer and day_laborer
+              return roleName && !['viewer', 'day_laborer'].includes(roleName);
+            })
             .map(ou => {
               const profile = profilesMap.get(ou.user_id);
               const worker = workersMap.get(ou.user_id);
+              const roleName = ou.roles?.name || 'viewer';
 
               return {
                 user_id: ou.user_id,
@@ -106,7 +112,7 @@ export const useAssignableUsers = (organizationId: string | null) => {
                 last_name: profile?.last_name || '',
                 full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
                 organization_id: ou.organization_id,
-                role: ou.role,
+                role: roleName,
                 worker_id: worker?.id || null,
                 worker_position: worker?.position || null,
                 user_type: worker ? 'worker' as const : 'user' as const,

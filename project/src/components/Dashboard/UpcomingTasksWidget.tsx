@@ -2,7 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Calendar, Clock, User, MapPin, ChevronRight } from 'lucide-react';
 import { format, isSameDay, startOfDay, addDays, isAfter, isBefore } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { fr } from 'date-fns/locale';
+import { ar } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import {
   MiniCalendar,
   MiniCalendarNavigation,
@@ -16,7 +19,20 @@ import type { Task } from '../../types/tasks';
 const UpcomingTasksWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
+  const { t, i18n } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Get locale for date formatting
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
 
   // Fetch tasks for the organization
   const { data: tasks = [], isLoading } = useTasks(currentOrganization?.id || '');
@@ -67,12 +83,24 @@ const UpcomingTasksWidget: React.FC = () => {
 
   const getPriorityBadge = (priority: string) => {
     const badges: Record<string, { color: string; label: string }> = {
-      low: { color: 'bg-green-500', label: 'Basse' },
-      medium: { color: 'bg-yellow-500', label: 'Moyenne' },
-      high: { color: 'bg-orange-500', label: 'Haute' },
-      urgent: { color: 'bg-red-500', label: 'Urgente' },
+      low: { color: 'bg-green-500', label: t('dashboard.widgets.tasks.priority.low') },
+      medium: { color: 'bg-yellow-500', label: t('dashboard.widgets.tasks.priority.medium') },
+      high: { color: 'bg-orange-500', label: t('dashboard.widgets.tasks.priority.high') },
+      urgent: { color: 'bg-red-500', label: t('dashboard.widgets.tasks.priority.urgent') },
     };
     return badges[priority] || badges.medium;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      pending: t('dashboard.widgets.tasks.status.pending'),
+      assigned: t('dashboard.widgets.tasks.status.assigned'),
+      in_progress: t('dashboard.widgets.tasks.status.inProgress'),
+      completed: t('dashboard.widgets.tasks.status.completed'),
+      cancelled: t('dashboard.widgets.tasks.status.cancelled'),
+      paused: t('dashboard.widgets.tasks.status.paused'),
+    };
+    return statusLabels[status] || statusLabels.pending;
   };
 
   const handleTaskClick = (task: Task) => {
@@ -103,13 +131,13 @@ const UpcomingTasksWidget: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Calendar className="h-5 w-5 text-green-600" />
-          Tâches à venir
+          {t('dashboard.widgets.tasks.title')}
         </h3>
         <button
           onClick={handleViewAllTasks}
           className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -142,13 +170,13 @@ const UpcomingTasksWidget: React.FC = () => {
       {/* Tasks for selected date */}
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
+          {format(selectedDate, 'EEEE d MMMM yyyy', { locale: getLocale() })}
         </h4>
 
         {tasksForSelectedDate.length === 0 ? (
           <div className="text-center py-6 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Aucune tâche prévue</p>
+            <p className="text-sm">{t('dashboard.widgets.tasks.noTasks')}</p>
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -165,7 +193,7 @@ const UpcomingTasksWidget: React.FC = () => {
                       {task.title}
                     </h5>
                     <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${getStatusColor(task.status)}`}>
-                      {task.status}
+                      {getStatusLabel(task.status)}
                     </span>
                   </div>
 
@@ -216,7 +244,7 @@ const UpcomingTasksWidget: React.FC = () => {
             <span className="font-semibold text-green-600 dark:text-green-400">
               {upcomingTasks.length}
             </span>{' '}
-            tâche{upcomingTasks.length > 1 ? 's' : ''} à venir dans les 30 prochains jours
+            {t('dashboard.widgets.tasks.upcomingSummary', { count: upcomingTasks.length })}
           </p>
         </div>
       )}

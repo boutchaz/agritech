@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -11,82 +12,83 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
+  const { t } = useTranslation();
 
   // Define menu items with role requirements
   const allMenuItems = useMemo(() => [
     {
       id: 'profile',
-      name: 'Mon Profil',
+      name: t('settings.menu.profile'),
       icon: User,
       path: '/settings/profile',
-      description: 'Gérer vos informations personnelles',
+      description: t('settings.menu.profileDescription'),
       roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
     },
     {
       id: 'preferences',
-      name: 'Préférences',
+      name: t('settings.menu.preferences'),
       icon: Sliders,
       path: '/settings/preferences',
-      description: 'Paramètres de l\'application',
+      description: t('settings.menu.preferencesDescription'),
       roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
     },
     {
       id: 'organization',
-      name: 'Organisation',
+      name: t('settings.menu.organization'),
       icon: Building,
       path: '/settings/organization',
-      description: 'Paramètres de l\'organisation',
+      description: t('settings.menu.organizationDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'subscription',
-      name: 'Abonnement',
+      name: t('settings.menu.subscription'),
       icon: CreditCard,
       path: '/settings/subscription',
-      description: 'Gérer votre abonnement',
+      description: t('settings.menu.subscriptionDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'modules',
-      name: 'Modules',
+      name: t('settings.menu.modules'),
       icon: Boxes,
       path: '/settings/modules',
-      description: 'Activer/désactiver les modules',
+      description: t('settings.menu.modulesDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'users',
-      name: 'Utilisateurs',
+      name: t('settings.menu.users'),
       icon: Users,
       path: '/settings/users',
-      description: 'Gérer les utilisateurs',
+      description: t('settings.menu.usersDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'work-units',
-      name: 'Unités de travail',
+      name: t('settings.menu.workUnits'),
       icon: Package,
       path: '/settings/work-units',
-      description: 'Gérer les unités pour le paiement à la tâche',
+      description: t('settings.menu.workUnitsDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     },
     {
       id: 'dashboard',
-      name: 'Tableau de bord',
+      name: t('settings.menu.dashboard'),
       icon: LayoutGrid,
       path: '/settings/dashboard',
-      description: 'Configuration du tableau de bord',
+      description: t('settings.menu.dashboardDescription'),
       roles: ['system_admin', 'organization_admin', 'farm_manager'] // Admin and managers
     },
     {
       id: 'documents',
-      name: 'Modèles de documents',
+      name: t('settings.menu.documents'),
       icon: FileText,
       path: '/settings/documents',
-      description: 'Personnaliser les en-têtes et pieds de page',
+      description: t('settings.menu.documentsDescription'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     }
-  ], []);
+  ], [t]);
 
   // Filter menu items based on user role
   const menuItems = useMemo(() => {
@@ -101,9 +103,9 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       {/* Settings Navigation Sidebar */}
       <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Paramètres</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gérez vos préférences et paramètres
+            {t('settings.subtitle')}
           </p>
         </div>
 
@@ -122,15 +124,15 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                 }`}
               >
-                <div className="flex items-start space-x-3">
+                <div className="flex items-start gap-3">
                   <Icon className={`h-5 w-5 mt-0.5 ${
                     active ? 'text-green-600 dark:text-green-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                   }`} />
                   <div className="flex-1 min-w-0">
-                    <div className={`font-medium ${active ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
+                    <div className={`font-medium text-start ${active ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
                       {item.name}
                     </div>
-                    <div className={`text-sm mt-1 ${
+                    <div className={`text-sm mt-1 text-start ${
                       active ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       {item.description}

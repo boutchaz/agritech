@@ -6,6 +6,7 @@ import OrganizationSwitcher from '../components/OrganizationSwitcher'
 import SettingsLayout from '../components/SettingsLayout'
 import { useState } from 'react'
 import type { Module } from '../types'
+import { useTranslation } from 'react-i18next'
 
 const mockModules: Module[] = [
   {
@@ -25,6 +26,7 @@ const mockModules: Module[] = [
 
 const SettingsLayoutComponent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
+  const { t } = useTranslation();
   const [activeModule, setActiveModule] = useState('settings');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
@@ -39,7 +41,7 @@ const SettingsLayoutComponent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('settings.loading')}</p>
         </div>
       </div>
     );

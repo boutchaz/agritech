@@ -6,6 +6,8 @@ import { useAuth } from './MultiTenantAuthProvider';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
 import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 const defaultSettings: DashboardSettingsType = {
   showSoilData: true,
@@ -26,6 +28,7 @@ const defaultSettings: DashboardSettingsType = {
 const DashboardSettings: React.FC = () => {
   const { user, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<DashboardSettingsType>(defaultSettings);
   const [success, setSuccess] = useState(false);
 
@@ -71,7 +74,7 @@ const DashboardSettings: React.FC = () => {
   const saveMutation = useMutation({
     mutationFn: async (settingsToSave: DashboardSettingsType) => {
       if (!user || !currentOrganization) {
-        throw new Error('User or organization not found');
+        throw new Error(t('dashboard.errors.userOrOrgNotFound'));
       }
 
       const dbSettings = {
@@ -103,8 +106,14 @@ const DashboardSettings: React.FC = () => {
         queryKey: ['dashboard-settings', user?.id, currentOrganization?.id]
       });
       setSuccess(true);
+      toast.success(t('dashboard.save.success'));
       setTimeout(() => setSuccess(false), 3000);
-    }
+    },
+    onError: (error) => {
+      toast.error(t('dashboard.save.failed'), {
+        description: error instanceof Error ? error.message : t('dashboard.save.failedDescription'),
+      });
+    },
   });
 
   const handleSettingChange = (key: keyof DashboardSettingsType, value: boolean) => {
@@ -133,7 +142,7 @@ const DashboardSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <LayoutGrid className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Tableau de bord
+            {t('dashboard.title')}
           </h2>
         </div>
         <button
@@ -146,7 +155,7 @@ const DashboardSettings: React.FC = () => {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          <span>{saveMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+          <span>{saveMutation.isPending ? t('dashboard.saving') : t('dashboard.save')}</span>
         </button>
       </div>
 
@@ -157,7 +166,7 @@ const DashboardSettings: React.FC = () => {
             <p className="text-red-600 dark:text-red-400">
               {saveMutation.error instanceof Error
                 ? saveMutation.error.message
-                : 'Erreur lors de la sauvegarde des paramètres'}
+                : t('dashboard.save.failed')}
             </p>
           </div>
         </div>
@@ -166,20 +175,20 @@ const DashboardSettings: React.FC = () => {
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
           <p className="text-green-600 dark:text-green-400">
-            Paramètres sauvegardés avec succès
+            {t('dashboard.save.success')}
           </p>
         </div>
       )}
 
       <p className="text-gray-600 dark:text-gray-400">
-        Personnalisez l'affichage de votre tableau de bord en choisissant les données à afficher et leur disposition.
+        {t('dashboard.description')}
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Data Display Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Données à afficher
+            {t('dashboard.sections.dataDisplay')}
           </h3>
 
           <div className="space-y-4">
@@ -191,8 +200,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données du sol</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Humidité, pH, nutriments</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.soil.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.soil.description')}</p>
               </div>
             </label>
 
@@ -204,8 +213,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données climatiques</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Température, humidité, pluviométrie</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.climate.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.climate.description')}</p>
               </div>
             </label>
 
@@ -217,8 +226,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données d'irrigation</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Consommation d'eau, planning</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.irrigation.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.irrigation.description')}</p>
               </div>
             </label>
 
@@ -230,8 +239,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données de maintenance</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">État des équipements, interventions</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.maintenance.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.maintenance.description')}</p>
               </div>
             </label>
 
@@ -243,8 +252,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données de production</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Rendements, récoltes, qualité</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.production.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.production.description')}</p>
               </div>
             </label>
 
@@ -256,8 +265,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Données financières</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Coûts, revenus, rentabilité</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.financial.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.data.financial.description')}</p>
               </div>
             </label>
           </div>
@@ -266,7 +275,7 @@ const DashboardSettings: React.FC = () => {
         {/* Alerts Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Alertes et notifications
+            {t('dashboard.sections.alerts')}
           </h3>
 
           <div className="space-y-4">
@@ -278,8 +287,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Alertes de stock</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Stock faible, ruptures, expirations</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.alerts.stock.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.alerts.stock.description')}</p>
               </div>
             </label>
 
@@ -291,8 +300,8 @@ const DashboardSettings: React.FC = () => {
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-white">Alertes de tâches</span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tâches en retard, échéances</p>
+                <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.alerts.tasks.title')}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.alerts.tasks.description')}</p>
               </div>
             </label>
           </div>
@@ -302,12 +311,12 @@ const DashboardSettings: React.FC = () => {
       {/* Layout Configuration */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-          Disposition du tableau de bord
+          {t('dashboard.sections.layout')}
         </h3>
 
         <div className="space-y-6">
           <div>
-            <FormField label="Ligne supérieure" htmlFor="topRow" helper="Maintenez Ctrl/Cmd pour sélectionner plusieurs options">
+            <FormField label={t('dashboard.layout.topRow')} htmlFor="topRow" helper={t('dashboard.layout.helper')}>
               <Select
                 id="topRow"
                 multiple
@@ -324,16 +333,16 @@ const DashboardSettings: React.FC = () => {
                 }}
                 size={4}
               >
-              <option value="soil">Données du sol</option>
-              <option value="climate">Données climatiques</option>
-              <option value="irrigation">Irrigation</option>
-              <option value="maintenance">Maintenance</option>
+              <option value="soil">{t('dashboard.layoutOptions.soil')}</option>
+              <option value="climate">{t('dashboard.layoutOptions.climate')}</option>
+              <option value="irrigation">{t('dashboard.layoutOptions.irrigation')}</option>
+              <option value="maintenance">{t('dashboard.layoutOptions.maintenance')}</option>
               </Select>
             </FormField>
           </div>
 
           <div>
-            <FormField label="Ligne centrale" htmlFor="middleRow">
+            <FormField label={t('dashboard.layout.middleRow')} htmlFor="middleRow">
               <Select
                 id="middleRow"
                 multiple
@@ -350,15 +359,15 @@ const DashboardSettings: React.FC = () => {
                 }}
                 size={3}
               >
-              <option value="production">Production</option>
-              <option value="financial">Finances</option>
-              <option value="stock">Stock</option>
+              <option value="production">{t('dashboard.layoutOptions.production')}</option>
+              <option value="financial">{t('dashboard.layoutOptions.financial')}</option>
+              <option value="stock">{t('dashboard.layoutOptions.stock')}</option>
               </Select>
             </FormField>
           </div>
 
           <div>
-            <FormField label="Ligne inférieure" htmlFor="bottomRow">
+            <FormField label={t('dashboard.layout.bottomRow')} htmlFor="bottomRow">
               <Select
                 id="bottomRow"
                 multiple
@@ -375,9 +384,9 @@ const DashboardSettings: React.FC = () => {
                 }}
                 size={3}
               >
-              <option value="alerts">Alertes</option>
-              <option value="tasks">Tâches</option>
-              <option value="weather">Météo</option>
+              <option value="alerts">{t('dashboard.layoutOptions.alerts')}</option>
+              <option value="tasks">{t('dashboard.layoutOptions.tasks')}</option>
+              <option value="weather">{t('dashboard.layoutOptions.weather')}</option>
               </Select>
             </FormField>
           </div>
@@ -387,27 +396,27 @@ const DashboardSettings: React.FC = () => {
       {/* Preview */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Aperçu de la disposition
+          {t('dashboard.preview.title')}
         </h3>
         <div className="space-y-3">
           <div className="grid grid-cols-4 gap-2">
             {settings.layout.topRow.map((item, index) => (
               <div key={index} className="h-8 bg-green-100 dark:bg-green-900 rounded text-xs flex items-center justify-center text-green-800 dark:text-green-200">
-                {item}
+                {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {settings.layout.middleRow.map((item, index) => (
               <div key={index} className="h-8 bg-blue-100 dark:bg-blue-900 rounded text-xs flex items-center justify-center text-blue-800 dark:text-blue-200">
-                {item}
+                {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {settings.layout.bottomRow.map((item, index) => (
               <div key={index} className="h-8 bg-purple-100 dark:bg-purple-900 rounded text-xs flex items-center justify-center text-purple-800 dark:text-purple-200">
-                {item}
+                {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>

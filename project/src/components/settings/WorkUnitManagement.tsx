@@ -30,6 +30,8 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import type {
   WorkUnit,
@@ -43,9 +45,10 @@ import { UNIT_CATEGORIES } from '@/types/work-units';
 // VALIDATION SCHEMA
 // =====================================================
 
-const workUnitSchema = z.object({
-  code: z.string().min(1, 'Code is required').max(20, 'Code must be 20 characters or less').toUpperCase(),
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+// Base schema type (validation messages will be added dynamically)
+const baseWorkUnitSchema = z.object({
+  code: z.string().min(1).max(20).toUpperCase(),
+  name: z.string().min(1).max(100),
   name_ar: z.string().max(100).optional(),
   name_fr: z.string().max(100).optional(),
   unit_category: z.enum(['count', 'weight', 'volume', 'area', 'length']),
@@ -55,7 +58,7 @@ const workUnitSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-type WorkUnitFormData = z.infer<typeof workUnitSchema>;
+type WorkUnitFormData = z.infer<typeof baseWorkUnitSchema>;
 
 // =====================================================
 // MAIN COMPONENT
@@ -64,6 +67,7 @@ type WorkUnitFormData = z.infer<typeof workUnitSchema>;
 export function WorkUnitManagement() {
   const { currentOrganization, hasRole } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<WorkUnit | null>(null);
@@ -71,6 +75,29 @@ export function WorkUnitManagement() {
   const [filterCategory, setFilterCategory] = useState<UnitCategory | 'all'>('all');
 
   const isAdmin = hasRole(['organization_admin', 'system_admin']);
+
+  // Get translated category labels
+  const getCategoryLabel = (category: UnitCategory) => {
+    return t(`workUnits.categories.${category}`);
+  };
+
+  // Create schema with translated messages
+  const workUnitSchemaWithTranslations = z.object({
+    code: z.string()
+      .min(1, t('workUnits.validation.codeRequired'))
+      .max(20, t('workUnits.validation.codeMaxLength'))
+      .toUpperCase(),
+    name: z.string()
+      .min(1, t('workUnits.validation.nameRequired'))
+      .max(100, t('workUnits.validation.nameMaxLength')),
+    name_ar: z.string().max(100).optional(),
+    name_fr: z.string().max(100).optional(),
+    unit_category: z.enum(['count', 'weight', 'volume', 'area', 'length']),
+    base_unit: z.string().max(20).optional(),
+    conversion_factor: z.number().positive().optional(),
+    allow_decimal: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+  });
 
   // =====================================================
   // DATA FETCHING
@@ -100,7 +127,7 @@ export function WorkUnitManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: WorkUnitFormData) => {
-      if (!currentOrganization?.id) throw new Error('No organization selected');
+      if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
       const insertData: WorkUnitInsertDto = {
         organization_id: currentOrganization.id,
@@ -120,6 +147,12 @@ export function WorkUnitManagement() {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
       setIsDialogOpen(false);
       form.reset();
+      toast.success(t('workUnits.create.success'));
+    },
+    onError: (error) => {
+      toast.error(t('workUnits.create.failed'), {
+        description: error instanceof Error ? error.message : t('workUnits.create.failedDescription'),
+      });
     },
   });
 
@@ -142,6 +175,12 @@ export function WorkUnitManagement() {
       setIsDialogOpen(false);
       setEditingUnit(null);
       form.reset();
+      toast.success(t('workUnits.update.success'));
+    },
+    onError: (error) => {
+      toast.error(t('workUnits.update.failed'), {
+        description: error instanceof Error ? error.message : t('workUnits.update.failedDescription'),
+      });
     },
   });
 
@@ -156,12 +195,18 @@ export function WorkUnitManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
+      toast.success(t('workUnits.delete.success'));
+    },
+    onError: (error) => {
+      toast.error(t('workUnits.delete.failed'), {
+        description: error instanceof Error ? error.message : t('workUnits.delete.failedDescription'),
+      });
     },
   });
 
   const seedDefaultUnitsMutation = useMutation({
     mutationFn: async () => {
-      if (!currentOrganization?.id) throw new Error('No organization selected');
+      if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
       const { error } = await supabase.rpc('seed_default_work_units', {
         p_organization_id: currentOrganization.id,
@@ -171,6 +216,12 @@ export function WorkUnitManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
+      toast.success(t('workUnits.seed.success'));
+    },
+    onError: (error) => {
+      toast.error(t('workUnits.seed.failed'), {
+        description: error instanceof Error ? error.message : t('workUnits.seed.failedDescription'),
+      });
     },
   });
 
@@ -179,7 +230,7 @@ export function WorkUnitManagement() {
   // =====================================================
 
   const form = useForm<WorkUnitFormData>({
-    resolver: zodResolver(workUnitSchema),
+    resolver: zodResolver(workUnitSchemaWithTranslations),
     defaultValues: {
       code: '',
       name: '',
@@ -227,7 +278,7 @@ export function WorkUnitManagement() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this work unit? This cannot be undone.')) {
+    if (confirm(t('workUnits.delete.confirm'))) {
       deleteMutation.mutate(id);
     }
   };
@@ -265,7 +316,7 @@ export function WorkUnitManagement() {
     return (
       <Card className="p-6">
         <p className="text-muted-foreground">
-          You need administrator permissions to manage work units.
+          {t('workUnits.accessDenied')}
         </p>
       </Card>
     );
@@ -276,9 +327,9 @@ export function WorkUnitManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Work Units</h2>
+          <h2 className="text-2xl font-bold">{t('workUnits.title')}</h2>
           <p className="text-muted-foreground">
-            Manage units for piece-work payment tracking (Arbre, Caisse, Kg, Litre, etc.)
+            {t('workUnits.description')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -289,12 +340,12 @@ export function WorkUnitManagement() {
               variant="outline"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Load Default Units
+              {t('workUnits.loadDefaults')}
             </Button>
           )}
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Unit
+            {t('workUnits.addUnit')}
           </Button>
         </div>
       </div>
@@ -305,7 +356,7 @@ export function WorkUnitManagement() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search units..."
+              placeholder={t('workUnits.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -316,10 +367,10 @@ export function WorkUnitManagement() {
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value as UnitCategory | 'all')}
         >
-          <option value="all">All Categories</option>
+          <option value="all">{t('workUnits.allCategories')}</option>
           {UNIT_CATEGORIES.map((cat) => (
             <option key={cat.value} value={cat.value}>
-              {cat.label}
+              {getCategoryLabel(cat.value)}
             </option>
           ))}
         </Select>
@@ -333,7 +384,7 @@ export function WorkUnitManagement() {
               <BarChart3 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Units</p>
+              <p className="text-sm text-muted-foreground">{t('workUnits.stats.totalUnits')}</p>
               <p className="text-2xl font-bold">{workUnits.length}</p>
             </div>
           </div>
@@ -344,7 +395,7 @@ export function WorkUnitManagement() {
               <Check className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active</p>
+              <p className="text-sm text-muted-foreground">{t('workUnits.stats.active')}</p>
               <p className="text-2xl font-bold">
                 {workUnits.filter((u) => u.is_active).length}
               </p>
@@ -357,7 +408,7 @@ export function WorkUnitManagement() {
               <Filter className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Categories</p>
+              <p className="text-sm text-muted-foreground">{t('workUnits.stats.categories')}</p>
               <p className="text-2xl font-bold">
                 {Object.keys(unitsByCategory).length}
               </p>
@@ -369,19 +420,19 @@ export function WorkUnitManagement() {
       {/* Units List */}
       {isLoading ? (
         <Card className="p-6">
-          <p className="text-center text-muted-foreground">Loading units...</p>
+          <p className="text-center text-muted-foreground">{t('workUnits.loading')}</p>
         </Card>
       ) : filteredUnits.length === 0 ? (
         <Card className="p-6">
           <p className="text-center text-muted-foreground">
-            No work units found. {workUnits.length === 0 && 'Click "Load Default Units" to get started.'}
+            {t('workUnits.empty')} {workUnits.length === 0 && t('workUnits.emptyHint')}
           </p>
         </Card>
       ) : (
         <div className="space-y-6">
           {Object.entries(unitsByCategory).map(([category, units]) => (
             <div key={category}>
-              <h3 className="text-lg font-semibold mb-3 capitalize">{category}</h3>
+              <h3 className="text-lg font-semibold mb-3 capitalize">{getCategoryLabel(category as UnitCategory)}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {units.map((unit) => (
                   <Card key={unit.id} className="p-4">
@@ -390,11 +441,11 @@ export function WorkUnitManagement() {
                         <div className="flex items-center gap-2 mb-2">
                           <h4 className="font-semibold">{unit.name}</h4>
                           {!unit.is_active && (
-                            <Badge variant="secondary">Inactive</Badge>
+                            <Badge variant="secondary">{t('workUnits.inactive')}</Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">
-                          Code: <span className="font-mono font-medium">{unit.code}</span>
+                          {t('workUnits.code')}: <span className="font-mono font-medium">{unit.code}</span>
                         </p>
                         {unit.name_fr && (
                           <p className="text-sm text-muted-foreground">FR: {unit.name_fr}</p>
@@ -404,7 +455,7 @@ export function WorkUnitManagement() {
                         )}
                         {unit.usage_count > 0 && (
                           <p className="text-xs text-muted-foreground mt-2">
-                            Used {unit.usage_count} times
+                            {t('workUnits.used', { count: unit.usage_count })}
                           </p>
                         )}
                       </div>
@@ -439,7 +490,7 @@ export function WorkUnitManagement() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingUnit ? 'Edit Work Unit' : 'Create Work Unit'}
+              {editingUnit ? t('workUnits.dialog.editTitle') : t('workUnits.dialog.createTitle')}
             </DialogTitle>
           </DialogHeader>
 
@@ -450,8 +501,8 @@ export function WorkUnitManagement() {
                 name="code"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Code *</label>
-                    <Input {...field} placeholder="e.g., TREE, KG" maxLength={20} />
+                    <label className="text-sm font-medium">{t('workUnits.form.code')} *</label>
+                    <Input {...field} placeholder={t('workUnits.form.codePlaceholder')} maxLength={20} />
                     {form.formState.errors.code && (
                       <p className="text-sm text-red-500 mt-1">
                         {form.formState.errors.code.message}
@@ -466,11 +517,11 @@ export function WorkUnitManagement() {
                 name="unit_category"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Category *</label>
+                    <label className="text-sm font-medium">{t('workUnits.form.category')} *</label>
                     <Select {...field}>
                       {UNIT_CATEGORIES.map((cat) => (
                         <option key={cat.value} value={cat.value}>
-                          {cat.label}
+                          {getCategoryLabel(cat.value)}
                         </option>
                       ))}
                     </Select>
@@ -484,8 +535,8 @@ export function WorkUnitManagement() {
               name="name"
               render={({ field }) => (
                 <div>
-                  <label className="text-sm font-medium">Name (English) *</label>
-                  <Input {...field} placeholder="e.g., Tree, Kilogram" />
+                  <label className="text-sm font-medium">{t('workUnits.form.nameEn')} *</label>
+                  <Input {...field} placeholder={t('workUnits.form.nameEnPlaceholder')} />
                   {form.formState.errors.name && (
                     <p className="text-sm text-red-500 mt-1">
                       {form.formState.errors.name.message}
@@ -501,8 +552,8 @@ export function WorkUnitManagement() {
                 name="name_fr"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Name (French)</label>
-                    <Input {...field} placeholder="e.g., Arbre, Kilogramme" />
+                    <label className="text-sm font-medium">{t('workUnits.form.nameFr')}</label>
+                    <Input {...field} placeholder={t('workUnits.form.nameFrPlaceholder')} />
                   </div>
                 )}
               />
@@ -512,8 +563,8 @@ export function WorkUnitManagement() {
                 name="name_ar"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Name (Arabic)</label>
-                    <Input {...field} placeholder="e.g., شجرة، كيلوغرام" dir="rtl" />
+                    <label className="text-sm font-medium">{t('workUnits.form.nameAr')}</label>
+                    <Input {...field} placeholder={t('workUnits.form.nameArPlaceholder')} dir="rtl" />
                   </div>
                 )}
               />
@@ -531,7 +582,7 @@ export function WorkUnitManagement() {
                       id="allow_decimal"
                     />
                     <label htmlFor="allow_decimal" className="text-sm font-medium">
-                      Allow Decimal Values
+                      {t('workUnits.form.allowDecimal')}
                     </label>
                   </div>
                 )}
@@ -548,7 +599,7 @@ export function WorkUnitManagement() {
                       id="is_active"
                     />
                     <label htmlFor="is_active" className="text-sm font-medium">
-                      Active
+                      {t('workUnits.form.active')}
                     </label>
                   </div>
                 )}
@@ -558,14 +609,14 @@ export function WorkUnitManagement() {
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {t('workUnits.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 <Check className="h-4 w-4 mr-2" />
-                {editingUnit ? 'Update' : 'Create'}
+                {editingUnit ? t('workUnits.update') : t('workUnits.create')}
               </Button>
             </div>
           </form>

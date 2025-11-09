@@ -287,6 +287,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   status VARCHAR(50) NOT NULL,
   plan_id VARCHAR(100),
+  plan_type VARCHAR(50), -- essential, professional, or enterprise
   current_period_start TIMESTAMPTZ,
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT false,
@@ -1356,6 +1357,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Generate Stock Entry Number
+CREATE OR REPLACE FUNCTION generate_stock_entry_number(p_organization_id UUID)
+RETURNS VARCHAR AS $$
+DECLARE
+  v_count INTEGER;
+  v_year VARCHAR(4);
+  v_number VARCHAR(100);
+BEGIN
+  v_year := TO_CHAR(NOW(), 'YYYY');
+  SELECT COUNT(*) INTO v_count
+  FROM stock_entries
+  WHERE organization_id = p_organization_id
+    AND EXTRACT(YEAR FROM entry_date) = EXTRACT(YEAR FROM NOW());
+  v_number := 'SE-' || v_year || '-' || LPAD((v_count + 1)::TEXT, 5, '0');
+  RETURN v_number;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Generate Invoice Number
 CREATE OR REPLACE FUNCTION generate_invoice_number(
   p_organization_id UUID,
@@ -1401,6 +1420,81 @@ BEGIN
   RETURN v_number;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Seed Default Work Units for an Organization
+CREATE OR REPLACE FUNCTION seed_default_work_units(p_organization_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  v_inserted_count INTEGER := 0;
+BEGIN
+  -- Insert default work units for the organization
+  INSERT INTO work_units (
+    organization_id,
+    code,
+    name,
+    name_fr,
+    name_ar,
+    unit_category,
+    base_unit,
+    conversion_factor,
+    allow_decimal,
+    is_active
+  )
+  SELECT
+    p_organization_id,
+    v.code,
+    v.name,
+    v.name_fr,
+    v.name_ar,
+    v.unit_category::TEXT,
+    v.base_unit,
+    v.conversion_factor,
+    v.allow_decimal,
+    true
+  FROM (
+    VALUES
+      -- Count-based units
+      ('TREE'::TEXT, 'Tree'::TEXT, 'Arbre'::TEXT, 'شجرة'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      ('PLANT'::TEXT, 'Plant'::TEXT, 'Plante'::TEXT, 'نبتة'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      ('UNIT'::TEXT, 'Unit'::TEXT, 'Unité'::TEXT, 'وحدة'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      ('BOX'::TEXT, 'Box'::TEXT, 'Caisse'::TEXT, 'صندوق'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      ('CRATE'::TEXT, 'Crate'::TEXT, 'Caisse'::TEXT, 'قفص'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      ('BAG'::TEXT, 'Bag'::TEXT, 'Sac'::TEXT, 'كيس'::TEXT, 'count'::TEXT, NULL::TEXT, NULL::NUMERIC, false::BOOLEAN),
+      -- Weight units
+      ('KG'::TEXT, 'Kilogram'::TEXT, 'Kilogramme'::TEXT, 'كيلوغرام'::TEXT, 'weight'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      ('TON'::TEXT, 'Ton'::TEXT, 'Tonne'::TEXT, 'طن'::TEXT, 'weight'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      ('QUINTAL'::TEXT, 'Quintal'::TEXT, 'Quintal'::TEXT, 'قنطار'::TEXT, 'weight'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      -- Volume units
+      ('LITER'::TEXT, 'Liter'::TEXT, 'Litre'::TEXT, 'لتر'::TEXT, 'volume'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      ('M3'::TEXT, 'Cubic meter'::TEXT, 'Mètre cube'::TEXT, 'متر مكعب'::TEXT, 'volume'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      -- Area units
+      ('HA'::TEXT, 'Hectare'::TEXT, 'Hectare'::TEXT, 'هكتار'::TEXT, 'area'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      ('M2'::TEXT, 'Square meter'::TEXT, 'Mètre carré'::TEXT, 'متر مربع'::TEXT, 'area'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      -- Length units
+      ('M'::TEXT, 'Meter'::TEXT, 'Mètre'::TEXT, 'متر'::TEXT, 'length'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN),
+      ('KM'::TEXT, 'Kilometer'::TEXT, 'Kilomètre'::TEXT, 'كيلومتر'::TEXT, 'length'::TEXT, NULL::TEXT, NULL::NUMERIC, true::BOOLEAN)
+  ) AS v(
+    code,
+    name,
+    name_fr,
+    name_ar,
+    unit_category,
+    base_unit,
+    conversion_factor,
+    allow_decimal
+  )
+  ON CONFLICT (organization_id, code) DO NOTHING;
+  
+  GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
+  RETURN v_inserted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION seed_default_work_units(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION seed_default_work_units(UUID) TO service_role;
+
+COMMENT ON FUNCTION seed_default_work_units IS 'Seeds default work units for an organization. Returns the number of units inserted.';
 
 -- Get farm hierarchy tree for an organization
 -- Updated to handle NULL org_uuid and ensure proper column aliases match RETURNS TABLE
@@ -2957,7 +3051,7 @@ CREATE TABLE IF NOT EXISTS inventory_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   batch_number TEXT NOT NULL,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   received_date DATE NOT NULL,
   manufacturing_date DATE,
   expiry_date DATE,
@@ -2982,7 +3076,7 @@ CREATE TABLE IF NOT EXISTS inventory_serial_numbers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   serial_number TEXT NOT NULL,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   warehouse_id UUID REFERENCES warehouses(id),
   status TEXT DEFAULT 'Available',
   received_date DATE,
@@ -3092,7 +3186,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_date ON stock_movements(movement_
 CREATE TABLE IF NOT EXISTS stock_valuation (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   quantity NUMERIC NOT NULL,
   cost_per_unit NUMERIC NOT NULL,
@@ -3115,7 +3209,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_valuation_warehouse ON stock_valuation(ware
 CREATE TABLE IF NOT EXISTS opening_stock_balances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   opening_date DATE NOT NULL,
   quantity NUMERIC NOT NULL,
@@ -3166,7 +3260,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_closing_entries_date ON stock_closing_entri
 CREATE TABLE IF NOT EXISTS stock_closing_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   closing_id UUID NOT NULL REFERENCES stock_closing_entries(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   closing_quantity NUMERIC NOT NULL,
   closing_rate NUMERIC NOT NULL,
@@ -4328,6 +4422,18 @@ CREATE POLICY "org_write_stock_entries" ON stock_entries
     is_organization_member(organization_id)
   );
 
+DROP POLICY IF EXISTS "org_update_stock_entries" ON stock_entries;
+CREATE POLICY "org_update_stock_entries" ON stock_entries
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_stock_entries" ON stock_entries;
+CREATE POLICY "org_delete_stock_entries" ON stock_entries
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Reception Batches Policies
 ALTER TABLE IF EXISTS reception_batches ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_reception_batches" ON reception_batches;
@@ -4989,8 +5095,16 @@ DO $$
 DECLARE
     v_user RECORD;
     v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_admin_role_id UUID;
     v_linked_count integer := 0;
 BEGIN
+    -- Get the organization_admin role_id
+    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
+    
+    IF v_org_admin_role_id IS NULL THEN
+        RAISE EXCEPTION 'organization_admin role not found';
+    END IF;
+    
     FOR v_user IN 
         SELECT u.id 
         FROM auth.users u
@@ -5002,19 +5116,19 @@ BEGIN
         INSERT INTO organization_users (
             user_id,
             organization_id,
-            role,
+            role_id,
             is_active
         )
         VALUES (
             v_user.id,
             v_org_id,
-            'organization_admin',
+            v_org_admin_role_id,
             true
         )
         ON CONFLICT (user_id, organization_id) 
         DO UPDATE SET 
             is_active = true,
-            role = 'organization_admin',
+            role_id = v_org_admin_role_id,
             updated_at = NOW();
         
         v_linked_count := v_linked_count + 1;
@@ -7957,3 +8071,117 @@ CREATE TRIGGER trg_revenue_create_journal_entry
 
 -- Create sequence for journal entry numbers if it doesn't exist
 CREATE SEQUENCE IF NOT EXISTS journal_entry_seq START 1;
+
+-- =====================================================
+-- FIX FOREIGN KEY CONSTRAINTS: Update inventory_items references to items
+-- =====================================================
+-- These ALTER TABLE statements update existing foreign key constraints
+-- to reference items(id) instead of inventory_items(id)
+-- =====================================================
+
+-- Update stock_valuation foreign key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'stock_valuation_item_id_fkey'
+    AND confrelid = (SELECT oid FROM pg_class WHERE relname = 'inventory_items')
+  ) THEN
+    ALTER TABLE stock_valuation DROP CONSTRAINT stock_valuation_item_id_fkey;
+    ALTER TABLE stock_valuation 
+    ADD CONSTRAINT stock_valuation_item_id_fkey 
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Update inventory_batches foreign key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'inventory_batches_item_id_fkey'
+    AND confrelid = (SELECT oid FROM pg_class WHERE relname = 'inventory_items')
+  ) THEN
+    ALTER TABLE inventory_batches DROP CONSTRAINT inventory_batches_item_id_fkey;
+    ALTER TABLE inventory_batches 
+    ADD CONSTRAINT inventory_batches_item_id_fkey 
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Update inventory_serial_numbers foreign key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'inventory_serial_numbers_item_id_fkey'
+    AND confrelid = (SELECT oid FROM pg_class WHERE relname = 'inventory_items')
+  ) THEN
+    ALTER TABLE inventory_serial_numbers DROP CONSTRAINT inventory_serial_numbers_item_id_fkey;
+    ALTER TABLE inventory_serial_numbers 
+    ADD CONSTRAINT inventory_serial_numbers_item_id_fkey 
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Update opening_stock_balances foreign key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'opening_stock_balances_item_id_fkey'
+    AND confrelid = (SELECT oid FROM pg_class WHERE relname = 'inventory_items')
+  ) THEN
+    ALTER TABLE opening_stock_balances DROP CONSTRAINT opening_stock_balances_item_id_fkey;
+    ALTER TABLE opening_stock_balances 
+    ADD CONSTRAINT opening_stock_balances_item_id_fkey 
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Update stock_closing_items foreign key
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'stock_closing_items_item_id_fkey'
+    AND confrelid = (SELECT oid FROM pg_class WHERE relname = 'inventory_items')
+  ) THEN
+    ALTER TABLE stock_closing_items DROP CONSTRAINT stock_closing_items_item_id_fkey;
+    ALTER TABLE stock_closing_items 
+    ADD CONSTRAINT stock_closing_items_item_id_fkey 
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- =====================================================
+-- VIEWS
+-- =====================================================
+
+-- Assignable Users View
+-- Combines users, profiles, roles, and workers for task assignment
+DROP VIEW IF EXISTS assignable_users;
+CREATE OR REPLACE VIEW assignable_users AS
+SELECT
+  ou.user_id,
+  ou.organization_id,
+  up.first_name,
+  up.last_name,
+  up.full_name,
+  r.name as role,
+  r.display_name as role_display_name,
+  w.id as worker_id,
+  w.position as worker_position,
+  CASE
+    WHEN w.id IS NOT NULL THEN 'worker'::text
+    ELSE 'user'::text
+  END as user_type
+FROM organization_users ou
+JOIN user_profiles up ON up.id = ou.user_id
+JOIN roles r ON r.id = ou.role_id
+LEFT JOIN workers w ON w.user_id = ou.user_id AND w.organization_id = ou.organization_id AND w.is_active = true
+WHERE ou.is_active = true;
+
+GRANT SELECT ON assignable_users TO authenticated;
+GRANT SELECT ON assignable_users TO service_role;
+COMMENT ON VIEW assignable_users IS 'View combining users, profiles, roles, and worker information for task assignment';

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useTranslation } from 'react-i18next';
 
 interface UserProfile {
   id: string;
@@ -26,6 +27,7 @@ interface PasswordChangeData {
 
 const ProfileSettings: React.FC = () => {
   const { user, currentOrganization, userRole } = useAuth();
+  const { t, i18n } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,12 +47,12 @@ const ProfileSettings: React.FC = () => {
   const [changingPassword, setChangingPassword] = useState(false);
 
   const timezones = [
-    { value: 'UTC', label: 'UTC (Temps universel coordonné)' },
-    { value: 'Africa/Casablanca', label: 'Maroc (GMT+1)' },
-    { value: 'Europe/Paris', label: 'France (GMT+1)' },
-    { value: 'Europe/Madrid', label: 'Espagne (GMT+1)' },
-    { value: 'Africa/Tunis', label: 'Tunisie (GMT+1)' },
-    { value: 'Africa/Algiers', label: 'Algérie (GMT+1)' }
+    { value: 'UTC', label: t('profile.timezones.utc') },
+    { value: 'Africa/Casablanca', label: t('profile.timezones.morocco') },
+    { value: 'Europe/Paris', label: t('profile.timezones.france') },
+    { value: 'Europe/Madrid', label: t('profile.timezones.spain') },
+    { value: 'Africa/Tunis', label: t('profile.timezones.tunisia') },
+    { value: 'Africa/Algiers', label: t('profile.timezones.algeria') }
   ];
 
   const languages = [
@@ -100,14 +102,14 @@ const ProfileSettings: React.FC = () => {
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
-        setError('Erreur lors du chargement du profil');
+        setError(t('profile.errors.loadError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, t]);
 
   const handleSave = async () => {
     if (!profile || !user) return;
@@ -136,7 +138,7 @@ const ProfileSettings: React.FC = () => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error updating profile:', err);
-      setError('Erreur lors de la sauvegarde du profil');
+      setError(t('profile.errors.saveError'));
     } finally {
       setSaving(false);
     }
@@ -144,12 +146,12 @@ const ProfileSettings: React.FC = () => {
 
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('Les nouveaux mots de passe ne correspondent pas');
+      setError(t('profile.errors.passwordMismatch'));
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      setError('Le nouveau mot de passe doit contenir au moins 6 caractères');
+      setError(t('profile.errors.passwordTooShort'));
       return;
     }
 
@@ -173,7 +175,7 @@ const ProfileSettings: React.FC = () => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       console.error('Error changing password:', err);
-      setError(err.message || 'Erreur lors du changement de mot de passe');
+      setError(err.message || t('profile.errors.passwordChangeError'));
     } finally {
       setChangingPassword(false);
     }
@@ -196,7 +198,7 @@ const ProfileSettings: React.FC = () => {
     return (
       <div className="p-6">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">Profil non trouvé</p>
+          <p className="text-red-600 dark:text-red-400">{t('profile.errors.notFound')}</p>
         </div>
       </div>
     );
@@ -208,7 +210,7 @@ const ProfileSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <User className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Mon Profil
+            {t('profile.title')}
           </h2>
         </div>
         <button
@@ -221,7 +223,7 @@ const ProfileSettings: React.FC = () => {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
+          <span>{saving ? t('profile.saving') : t('profile.save')}</span>
         </button>
       </div>
 
@@ -237,7 +239,7 @@ const ProfileSettings: React.FC = () => {
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
           <p className="text-green-600 dark:text-green-400">
-            Profil sauvegardé avec succès
+            {t('profile.success')}
           </p>
         </div>
       )}
@@ -246,41 +248,41 @@ const ProfileSettings: React.FC = () => {
         {/* Personal Information */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Informations personnelles
+            {t('profile.sections.personalInfo')}
           </h3>
           <div className="space-y-4">
-            <FormField label="Nom complet" htmlFor="full_name">
+            <FormField label={t('profile.fields.fullName')} htmlFor="full_name">
               <Input
                 id="full_name"
                 type="text"
                 value={profile.full_name || ''}
                 onChange={(e) => handleInputChange('full_name', e.target.value)}
-                placeholder="Votre nom complet"
+                placeholder={t('profile.placeholders.fullName')}
               />
             </FormField>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="Prénom" htmlFor="first_name">
+              <FormField label={t('profile.fields.firstName')} htmlFor="first_name">
                 <Input
                   id="first_name"
                   type="text"
                   value={profile.first_name || ''}
                   onChange={(e) => handleInputChange('first_name', e.target.value)}
-                  placeholder="Prénom"
+                  placeholder={t('profile.placeholders.firstName')}
                 />
               </FormField>
-              <FormField label="Nom de famille" htmlFor="last_name">
+              <FormField label={t('profile.fields.lastName')} htmlFor="last_name">
                 <Input
                   id="last_name"
                   type="text"
                   value={profile.last_name || ''}
                   onChange={(e) => handleInputChange('last_name', e.target.value)}
-                  placeholder="Nom de famille"
+                  placeholder={t('profile.placeholders.lastName')}
                 />
               </FormField>
             </div>
 
-            <FormField label={<><Mail className="inline h-4 w-4 mr-1" /> Email</>} htmlFor="email" helper="L'email ne peut pas être modifié ici">
+            <FormField label={<><Mail className="inline h-4 w-4 mr-1" /> {t('profile.fields.email')}</>} htmlFor="email" helper={t('profile.fields.emailHelper')}>
               <Input
                 id="email"
                 type="email"
@@ -290,9 +292,9 @@ const ProfileSettings: React.FC = () => {
             </FormField>
 
             <FormField
-              label={<><Shield className="inline h-4 w-4 mr-1" /> Rôle</>}
+              label={<><Shield className="inline h-4 w-4 mr-1" /> {t('profile.fields.role')}</>}
               htmlFor="role"
-              helper={currentOrganization ? `Rôle dans ${currentOrganization.name}` : 'Rôle dans l\'organisation'}
+              helper={currentOrganization ? t('profile.fields.roleHelper', { orgName: currentOrganization.name }) : t('profile.fields.roleHelperOrg')}
             >
               <div className="flex items-center gap-2">
                 <Input
@@ -313,22 +315,22 @@ const ProfileSettings: React.FC = () => {
                     ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
                     : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                 }`}>
-                  {userRole?.role_name === 'organization_admin' ? 'Administrateur'
-                    : userRole?.role_name === 'farm_manager' ? 'Gestionnaire'
-                    : userRole?.role_name === 'farm_worker' ? 'Employé'
-                    : userRole?.role_name === 'day_laborer' ? 'Journalier'
-                    : 'Autre'}
+                  {userRole?.role_name === 'organization_admin' ? t('profile.roles.admin')
+                    : userRole?.role_name === 'farm_manager' ? t('profile.roles.manager')
+                    : userRole?.role_name === 'farm_worker' ? t('profile.roles.worker')
+                    : userRole?.role_name === 'day_laborer' ? t('profile.roles.laborer')
+                    : t('profile.roles.other')}
                 </span>
               </div>
             </FormField>
 
-            <FormField label={<><Phone className="inline h-4 w-4 mr-1" /> Téléphone</>} htmlFor="phone">
+            <FormField label={<><Phone className="inline h-4 w-4 mr-1" /> {t('profile.fields.phone')}</>} htmlFor="phone">
               <Input
                 id="phone"
                 type="tel"
                 value={profile.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder="+212 6XX XXX XXX"
+                placeholder={t('profile.placeholders.phone')}
               />
             </FormField>
           </div>
@@ -337,10 +339,10 @@ const ProfileSettings: React.FC = () => {
         {/* Preferences */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Préférences
+            {t('profile.sections.preferences')}
           </h3>
           <div className="space-y-4">
-            <FormField label={<><Globe className="inline h-4 w-4 mr-1" /> Fuseau horaire</>} htmlFor="timezone">
+            <FormField label={<><Globe className="inline h-4 w-4 mr-1" /> {t('profile.fields.timezone')}</>} htmlFor="timezone">
               <Select
                 id="timezone"
                 value={profile.timezone}
@@ -354,7 +356,7 @@ const ProfileSettings: React.FC = () => {
               </Select>
             </FormField>
 
-            <FormField label="Langue" htmlFor="language">
+            <FormField label={t('profile.fields.language')} htmlFor="language">
               <Select
                 id="language"
                 value={profile.language}
@@ -371,7 +373,7 @@ const ProfileSettings: React.FC = () => {
             {/* Avatar placeholder for future implementation */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Photo de profil
+                {t('profile.fields.profilePhoto')}
               </label>
               <div className="flex items-center space-x-4">
                 <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
@@ -379,11 +381,11 @@ const ProfileSettings: React.FC = () => {
                 </div>
                 <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
                   <Camera className="h-4 w-4" />
-                  <span>Changer la photo</span>
+                  <span>{t('profile.changePhoto')}</span>
                 </button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Formats acceptés: JPG, PNG (max 2MB)
+                {t('profile.photoFormats')}
               </p>
             </div>
           </div>
@@ -393,29 +395,29 @@ const ProfileSettings: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <Lock className="inline h-5 w-5 mr-2" />
-            Sécurité
+            {t('profile.sections.security')}
           </h3>
 
           {!showPasswordChange ? (
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Mot de passe</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white">{t('profile.password.title')}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Dernière modification: il y a quelques jours
+                  {t('profile.password.lastModified')}
                 </p>
               </div>
               <button
                 onClick={() => setShowPasswordChange(true)}
                 className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
               >
-                Changer le mot de passe
+                {t('profile.password.change')}
               </button>
             </div>
           ) : (
             <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mot de passe actuel
+                  {t('profile.password.current')}
                 </label>
                 <div className="relative">
                   <input
@@ -423,7 +425,7 @@ const ProfileSettings: React.FC = () => {
                     value={passwordData.currentPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder="Mot de passe actuel"
+                    placeholder={t('profile.password.currentPlaceholder')}
                   />
                   <button
                     type="button"
@@ -441,7 +443,7 @@ const ProfileSettings: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nouveau mot de passe
+                  {t('profile.password.new')}
                 </label>
                 <div className="relative">
                   <input
@@ -449,7 +451,7 @@ const ProfileSettings: React.FC = () => {
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder="Nouveau mot de passe"
+                    placeholder={t('profile.password.newPlaceholder')}
                   />
                   <button
                     type="button"
@@ -467,7 +469,7 @@ const ProfileSettings: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Confirmer le nouveau mot de passe
+                  {t('profile.password.confirm')}
                 </label>
                 <div className="relative">
                   <input
@@ -475,7 +477,7 @@ const ProfileSettings: React.FC = () => {
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder="Confirmer le nouveau mot de passe"
+                    placeholder={t('profile.password.confirmPlaceholder')}
                   />
                   <button
                     type="button"
@@ -504,7 +506,7 @@ const ProfileSettings: React.FC = () => {
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
                 >
-                  Annuler
+                  {t('profile.cancel')}
                 </button>
                 <button
                   onClick={handlePasswordChange}
@@ -516,7 +518,7 @@ const ProfileSettings: React.FC = () => {
                   ) : (
                     <Lock className="h-4 w-4" />
                   )}
-                  <span>{changingPassword ? 'Changement...' : 'Changer le mot de passe'}</span>
+                  <span>{changingPassword ? t('profile.password.changing') : t('profile.password.change')}</span>
                 </button>
               </div>
             </div>

@@ -272,14 +272,24 @@ serve(async (req) => {
     }
 
     // 4. Add user to organization with admin role
-    // organization_users table only has: organization_id, user_id, role, is_active
-    // The role field should match a role name in the roles table (e.g., 'organization_admin')
+    // Get the organization_admin role_id from the roles table
+    const { data: orgAdminRole, error: roleError } = await supabaseAdmin
+      .from('roles')
+      .select('id')
+      .eq('name', 'organization_admin')
+      .single();
+
+    if (roleError || !orgAdminRole) {
+      console.error('❌ Error fetching organization_admin role:', roleError);
+      throw new Error('Failed to fetch organization_admin role');
+    }
+
     const { error: orgUserError } = await supabaseAdmin
       .from('organization_users')
       .insert({
         user_id: userId,
         organization_id: newOrg.id,
-        role: 'organization_admin', // Role name from roles table
+        role_id: orgAdminRole.id,
         is_active: true,
       });
 
@@ -291,7 +301,7 @@ serve(async (req) => {
         const { error: updateError } = await supabaseAdmin
           .from('organization_users')
           .update({
-            role: 'organization_admin',
+            role_id: orgAdminRole.id,
             is_active: true,
           })
           .eq('user_id', userId)

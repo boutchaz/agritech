@@ -23,12 +23,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/settings/documents')({
   component: DocumentSettingsPage,
 });
 
 function DocumentSettingsPage() {
+  const { t } = useTranslation();
   const [selectedType, setSelectedType] = useState<DocumentType>('invoice');
   const [editorOpen, setEditorOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -42,12 +44,12 @@ function DocumentSettingsPage() {
   const setDefault = useSetDefaultTemplate();
 
   const documentTypes: { value: DocumentType; label: string; icon: typeof FileText }[] = [
-    { value: 'invoice', label: 'Invoices', icon: FileText },
-    { value: 'quote', label: 'Quotes', icon: FileText },
-    { value: 'sales_order', label: 'Sales Orders', icon: FileText },
-    { value: 'purchase_order', label: 'Purchase Orders', icon: FileText },
-    { value: 'report', label: 'Reports', icon: FileText },
-    { value: 'general', label: 'General', icon: FileText },
+    { value: 'invoice', label: t('documents.types.invoice'), icon: FileText },
+    { value: 'quote', label: t('documents.types.quote'), icon: FileText },
+    { value: 'sales_order', label: t('documents.types.salesOrder'), icon: FileText },
+    { value: 'purchase_order', label: t('documents.types.purchaseOrder'), icon: FileText },
+    { value: 'report', label: t('documents.types.report'), icon: FileText },
+    { value: 'general', label: t('documents.types.general'), icon: FileText },
   ];
 
   const handleEdit = (templateId: string) => {
@@ -75,22 +77,22 @@ function DocumentSettingsPage() {
 
     try {
       await deleteTemplate.mutateAsync(deletingTemplate);
-      toast.success('Template deleted successfully');
+      toast.success(t('documents.delete.success'));
       setDeleteDialogOpen(false);
       setDeletingTemplate(null);
     } catch (error) {
       console.error('Error deleting template:', error);
-      toast.error('Failed to delete template');
+      toast.error(t('documents.delete.failed'));
     }
   };
 
   const handleSetDefault = async (templateId: string) => {
     try {
       await setDefault.mutateAsync(templateId);
-      toast.success('Default template updated');
+      toast.success(t('documents.setDefault.success'));
     } catch (error) {
       console.error('Error setting default:', error);
-      toast.error('Failed to set default template');
+      toast.error(t('documents.setDefault.failed'));
     }
   };
 
@@ -98,9 +100,9 @@ function DocumentSettingsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Document Templates</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('documents.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Customize headers and footers for your documents
+          {t('documents.description')}
         </p>
       </div>
 
@@ -128,16 +130,15 @@ function DocumentSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                {documentTypes.find((t) => t.value === selectedType)?.label} Templates
+                {t('documents.templates.title', { type: documentTypes.find((t) => t.value === selectedType)?.label })}
               </CardTitle>
               <CardDescription>
-                Manage document templates for{' '}
-                {documentTypes.find((t) => t.value === selectedType)?.label.toLowerCase()}
+                {t('documents.templates.description', { type: documentTypes.find((t) => t.value === selectedType)?.label.toLowerCase() })}
               </CardDescription>
             </div>
             <Button onClick={handleCreate} className="gap-2">
               <Plus className="h-4 w-4" />
-              Create Template
+              {t('documents.create')}
             </Button>
           </div>
         </CardHeader>
@@ -165,14 +166,14 @@ function DocumentSettingsPage() {
                         {template.is_default && (
                           <Badge variant="default" className="gap-1 flex-shrink-0">
                             <Star className="h-3 w-3 fill-current" />
-                            Default
+                            {t('documents.default')}
                           </Badge>
                         )}
                       </div>
                       <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        <span>Header: {template.header_enabled ? 'Enabled' : 'Disabled'}</span>
+                        <span>{t('documents.header')}: {template.header_enabled ? t('documents.enabled') : t('documents.disabled')}</span>
                         <span>•</span>
-                        <span>Footer: {template.footer_enabled ? 'Enabled' : 'Disabled'}</span>
+                        <span>{t('documents.footer')}: {template.footer_enabled ? t('documents.enabled') : t('documents.disabled')}</span>
                       </div>
                     </div>
                   </div>
@@ -183,10 +184,10 @@ function DocumentSettingsPage() {
                       size="sm"
                       onClick={() => handlePreview(template.id)}
                       className="gap-1.5"
-                      title="Preview template"
+                      title={t('documents.actions.preview')}
                     >
                       <Eye className="h-4 w-4" />
-                      <span className="hidden lg:inline">Preview</span>
+                      <span className="hidden lg:inline">{t('documents.actions.preview')}</span>
                     </Button>
 
                     {!template.is_default && (
@@ -195,10 +196,10 @@ function DocumentSettingsPage() {
                         size="sm"
                         onClick={() => handleSetDefault(template.id)}
                         className="gap-1.5"
-                        title="Set as default"
+                        title={t('documents.actions.setDefault')}
                       >
                         <StarOff className="h-4 w-4" />
-                        <span className="hidden lg:inline">Set Default</span>
+                        <span className="hidden lg:inline">{t('documents.actions.setDefault')}</span>
                       </Button>
                     )}
 
@@ -207,10 +208,10 @@ function DocumentSettingsPage() {
                       size="sm"
                       onClick={() => handleEdit(template.id)}
                       className="gap-1.5"
-                      title="Edit template"
+                      title={t('documents.actions.edit')}
                     >
                       <Edit2 className="h-4 w-4" />
-                      <span className="hidden lg:inline">Edit</span>
+                      <span className="hidden lg:inline">{t('documents.actions.edit')}</span>
                     </Button>
 
                     <Button
@@ -218,10 +219,10 @@ function DocumentSettingsPage() {
                       size="sm"
                       onClick={() => handleDelete(template.id)}
                       className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="Delete template"
+                      title={t('documents.actions.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
-                      <span className="hidden lg:inline">Delete</span>
+                      <span className="hidden lg:inline">{t('documents.actions.delete')}</span>
                     </Button>
                   </div>
                 </div>
@@ -231,14 +232,14 @@ function DocumentSettingsPage() {
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No templates yet
+                {t('documents.empty.title')}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Create your first template to customize document headers and footers
+                {t('documents.empty.description')}
               </p>
               <Button onClick={handleCreate} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Create Template
+                {t('documents.create')}
               </Button>
             </div>
           )}
@@ -270,18 +271,18 @@ function DocumentSettingsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogTitle>{t('documents.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this template? This action cannot be undone.
+              {t('documents.delete.confirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('documents.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              {t('documents.delete.action')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

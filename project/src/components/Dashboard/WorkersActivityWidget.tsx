@@ -5,10 +5,12 @@ import { useAuth } from '../MultiTenantAuthProvider';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useTasks } from '../../hooks/useTasks';
 import { isToday } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const WorkersActivityWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
+  const { t } = useTranslation();
   const { data: workers = [], isLoading: workersLoading } = useWorkers(currentOrganization?.id || '');
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(currentOrganization?.id || '');
 
@@ -82,14 +84,14 @@ const WorkersActivityWidget: React.FC = () => {
             <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Activité Travailleurs
+            {t('dashboard.widgets.workers.title')}
           </h3>
         </div>
         <button
           onClick={handleViewWorkers}
           className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
         >
-          Voir tout
+          {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
@@ -100,14 +102,14 @@ const WorkersActivityWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200/20 dark:bg-purple-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Actifs</span>
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wider">{t('dashboard.widgets.workers.active')}</span>
               <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {stats.active}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              sur {stats.total} total
+              {t('dashboard.widgets.workers.outOfTotal', { total: stats.total })}
             </div>
           </div>
         </div>
@@ -116,14 +118,14 @@ const WorkersActivityWidget: React.FC = () => {
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-2xl"></div>
           <div className="relative">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Aujourd'hui</span>
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{t('dashboard.widgets.workers.today')}</span>
               <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
               {stats.workingToday}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              en activité
+              {t('dashboard.widgets.workers.activeToday')}
             </div>
           </div>
         </div>
@@ -137,7 +139,7 @@ const WorkersActivityWidget: React.FC = () => {
               <Activity className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
             <span className="text-sm font-bold text-gray-900 dark:text-white">
-              Tâches en cours
+              {t('dashboard.widgets.workers.tasksInProgress')}
             </span>
           </div>
           <span className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -145,7 +147,7 @@ const WorkersActivityWidget: React.FC = () => {
           </span>
         </div>
         <div className="text-xs text-gray-600 dark:text-gray-400 font-medium ml-9">
-          {stats.tasksToday} tâches prévues aujourd'hui
+          {t('dashboard.widgets.workers.tasksScheduledToday', { count: stats.tasksToday })}
         </div>
       </div>
 
@@ -153,7 +155,7 @@ const WorkersActivityWidget: React.FC = () => {
       {topWorkers.length > 0 && (
         <div>
           <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-            Plus actifs
+            {t('dashboard.widgets.workers.mostActive')}
           </h4>
           <div className="space-y-2">
             {topWorkers.map((worker, index) => (
@@ -183,7 +185,7 @@ const WorkersActivityWidget: React.FC = () => {
                     {worker.taskCount}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    tâches
+                    {t('dashboard.widgets.workers.tasks')}
                   </div>
                 </div>
               </div>
@@ -198,14 +200,14 @@ const WorkersActivityWidget: React.FC = () => {
             <Users className="h-8 w-8 text-gray-300 dark:text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
-            Aucun travailleur enregistré
+            {t('dashboard.widgets.workers.empty')}
           </p>
           <button
             onClick={handleViewWorkers}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors"
           >
             <Users className="h-4 w-4" />
-            Ajouter des travailleurs
+            {t('dashboard.widgets.workers.addWorkers')}
           </button>
         </div>
       )}

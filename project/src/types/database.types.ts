@@ -6403,6 +6403,7 @@ export type Database = {
           id: string
           organization_id: string
           plan_id: string | null
+          plan_type: string | null
           status: string
           updated_at: string | null
         }
@@ -6414,6 +6415,7 @@ export type Database = {
           id?: string
           organization_id: string
           plan_id?: string | null
+          plan_type?: string | null
           status: string
           updated_at?: string | null
         }
@@ -6425,6 +6427,7 @@ export type Database = {
           id?: string
           organization_id?: string
           plan_id?: string | null
+          plan_type?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -7834,6 +7837,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      generate_stock_entry_number: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -8042,6 +8049,10 @@ export type Database = {
           message: string
           success: boolean
         }[]
+      }
+      seed_default_work_units: {
+        Args: { p_organization_id: string }
+        Returns: number
       }
       seed_french_chart_of_accounts: {
         Args: { p_org_id: string }

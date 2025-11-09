@@ -59,13 +59,14 @@ const defaultDashboardSettings: DashboardSettings = {
 };
 
 const AppContent: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
+  const isRTL = i18n.language === 'ar';
 
   // Fetch dashboard settings from database
   const { data: dashboardSettings = defaultDashboardSettings } = useQuery({
@@ -116,8 +117,8 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const organizationName = currentOrganization?.name ?? 'Agritech Suite';
     const farmName = currentFarm?.name ? ` · ${currentFarm.name}` : '';
-    const title = `${organizationName}${farmName} | Tableau de bord`;
-    const description = 'Pilotez vos fermes : visualisez parcelles, tâches, analyses et comptabilité dans une seule interface.';
+    const title = `${organizationName}${farmName} | ${t('dashboard.pageTitle')}`;
+    const description = t('dashboard.metaDescription');
 
     document.title = title;
 
@@ -128,15 +129,15 @@ const AppContent: React.FC = () => {
       document.head.appendChild(metaDescription);
     }
     metaDescription.setAttribute('content', description);
-  }, [currentOrganization, currentFarm]);
+  }, [currentOrganization, currentFarm, t]);
 
   const structuredData = useMemo(() => {
     const organizationName = currentOrganization?.name ?? 'Agritech Suite';
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: `${organizationName} – plateforme de gestion agricole`,
-      description: 'Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.',
+      name: `${organizationName} – ${t('dashboard.structuredData.platformName')}`,
+      description: t('dashboard.structuredData.description'),
       url: `${siteOrigin}/dashboard`,
       brand: {
         '@type': 'Organization',
@@ -149,27 +150,27 @@ const AppContent: React.FC = () => {
       hasPart: [
         {
           '@type': 'Service',
-          name: 'Gestion des parcelles',
+          name: t('dashboard.structuredData.services.parcels'),
           url: `${siteOrigin}/parcels`,
         },
         {
           '@type': 'Service',
-          name: 'Planification des tâches',
+          name: t('dashboard.structuredData.services.tasks'),
           url: `${siteOrigin}/tasks`,
         },
         {
           '@type': 'Service',
-          name: 'Comptabilité agricole',
+          name: t('dashboard.structuredData.services.accounting'),
           url: `${siteOrigin}/accounting`,
         },
         {
           '@type': 'Service',
-          name: 'Analyses de laboratoire',
+          name: t('dashboard.structuredData.services.analyses'),
           url: `${siteOrigin}/analyses`,
         },
       ],
     };
-  }, [currentOrganization, siteOrigin]);
+  }, [currentOrganization, siteOrigin, t]);
 
   const featureHighlights = useMemo(() => [
     {
@@ -196,56 +197,56 @@ const AppContent: React.FC = () => {
       description: t('dashboard.keyFeatures.labServices.description'),
       cta: { label: t('dashboard.keyFeatures.labServices.cta'), to: '/analyses' }
     },
-  ], [t]);
+  ], [t, i18n.language]);
 
   const commandActions = useMemo<Action[]>(() => {
     const navigationActions: Action[] = [
       {
         id: 'go-dashboard',
-        name: 'Aller au tableau de bord',
+        name: t('dashboard.commands.navigation.dashboard'),
         shortcut: ['g', 'd'],
-        keywords: 'dashboard accueil home tableau',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.dashboardKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/dashboard' }),
       },
       {
         id: 'go-analyses',
-        name: 'Ouvrir les analyses',
+        name: t('dashboard.commands.navigation.analyses'),
         shortcut: ['g', 'a'],
-        keywords: 'analyses soil rapport',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.analysesKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/analyses' }),
       },
       {
         id: 'go-parcels',
-        name: 'Voir les parcelles',
+        name: t('dashboard.commands.navigation.parcels'),
         shortcut: ['g', 'p'],
-        keywords: 'parcelles champs map',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.parcelsKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/parcels' }),
       },
       {
         id: 'go-stock',
-        name: 'Accéder au stock',
+        name: t('dashboard.commands.navigation.stock'),
         shortcut: ['g', 's'],
-        keywords: 'stock inventaire',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.stockKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/stock' }),
       },
       {
         id: 'go-infrastructure',
-        name: 'Consulter les infrastructures',
+        name: t('dashboard.commands.navigation.infrastructure'),
         shortcut: ['g', 'i'],
-        keywords: 'infrastructure irrigation équipements',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.infrastructureKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/infrastructure' }),
       },
       {
         id: 'go-settings',
-        name: 'Ouvrir les paramètres',
+        name: t('dashboard.commands.navigation.settings'),
         shortcut: ['g', 't'],
-        keywords: 'paramètres settings organisation',
-        section: 'Navigation',
+        keywords: t('dashboard.commands.navigation.settingsKeywords'),
+        section: t('dashboard.commands.sections.navigation'),
         perform: () => navigate({ to: '/settings' }),
       },
     ]
@@ -255,9 +256,9 @@ const AppContent: React.FC = () => {
       .map((module) => ({
         id: `module-${module.id}`,
         name: module.name,
-        subtitle: 'Modules disponibles',
+        subtitle: t('dashboard.commands.modules.subtitle'),
         keywords: `${module.category} ${module.description ?? ''}`.trim(),
-        section: 'Modules',
+        section: t('dashboard.commands.sections.modules'),
         perform: () => {
           setActiveModule(module.id);
           navigate({ to: '/$moduleId', params: { moduleId: module.id } });
@@ -267,16 +268,16 @@ const AppContent: React.FC = () => {
     const preferenceActions: Action[] = [
       {
         id: 'toggle-theme',
-        name: isDarkMode ? 'Passer en mode clair' : 'Passer en mode sombre',
+        name: isDarkMode ? t('dashboard.commands.preferences.lightMode') : t('dashboard.commands.preferences.darkMode'),
         shortcut: ['t'],
-        keywords: 'theme mode sombre clair dark light',
-        section: 'Préférences',
+        keywords: t('dashboard.commands.preferences.themeKeywords'),
+        section: t('dashboard.commands.sections.preferences'),
         perform: toggleTheme,
       },
     ]
 
     return [...navigationActions, ...moduleActions, ...preferenceActions]
-  }, [isDarkMode, modules, navigate, toggleTheme])
+  }, [isDarkMode, modules, navigate, toggleTheme, t])
 
   if (!currentOrganization) {
     return (
@@ -291,7 +292,7 @@ const AppContent: React.FC = () => {
 
   return (
     <CommandPalette actions={commandActions}>
-      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}

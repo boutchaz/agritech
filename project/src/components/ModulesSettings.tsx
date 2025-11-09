@@ -135,7 +135,7 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
         Activez ou désactivez les modules selon vos besoins. Les modules désactivés n'apparaîtront pas dans la navigation.
       </p>
 
-      {subscription && (
+      {subscription && subscription.plan_type && (
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-center justify-between">
           <div>
             <p className="font-medium text-blue-900 dark:text-blue-100">
