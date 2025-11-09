@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation} from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { useCreateQuote } from '@/hooks/useQuotes';
+import type { Quote } from '@/hooks/useQuotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
@@ -25,50 +27,18 @@ import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
-
-const quoteItemSchema = z.object({
-  item_id: z.string().optional(),
-  item_name: z.string().min(1, 'Item name is required'),
-  description: z.string().optional(),
-  quantity: z.coerce.number().min(0.01, 'Quantity must be positive'),
-  rate: z.coerce.number().min(0, 'Rate must be positive'),
-  account_id: z.string().min(1, 'Account is required'),
-  tax_id: z.string().optional(),
-});
-
-const quoteSchema = z
-  .object({
-    customer_id: z.string().min(1, 'Customer is required'),
-    quote_date: z.string().min(1, 'Quote date is required'),
-    valid_until: z.string().min(1, 'Valid until date is required'),
-    items: z.array(quoteItemSchema).min(1, 'At least one item is required'),
-    payment_terms: z.string().optional(),
-    delivery_terms: z.string().optional(),
-    terms_and_conditions: z.string().optional(),
-    notes: z.string().optional(),
-    reference_number: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      const quoteDate = new Date(data.quote_date);
-      const validUntil = new Date(data.valid_until);
-      return validUntil >= quoteDate;
-    },
-    {
-      message: 'Valid until date must be on or after quote date',
-      path: ['valid_until'],
-    }
-  );
-
-type QuoteFormData = z.infer<typeof quoteSchema>;
+import { cn } from '@/lib/utils';
+import i18n from '@/i18n/config';
 
 interface QuoteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  quote?: Quote | null;
 }
 
-export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSuccess }) => {
+export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSuccess, quote }) => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createQuote = useCreateQuote();
   const { data: customers = [] } = useCustomers();
@@ -78,9 +48,46 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     is_sales_item: true 
   });
 
+  const isRTL = i18n.language === 'ar';
+
   const [totals, setTotals] = useState<any>(null);
 
   const revenueAccounts = accounts.filter((acc) => acc.account_type === 'Revenue' && !acc.is_group);
+
+  // Create schema with translated messages
+  const quoteItemSchema = z.object({
+    item_id: z.string().optional(),
+    item_name: z.string().min(1, t('quotes.form.validation.itemNameRequired')),
+    description: z.string().optional(),
+    quantity: z.coerce.number().min(0.01, t('quotes.form.validation.quantityPositive')),
+    rate: z.coerce.number().min(0, t('quotes.form.validation.ratePositive')),
+    account_id: z.string().min(1, t('quotes.form.validation.accountRequired')),
+    tax_id: z.string().optional(),
+  });
+
+  const quoteSchema = z
+    .object({
+      customer_id: z.string().min(1, t('quotes.form.validation.customerRequired')),
+      quote_date: z.string().min(1, t('quotes.form.validation.quoteDateRequired')),
+      valid_until: z.string().min(1, t('quotes.form.validation.validUntilRequired')),
+      items: z.array(quoteItemSchema).min(1, t('quotes.form.validation.atLeastOneItem')),
+      payment_terms: z.string().optional(),
+      delivery_terms: z.string().optional(),
+      terms_and_conditions: z.string().optional(),
+      notes: z.string().optional(),
+      reference_number: z.string().optional(),
+    })
+    .refine(
+      (data) => {
+        const quoteDate = new Date(data.quote_date);
+        const validUntil = new Date(data.valid_until);
+        return validUntil >= quoteDate;
+      },
+      {
+        message: t('quotes.form.validation.validUntilAfterDate'),
+        path: ['valid_until'],
+      }
+    );
 
   const {
     register,
@@ -151,7 +158,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     calculateTotals();
   }, [watchItems]);
 
-  const onSubmit = async (data: QuoteFormData) => {
+  const onSubmit = async (data: z.infer<typeof quoteSchema>) => {
     try {
       await createQuote.mutateAsync({
         ...data,
@@ -166,31 +173,31 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
         })),
       });
 
-      toast.success('Quote created successfully');
+      toast.success(t('quotes.form.success.created'));
       reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       console.error('Failed to create quote:', error);
-      toast.error('Failed to create quote');
+      toast.error(t('quotes.form.error.createFailed'));
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn("max-w-6xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
-          <DialogTitle>Create New Quote</DialogTitle>
-          <DialogDescription>Create a quotation to send to a customer</DialogDescription>
+          <DialogTitle>{quote ? t('quotes.form.edit') : t('quotes.form.create')}</DialogTitle>
+          <DialogDescription>{quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Header Information */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="customer_id">Customer *</Label>
+              <Label htmlFor="customer_id">{t('quotes.form.customer')} *</Label>
               <NativeSelect id="customer_id" {...register('customer_id')}>
-                <option value="">-- Select Customer --</option>
+                <option value="">{t('quotes.form.selectCustomer')}</option>
                 {customers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {customer.name}
@@ -203,16 +210,16 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             </div>
 
             <div>
-              <Label htmlFor="reference_number">Reference Number</Label>
+              <Label htmlFor="reference_number">{t('quotes.form.referenceNumber')}</Label>
               <Input
                 id="reference_number"
                 {...register('reference_number')}
-                placeholder="Customer's RFQ number"
+                placeholder={t('quotes.form.referencePlaceholder')}
               />
             </div>
 
             <div>
-              <Label htmlFor="quote_date">Quote Date *</Label>
+              <Label htmlFor="quote_date">{t('quotes.form.quoteDate')} *</Label>
               <Input type="date" id="quote_date" {...register('quote_date')} />
               {errors.quote_date && (
                 <p className="text-sm text-red-600 mt-1">{errors.quote_date.message}</p>
@@ -220,7 +227,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             </div>
 
             <div>
-              <Label htmlFor="valid_until">Valid Until *</Label>
+              <Label htmlFor="valid_until">{t('quotes.form.validUntil')} *</Label>
               <Input type="date" id="valid_until" {...register('valid_until')} />
               {errors.valid_until && (
                 <p className="text-sm text-red-600 mt-1">{errors.valid_until.message}</p>
@@ -230,8 +237,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
 
           {/* Line Items */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <Label className="text-base font-semibold">Line Items *</Label>
+            <div className={cn("flex items-center justify-between mb-3", isRTL && "flex-row-reverse")}>
+              <Label className="text-base font-semibold">{t('quotes.form.lineItems')} *</Label>
               <Button
                 type="button"
                 size="sm"
@@ -247,8 +254,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                   })
                 }
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
+                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                {t('quotes.form.addItem')}
               </Button>
             </div>
 
@@ -257,13 +264,13 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="text-left py-2 px-3 text-sm font-medium">Item *</th>
-                      <th className="text-left py-2 px-3 text-sm font-medium">Description</th>
-                      <th className="text-left py-2 px-3 text-sm font-medium w-24">Qty</th>
-                      <th className="text-left py-2 px-3 text-sm font-medium w-32">Rate</th>
-                      <th className="text-left py-2 px-3 text-sm font-medium w-40">Account</th>
-                      <th className="text-left py-2 px-3 text-sm font-medium w-32">Tax</th>
-                      <th className="text-right py-2 px-3 text-sm font-medium w-32">Amount</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-24", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.account')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
+                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-32", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
                       <th className="w-12"></th>
                     </tr>
                   </thead>
@@ -288,16 +295,16 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               }}
                             >
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select item" />
+                                <SelectValue placeholder={t('quotes.form.selectItem')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {itemsLoading ? (
                                   <SelectItem value="_loading" disabled>
-                                    Loading items...
+                                    {t('quotes.form.loadingItems')}
                                   </SelectItem>
                                 ) : items.length === 0 ? (
                                   <SelectItem value="_none" disabled>
-                                    No items available. Create items first.
+                                    {t('quotes.form.noItems')}
                                   </SelectItem>
                                 ) : (
                                   items.map((item) => (
@@ -321,7 +328,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                           <td className="py-2 px-3">
                             <Input
                               {...register(`items.${index}.description`)}
-                              placeholder="Description"
+                              placeholder={t('quotes.form.description')}
                               className="w-full"
                             />
                           </td>
@@ -343,7 +350,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                           </td>
                           <td className="py-2 px-3">
                             <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
-                              <option value="">-- Account --</option>
+                              <option value="">{t('quotes.form.selectAccount')}</option>
                               {revenueAccounts.map((acc) => (
                                 <option key={acc.id} value={acc.id}>
                                   {acc.name}
@@ -353,7 +360,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                           </td>
                           <td className="py-2 px-3">
                             <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
-                              <option value="">No tax</option>
+                              <option value="">{t('quotes.form.noTax')}</option>
                               {taxes.map((tax) => (
                                 <option key={tax.id} value={tax.id}>
                                   {tax.name} ({tax.rate}%)
@@ -361,7 +368,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               ))}
                             </NativeSelect>
                           </td>
-                          <td className="py-2 px-3 text-right font-medium">
+                          <td className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
                             {amount.toFixed(2)}
                           </td>
                           <td className="py-2 px-3">
@@ -404,52 +411,52 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
           {/* Terms & Conditions */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="payment_terms">Payment Terms</Label>
+              <Label htmlFor="payment_terms">{t('quotes.form.paymentTerms')}</Label>
               <Input
                 id="payment_terms"
                 {...register('payment_terms')}
-                placeholder="e.g., Net 30 days"
+                placeholder={t('quotes.form.paymentTermsPlaceholder')}
               />
             </div>
 
             <div>
-              <Label htmlFor="delivery_terms">Delivery Terms</Label>
+              <Label htmlFor="delivery_terms">{t('quotes.form.deliveryTerms')}</Label>
               <Input
                 id="delivery_terms"
                 {...register('delivery_terms')}
-                placeholder="e.g., FOB Farm"
+                placeholder={t('quotes.form.deliveryTermsPlaceholder')}
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="terms_and_conditions">Terms & Conditions</Label>
+            <Label htmlFor="terms_and_conditions">{t('quotes.form.termsConditions')}</Label>
             <Textarea
               id="terms_and_conditions"
               {...register('terms_and_conditions')}
               rows={3}
-              placeholder="Enter terms and conditions..."
+              placeholder={t('quotes.form.termsPlaceholder')}
             />
           </div>
 
           <div>
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t('quotes.form.notes')}</Label>
             <Textarea
               id="notes"
               {...register('notes')}
               rows={2}
-              placeholder="Internal notes (not visible to customer)"
+              placeholder={t('quotes.form.notesPlaceholder')}
             />
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className={cn("flex justify-end gap-3 pt-4 border-t", isRTL && "flex-row-reverse")}>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('quotes.form.cancel')}
             </Button>
             <Button type="submit" disabled={createQuote.isPending}>
-              {createQuote.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Quote
+              {createQuote.isPending && <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />}
+              {quote ? t('quotes.form.updateQuote') : t('quotes.form.createQuote')}
             </Button>
           </div>
         </form>

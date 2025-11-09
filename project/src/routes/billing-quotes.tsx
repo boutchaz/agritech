@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -20,6 +22,9 @@ import { withRouteProtection } from '../components/authorization/withRouteProtec
 import { useQuotes, type Quote } from '../hooks/useQuotes';
 import { QuoteForm } from '../components/Billing/QuoteForm';
 import { QuoteDetailDialog } from '../components/Billing/QuoteDetailDialog';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { fr, ar, enUS } from 'date-fns/locale';
 
 const mockModules: Module[] = [
   {
@@ -34,6 +39,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -46,6 +52,23 @@ const AppContent: React.FC = () => {
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
 
+  const isRTL = i18n.language === 'ar';
+
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
+
+  const getStatusLabel = (status: Quote['status']) => {
+    return t(`quotes.status.${status}`);
+  };
+
   const handleDownloadPDF = async (quote: Quote) => {
     try {
       const { supabase } = await import('../lib/supabase');
@@ -53,7 +76,7 @@ const AppContent: React.FC = () => {
       // Get current session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('Please sign in to download PDF');
+        alert(t('quotes.pdf.signInRequired'));
         return;
       }
 
@@ -68,7 +91,7 @@ const AppContent: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate PDF');
+        throw new Error(errorData.error || t('quotes.pdf.failed'));
       }
 
       // Check if we got HTML (fallback) or PDF
@@ -81,7 +104,7 @@ const AppContent: React.FC = () => {
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
 
-        alert('PDF service not configured. Opening printable HTML version. Use browser\'s Print to PDF feature.');
+        alert(t('quotes.pdf.htmlFallback'));
       } else {
         // Got PDF directly
         const blob = await response.blob();
@@ -96,7 +119,7 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`${t('quotes.pdf.downloadFailed')}: ${error instanceof Error ? error.message : t('quotes.error.unknown')}`);
     }
   };
 
@@ -160,10 +183,10 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading organization...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('quotes.loading')}</p>
         </div>
       </div>
     );
@@ -171,7 +194,7 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen">
+      <div className={cn("flex min-h-screen", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -183,10 +206,10 @@ const AppContent: React.FC = () => {
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: FileText, label: 'Quotes', isActive: true }
+              { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
             ]}
-            title="Quotes"
-            subtitle="Sales quotations and proforma invoices"
+            title={t('quotes.pageTitle')}
+            subtitle={t('quotes.pageSubtitle')}
           />
           <div className="p-6 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -198,18 +221,18 @@ const AppContent: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">Error loading quotes</p>
-          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-red-600 dark:text-red-400">{t('quotes.error.loading')}</p>
+          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('quotes.error.unknown')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={cn(`flex min-h-screen ${isDarkMode ? 'dark' : ''}`, isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -221,29 +244,29 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: FileText, label: 'Quotes', isActive: true }
+            { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
           ]}
-          title="Sales Quotes"
-          subtitle="Create and manage customer quotations"
+          title={t('quotes.title')}
+          subtitle={t('quotes.subtitle')}
         />
 
         <div className="p-6 space-y-6">
           {/* Header Actions */}
-          <div className="flex items-center justify-between">
+          <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Quotes</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('quotes.allQuotes')}</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Create quotations and convert to sales orders
+                {t('quotes.description')}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className={cn("flex gap-2", isRTL && "flex-row-reverse")}>
               <Button variant="outline">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
+                <Filter className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                {t('quotes.actions.filter')}
               </Button>
               <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Quote
+                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                {t('quotes.actions.newQuote')}
               </Button>
             </div>
           </div>
@@ -253,7 +276,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Quotes
+                  {t('quotes.stats.total')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -263,7 +286,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Draft
+                  {t('quotes.stats.draft')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -273,7 +296,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Sent
+                  {t('quotes.stats.sent')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -283,7 +306,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Accepted
+                  {t('quotes.stats.accepted')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -293,7 +316,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Converted
+                  {t('quotes.stats.converted')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -303,7 +326,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Value
+                  {t('quotes.stats.totalValue')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -317,9 +340,9 @@ const AppContent: React.FC = () => {
           {/* Quote List */}
           <Card>
             <CardHeader>
-              <CardTitle>All Quotes</CardTitle>
+              <CardTitle>{t('quotes.allQuotes')}</CardTitle>
               <CardDescription>
-                View and manage your sales quotations
+                {t('quotes.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -327,26 +350,26 @@ const AppContent: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Quote #
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.table.quoteNumber')}
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Customer
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.table.customer')}
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Date
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.table.date')}
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Valid Until
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.table.validUntil')}
                       </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Amount
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.table.amount')}
                       </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Status
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.table.status')}
                       </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Actions
+                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.table.actions')}
                       </th>
                     </tr>
                   </thead>
@@ -354,33 +377,33 @@ const AppContent: React.FC = () => {
                     {quotes.map((quote) => (
                       <tr key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
+                          <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                             <FileText className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {quote.quote_number}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">
+                        <td className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
                           {quote.customer_name}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(quote.quote_date).toLocaleDateString('fr-FR')}
+                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                          {format(new Date(quote.quote_date), 'P', { locale: getLocale() })}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(quote.valid_until).toLocaleDateString('fr-FR')}
+                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                          {format(new Date(quote.valid_until), 'P', { locale: getLocale() })}
                         </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium">
+                        <td className={cn("py-3 px-4 text-sm font-medium", isRTL ? "text-left" : "text-right")}>
                           {quote.currency_code} {Number(quote.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3 px-4">
-                          <Badge className={`${getStatusColor(quote.status)} flex items-center gap-1 w-fit`}>
+                          <Badge className={cn(`${getStatusColor(quote.status)} flex items-center gap-1 w-fit`, isRTL && "flex-row-reverse")}>
                             {getStatusIcon(quote.status)}
-                            {quote.status}
+                            {getStatusLabel(quote.status)}
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className={cn("flex items-center gap-2", isRTL ? "justify-start flex-row-reverse" : "justify-end")}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -412,16 +435,16 @@ const AppContent: React.FC = () => {
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                              <DropdownMenuContent align={isRTL ? "start" : "end"} className={cn("w-48", isRTL && "text-right")}>
+                                <DropdownMenuLabel>{t('quotes.actions.changeStatus')}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {quote.status === 'draft' && (
                                   <DropdownMenuItem onClick={() => {
                                     setSelectedQuote(quote);
                                     setDetailDialogOpen(true);
                                   }}>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Send to Customer
+                                    <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                    {t('quotes.actions.sendToCustomer')}
                                   </DropdownMenuItem>
                                 )}
                                 {quote.status === 'sent' && (
@@ -430,15 +453,15 @@ const AppContent: React.FC = () => {
                                       setSelectedQuote(quote);
                                       setDetailDialogOpen(true);
                                     }}>
-                                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                                      Mark as Accepted
+                                      <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                      {t('quotes.actions.markAccepted')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => {
                                       setSelectedQuote(quote);
                                       setDetailDialogOpen(true);
                                     }}>
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Mark as Rejected
+                                      <XCircle className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                      {t('quotes.actions.markRejected')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -447,8 +470,8 @@ const AppContent: React.FC = () => {
                                     setSelectedQuote(quote);
                                     setDetailDialogOpen(true);
                                   }}>
-                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Convert to Sales Order
+                                    <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                    {t('quotes.actions.convertToOrder')}
                                   </DropdownMenuItem>
                                 )}
                                 {quote.status !== 'cancelled' && quote.status !== 'converted' && (
@@ -461,8 +484,8 @@ const AppContent: React.FC = () => {
                                       }}
                                       className="text-red-600 dark:text-red-400"
                                     >
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Cancel Quote
+                                      <XCircle className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                      {t('quotes.actions.cancelQuote')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -474,8 +497,8 @@ const AppContent: React.FC = () => {
                     ))}
                     {quotes.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          No quotes found. Create your first quote to get started.
+                        <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                          {t('quotes.empty.message')}
                         </td>
                       </tr>
                     )}

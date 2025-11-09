@@ -1499,6 +1499,225 @@
       "success": "Modèle par défaut mis à jour",
       "failed": "Échec de la définition du modèle par défaut"
     }
+  },
+  "quotes": {
+    "title": "Devis",
+    "subtitle": "Créer et gérer les devis clients",
+    "pageTitle": "Devis",
+    "pageSubtitle": "Devis et factures proforma",
+    "allQuotes": "Tous les devis",
+    "description": "Créer des devis et les convertir en commandes",
+    "loading": "Chargement de l'organisation...",
+    "error": {
+      "loading": "Erreur lors du chargement des devis",
+      "unknown": "Erreur inconnue"
+    },
+    "stats": {
+      "total": "Total des devis",
+      "draft": "Brouillon",
+      "sent": "Envoyé",
+      "accepted": "Accepté",
+      "converted": "Converti",
+      "totalValue": "Valeur totale"
+    },
+    "table": {
+      "quoteNumber": "N° de devis",
+      "customer": "Client",
+      "date": "Date",
+      "validUntil": "Valide jusqu'au",
+      "amount": "Montant",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "empty": {
+      "message": "Aucun devis trouvé. Créez votre premier devis pour commencer."
+    },
+    "actions": {
+      "filter": "Filtrer",
+      "newQuote": "Nouveau devis",
+      "view": "Voir",
+      "download": "Télécharger",
+      "edit": "Modifier",
+      "changeStatus": "Changer le statut",
+      "sendToCustomer": "Envoyer au client",
+      "markAccepted": "Marquer comme accepté",
+      "markRejected": "Marquer comme rejeté",
+      "convertToOrder": "Convertir en commande",
+      "cancelQuote": "Annuler le devis"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "sent": "Envoyé",
+      "accepted": "Accepté",
+      "converted": "Converti",
+      "rejected": "Rejeté",
+      "expired": "Expiré",
+      "cancelled": "Annulé"
+    },
+    "pdf": {
+      "signInRequired": "Veuillez vous connecter pour télécharger le PDF",
+      "failed": "Échec de la génération du PDF",
+      "downloadFailed": "Échec du téléchargement du PDF",
+      "htmlFallback": "Service PDF non configuré. Ouverture de la version HTML imprimable. Utilisez la fonction Imprimer en PDF du navigateur."
+    },
+    "form": {
+      "create": "Créer un nouveau devis",
+      "createDescription": "Créer un devis à envoyer à un client",
+      "edit": "Modifier le devis",
+      "editDescription": "Mettre à jour les détails du devis",
+      "customer": "Client",
+      "selectCustomer": "-- Sélectionner un client --",
+      "referenceNumber": "Numéro de référence",
+      "referencePlaceholder": "Numéro RFQ du client",
+      "quoteDate": "Date du devis",
+      "validUntil": "Valide jusqu'au",
+      "lineItems": "Articles",
+      "addItem": "Ajouter un article",
+      "item": "Article",
+      "selectItem": "Sélectionner un article",
+      "loadingItems": "Chargement des articles...",
+      "noItems": "Aucun article disponible. Créez d'abord des articles.",
+      "description": "Description",
+      "quantity": "Qté",
+      "rate": "Prix unitaire",
+      "account": "Compte",
+      "selectAccount": "-- Compte --",
+      "tax": "Taxe",
+      "noTax": "Sans taxe",
+      "amount": "Montant",
+      "paymentTerms": "Conditions de paiement",
+      "paymentTermsPlaceholder": "ex. : Net 30 jours",
+      "deliveryTerms": "Conditions de livraison",
+      "deliveryTermsPlaceholder": "ex. : FOB Ferme",
+      "termsConditions": "Conditions générales",
+      "termsPlaceholder": "Saisir les conditions générales...",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes internes (non visibles par le client)",
+      "cancel": "Annuler",
+      "createQuote": "Créer le devis",
+      "updateQuote": "Mettre à jour le devis",
+      "saving": "Enregistrement...",
+      "validation": {
+        "customerRequired": "Le client est requis",
+        "quoteDateRequired": "La date du devis est requise",
+        "validUntilRequired": "La date de validité est requise",
+        "validUntilAfterDate": "La date de validité doit être égale ou postérieure à la date du devis",
+        "itemNameRequired": "Le nom de l'article est requis",
+        "quantityPositive": "La quantité doit être positive",
+        "ratePositive": "Le prix unitaire doit être positif",
+        "accountRequired": "Le compte est requis",
+        "atLeastOneItem": "Au moins un article est requis"
+      },
+      "success": {
+        "created": "Devis créé avec succès",
+        "updated": "Devis mis à jour avec succès"
+      },
+      "error": {
+        "createFailed": "Échec de la création du devis",
+        "updateFailed": "Échec de la mise à jour du devis"
+      }
+    },
+    "detail": {
+      "title": "Devis #{{number}}",
+      "subtitle": "Voir les détails du devis et gérer le statut",
+      "loading": "Chargement des détails du devis...",
+      "error": "Échec du chargement des détails du devis.",
+      "statusTimeline": "Chronologie du statut",
+      "timelineDescription": "Suivre chaque étape du cycle de vie du devis.",
+      "quickActions": "Actions rapides",
+      "actionsDescription": "Effectuer l'étape suivante en fonction du statut actuel du devis.",
+      "quoteInformation": "Informations sur le devis",
+      "lineItems": "Articles",
+      "totals": "Totaux",
+      "termsConditions": "Conditions générales",
+      "customer": "Client",
+      "quoteDate": "Date du devis",
+      "validUntil": "Valide jusqu'au",
+      "currency": "Devise",
+      "paymentTerms": "Conditions de paiement",
+      "deliveryTerms": "Conditions de livraison",
+      "downloadPdf": "Télécharger le PDF",
+      "downloadPdfDescription": "Générer une copie PDF pour le client ou les archives.",
+      "downloadPdfDisabled": "Envoyez le devis avant de générer un PDF.",
+      "editDetails": "Modifier les détails du devis",
+      "editDetailsDescription": "Ajuster la validité, les conditions ou les termes avant la finalisation.",
+      "editDetailsDisabled": "L'édition est limitée aux devis en brouillon ou envoyés.",
+      "convertToOrder": "Convertir en commande",
+      "convertDescription": "Convertir ce devis accepté en commande.",
+      "convertDisabled": "Le devis doit être accepté avant la conversion.",
+      "addItems": "Ajouter des articles",
+      "noItems": "Aucun article trouvé.",
+      "noItemsWithEdit": " Utilisez le bouton \"Ajouter des articles\" ci-dessus pour ajouter des articles.",
+      "noItemsWithoutEdit": " Ce devis n'a pas d'articles.",
+      "editForm": {
+        "validUntil": "Date de validité",
+        "paymentTerms": "Conditions de paiement",
+        "paymentTermsPlaceholder": "ex. Net 30",
+        "deliveryTerms": "Conditions de livraison",
+        "termsConditions": "Conditions générales",
+        "termsPlaceholder": "Ajouter les conditions générales",
+        "saveChanges": "Enregistrer les modifications",
+        "cancel": "Annuler"
+      },
+      "timeline": {
+        "draft": {
+          "label": "Brouillon",
+          "description": "Devis créé et stocké en brouillon."
+        },
+        "sent": {
+          "label": "Envoyé",
+          "description": "Devis envoyé au client pour examen."
+        },
+        "accepted": {
+          "label": "Accepté",
+          "description": "Le client a accepté le devis."
+        },
+        "converted": {
+          "label": "Converti",
+          "description": "Devis converti en commande."
+        }
+      },
+      "actions": {
+        "sendToCustomer": "Envoyer au client",
+        "markAccepted": "Marquer comme accepté",
+        "markRejected": "Marquer comme rejeté",
+        "close": "Fermer"
+      },
+      "dialogs": {
+        "send": {
+          "title": "Envoyer au client",
+          "body": "Cela marquera le devis comme envoyé et notifiera le client.",
+          "confirm": "Envoyer le devis"
+        },
+        "accept": {
+          "title": "Accepter le devis et créer une commande",
+          "body": "Cela marquera le devis comme accepté et créera automatiquement une commande pour commencer l'exécution.",
+          "confirm": "Accepter et créer la commande"
+        },
+        "reject": {
+          "title": "Marquer comme rejeté",
+          "body": "Cela fermera le devis comme rejeté. Cette action peut être annulée.",
+          "confirm": "Marquer comme rejeté"
+        }
+      },
+      "messages": {
+        "quoteAccepted": "Devis accepté. Création de la commande...",
+        "salesOrderCreated": "Commande #{{number}} créée avec succès",
+        "convertFailed": "Échec de la conversion en commande : {{error}}",
+        "quoteMarked": "Devis marqué comme {{status}}",
+        "updateFailed": "Échec de la mise à jour du statut du devis : {{error}}",
+        "detailsUpdated": "Détails du devis mis à jour",
+        "updateDetailsFailed": "Échec de la mise à jour du devis : {{error}}",
+        "converted": "Devis converti en commande #{{number}}",
+        "convertError": "Échec de la conversion du devis : {{error}}",
+        "signInRequired": "Veuillez vous connecter pour télécharger le devis.",
+        "pdfFailed": "Échec de la génération du PDF",
+        "htmlFallback": "Service PDF non configuré. Version imprimable ouverte dans un nouvel onglet. Utilisez la boîte de dialogue d'impression du navigateur pour exporter en PDF.",
+        "pdfDownloaded": "PDF du devis téléchargé",
+        "downloadError": "Échec du téléchargement du devis : {{error}}",
+        "locked": "Ce devis a été {{status}}. Les actions de workflow restantes sont verrouillées."
+      }
+    }
   }
 }
 

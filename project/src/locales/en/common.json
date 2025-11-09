@@ -1499,5 +1499,224 @@
       "success": "Default template updated",
       "failed": "Failed to set default template"
     }
+  },
+  "quotes": {
+    "title": "Sales Quotes",
+    "subtitle": "Create and manage customer quotations",
+    "pageTitle": "Quotes",
+    "pageSubtitle": "Sales quotations and proforma invoices",
+    "allQuotes": "All Quotes",
+    "description": "Create quotations and convert to sales orders",
+    "loading": "Loading organization...",
+    "error": {
+      "loading": "Error loading quotes",
+      "unknown": "Unknown error"
+    },
+    "stats": {
+      "total": "Total Quotes",
+      "draft": "Draft",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "converted": "Converted",
+      "totalValue": "Total Value"
+    },
+    "table": {
+      "quoteNumber": "Quote #",
+      "customer": "Customer",
+      "date": "Date",
+      "validUntil": "Valid Until",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": {
+      "message": "No quotes found. Create your first quote to get started."
+    },
+    "actions": {
+      "filter": "Filter",
+      "newQuote": "New Quote",
+      "view": "View",
+      "download": "Download",
+      "edit": "Edit",
+      "changeStatus": "Change Status",
+      "sendToCustomer": "Send to Customer",
+      "markAccepted": "Mark as Accepted",
+      "markRejected": "Mark as Rejected",
+      "convertToOrder": "Convert to Sales Order",
+      "cancelQuote": "Cancel Quote"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "converted": "Converted",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "pdf": {
+      "signInRequired": "Please sign in to download PDF",
+      "failed": "Failed to generate PDF",
+      "downloadFailed": "Failed to download PDF",
+      "htmlFallback": "PDF service not configured. Opening printable HTML version. Use browser's Print to PDF feature."
+    },
+    "form": {
+      "create": "Create New Quote",
+      "createDescription": "Create a quotation to send to a customer",
+      "edit": "Edit Quote",
+      "editDescription": "Update quote details",
+      "customer": "Customer",
+      "selectCustomer": "-- Select Customer --",
+      "referenceNumber": "Reference Number",
+      "referencePlaceholder": "Customer's RFQ number",
+      "quoteDate": "Quote Date",
+      "validUntil": "Valid Until",
+      "lineItems": "Line Items",
+      "addItem": "Add Item",
+      "item": "Item",
+      "selectItem": "Select item",
+      "loadingItems": "Loading items...",
+      "noItems": "No items available. Create items first.",
+      "description": "Description",
+      "quantity": "Qty",
+      "rate": "Rate",
+      "account": "Account",
+      "selectAccount": "-- Account --",
+      "tax": "Tax",
+      "noTax": "No tax",
+      "amount": "Amount",
+      "paymentTerms": "Payment Terms",
+      "paymentTermsPlaceholder": "e.g., Net 30 days",
+      "deliveryTerms": "Delivery Terms",
+      "deliveryTermsPlaceholder": "e.g., FOB Farm",
+      "termsConditions": "Terms & Conditions",
+      "termsPlaceholder": "Enter terms and conditions...",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal notes (not visible to customer)",
+      "cancel": "Cancel",
+      "createQuote": "Create Quote",
+      "updateQuote": "Update Quote",
+      "saving": "Saving...",
+      "validation": {
+        "customerRequired": "Customer is required",
+        "quoteDateRequired": "Quote date is required",
+        "validUntilRequired": "Valid until date is required",
+        "validUntilAfterDate": "Valid until date must be on or after quote date",
+        "itemNameRequired": "Item name is required",
+        "quantityPositive": "Quantity must be positive",
+        "ratePositive": "Rate must be positive",
+        "accountRequired": "Account is required",
+        "atLeastOneItem": "At least one item is required"
+      },
+      "success": {
+        "created": "Quote created successfully",
+        "updated": "Quote updated successfully"
+      },
+      "error": {
+        "createFailed": "Failed to create quote",
+        "updateFailed": "Failed to update quote"
+      }
+    },
+    "detail": {
+      "title": "Quote #{{number}}",
+      "subtitle": "View quote details and manage status",
+      "loading": "Loading quote details...",
+      "error": "Failed to load quote details.",
+      "statusTimeline": "Status Timeline",
+      "timelineDescription": "Track each step of the quote lifecycle.",
+      "quickActions": "Quick Actions",
+      "actionsDescription": "Perform the next step based on the current quote status.",
+      "quoteInformation": "Quote Information",
+      "lineItems": "Line Items",
+      "totals": "Totals",
+      "termsConditions": "Terms & Conditions",
+      "customer": "Customer",
+      "quoteDate": "Quote Date",
+      "validUntil": "Valid Until",
+      "currency": "Currency",
+      "paymentTerms": "Payment Terms",
+      "deliveryTerms": "Delivery Terms",
+      "downloadPdf": "Download PDF",
+      "downloadPdfDescription": "Generate a PDF copy for customer or records.",
+      "downloadPdfDisabled": "Send the quote before generating a PDF.",
+      "editDetails": "Edit Quote Details",
+      "editDetailsDescription": "Adjust validity, terms, or conditions before finalizing.",
+      "editDetailsDisabled": "Editing is limited to draft or sent quotes.",
+      "convertToOrder": "Convert to Sales Order",
+      "convertDescription": "Convert this accepted quote to a sales order.",
+      "convertDisabled": "Quote must be accepted before conversion.",
+      "addItems": "Add Items",
+      "noItems": "No line items found.",
+      "noItemsWithEdit": " Use the \"Add Items\" button above to add line items.",
+      "noItemsWithoutEdit": " This quote has no line items.",
+      "editForm": {
+        "validUntil": "Valid Until Date",
+        "paymentTerms": "Payment Terms",
+        "paymentTermsPlaceholder": "e.g. Net 30",
+        "deliveryTerms": "Delivery Terms",
+        "termsConditions": "Terms & Conditions",
+        "termsPlaceholder": "Add terms and conditions",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "timeline": {
+        "draft": {
+          "label": "Draft",
+          "description": "Quote created and stored as draft."
+        },
+        "sent": {
+          "label": "Sent",
+          "description": "Quote sent to customer for review."
+        },
+        "accepted": {
+          "label": "Accepted",
+          "description": "Customer accepted the quote."
+        },
+        "converted": {
+          "label": "Converted",
+          "description": "Quote converted to Sales Order."
+        }
+      },
+      "actions": {
+        "sendToCustomer": "Send to Customer",
+        "markAccepted": "Mark as Accepted",
+        "markRejected": "Mark as Rejected",
+        "close": "Close"
+      },
+      "dialogs": {
+        "send": {
+          "title": "Send to Customer",
+          "body": "This will mark the quote as sent and notify the customer.",
+          "confirm": "Send Quote"
+        },
+        "accept": {
+          "title": "Accept Quote & Create Sales Order",
+          "body": "This will mark the quote as accepted and automatically create a Sales Order to begin fulfillment.",
+          "confirm": "Accept & Create Order"
+        },
+        "reject": {
+          "title": "Mark as Rejected",
+          "body": "This will close the quote as rejected. This action can be reversed.",
+          "confirm": "Mark as Rejected"
+        }
+      },
+      "messages": {
+        "quoteAccepted": "Quote accepted. Creating sales order...",
+        "salesOrderCreated": "Sales Order #{{number}} created successfully",
+        "convertFailed": "Failed to convert to sales order: {{error}}",
+        "quoteMarked": "Quote marked as {{status}}",
+        "updateFailed": "Failed to update quote status: {{error}}",
+        "detailsUpdated": "Quote details updated",
+        "updateDetailsFailed": "Failed to update quote: {{error}}",
+        "converted": "Quote converted to Sales Order #{{number}}",
+        "convertError": "Failed to convert quote: {{error}}",
+        "signInRequired": "Please sign in to download the quote.",
+        "pdfFailed": "Failed to generate PDF",
+        "htmlFallback": "PDF service not configured. Opened a printable version in a new tab. Use the browser print dialog to export to PDF.",
+        "pdfDownloaded": "Quote PDF downloaded",
+        "downloadError": "Failed to download quote: {{error}}",
+        "locked": "This quote was {{status}}. Remaining workflow actions are locked."
+      }
+    }
   }
 }

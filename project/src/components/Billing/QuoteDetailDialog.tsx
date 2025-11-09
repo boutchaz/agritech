@@ -2,6 +2,8 @@ import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '../MultiTenantAuthProvider';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,10 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import type { Locale } from 'date-fns';
+import { fr, ar, enUS } from 'date-fns/locale';
 
 interface QuoteDetailDialogProps {
   quote: Quote | null;
@@ -60,54 +66,11 @@ type StatusActionKey = 'sent' | 'accepted' | 'rejected';
 
 const statusOrder: TimelineStepKey[] = ['draft', 'sent', 'accepted', 'converted'];
 
-const timelineStepConfig: Record<TimelineStepKey, { label: string; description: string }> = {
-  draft: {
-    label: 'Draft',
-    description: 'Quote created and stored as draft.',
-  },
-  sent: {
-    label: 'Sent',
-    description: 'Quote sent to customer for review.',
-  },
-  accepted: {
-    label: 'Accepted',
-    description: 'Customer accepted the quote.',
-  },
-  converted: {
-    label: 'Converted',
-    description: 'Quote converted to Sales Order.',
-  },
-};
-
-const statusActionCopy: Record<
-  StatusActionKey,
-  { title: string; body: string; confirmLabel: string }
-> = {
-  sent: {
-    title: 'Send to Customer',
-    body: 'This will mark the quote as sent and notify the customer.',
-    confirmLabel: 'Send Quote',
-  },
-  accepted: {
-    title: 'Accept Quote & Create Sales Order',
-    body: 'This will mark the quote as accepted and automatically create a Sales Order to begin fulfillment.',
-    confirmLabel: 'Accept & Create Order',
-  },
-  rejected: {
-    title: 'Mark as Rejected',
-    body: 'This will close the quote as rejected. This action can be reversed.',
-    confirmLabel: 'Mark as Rejected',
-  },
-};
-
-const formatDateTime = (value: string | null | undefined) => {
+const formatDateTime = (value: string | null | undefined, locale: Locale) => {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(parsed);
+  return format(parsed, 'PPp', { locale });
 };
 
 const toInputDate = (value: string | null | undefined) => {
@@ -125,9 +88,63 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   onEdit,
   onDownloadPDF,
 }) => {
+  const { t } = useTranslation();
   const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToOrder = useConvertQuoteToOrder();
+
+  const isRTL = i18n.language === 'ar';
+
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
+
+  const timelineStepConfig: Record<TimelineStepKey, { label: string; description: string }> = {
+    draft: {
+      label: t('quotes.detail.timeline.draft.label'),
+      description: t('quotes.detail.timeline.draft.description'),
+    },
+    sent: {
+      label: t('quotes.detail.timeline.sent.label'),
+      description: t('quotes.detail.timeline.sent.description'),
+    },
+    accepted: {
+      label: t('quotes.detail.timeline.accepted.label'),
+      description: t('quotes.detail.timeline.accepted.description'),
+    },
+    converted: {
+      label: t('quotes.detail.timeline.converted.label'),
+      description: t('quotes.detail.timeline.converted.description'),
+    },
+  };
+
+  const statusActionCopy: Record<
+    StatusActionKey,
+    { title: string; body: string; confirmLabel: string }
+  > = {
+    sent: {
+      title: t('quotes.detail.dialogs.send.title'),
+      body: t('quotes.detail.dialogs.send.body'),
+      confirmLabel: t('quotes.detail.dialogs.send.confirm'),
+    },
+    accepted: {
+      title: t('quotes.detail.dialogs.accept.title'),
+      body: t('quotes.detail.dialogs.accept.body'),
+      confirmLabel: t('quotes.detail.dialogs.accept.confirm'),
+    },
+    rejected: {
+      title: t('quotes.detail.dialogs.reject.title'),
+      body: t('quotes.detail.dialogs.reject.body'),
+      confirmLabel: t('quotes.detail.dialogs.reject.confirm'),
+    },
+  };
 
   // Fetch full quote with items when dialog is open
   const quoteId = quote?.id ?? null;
@@ -199,24 +216,24 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
       // If accepted, trigger automatic conversion to sales order
       if (result?.shouldConvert && resolvedQuote) {
-        toast.success('Quote accepted. Creating sales order...');
+        toast.success(t('quotes.detail.messages.quoteAccepted'));
 
         // Trigger conversion
         convertToOrder.mutate(resolvedQuote.id, {
           onSuccess: (salesOrder) => {
-            toast.success(`Sales Order #${salesOrder.order_number} created successfully`);
+            toast.success(t('quotes.detail.messages.salesOrderCreated', { number: salesOrder.order_number }));
             onOpenChange(false);
           },
           onError: (error) => {
-            toast.error('Failed to convert to sales order: ' + error.message);
+            toast.error(t('quotes.detail.messages.convertFailed', { error: error.message }));
           },
         });
       } else {
-        toast.success(`Quote marked as ${status}`);
+        toast.success(t('quotes.detail.messages.quoteMarked', { status: t(`quotes.status.${status}`) }));
       }
     },
     onError: (error) => {
-      toast.error('Failed to update quote status: ' + error.message);
+      toast.error(t('quotes.detail.messages.updateFailed', { error: error.message }));
     },
   });
 
@@ -227,10 +244,10 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       const { error } = await supabase
         .from('quotes')
         .update({
-          valid_until: editFormData.validUntil || null,
-          payment_terms: editFormData.paymentTerms || null,
-          delivery_terms: editFormData.deliveryTerms || null,
-          terms_and_conditions: editFormData.termsConditions || null,
+          valid_until: editFormData.validUntil || undefined,
+          payment_terms: editFormData.paymentTerms || undefined,
+          delivery_terms: editFormData.deliveryTerms || undefined,
+          terms_and_conditions: editFormData.termsConditions || undefined,
         })
         .eq('id', resolvedQuote.id);
 
@@ -238,11 +255,11 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      toast.success('Quote details updated');
+      toast.success(t('quotes.detail.messages.detailsUpdated'));
       setIsEditingDetails(false);
     },
     onError: (error) => {
-      toast.error('Failed to update quote: ' + error.message);
+      toast.error(t('quotes.detail.messages.updateDetailsFailed', { error: error.message }));
     },
   });
 
@@ -251,11 +268,11 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
     convertToOrder.mutate(resolvedQuote.id, {
       onSuccess: (salesOrder) => {
-        toast.success(`Quote converted to Sales Order #${salesOrder.order_number}`);
+        toast.success(t('quotes.detail.messages.converted', { number: salesOrder.order_number }));
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error('Failed to convert quote: ' + error.message);
+        toast.error(t('quotes.detail.messages.convertError', { error: error.message }));
       },
     });
   };
@@ -269,7 +286,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       const session = data.session;
 
       if (!session) {
-        toast.error('Please sign in to download the quote.');
+        toast.error(t('quotes.detail.messages.signInRequired'));
         return;
       }
 
@@ -286,7 +303,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
       if (!response.ok) {
         const contentType = response.headers.get('Content-Type');
-        let errorMessage = 'Failed to generate PDF';
+        let errorMessage = t('quotes.detail.messages.pdfFailed');
 
         if (contentType?.includes('application/json')) {
           const errorData = await response.json();
@@ -303,9 +320,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
-        toast.info(
-          'PDF service not configured. Opened a printable version in a new tab. Use the browser print dialog to export to PDF.'
-        );
+        toast.info(t('quotes.detail.messages.htmlFallback'));
       } else {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -316,12 +331,10 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         anchor.click();
         document.body.removeChild(anchor);
         window.URL.revokeObjectURL(url);
-        toast.success('Quote PDF downloaded');
+        toast.success(t('quotes.detail.messages.pdfDownloaded'));
       }
     } catch (error) {
-      toast.error(
-        'Failed to download quote: ' + (error instanceof Error ? error.message : 'Unknown error')
-      );
+      toast.error(t('quotes.detail.messages.downloadError', { error: error instanceof Error ? error.message : t('quotes.error.unknown') }));
     } finally {
       setIsDownloading(false);
     }
@@ -355,10 +368,10 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   if (isDetailLoading || !resolvedQuote) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
             <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            Loading quote details...
+            {t('quotes.detail.loading')}
           </div>
         </DialogContent>
       </Dialog>
@@ -368,9 +381,9 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   if (detailError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
-            Failed to load quote details.
+            {t('quotes.detail.error')}
           </div>
         </DialogContent>
       </Dialog>
@@ -452,20 +465,20 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   }> = [
     {
       key: 'sent',
-      label: 'Send to Customer',
-      icon: <Send className="mr-2 h-4 w-4" />,
+      label: t('quotes.detail.actions.sendToCustomer'),
+      icon: <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />,
       disabled: !canSend,
     },
     {
       key: 'accepted',
-      label: 'Mark as Accepted',
-      icon: <CheckCircle2 className="mr-2 h-4 w-4" />,
+      label: t('quotes.detail.actions.markAccepted'),
+      icon: <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />,
       disabled: !canAccept,
     },
     {
       key: 'rejected',
-      label: 'Mark as Rejected',
-      icon: <XCircle className="mr-2 h-4 w-4" />,
+      label: t('quotes.detail.actions.markRejected'),
+      icon: <XCircle className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />,
       disabled: !canReject,
     },
   ];
@@ -495,17 +508,17 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn("max-w-4xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                 <FileText className="h-5 w-5" />
-                Quote #{q.quote_number}
+                {t('quotes.detail.title', { number: q.quote_number })}
               </DialogTitle>
-              <DialogDescription>View quote details and manage status</DialogDescription>
+              <DialogDescription>{t('quotes.detail.subtitle')}</DialogDescription>
             </div>
-            <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
+            <Badge className={getStatusColor(q.status)}>{t(`quotes.status.${q.status}`)}</Badge>
           </div>
         </DialogHeader>
 
@@ -514,17 +527,17 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Status Timeline
+                  {t('quotes.detail.statusTimeline')}
                 </CardTitle>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Track each step of the quote lifecycle.
+                  {t('quotes.detail.timelineDescription')}
                 </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-5">
                   {timelineSteps.map((step, index) => {
                     const state = getStepState(step.key);
-                    const timestampLabel = formatDateTime(step.timestamp);
+                    const timestampLabel = formatDateTime(step.timestamp, getLocale());
                     const nextState = timelineSteps[index + 1]
                       ? getStepState(timelineSteps[index + 1].key)
                       : null;
@@ -600,10 +613,10 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 {(normalizedStatus === 'cancelled' ||
                   normalizedStatus === 'rejected' ||
                   normalizedStatus === 'expired') && (
-                  <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                  <div className={cn("mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300", isRTL && "flex-row-reverse")}>
                     <AlertCircle className="mt-0.5 h-4 w-4" />
                     <span>
-                      This quote was {normalizedStatus}. Remaining workflow actions are locked.
+                      {t('quotes.detail.messages.locked', { status: t(`quotes.status.${normalizedStatus}`) })}
                     </span>
                   </div>
                 )}
@@ -613,31 +626,29 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Quick Actions
+                  {t('quotes.detail.quickActions')}
                 </CardTitle>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Perform the next step based on the current quote status.
+                  {t('quotes.detail.actionsDescription')}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <Button
-                    onClick={onDownloadPDF ? () => onDownloadPDF(quote) : handleDownload}
+                    onClick={onDownloadPDF && quote ? () => onDownloadPDF(quote) : handleDownload}
                     disabled={!canDownload || isDownloading}
                     variant="outline"
-                    className="justify-start"
+                    className={cn("justify-start", isRTL && "flex-row-reverse")}
                   >
                     {isDownloading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                     ) : (
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                     )}
-                    Download PDF
+                    {t('quotes.detail.downloadPdf')}
                   </Button>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {canDownload
-                      ? 'Generate a PDF copy for customer or records.'
-                      : 'Send the quote before generating a PDF.'}
+                    {canDownload ? t('quotes.detail.downloadPdfDescription') : t('quotes.detail.downloadPdfDisabled')}
                   </p>
                 </div>
 
@@ -646,15 +657,13 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                     onClick={() => setIsEditingDetails(true)}
                     disabled={!canEditDetails || isEditingDetails}
                     variant="outline"
-                    className="justify-start"
+                    className={cn("justify-start", isRTL && "flex-row-reverse")}
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Quote Details
+                    <Pencil className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    {t('quotes.detail.editDetails')}
                   </Button>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {canEditDetails
-                      ? 'Adjust validity, terms, or conditions before finalizing.'
-                      : 'Editing is limited to draft or sent quotes.'}
+                    {canEditDetails ? t('quotes.detail.editDetailsDescription') : t('quotes.detail.editDetailsDisabled')}
                   </p>
                 </div>
 
@@ -663,19 +672,17 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                     onClick={handleConvertToOrder}
                     disabled={!canConvert || convertToOrder.isPending}
                     variant="outline"
-                    className="justify-start"
+                    className={cn("justify-start", isRTL && "flex-row-reverse")}
                   >
                     {convertToOrder.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                     ) : (
-                      <ArrowRight className="mr-2 h-4 w-4" />
+                      <ArrowRight className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                     )}
-                    Convert to Sales Order
+                    {t('quotes.detail.convertToOrder')}
                   </Button>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {canConvert
-                      ? 'Convert this accepted quote to a sales order.'
-                      : 'Quote must be accepted before conversion.'}
+                    {canConvert ? t('quotes.detail.convertDescription') : t('quotes.detail.convertDisabled')}
                   </p>
                 </div>
               </CardContent>
@@ -685,34 +692,34 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Quote Information
+                {t('quotes.detail.quoteInformation')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 text-sm md:grid-cols-2">
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Customer:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.customer')}:</span>
                   <p className="font-medium text-gray-900 dark:text-white">{q.customer_name}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Quote Date:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.quoteDate')}:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(q.quote_date).toLocaleDateString('fr-FR')}
+                    {format(new Date(q.quote_date), 'P', { locale: getLocale() })}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Valid Until:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.validUntil')}:</span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {new Date(q.valid_until).toLocaleDateString('fr-FR')}
+                    {format(new Date(q.valid_until), 'P', { locale: getLocale() })}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Currency:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.currency')}:</span>
                   <p className="font-medium text-gray-900 dark:text-white">{q.currency_code}</p>
                 </div>
                 {q.payment_terms && (
                   <div className="md:col-span-2">
-                    <span className="text-gray-600 dark:text-gray-400">Payment Terms:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.paymentTerms')}:</span>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {q.payment_terms}
                     </p>
@@ -720,7 +727,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 )}
                 {q.delivery_terms && (
                   <div className="md:col-span-2">
-                    <span className="text-gray-600 dark:text-gray-400">Delivery Terms:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('quotes.detail.deliveryTerms')}:</span>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {q.delivery_terms}
                     </p>
@@ -735,7 +742,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 >
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <Label htmlFor="valid-until">Valid Until Date</Label>
+                      <Label htmlFor="valid-until">{t('quotes.detail.editForm.validUntil')}</Label>
                       <Input
                         id="valid-until"
                         type="date"
@@ -744,19 +751,19 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="payment-terms">Payment Terms</Label>
+                      <Label htmlFor="payment-terms">{t('quotes.detail.editForm.paymentTerms')}</Label>
                       <Input
                         id="payment-terms"
                         value={editFormData.paymentTerms}
                         onChange={(event) =>
                           handleEditFieldChange('paymentTerms')(event.target.value)
                         }
-                        placeholder="e.g. Net 30"
+                        placeholder={t('quotes.detail.editForm.paymentTermsPlaceholder')}
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="delivery-terms">Delivery Terms</Label>
+                    <Label htmlFor="delivery-terms">{t('quotes.detail.editForm.deliveryTerms')}</Label>
                     <Textarea
                       id="delivery-terms"
                       value={editFormData.deliveryTerms}
@@ -767,7 +774,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="terms-conditions">Terms & Conditions</Label>
+                    <Label htmlFor="terms-conditions">{t('quotes.detail.editForm.termsConditions')}</Label>
                     <Textarea
                       id="terms-conditions"
                       value={editFormData.termsConditions}
@@ -775,25 +782,25 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                         handleEditFieldChange('termsConditions')(event.target.value)
                       }
                       rows={4}
-                      placeholder="Add terms and conditions"
+                      placeholder={t('quotes.detail.editForm.termsPlaceholder')}
                     />
                   </div>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className={cn("flex items-center justify-end gap-2", isRTL && "flex-row-reverse")}>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleCancelEdit}
                       disabled={updateQuoteDetails.isPending}
                     >
-                      Cancel
+                      {t('quotes.detail.editForm.cancel')}
                     </Button>
                     <Button type="submit" disabled={updateQuoteDetails.isPending}>
                       {updateQuoteDetails.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                       ) : (
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                       )}
-                      Save Changes
+                      {t('quotes.detail.editForm.saveChanges')}
                     </Button>
                   </div>
                 </form>
@@ -803,14 +810,14 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Line Items
+                  {t('quotes.detail.lineItems')}
                 </CardTitle>
-                {canEditDetails && (!q.items || q.items.length === 0) && (
+                {canEditDetails && (!q.items || q.items.length === 0) && quote && (
                   <Button variant="outline" size="sm" onClick={() => onEdit?.(quote)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Add Items
+                    <Pencil className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    {t('quotes.detail.addItems')}
                   </Button>
                 )}
               </div>
@@ -820,26 +827,26 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Item
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.form.item')}
                       </th>
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Description
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                        {t('quotes.form.description')}
                       </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Qty
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.form.quantity')}
                       </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Rate
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.form.rate')}
                       </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Amount
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.form.amount')}
                       </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Tax
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.form.tax')}
                       </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Total
+                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                        {t('quotes.detail.totals')}
                       </th>
                     </tr>
                   </thead>
@@ -847,25 +854,25 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                     {q.items && q.items.length > 0 ? (
                       q.items.map((item: any, index: number) => (
                         <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
+                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
                             {item.item_name}
                           </td>
-                          <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
+                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                             {item.description || '-'}
                           </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {item.quantity}
                           </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.rate ?? 0), q.currency_code)}
                           </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.amount ?? 0), q.currency_code)}
                           </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.tax_amount ?? 0), q.currency_code)}
                           </td>
-                          <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(
                               Number(item.amount ?? 0) + Number(item.tax_amount ?? 0),
                               q.currency_code
@@ -875,9 +882,9 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                          No line items found.
-                          {canEditDetails ? ' Use the "Add Items" button above to add line items.' : ' This quote has no line items.'}
+                        <td colSpan={7} className={cn("py-8 text-center text-sm text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                          {t('quotes.detail.noItems')}
+                          {canEditDetails ? t('quotes.detail.noItemsWithEdit') : t('quotes.detail.noItemsWithoutEdit')}
                         </td>
                       </tr>
                     )}
@@ -890,7 +897,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Totals
+                {t('quotes.detail.totals')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -907,7 +914,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Terms & Conditions
+                  {t('quotes.detail.termsConditions')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -919,41 +926,41 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           )}
 
           {/* Actions - Matching Purchase Order Pattern */}
-          <div className="flex items-center justify-between gap-2 pt-4 border-t">
+          <div className={cn("flex items-center justify-between gap-2 pt-4 border-t", isRTL && "flex-row-reverse")}>
             {/* Left side - Download, Edit, Convert */}
-            <div className="flex items-center gap-2">
+            <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
               <Button
-                onClick={onDownloadPDF ? () => onDownloadPDF(quote) : handleDownload}
+                onClick={onDownloadPDF && quote ? () => onDownloadPDF(quote) : handleDownload}
                 disabled={isDownloading}
                 variant="outline"
               >
                 {isDownloading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                 ) : (
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                 )}
-                Download PDF
+                {t('quotes.detail.downloadPdf')}
               </Button>
-              {onEdit && quote.status !== 'converted' && quote.status !== 'cancelled' && (
+              {onEdit && quote && quote.status !== 'converted' && quote.status !== 'cancelled' && (
                 <Button onClick={() => onEdit(quote)} variant="outline">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Quote
+                  <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                  {t('quotes.form.edit')}
                 </Button>
               )}
               {canConvert && (
                 <Button onClick={handleConvertToOrder} disabled={convertToOrder.isPending} variant="outline">
                   {convertToOrder.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                   ) : (
-                    <ArrowRight className="mr-2 h-4 w-4" />
+                    <ArrowRight className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
                   )}
-                  Convert to Sales Order
+                  {t('quotes.detail.convertToOrder')}
                 </Button>
               )}
             </div>
 
             {/* Right side - Status actions and Close */}
-            <div className="flex items-center gap-2">
+            <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
               {availableStatusActions.map((action) => (
                 <Button
                   key={action.key}
@@ -966,7 +973,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                 </Button>
               ))}
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
+                {t('quotes.detail.actions.close')}
               </Button>
             </div>
           </div>
@@ -990,8 +997,8 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                   {statusActionCopy[pendingStatus].body}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={updateStatus.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogFooter className={cn(isRTL && "flex-row-reverse")}>
+                <AlertDialogCancel disabled={updateStatus.isPending}>{t('app.cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   disabled={updateStatus.isPending}
                   onClick={() => {
@@ -1002,7 +1009,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                   }}
                 >
                   {updateStatus.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
                   ) : null}
                   {statusActionCopy[pendingStatus].confirmLabel}
                 </AlertDialogAction>

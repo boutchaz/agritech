@@ -1419,5 +1419,224 @@
       "success": "تم تحديث القالب الافتراضي",
       "failed": "فشل تعيين القالب الافتراضي"
     }
+  },
+  "quotes": {
+    "title": "عروض الأسعار",
+    "subtitle": "إنشاء وإدارة عروض الأسعار للعملاء",
+    "pageTitle": "عروض الأسعار",
+    "pageSubtitle": "عروض الأسعار والفواتير الأولية",
+    "allQuotes": "جميع عروض الأسعار",
+    "description": "إنشاء عروض الأسعار وتحويلها إلى أوامر مبيعات",
+    "loading": "جاري تحميل المؤسسة...",
+    "error": {
+      "loading": "خطأ في تحميل عروض الأسعار",
+      "unknown": "خطأ غير معروف"
+    },
+    "stats": {
+      "total": "إجمالي عروض الأسعار",
+      "draft": "مسودة",
+      "sent": "مرسل",
+      "accepted": "مقبول",
+      "converted": "محول",
+      "totalValue": "القيمة الإجمالية"
+    },
+    "table": {
+      "quoteNumber": "رقم العرض",
+      "customer": "العميل",
+      "date": "التاريخ",
+      "validUntil": "صالح حتى",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "empty": {
+      "message": "لم يتم العثور على عروض أسعار. قم بإنشاء عرضك الأول للبدء."
+    },
+    "actions": {
+      "filter": "تصفية",
+      "newQuote": "عرض سعر جديد",
+      "view": "عرض",
+      "download": "تحميل",
+      "edit": "تعديل",
+      "changeStatus": "تغيير الحالة",
+      "sendToCustomer": "إرسال إلى العميل",
+      "markAccepted": "وضع علامة كمقبول",
+      "markRejected": "وضع علامة كمرفوض",
+      "convertToOrder": "تحويل إلى أمر مبيعات",
+      "cancelQuote": "إلغاء العرض"
+    },
+    "status": {
+      "draft": "مسودة",
+      "sent": "مرسل",
+      "accepted": "مقبول",
+      "converted": "محول",
+      "rejected": "مرفوض",
+      "expired": "منتهي الصلاحية",
+      "cancelled": "ملغى"
+    },
+    "pdf": {
+      "signInRequired": "يرجى تسجيل الدخول لتحميل PDF",
+      "failed": "فشل إنشاء PDF",
+      "downloadFailed": "فشل تحميل PDF",
+      "htmlFallback": "خدمة PDF غير مهيأة. فتح النسخة HTML القابلة للطباعة. استخدم ميزة Print to PDF في المتصفح."
+    },
+    "form": {
+      "create": "إنشاء عرض سعر جديد",
+      "createDescription": "إنشاء عرض سعر لإرساله إلى عميل",
+      "edit": "تعديل عرض السعر",
+      "editDescription": "تحديث تفاصيل عرض السعر",
+      "customer": "العميل",
+      "selectCustomer": "-- اختر العميل --",
+      "referenceNumber": "رقم المرجع",
+      "referencePlaceholder": "رقم RFQ للعميل",
+      "quoteDate": "تاريخ العرض",
+      "validUntil": "صالح حتى",
+      "lineItems": "البنود",
+      "addItem": "إضافة بند",
+      "item": "البند",
+      "selectItem": "اختر البند",
+      "loadingItems": "جاري تحميل البنود...",
+      "noItems": "لا توجد بنود متاحة. قم بإنشاء البنود أولاً.",
+      "description": "الوصف",
+      "quantity": "الكمية",
+      "rate": "السعر",
+      "account": "الحساب",
+      "selectAccount": "-- الحساب --",
+      "tax": "الضريبة",
+      "noTax": "بدون ضريبة",
+      "amount": "المبلغ",
+      "paymentTerms": "شروط الدفع",
+      "paymentTermsPlaceholder": "مثال: صافي 30 يوم",
+      "deliveryTerms": "شروط التسليم",
+      "deliveryTermsPlaceholder": "مثال: FOB المزرعة",
+      "termsConditions": "الشروط والأحكام",
+      "termsPlaceholder": "أدخل الشروط والأحكام...",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "ملاحظات داخلية (غير مرئية للعميل)",
+      "cancel": "إلغاء",
+      "createQuote": "إنشاء عرض السعر",
+      "updateQuote": "تحديث عرض السعر",
+      "saving": "جاري الحفظ...",
+      "validation": {
+        "customerRequired": "العميل مطلوب",
+        "quoteDateRequired": "تاريخ العرض مطلوب",
+        "validUntilRequired": "تاريخ الصلاحية مطلوب",
+        "validUntilAfterDate": "يجب أن يكون تاريخ الصلاحية في نفس تاريخ العرض أو بعده",
+        "itemNameRequired": "اسم البند مطلوب",
+        "quantityPositive": "يجب أن تكون الكمية موجبة",
+        "ratePositive": "يجب أن يكون السعر موجباً",
+        "accountRequired": "الحساب مطلوب",
+        "atLeastOneItem": "يجب إضافة بند واحد على الأقل"
+      },
+      "success": {
+        "created": "تم إنشاء عرض السعر بنجاح",
+        "updated": "تم تحديث عرض السعر بنجاح"
+      },
+      "error": {
+        "createFailed": "فشل إنشاء عرض السعر",
+        "updateFailed": "فشل تحديث عرض السعر"
+      }
+    },
+    "detail": {
+      "title": "عرض السعر #{{number}}",
+      "subtitle": "عرض تفاصيل عرض السعر وإدارة الحالة",
+      "loading": "جاري تحميل تفاصيل عرض السعر...",
+      "error": "فشل تحميل تفاصيل عرض السعر.",
+      "statusTimeline": "الجدول الزمني للحالة",
+      "timelineDescription": "تتبع كل خطوة من دورة حياة عرض السعر.",
+      "quickActions": "إجراءات سريعة",
+      "actionsDescription": "تنفيذ الخطوة التالية بناءً على حالة عرض السعر الحالية.",
+      "quoteInformation": "معلومات عرض السعر",
+      "lineItems": "البنود",
+      "totals": "الإجماليات",
+      "termsConditions": "الشروط والأحكام",
+      "customer": "العميل",
+      "quoteDate": "تاريخ العرض",
+      "validUntil": "صالح حتى",
+      "currency": "العملة",
+      "paymentTerms": "شروط الدفع",
+      "deliveryTerms": "شروط التسليم",
+      "downloadPdf": "تحميل PDF",
+      "downloadPdfDescription": "إنشاء نسخة PDF للعميل أو السجلات.",
+      "downloadPdfDisabled": "أرسل عرض السعر قبل إنشاء PDF.",
+      "editDetails": "تعديل تفاصيل عرض السعر",
+      "editDetailsDescription": "تعديل الصلاحية أو الشروط أو الأحكام قبل الإنهاء.",
+      "editDetailsDisabled": "التعديل محدود لعروض الأسعار المسودة أو المرسلة.",
+      "convertToOrder": "تحويل إلى أمر مبيعات",
+      "convertDescription": "تحويل عرض السعر المقبول هذا إلى أمر مبيعات.",
+      "convertDisabled": "يجب قبول عرض السعر قبل التحويل.",
+      "addItems": "إضافة بنود",
+      "noItems": "لم يتم العثور على بنود.",
+      "noItemsWithEdit": " استخدم زر \"إضافة بنود\" أعلاه لإضافة بنود.",
+      "noItemsWithoutEdit": " لا يحتوي عرض السعر هذا على بنود.",
+      "editForm": {
+        "validUntil": "تاريخ الصلاحية",
+        "paymentTerms": "شروط الدفع",
+        "paymentTermsPlaceholder": "مثال: صافي 30",
+        "deliveryTerms": "شروط التسليم",
+        "termsConditions": "الشروط والأحكام",
+        "termsPlaceholder": "إضافة الشروط والأحكام",
+        "saveChanges": "حفظ التغييرات",
+        "cancel": "إلغاء"
+      },
+      "timeline": {
+        "draft": {
+          "label": "مسودة",
+          "description": "تم إنشاء عرض السعر وحفظه كمسودة."
+        },
+        "sent": {
+          "label": "مرسل",
+          "description": "تم إرسال عرض السعر إلى العميل للمراجعة."
+        },
+        "accepted": {
+          "label": "مقبول",
+          "description": "قبل العميل عرض السعر."
+        },
+        "converted": {
+          "label": "محول",
+          "description": "تم تحويل عرض السعر إلى أمر مبيعات."
+        }
+      },
+      "actions": {
+        "sendToCustomer": "إرسال إلى العميل",
+        "markAccepted": "وضع علامة كمقبول",
+        "markRejected": "وضع علامة كمرفوض",
+        "close": "إغلاق"
+      },
+      "dialogs": {
+        "send": {
+          "title": "إرسال إلى العميل",
+          "body": "سيؤدي هذا إلى وضع علامة على عرض السعر كمرسل وإشعار العميل.",
+          "confirm": "إرسال عرض السعر"
+        },
+        "accept": {
+          "title": "قبول عرض السعر وإنشاء أمر مبيعات",
+          "body": "سيؤدي هذا إلى وضع علامة على عرض السعر كمقبول وإنشاء أمر مبيعات تلقائياً لبدء التنفيذ.",
+          "confirm": "قبول وإنشاء الأمر"
+        },
+        "reject": {
+          "title": "وضع علامة كمرفوض",
+          "body": "سيؤدي هذا إلى إغلاق عرض السعر كمرفوض. يمكن عكس هذا الإجراء.",
+          "confirm": "وضع علامة كمرفوض"
+        }
+      },
+      "messages": {
+        "quoteAccepted": "تم قبول عرض السعر. جاري إنشاء أمر المبيعات...",
+        "salesOrderCreated": "تم إنشاء أمر المبيعات #{{number}} بنجاح",
+        "convertFailed": "فشل التحويل إلى أمر مبيعات: {{error}}",
+        "quoteMarked": "تم وضع علامة على عرض السعر كـ {{status}}",
+        "updateFailed": "فشل تحديث حالة عرض السعر: {{error}}",
+        "detailsUpdated": "تم تحديث تفاصيل عرض السعر",
+        "updateDetailsFailed": "فشل تحديث عرض السعر: {{error}}",
+        "converted": "تم تحويل عرض السعر إلى أمر مبيعات #{{number}}",
+        "convertError": "فشل تحويل عرض السعر: {{error}}",
+        "signInRequired": "يرجى تسجيل الدخول لتحميل عرض السعر.",
+        "pdfFailed": "فشل إنشاء PDF",
+        "htmlFallback": "خدمة PDF غير مهيأة. تم فتح نسخة قابلة للطباعة في علامة تبويب جديدة. استخدم مربع حوار الطباعة في المتصفح لتصدير PDF.",
+        "pdfDownloaded": "تم تحميل PDF عرض السعر",
+        "downloadError": "فشل تحميل عرض السعر: {{error}}",
+        "locked": "تم {{status}} هذا العرض. تم قفل إجراءات سير العمل المتبقية."
+      }
+    }
   }
 }
