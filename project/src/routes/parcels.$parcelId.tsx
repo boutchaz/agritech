@@ -4,7 +4,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider'
 import { useParcelById, useFarms } from '../hooks/useParcelsQuery'
 import Sidebar from '../components/Sidebar'
 import ModernPageHeader from '../components/ModernPageHeader'
-import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet } from 'lucide-react'
+import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp } from 'lucide-react'
 import type { Module } from '../types'
 
 const mockModules: Module[] = [
@@ -44,6 +44,7 @@ const ParcelLayout = () => {
     { id: 'soil', name: t('farmHierarchy.parcel.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/soil` },
     { id: 'satellite', name: t('farmHierarchy.parcel.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
     { id: 'weather', name: t('farmHierarchy.parcel.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
+    { id: 'production', name: 'Production Intelligence', icon: TrendingUp, path: `/parcels/${parcelId}/production` },
     { id: 'profitability', name: t('farmHierarchy.parcel.detail.tabs.profitability'), icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
     { id: 'reports', name: t('farmHierarchy.parcel.detail.tabs.reports'), icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
   ];

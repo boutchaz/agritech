@@ -80,6 +80,7 @@ import { Route as ParcelsParcelIdSoilRouteImport } from './routes/parcels.$parce
 import { Route as ParcelsParcelIdSatelliteRouteImport } from './routes/parcels.$parcelId.satellite'
 import { Route as ParcelsParcelIdReportsRouteImport } from './routes/parcels.$parcelId.reports'
 import { Route as ParcelsParcelIdProfitabilityRouteImport } from './routes/parcels.$parcelId.profitability'
+import { Route as ParcelsParcelIdProductionRouteImport } from './routes/parcels.$parcelId.production'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -438,6 +439,12 @@ const ParcelsParcelIdProfitabilityRoute =
     path: '/profitability',
     getParentRoute: () => ParcelsParcelIdRoute,
   } as any)
+const ParcelsParcelIdProductionRoute =
+  ParcelsParcelIdProductionRouteImport.update({
+    id: '/production',
+    path: '/production',
+    getParentRoute: () => ParcelsParcelIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -500,6 +507,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
@@ -566,6 +574,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/stock': typeof StockIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
@@ -640,6 +649,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
@@ -714,6 +724,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
@@ -780,6 +791,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stock'
     | '/tasks'
+    | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
@@ -853,6 +865,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
@@ -1407,6 +1420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdProfitabilityRouteImport
       parentRoute: typeof ParcelsParcelIdRoute
     }
+    '/parcels/$parcelId/production': {
+      id: '/parcels/$parcelId/production'
+      path: '/production'
+      fullPath: '/parcels/$parcelId/production'
+      preLoaderRoute: typeof ParcelsParcelIdProductionRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
   }
 }
 
@@ -1423,6 +1443,7 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
 )
 
 interface ParcelsParcelIdRouteChildren {
+  ParcelsParcelIdProductionRoute: typeof ParcelsParcelIdProductionRoute
   ParcelsParcelIdProfitabilityRoute: typeof ParcelsParcelIdProfitabilityRoute
   ParcelsParcelIdReportsRoute: typeof ParcelsParcelIdReportsRoute
   ParcelsParcelIdSatelliteRoute: typeof ParcelsParcelIdSatelliteRoute
@@ -1432,6 +1453,7 @@ interface ParcelsParcelIdRouteChildren {
 }
 
 const ParcelsParcelIdRouteChildren: ParcelsParcelIdRouteChildren = {
+  ParcelsParcelIdProductionRoute: ParcelsParcelIdProductionRoute,
   ParcelsParcelIdProfitabilityRoute: ParcelsParcelIdProfitabilityRoute,
   ParcelsParcelIdReportsRoute: ParcelsParcelIdReportsRoute,
   ParcelsParcelIdSatelliteRoute: ParcelsParcelIdSatelliteRoute,

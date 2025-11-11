@@ -26,7 +26,11 @@ import { YieldHistoryForm } from './YieldHistoryForm';
 import { BenchmarkForm } from './BenchmarkForm';
 import { HarvestForecastForm } from './HarvestForecastForm';
 
-export const ProductionDashboard: React.FC = () => {
+interface ProductionDashboardProps {
+  parcelId?: string;
+}
+
+export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcelId }) => {
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState({
@@ -39,20 +43,23 @@ export const ProductionDashboard: React.FC = () => {
   const [isBenchmarkFormOpen, setIsBenchmarkFormOpen] = useState(false);
   const [isForecastFormOpen, setIsForecastFormOpen] = useState(false);
 
-  // Fetch data
+  // Fetch data - filter by parcelId if provided
   const { data: performanceSummary = [], isLoading: loadingPerformance } = useParcelPerformanceSummary({
     farmId: currentFarm?.id,
+    parcelId: parcelId,
     fromDate: dateRange.fromDate,
     toDate: dateRange.toDate,
   });
 
   const { data: alerts = [], isLoading: loadingAlerts } = usePerformanceAlerts({
     farmId: currentFarm?.id,
+    parcelId: parcelId,
     status: 'active',
   });
 
   const { data: forecasts = [], isLoading: loadingForecasts } = useHarvestForecasts({
     farmId: currentFarm?.id,
+    parcelId: parcelId,
     status: 'pending',
     fromDate: new Date().toISOString().split('T')[0],
   });
