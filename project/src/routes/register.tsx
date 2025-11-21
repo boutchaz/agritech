@@ -41,115 +41,76 @@ function RegisterPage() {
     }
 
     try {
-      // Sign up the user with organization name in metadata
-      // The Edge Function will be called directly after signup (bypassing triggers)
-      console.log('📝 Starting user signup...', { email, organizationName })
+      console.log('📝 Starting user signup via NestJS API...', { email, organizationName })
 
-      const emailRedirectUrl = new URL('/auth/callback', window.location.origin)
-      emailRedirectUrl.searchParams.set('next', '/select-trial')
+      // Extract first and last name from organization name
+      const nameParts = organizationName.split(' ')
+      const firstName = nameParts[0] || organizationName
+      const lastName = nameParts.slice(1).join(' ') || 'User'
 
-      const { data: authData, error: signUpError } = await authSupabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: emailRedirectUrl.toString(),
-          data: {
-            organization_name: organizationName,
-            allow_unconfirmed_setup: true, // Allow Edge Function to setup even if email not confirmed
-          }
-        }
+      // Call NestJS signup endpoint
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          lastName,
+          organizationName,
+        }),
       })
-      
-      console.log('📝 Signup response:', { user: authData?.user?.id, error: signUpError?.message })
 
-      if (signUpError) {
-        console.error('❌ Signup error:', signUpError)
-        console.error('❌ Signup error details:', JSON.stringify(signUpError, null, 2))
-        console.error('❌ Signup error status:', signUpError.status)
-        console.error('❌ Signup error message:', signUpError.message)
-        
-        if (signUpError.message?.includes('User already registered') || signUpError.message?.includes('already registered')) {
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Signup error:', data)
+
+        if (response.status === 409 || data.message?.includes('already exists') || data.message?.includes('already registered')) {
           throw new Error('A user with this email already exists')
         }
-        
-        // Handle 500 errors specifically - show actual error message
-        if (signUpError.message?.includes('500') || signUpError.status === 500 || signUpError.message?.includes('Internal Server Error')) {
-          const errorMsg = signUpError.message || 'Unknown server error'
-          throw new Error(`Server error during registration: ${errorMsg}. Please check the Supabase dashboard logs.`)
-        }
-        
-        // Show the actual error message to the user
-        throw new Error(signUpError.message || 'An error occurred during registration')
+
+        throw new Error(data.message || 'An error occurred during registration')
       }
 
-      if (authData.user) {
-        // Call Edge Function directly to setup user (bypass trigger)
-        // Wait a moment for session to be available (new users might need a moment)
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        let edgeFunctionCalled = false
-        try {
-          // Wait a bit more for session to be established
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          console.log('📞 Calling Edge Function to setup user...')
-          
-          // Use Supabase client to call Edge Function (handles auth automatically)
-          const { data, error } = await authSupabase.functions.invoke('on-user-created', {
-            body: {
-              id: authData.user.id,
-              email: authData.user.email,
-              raw_user_meta_data: {
-                organization_name: organizationName,
-                allow_unconfirmed_setup: true,
-                ...authData.user.user_metadata,
-              },
-            },
-          })
+      console.log('✅ Signup successful:', data)
 
-          if (error) {
-            console.error('❌ Edge Function error:', error)
-            console.error('❌ Edge Function error details:', JSON.stringify(error, null, 2))
-            // Continue anyway - select-trial page will retry if needed
-          } else {
-            console.log('✅ Edge Function setup completed:', data)
-            edgeFunctionCalled = true
-          }
-        } catch (edgeError) {
-          console.error('⚠️ Error calling Edge Function:', edgeError)
-          // Continue anyway - select-trial page will retry if needed
-        }
-        
-        // Wait a moment for Edge Function to complete if it was called
-        if (edgeFunctionCalled) {
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
+      // Store tokens in localStorage
+      if (data.session) {
+        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session))
 
-        // Check if email confirmation is required
-        if (authData.user.identities && authData.user.identities.length === 0) {
-          // Email confirmation is required
-          setNeedsEmailConfirmation(true)
-          setShowEmailConfirmation(true)
-          setIsLoading(false)
-          return
-        }
+        // Set the session in Supabase auth
+        const { error: sessionError } = await authSupabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
 
-        // Email confirmation disabled or already confirmed
-        // Wait a moment for Edge Function to complete
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-        console.log('✅ Account created - showing activation message')
-        
-        // Show success message with activation instructions
-        setNeedsEmailConfirmation(false)
-        setShowEmailConfirmation(true) // Reuse this state to show activation message
-        setIsLoading(false)
-        
-        // Redirect to trial selection after showing message for 3 seconds
-        setTimeout(() => {
-          window.location.href = '/select-trial'
-        }, 3000) // Give user 3 seconds to see the message
+        if (sessionError) {
+          console.error('⚠️ Error setting session:', sessionError)
+        }
       }
+
+      // Store organization ID for later use
+      if (data.organization?.id) {
+        localStorage.setItem('currentOrganizationId', data.organization.id)
+      }
+
+      console.log('✅ Account created - redirecting to trial selection')
+
+      // Show success message
+      setNeedsEmailConfirmation(false)
+      setShowEmailConfirmation(true)
+      setIsLoading(false)
+
+      // Redirect to trial selection after showing message for 3 seconds
+      setTimeout(() => {
+        window.location.href = '/select-trial'
+      }, 3000)
     } catch (error) {
+      console.error('❌ Registration error:', error)
       setError(error instanceof Error ? error.message : 'An error occurred during registration')
     } finally {
       setIsLoading(false)
