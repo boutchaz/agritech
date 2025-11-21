@@ -18,8 +18,6 @@ function RegisterPage() {
   const [organizationName, setOrganizationName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
-  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -41,7 +39,7 @@ function RegisterPage() {
     }
 
     try {
-      console.log('📝 Starting user signup via NestJS API...', { email, organizationName })
+      // Starting user signup via NestJS API
 
       // Extract first and last name from organization name
       const nameParts = organizationName.split(' ')
@@ -76,7 +74,7 @@ function RegisterPage() {
         throw new Error(data.message || 'An error occurred during registration')
       }
 
-      console.log('✅ Signup successful:', data)
+      // Signup successful
 
       // Store tokens in localStorage
       if (data.session) {
@@ -93,132 +91,60 @@ function RegisterPage() {
         }
       }
 
-      // Store organization ID for later use
+      // Store organization ID and data for later use
       if (data.organization?.id) {
         localStorage.setItem('currentOrganizationId', data.organization.id)
+
+        // Store organization data to help with initial load
+        localStorage.setItem('currentOrganization', JSON.stringify({
+          id: data.organization.id,
+          name: data.organization.name,
+          slug: data.organization.slug,
+          role: 'organization_admin',
+          is_active: true
+        }))
       }
 
-      console.log('✅ Account created - redirecting to trial selection')
+      // Verify organization membership before redirecting
 
-      // Show success message
-      setNeedsEmailConfirmation(false)
-      setShowEmailConfirmation(true)
-      setIsLoading(false)
+      // Verify organization membership with retry logic
+      // This ensures the database transaction is fully committed and queryable
+      let membershipVerified = false
+      const maxRetries = 5
 
-      // Redirect to trial selection after showing message for 3 seconds
-      setTimeout(() => {
-        window.location.href = '/select-trial'
-      }, 3000)
+      for (let attempt = 0; attempt < maxRetries && !membershipVerified; attempt++) {
+        // Wait before checking (exponential backoff: 300ms, 600ms, 1200ms, etc.)
+        const delay = 300 * Math.pow(2, attempt)
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+        try {
+          // Check if organization_users record exists
+          const { data: orgCheck, error: orgCheckError } = await authSupabase
+            .from('organization_users')
+            .select('organization_id')
+            .eq('user_id', data.user.id)
+            .eq('organization_id', data.organization.id)
+            .maybeSingle()
+
+          if (!orgCheckError && orgCheck) {
+            membershipVerified = true
+            break
+          }
+        } catch (error) {
+          console.warn(`⚠️ Error checking organization membership (attempt ${attempt + 1}):`, error)
+        }
+      }
+
+      if (!membershipVerified) {
+        console.warn('⚠️ Could not verify organization membership, but proceeding anyway')
+      }
+
+      // Redirect to trial selection
+      window.location.href = '/select-trial'
     } catch (error) {
       console.error('❌ Registration error:', error)
       setError(error instanceof Error ? error.message : 'An error occurred during registration')
-    } finally {
       setIsLoading(false)
-    }
-  }
-
-  // Show email confirmation or account activation message
-  if (showEmailConfirmation) {
-    if (needsEmailConfirmation) {
-      // Email confirmation required
-      return (
-        <AuthLayout
-          title="Check your email"
-          subtitle="We've sent you a confirmation link"
-          helperText={`Please check ${email} and click the link to confirm your account.`}
-          switchLabel="Didn't receive the email?"
-          switchHref="/register"
-          switchCta="Try again"
-        >
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div className="space-y-3">
-              <p className="text-gray-600 dark:text-gray-400">
-                After confirming your email, you'll be redirected to select your free trial plan.
-              </p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                  📋 Important: Activate Your Account
-                </p>
-                <p className="text-sm text-blue-800 dark:text-blue-400">
-                  After confirming your email, please visit{' '}
-                  <a 
-                    href="/select-trial" 
-                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.location.href = '/select-trial'
-                    }}
-                  >
-                    http://localhost:5173/select-trial
-                  </a>
-                  {' '}to activate your account and select your free trial plan.
-                </p>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
-                Make sure to check your spam folder if you don't see the email within a few minutes.
-              </p>
-            </div>
-          </div>
-        </AuthLayout>
-      )
-    } else {
-      // Account created, show activation message
-      return (
-        <AuthLayout
-          title="Account Created Successfully!"
-          subtitle="Your account is being set up"
-          helperText="Please complete the activation process to start using your account."
-          switchLabel="Already have an account?"
-          switchHref="/login"
-          switchCta="Sign in"
-        >
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div className="space-y-3">
-              <p className="text-gray-600 dark:text-gray-400">
-                Your account has been created successfully. To activate your account, please visit:
-              </p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                  📋 Activate Your Account
-                </p>
-                <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-                  Go to{' '}
-                  <a 
-                    href="/select-trial" 
-                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300 break-all"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.location.href = '/select-trial'
-                    }}
-                  >
-                    http://localhost:5173/select-trial
-                  </a>
-                  {' '}to activate your account and select your free trial plan.
-                </p>
-                <button
-                  onClick={() => window.location.href = '/select-trial'}
-                  className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-                >
-                  Go to Activation Page
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-500">
-                You will be redirected automatically in a few seconds...
-              </p>
-            </div>
-          </div>
-        </AuthLayout>
-      )
     }
   }
 
@@ -226,7 +152,7 @@ function RegisterPage() {
     <AuthLayout
       title="Create your Agritech account"
       subtitle="Get started in minutes"
-      helperText="Set up a workspace for your organization and invite your team once you're inside. You'll receive a confirmation email after signing up."
+      helperText="Set up a workspace for your organization and invite your team once you're inside."
       switchLabel="Already have an account?"
       switchHref="/login"
       switchCta="Sign in"
