@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -33,11 +33,8 @@ async function bootstrap() {
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
 
-  // Enable versioning
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-  });
+  // Note: URI versioning disabled to avoid conflict with global prefix
+  // Routes will be: /api/v1/health, /api/v1/auth/signup, etc.
 
   // Swagger API documentation
   const config = new DocumentBuilder()
