@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
+
+  const logger = new Logger('Bootstrap');
 
   // Get config service
   const configService = app.get(ConfigService);
@@ -33,8 +37,7 @@ async function bootstrap() {
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
 
-  // Note: URI versioning disabled to avoid conflict with global prefix
-  // Routes will be: /api/v1/health, /api/v1/auth/signup, etc.
+  logger.log(`Global prefix set to: ${apiPrefix}`);
 
   // Swagger API documentation
   const config = new DocumentBuilder()
@@ -52,16 +55,21 @@ async function bootstrap() {
     .addTag('production', 'Production intelligence')
     .addTag('harvests', 'Harvest management')
     .addTag('tasks', 'Task management')
-    .addTag('workers', 'Worker management')
+    .addTag('workers', 'Management')
     .addTag('stock', 'Stock/Inventory management')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  logger.log('Swagger docs available at /api/docs');
+
   // Start server
   const port = configService.get('PORT', 3000);
   await app.listen(port, '0.0.0.0'); // Listen on all interfaces for Docker
+
+  const url = await app.getUrl();
+  logger.log(`Application is running on: ${url}`);
 
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
@@ -71,9 +79,21 @@ async function bootstrap() {
   ║   Server running on: http://0.0.0.0:${port}             ║
   ║   API Docs: http://0.0.0.0:${port}/api/docs             ║
   ║   Environment: ${configService.get('NODE_ENV')}                      ║
+  ║   Global Prefix: /${apiPrefix}                        ║
+  ║                                                       ║
+  ║   Try: curl http://localhost:${port}/${apiPrefix}/health   ║
   ║                                                       ║
   ╚═══════════════════════════════════════════════════════╝
   `);
+
+  // Log sample endpoints
+  logger.log('\n📋 Available Endpoints:');
+  logger.log(`   GET  /${apiPrefix}`);
+  logger.log(`   GET  /${apiPrefix}/health`);
+  logger.log(`   POST /${apiPrefix}/auth/signup`);
+  logger.log(`   GET  /${apiPrefix}/auth/me`);
+  logger.log(`   POST /${apiPrefix}/sequences/invoice`);
+  logger.log(`   GET  /api/docs (Swagger UI)\n`);
 }
 
 bootstrap();
