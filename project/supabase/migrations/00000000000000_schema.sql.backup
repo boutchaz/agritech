@@ -1728,132 +1728,6 @@ CREATE TRIGGER trg_purchase_orders_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-
--- =====================================================
--- 20. ROLES & PERMISSIONS TABLES
--- =====================================================
-
--- Roles
-CREATE TABLE IF NOT EXISTS roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  level INTEGER NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (name IN ('system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
-);
-
--- Permissions
-CREATE TABLE IF NOT EXISTS permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  resource TEXT NOT NULL,
-  action TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (action IN ('create', 'read', 'update', 'delete', 'manage'))
-);
-
--- Role Permissions
-CREATE TABLE IF NOT EXISTS role_permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
-
--- Role Templates
-CREATE TABLE IF NOT EXISTS role_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  is_system_template BOOLEAN DEFAULT false,
-  permissions JSONB DEFAULT '{}',
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_templates_org ON role_templates(organization_id);
-
--- Role Assignments Audit
-CREATE TABLE IF NOT EXISTS role_assignments_audit (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  old_role_id UUID REFERENCES roles(id),
-  new_role_id UUID NOT NULL REFERENCES roles(id),
-  assigned_by UUID REFERENCES auth.users(id),
-  reason TEXT,
-  effective_date TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_user ON role_assignments_audit(user_id);
-CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_org ON role_assignments_audit(organization_id);
-
--- Permission Groups
-CREATE TABLE IF NOT EXISTS permission_groups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  permissions TEXT[] NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Farm Management Roles
-CREATE TABLE IF NOT EXISTS farm_management_roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role_id UUID REFERENCES roles(id),
-  role TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
-CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
-
--- Add role_id column and foreign key constraint from organization_users to roles
--- This is added here after roles table is created to avoid dependency issues
-DO $$
-BEGIN
-  -- Add the role_id column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role_id'
-  ) THEN
-    ALTER TABLE organization_users ADD COLUMN role_id UUID;
-  END IF;
-
-  -- Add the foreign key constraint if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_id_fkey'
-  ) THEN
-    ALTER TABLE organization_users
-    ADD CONSTRAINT organization_users_role_id_fkey
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
-  END IF;
-END $$;
-
--- Add index for the role_id column
-CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
-
 -- =====================================================
 -- 10. RLS POLICIES
 -- =====================================================
@@ -4076,6 +3950,130 @@ CREATE TABLE IF NOT EXISTS utilities (
 CREATE INDEX IF NOT EXISTS idx_utilities_farm ON utilities(farm_id);
 CREATE INDEX IF NOT EXISTS idx_utilities_parcel ON utilities(parcel_id);
 
+-- =====================================================
+-- 20. ROLES & PERMISSIONS TABLES
+-- =====================================================
+
+-- Roles
+CREATE TABLE IF NOT EXISTS roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  level INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (name IN ('system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
+);
+
+-- Permissions
+CREATE TABLE IF NOT EXISTS permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  resource TEXT NOT NULL,
+  action TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (action IN ('create', 'read', 'update', 'delete', 'manage'))
+);
+
+-- Role Permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
+
+-- Role Templates
+CREATE TABLE IF NOT EXISTS role_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  is_system_template BOOLEAN DEFAULT false,
+  permissions JSONB DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_templates_org ON role_templates(organization_id);
+
+-- Role Assignments Audit
+CREATE TABLE IF NOT EXISTS role_assignments_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  old_role_id UUID REFERENCES roles(id),
+  new_role_id UUID NOT NULL REFERENCES roles(id),
+  assigned_by UUID REFERENCES auth.users(id),
+  reason TEXT,
+  effective_date TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_user ON role_assignments_audit(user_id);
+CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_org ON role_assignments_audit(organization_id);
+
+-- Permission Groups
+CREATE TABLE IF NOT EXISTS permission_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  permissions TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Farm Management Roles
+CREATE TABLE IF NOT EXISTS farm_management_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id UUID REFERENCES roles(id),
+  role TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
+
+-- Add role_id column and foreign key constraint from organization_users to roles
+-- This is added here after roles table is created to avoid dependency issues
+DO $$
+BEGIN
+  -- Add the role_id column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role_id'
+  ) THEN
+    ALTER TABLE organization_users ADD COLUMN role_id UUID;
+  END IF;
+
+  -- Add the foreign key constraint if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_id_fkey'
+  ) THEN
+    ALTER TABLE organization_users
+    ADD CONSTRAINT organization_users_role_id_fkey
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Add index for the role_id column
+CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
 
 -- =====================================================
 -- 21. AUDIT & LOGGING TABLES
