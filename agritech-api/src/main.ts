@@ -64,15 +64,15 @@ async function bootstrap() {
 
   // Start server
   const port = configService.get('PORT', 3000);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0'); // Listen on all interfaces for Docker
 
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
   ║                                                       ║
   ║   🌾 AgriTech API Server                             ║
   ║                                                       ║
-  ║   Server running on: http://localhost:${port}           ║
-  ║   API Docs: http://localhost:${port}/api/docs         ║
+  ║   Server running on: http://0.0.0.0:${port}             ║
+  ║   API Docs: http://0.0.0.0:${port}/api/docs             ║
   ║   Environment: ${configService.get('NODE_ENV')}                      ║
   ║                                                       ║
   ╚═══════════════════════════════════════════════════════╝
