@@ -111,6 +111,13 @@ class ParcelsService {
     return apiClient.put<Parcel>(`/api/v1/parcels/${parcelId}`, data);
   }
 
+  async getParcelById(parcelId: string): Promise<Parcel | null> {
+    // Fetch all parcels for organization and find by ID
+    // TODO: Add dedicated GET /api/v1/parcels/:id endpoint in backend
+    const parcels = await this.listParcels();
+    return parcels.find(p => p.id === parcelId) || null;
+  }
+
   async deleteParcel(parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string } }> {
     // Use apiRequest directly since DELETE with body is needed
     const { apiRequest } = await import('../lib/api-client');

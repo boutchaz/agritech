@@ -61,6 +61,13 @@ class FarmsService {
     return apiClient.get<Farm>(`/api/v1/farms/${farmId}`);
   }
 
+  async listFarms(organizationId: string): Promise<Farm[]> {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
+    const result = await apiClient.get<{ success: boolean; farms: Farm[] }>(url);
+    return result.farms || [];
+  }
+
   async getOrganization(organizationId: string): Promise<Organization> {
     return apiClient.get<Organization>(`/api/v1/organizations/${organizationId}`);
   }

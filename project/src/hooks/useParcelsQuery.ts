@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { parcelsService } from '../services/parcelsService';
+import { farmsService } from '../services/farmsService';
 
 export interface Parcel {
   id: string;
@@ -48,25 +49,20 @@ export const farmsKeys = {
   byOrganization: (organizationId: string) => ['farms', 'organization', organizationId] as const,
 };
 
-// Fetch farms for an organization
+// Fetch farms for an organization using farmsService (apiClient)
 export const useFarms = (organizationId: string | undefined) => {
   return useQuery({
     queryKey: farmsKeys.byOrganization(organizationId || ''),
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
-
-      const { data, error } = await supabase
-        .from('farms')
-        .select('id, name, location, size, manager_name')
-        .eq('organization_id', organizationId)
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching farms:', error);
-        throw error;
-      }
-
-      return data || [];
+      const farms = await farmsService.listFarms(organizationId);
+      // Map to match expected Farm interface (convert undefined to null)
+      return farms.map(farm => ({
+        ...farm,
+        location: farm.location ?? null,
+        size: farm.size ?? null,
+        manager_name: farm.manager_name ?? null,
+      }));
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -74,27 +70,34 @@ export const useFarms = (organizationId: string | undefined) => {
   });
 };
 
-// Fetch parcels for a specific farm
+// Fetch parcels for a specific farm using parcelsService (apiClient)
 export const useParcelsByFarm = (farmId: string | undefined) => {
   return useQuery({
     queryKey: parcelsKeys.byFarm(farmId || ''),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmId) return [];
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .eq('farm_id', farmId)
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching parcels:', error);
-        throw error;
-      }
-
-      return (data || []).map(parcel => ({
+      const parcels = await parcelsService.listParcels(farmId);
+      return parcels.map(parcel => ({
         ...parcel,
-        boundary: parcel.boundary as number[][] | undefined,
+        farm_id: parcel.farm_id ?? null,
+        description: parcel.description ?? null,
+        area: parcel.area ?? null,
+        area_unit: parcel.area_unit ?? null,
+        boundary: (parcel as any).boundary as number[][] | undefined,
+        calculated_area: (parcel as any).calculated_area ?? null,
+        perimeter: (parcel as any).perimeter ?? null,
+        soil_type: parcel.soil_type ?? null,
+        planting_density: (parcel as any).planting_density ?? null,
+        irrigation_type: parcel.irrigation_type ?? null,
+        tree_type: (parcel as any).tree_type ?? null,
+        tree_count: (parcel as any).tree_count ?? null,
+        planting_year: parcel.planting_year ?? null,
+        variety: parcel.variety ?? null,
+        rootstock: parcel.rootstock ?? null,
+        planting_date: parcel.planting_date ?? null,
+        planting_type: (parcel as any).planting_type ?? null,
+        created_at: parcel.created_at ?? null,
+        updated_at: parcel.updated_at ?? null,
       }));
     },
     enabled: !!farmId,
@@ -103,27 +106,38 @@ export const useParcelsByFarm = (farmId: string | undefined) => {
   });
 };
 
-// Fetch parcels for multiple farms (organization-wide)
+// Fetch parcels for multiple farms (organization-wide) using parcelsService (apiClient)
 export const useParcelsByFarms = (farmIds: string[]) => {
   return useQuery({
     queryKey: parcelsKeys.byFarms(farmIds),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmIds.length) return [];
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .in('farm_id', farmIds)
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching parcels:', error);
-        throw error;
-      }
-
-      return (data || []).map(parcel => ({
+      
+      // Fetch all parcels for organization and filter by farm IDs
+      const parcels = await parcelsService.listParcels();
+      const filteredParcels = parcels.filter(p => farmIds.includes(p.farm_id));
+      
+      return filteredParcels.map(parcel => ({
         ...parcel,
-        boundary: parcel.boundary as number[][] | undefined,
+        farm_id: parcel.farm_id ?? null,
+        description: parcel.description ?? null,
+        area: parcel.area ?? null,
+        area_unit: parcel.area_unit ?? null,
+        boundary: (parcel as any).boundary as number[][] | undefined,
+        calculated_area: (parcel as any).calculated_area ?? null,
+        perimeter: (parcel as any).perimeter ?? null,
+        soil_type: parcel.soil_type ?? null,
+        planting_density: (parcel as any).planting_density ?? null,
+        irrigation_type: parcel.irrigation_type ?? null,
+        tree_type: (parcel as any).tree_type ?? null,
+        tree_count: (parcel as any).tree_count ?? null,
+        planting_year: parcel.planting_year ?? null,
+        variety: parcel.variety ?? null,
+        rootstock: parcel.rootstock ?? null,
+        planting_date: parcel.planting_date ?? null,
+        planting_type: (parcel as any).planting_type ?? null,
+        created_at: parcel.created_at ?? null,
+        updated_at: parcel.updated_at ?? null,
       }));
     },
     enabled: farmIds.length > 0,
@@ -132,29 +146,35 @@ export const useParcelsByFarms = (farmIds: string[]) => {
   });
 };
 
-// Fetch a single parcel by ID (useful when directly accessing via URL)
+// Fetch a single parcel by ID using parcelsService (apiClient)
 export const useParcelById = (parcelId: string | null | undefined) => {
   return useQuery({
     queryKey: ['parcel', parcelId],
     queryFn: async (): Promise<Parcel | null> => {
       if (!parcelId) return null;
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .eq('id', parcelId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching parcel:', error);
-        throw error;
-      }
-
-      if (!data) return null;
-
+      const parcel = await parcelsService.getParcelById(parcelId);
+      if (!parcel) return null;
       return {
-        ...data,
-        boundary: data.boundary as number[][] | undefined,
+        ...parcel,
+        farm_id: parcel.farm_id ?? null,
+        description: parcel.description ?? null,
+        area: parcel.area ?? null,
+        area_unit: parcel.area_unit ?? null,
+        boundary: (parcel as any).boundary as number[][] | undefined,
+        calculated_area: (parcel as any).calculated_area ?? null,
+        perimeter: (parcel as any).perimeter ?? null,
+        soil_type: parcel.soil_type ?? null,
+        planting_density: (parcel as any).planting_density ?? null,
+        irrigation_type: parcel.irrigation_type ?? null,
+        tree_type: (parcel as any).tree_type ?? null,
+        tree_count: (parcel as any).tree_count ?? null,
+        planting_year: parcel.planting_year ?? null,
+        variety: parcel.variety ?? null,
+        rootstock: parcel.rootstock ?? null,
+        planting_date: parcel.planting_date ?? null,
+        planting_type: (parcel as any).planting_type ?? null,
+        created_at: parcel.created_at ?? null,
+        updated_at: parcel.updated_at ?? null,
       };
     },
     enabled: !!parcelId,
@@ -163,7 +183,7 @@ export const useParcelById = (parcelId: string | null | undefined) => {
   });
 };
 
-// Add parcel mutation
+// Add parcel mutation using parcelsService (apiClient)
 export const useAddParcel = () => {
   const queryClient = useQueryClient();
 
@@ -185,14 +205,41 @@ export const useAddParcel = () => {
       planting_date?: string;
       planting_type?: string;
     }) => {
-      const { data, error } = await supabase
-        .from('parcels')
-        .insert([parcelData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Convert undefined to null where needed and ensure required fields
+      const createData: {
+        farm_id: string;
+        name: string;
+        description?: string;
+        area: number;
+        area_unit?: string;
+        soil_type?: string;
+        irrigation_type?: string;
+        variety?: string;
+        planting_date?: string;
+        planting_year?: number;
+        rootstock?: string;
+        [key: string]: unknown;
+      } = {
+        farm_id: parcelData.farm_id,
+        name: parcelData.name,
+        area: parcelData.area ?? 0, // Required field, default to 0
+      };
+      
+      if (parcelData.description !== undefined) createData.description = parcelData.description || undefined;
+      if (parcelData.area_unit) createData.area_unit = parcelData.area_unit;
+      if (parcelData.soil_type) createData.soil_type = parcelData.soil_type;
+      if (parcelData.irrigation_type) createData.irrigation_type = parcelData.irrigation_type;
+      if (parcelData.variety) createData.variety = parcelData.variety;
+      if (parcelData.planting_date) createData.planting_date = parcelData.planting_date;
+      if (parcelData.planting_year) createData.planting_year = parcelData.planting_year;
+      if (parcelData.rootstock) createData.rootstock = parcelData.rootstock;
+      
+      // Handle boundary separately if needed (it might need special handling)
+      if (parcelData.boundary) {
+        (createData as any).boundary = parcelData.boundary;
+      }
+      
+      return parcelsService.createParcel(createData);
     },
     onSuccess: (data) => {
       // Invalidate relevant queries - invalidate ALL parcel queries
@@ -204,21 +251,25 @@ export const useAddParcel = () => {
   });
 };
 
-// Update parcel mutation
+// Update parcel mutation using parcelsService (apiClient)
 export const useUpdateParcel = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Parcel> }) => {
-      const { data, error } = await supabase
-        .from('parcels')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // Convert null to undefined for the service (which expects undefined for optional fields)
+      const updateData: Record<string, unknown> = {};
+      
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          updateData[key] = value;
+        } else if (value === null) {
+          // Explicitly set to undefined to remove the field
+          updateData[key] = undefined;
+        }
+      });
+      
+      return parcelsService.updateParcel(id, updateData);
     },
     onSuccess: (data) => {
       // Invalidate relevant queries
@@ -231,18 +282,13 @@ export const useUpdateParcel = () => {
   });
 };
 
-// Delete parcel mutation
+// Delete parcel mutation using parcelsService (apiClient)
 export const useDeleteParcel = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (parcelId: string) => {
-      const { error } = await supabase
-        .from('parcels')
-        .delete()
-        .eq('id', parcelId);
-
-      if (error) throw error;
+      await parcelsService.deleteParcel(parcelId);
       return parcelId;
     },
     onSuccess: (_parcelId) => {
