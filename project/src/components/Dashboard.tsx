@@ -3,8 +3,7 @@ import { Activity, Droplets, Thermometer, Wrench, AlertTriangle, MapPin } from '
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from './MultiTenantAuthProvider';
-import { useParcels } from '../hooks/useParcels';
-import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
+import { useDashboardSummary } from '../hooks/useDashboardSummary';
 import { useNavigate } from '@tanstack/react-router';
 import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';
 import ParcelsOverviewWidget from './Dashboard/ParcelsOverviewWidget';
@@ -21,11 +20,10 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
   const { t } = useTranslation();
-  const { latestReadings, _isConnected } = useSensorData();
+  const { latestReadings } = useSensorData();
   const { currentFarm } = useAuth();
   const farmId = currentFarm?.id ?? null;
-  const { parcels, loading: parcelsLoading } = useParcels(farmId);
-  const { analyses, loading: analysesLoading } = useSoilAnalyses(currentFarm?.id ?? '');
+  const { data: dashboardData, isLoading: dashboardLoading } = useDashboardSummary(farmId || undefined);
   const navigate = useNavigate();
 
   const getSensorValue = (type: string) => {
@@ -60,12 +58,12 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
     ]
   };
 
-  interface Parcel {
-    calculated_area?: number;
-    area?: number;
-  }
-
-  const totalArea = parcels.reduce((sum, p) => sum + ((p as Parcel).calculated_area ?? (p as Parcel).area ?? 0), 0);
+  // Get summary data from dashboard API
+  const parcelCount = dashboardData?.parcels.total ?? 0;
+  const totalArea = dashboardData?.parcels.totalArea ?? 0;
+  // Note: Soil analyses are not currently included in the dashboard summary
+  // This could be added to the backend DashboardService if needed
+  const analysesCount = 0;
 
   const renderWidget = (type: string) => {
     switch (type) {
@@ -84,15 +82,15 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
             <div className="mt-3 sm:mt-4 grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.parcels')}</div>
-                <div className="text-base sm:text-lg font-semibold">{parcelsLoading ? '…' : parcels.length}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : parcelCount}</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.surface')}</div>
-                <div className="text-base sm:text-lg font-semibold">{parcelsLoading ? '…' : totalArea.toFixed(2)} ha</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : totalArea.toFixed(2)} ha</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.analyses')}</div>
-                <div className="text-base sm:text-lg font-semibold">{analysesLoading ? '…' : analyses.length}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : analysesCount}</div>
               </div>
             </div>
             <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -164,18 +162,16 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.irrigation.title')}</p>
                 <div className="flex items-center space-x-2 mt-1 sm:mt-2">
-                  <h3 className={`text-base sm:text-lg font-bold ${
-                    infrastructureStatus.irrigation.status === 'active'
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
+                  <h3 className={`text-base sm:text-lg font-bold ${infrastructureStatus.irrigation.status === 'active'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                    }`}>
                     {infrastructureStatus.irrigation.status === 'active' ? t('dashboard.widgets.irrigation.active') : t('dashboard.widgets.irrigation.stopped')}
                   </h3>
-                  <Droplets className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    infrastructureStatus.irrigation.status === 'active'
-                      ? 'text-green-500'
-                      : 'text-gray-500'
-                  }`} />
+                  <Droplets className={`h-4 w-4 sm:h-5 sm:w-5 ${infrastructureStatus.irrigation.status === 'active'
+                    ? 'text-green-500'
+                    : 'text-gray-500'
+                    }`} />
                 </div>
               </div>
             </div>
