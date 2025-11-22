@@ -37,6 +37,8 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
   const { t } = useTranslation();
 
   // Fetch farm details
+  // TODO: Create GET /api/v1/farms/:id endpoint in NestJS
+  // For now, using Supabase directly until NestJS endpoint is available
   const { data: farm, isLoading } = useQuery({
     queryKey: ['farm-details', farmId],
     queryFn: async () => {
@@ -52,6 +54,8 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
   });
 
   // Fetch parcels
+  // TODO: Create GET /api/v1/parcels?farm_id=:farmId endpoint in NestJS
+  // For now, using Supabase directly until NestJS endpoint is available
   const { data: parcels = [] } = useQuery({
     queryKey: ['farm-parcels', farmId],
     queryFn: async () => {
@@ -66,6 +70,8 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
   });
 
   // Fetch organization name
+  // TODO: Create GET /api/v1/organizations/:id endpoint in NestJS
+  // For now, using Supabase directly until NestJS endpoint is available
   const { data: organization } = useQuery({
     queryKey: ['organization', farm?.organization_id],
     queryFn: async () => {

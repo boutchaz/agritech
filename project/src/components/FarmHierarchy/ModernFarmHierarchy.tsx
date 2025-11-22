@@ -7,14 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { authSupabase } from '../../lib/auth-supabase';
-import { useAuth } from '../../hooks/useAuth';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
 import FarmListItem from './FarmListItem';
 import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
-import { Building2, X, Trash2, Download } from 'lucide-react';
+import { Building2, X, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +62,6 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   onManageFarm
 }) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,11 +102,41 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     resolver: zodResolver(getFarmSchema(t)),
   });
 
-  // Fetch organization
+  // Fetch organization using NestJS API
+  // TODO: Create GET /api/v1/organizations/:id endpoint in NestJS
+  // For now, using auth/organizations and filtering client-side
   const { data: organization } = useQuery({
     queryKey: ['organization', organizationId],
     queryFn: async () => {
       console.log('🔍 Fetching organization:', organizationId);
+      
+      // Get JWT token
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Try NestJS API first
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiUrl}/api/v1/auth/organizations`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.ok) {
+          const organizations = await response.json();
+          const org = organizations.find((o: any) => o.id === organizationId);
+          if (org) {
+            return { name: org.name, id: org.id };
+          }
+        }
+      } catch (apiError) {
+        console.warn('⚠️ NestJS API failed, falling back to Supabase:', apiError);
+      }
+
+      // Fallback to Supabase
       const { data, error } = await supabase
         .from('organizations')
         .select('name')
@@ -207,6 +235,8 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       });
 
       // Fetch parcels for each farm
+      // TODO: Create GET /api/v1/parcels endpoint in NestJS (with farm_id filter)
+      // For now, using Supabase directly until NestJS endpoint is available
       const farmIds = Array.from(farmMap.keys());
       console.log('🔍 Fetching parcels for', farmIds.length, 'farms');
 
@@ -275,38 +305,38 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     enabled: !!organizationId
   });
 
-  // Create farm mutation
+  // Create farm mutation using NestJS API
   const createFarmMutation = useMutation({
     mutationFn: async (formData: FarmFormValues) => {
-      if (!user) {
-        throw new Error('User not authenticated');
+      // Get JWT token
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      const { data: newFarm, error: farmError } = await supabase
-        .from('farms')
-        .insert({
+      // Call NestJS API
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/farms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'X-Organization-Id': organizationId,
+        },
+        body: JSON.stringify({
           name: formData.name,
-          organization_id: organizationId,
-          status: 'active',
-        })
-        .select()
-        .single();
+          farm_type: 'main',
+          is_active: true,
+        }),
+      });
 
-      if (farmError) throw farmError;
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `Failed to create farm (${response.status})`);
+      }
 
-      // Assign the current user as admin of the new farm
-      const { error: roleError } = await supabase
-        .from('farm_management_roles')
-        .insert({
-          farm_id: newFarm.id,
-          user_id: user.id,
-          role: 'admin',
-          is_active: true
-        });
-
-      if (roleError) throw roleError;
-
-      return newFarm;
+      const result = await response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
@@ -432,6 +462,8 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   };
 
   // Fetch related data counts for a farm
+  // TODO: Create GET /api/v1/farms/:id/related-data-counts endpoint in NestJS
+  // For now, using Supabase directly until NestJS endpoint is available
   const fetchRelatedDataCounts = async (farmId: string) => {
     setLoadingRelatedData(true);
     try {

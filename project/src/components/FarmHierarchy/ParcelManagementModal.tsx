@@ -172,6 +172,8 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   }, [selectedArea, selectedDensity, setValue]);
 
   // Fetch parcels for this farm
+  // TODO: Create GET /api/v1/parcels?farm_id=:farmId endpoint in NestJS
+  // For now, using Supabase directly until NestJS endpoint is available
   const { data: parcels = [], isLoading } = useQuery({
     queryKey: ['parcels', farmId],
     queryFn: async () => {
@@ -187,6 +189,8 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   });
 
   // Create/Update parcel mutation
+  // TODO: Create POST /api/v1/parcels and PUT /api/v1/parcels/:id endpoints in NestJS
+  // For now, using Supabase directly until NestJS endpoints are available
   const saveParcelMutation = useMutation({
     mutationFn: async (formData: ParcelFormValues) => {
       const parcelData = {

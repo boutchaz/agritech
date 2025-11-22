@@ -33,21 +33,52 @@ export interface WidgetData {
     data: unknown;
 }
 
+/**
+ * Get the current organization ID from localStorage
+ */
+function getCurrentOrganizationId(): string | null {
+  try {
+    const orgStr = localStorage.getItem('currentOrganization');
+    if (orgStr) {
+      const org = JSON.parse(orgStr);
+      return org.id || null;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error reading organization from localStorage:', error);
+    return null;
+  }
+}
+
 class DashboardService {
     async getDashboardSummary(farmId?: string): Promise<DashboardSummary> {
-        let endpoint = '/api/v1/dashboard/summary';
+        const organizationId = getCurrentOrganizationId();
         
-        if (farmId) {
-            const url = new URL(endpoint, 'http://dummy');
-            url.searchParams.append('farmId', farmId);
-            endpoint = url.pathname + url.search;
+        if (!organizationId) {
+            throw new Error('Organization ID is required. Please select an organization first.');
         }
 
-        return apiClient.get<DashboardSummary>(endpoint);
+        const url = new URL('/api/v1/dashboard/summary', 'http://dummy');
+        url.searchParams.append('organization_id', organizationId);
+        
+        if (farmId) {
+            url.searchParams.append('farmId', farmId);
+        }
+
+        return apiClient.get<DashboardSummary>(url.pathname + url.search);
     }
 
     async getWidgetData(widgetType: string): Promise<WidgetData> {
-        return apiClient.get<WidgetData>(`/api/v1/dashboard/widgets/${widgetType}`);
+        const organizationId = getCurrentOrganizationId();
+        
+        if (!organizationId) {
+            throw new Error('Organization ID is required. Please select an organization first.');
+        }
+
+        const url = new URL(`/api/v1/dashboard/widgets/${widgetType}`, 'http://dummy');
+        url.searchParams.append('organization_id', organizationId);
+
+        return apiClient.get<WidgetData>(url.pathname + url.search);
     }
 }
 
