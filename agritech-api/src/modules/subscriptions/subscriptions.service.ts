@@ -11,6 +11,7 @@ import {
   CreateTrialSubscriptionDto,
   PlanType,
 } from './dto/create-trial-subscription.dto';
+import { CheckSubscriptionDto } from './dto/check-subscription.dto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -172,5 +173,146 @@ export class SubscriptionsService {
     this.logger.log(`Trial subscription created: ${subscription.id}`);
 
     return { success: true, subscription };
+  }
+
+  async checkSubscription(userId: string, dto: CheckSubscriptionDto) {
+    const { organizationId, feature } = dto;
+
+    this.logger.log(
+      `Checking subscription for user ${userId} and organization ${organizationId}`,
+    );
+
+    // Verify user belongs to the organization
+    const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (orgUserError || !orgUser) {
+      this.logger.error(
+        `User ${userId} does not have access to organization ${organizationId}`,
+      );
+      throw new ForbiddenException('Access denied to organization');
+    }
+
+    // Check subscription validity using database function
+    const { data: isValid, error: validError } = await this.supabaseAdmin.rpc(
+      'has_valid_subscription',
+      { org_id: organizationId },
+    );
+
+    if (validError) {
+      this.logger.error('Error checking subscription validity', validError);
+      throw new InternalServerErrorException(
+        'Failed to check subscription validity',
+      );
+    }
+
+    // Get subscription details
+    const { data: subscription } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    const response: any = {
+      isValid: isValid === true,
+      subscription,
+      reason: !isValid
+        ? !subscription
+          ? 'no_subscription'
+          : subscription.status === 'canceled'
+          ? 'canceled'
+          : subscription.status === 'past_due'
+          ? 'past_due'
+          : 'expired'
+        : undefined,
+    };
+
+    // Check specific feature if requested
+    if (feature && isValid) {
+      const { data: hasFeature, error: featureError } =
+        await this.supabaseAdmin.rpc('has_feature_access', {
+          org_id: organizationId,
+          feature_name: feature,
+        });
+
+      if (featureError) {
+        this.logger.warn('Error checking feature access', featureError);
+      } else {
+        response.hasFeature = hasFeature === true;
+      }
+    }
+
+    // Get usage stats if valid subscription
+    if (isValid && subscription) {
+      try {
+        // Check if can create more resources
+        const { data: canCreateFarm } = await this.supabaseAdmin.rpc(
+          'can_create_farm',
+          { org_id: organizationId },
+        );
+
+        const { data: canCreateParcel } = await this.supabaseAdmin.rpc(
+          'can_create_parcel',
+          { org_id: organizationId },
+        );
+
+        const { data: canAddUser } = await this.supabaseAdmin.rpc(
+          'can_add_user',
+          { org_id: organizationId },
+        );
+
+        // Get current counts
+        const { count: farmsCount } = await this.supabaseAdmin
+          .from('farms')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId);
+
+        const { count: parcelsCount } = await this.supabaseAdmin
+          .from('parcels')
+          .select('parcels.id, farms!inner(organization_id)', {
+            count: 'exact',
+            head: true,
+          })
+          .eq('farms.organization_id', organizationId);
+
+        const { count: usersCount } = await this.supabaseAdmin
+          .from('organization_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        response.usage = {
+          farms: {
+            current: farmsCount || 0,
+            max: subscription.max_farms || 0,
+            canCreate: canCreateFarm === true,
+          },
+          parcels: {
+            current: parcelsCount || 0,
+            max: subscription.max_parcels || 0,
+            canCreate: canCreateParcel === true,
+          },
+          users: {
+            current: usersCount || 0,
+            max: subscription.max_users || 0,
+            canAdd: canAddUser === true,
+          },
+        };
+      } catch (error) {
+        this.logger.warn('Error getting usage stats', error);
+        // Don't fail the request if usage stats can't be retrieved
+      }
+    }
+
+    this.logger.log(
+      `Subscription check complete for organization ${organizationId}: isValid=${isValid}`,
+    );
+
+    return response;
   }
 }

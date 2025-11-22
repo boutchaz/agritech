@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export interface SubscriptionCheckResponse {
   isValid: boolean;
-  subscription: any;
+  subscription: Record<string, unknown> | null;
   hasFeature?: boolean;
   reason?: 'no_subscription' | 'canceled' | 'past_due' | 'expired';
   usage?: {
@@ -15,7 +15,7 @@ export interface SubscriptionCheckResponse {
 }
 
 /**
- * Hook to check subscription status using backend Edge Function
+ * Hook to check subscription status using NestJS API
  * This offloads all validation logic to the backend
  */
 export const useSubscriptionCheck = (feature?: string) => {
@@ -33,15 +33,34 @@ export const useSubscriptionCheck = (feature?: string) => {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('check-subscription', {
-          body: {
+        // Get the access token from the current session
+        const { data: { session } } = await authSupabase.auth.getSession();
+        if (!session?.access_token) {
+          console.error('❌ Not authenticated');
+          return {
+            isValid: false,
+            subscription: null,
+            reason: 'no_subscription',
+          };
+        }
+
+        // Call NestJS API to check subscription
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiUrl}/api/v1/subscriptions/check`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
             organizationId: currentOrganization.id,
             feature,
-          },
+          }),
         });
 
-        if (error) {
-          console.error('❌ Subscription check error:', error);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ Subscription check error:', errorData);
           // On error, block access (fail closed)
           return {
             isValid: false,
@@ -50,7 +69,7 @@ export const useSubscriptionCheck = (feature?: string) => {
           };
         }
 
-        console.log('✅ Subscription check result:', data);
+        const data = await response.json();
 
         // Ensure we have a valid response
         if (!data || typeof data.isValid !== 'boolean') {

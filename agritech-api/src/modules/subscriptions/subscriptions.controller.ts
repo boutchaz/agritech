@@ -11,6 +11,10 @@ import {
   CreateTrialSubscriptionDto,
   SubscriptionResponseDto,
 } from './dto/create-trial-subscription.dto';
+import {
+  CheckSubscriptionDto,
+  SubscriptionCheckResponseDto,
+} from './dto/check-subscription.dto';
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
@@ -36,6 +40,32 @@ export class SubscriptionsController {
     return this.subscriptionsService.createTrialSubscription(
       req.user.id,
       createTrialSubscriptionDto,
+    );
+  }
+
+  @Post('check')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Check subscription status and feature access',
+    description:
+      'Verify subscription validity, check feature access, and get usage statistics',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscription check completed successfully',
+    type: SubscriptionCheckResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User not in organization' })
+  async checkSubscription(
+    @Request() req,
+    @Body() checkSubscriptionDto: CheckSubscriptionDto,
+  ) {
+    return this.subscriptionsService.checkSubscription(
+      req.user.id,
+      checkSubscriptionDto,
     );
   }
 }

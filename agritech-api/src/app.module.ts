@@ -18,6 +18,8 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { StockEntriesModule } from './modules/stock-entries/stock-entries.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { FarmsModule } from './modules/farms/farms.module';
+import { ParcelsModule } from './modules/parcels/parcels.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
     WorkersModule,
     StockEntriesModule,
     SubscriptionsModule,
+    FarmsModule,
+    ParcelsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,7 +14,6 @@ import {
   type CropCategory,
 } from '../../lib/plantingSystemData';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../MultiTenantAuthProvider';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -116,7 +115,6 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [parcelToDelete, setParcelToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -243,55 +241,57 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       setShowForm(false);
       setEditingParcel(null);
     },
-    onError: (error: any) => {
-      console.error('Error saving parcel:', error);
+    onError: (error: Error) => {
       alert(t('app.error') + ': ' + (error.message || ''));
     }
   });
 
-  // Delete parcel mutation using Edge Function
+  // Delete parcel mutation using NestJS API
   const deleteParcelMutation = useMutation({
     mutationFn: async (parcelId: string) => {
-      console.log('🗑️ Starting delete parcel via Edge Function:', parcelId);
 
-      // Check if user is authenticated
-      if (!user?.id) {
-        throw new Error('Utilisateur non authentifié');
+      // Get the access token from the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Non authentifié');
       }
 
-      // Call the Edge Function
-      const { data, error } = await supabase.functions.invoke('delete-parcel', {
-        body: { parcel_id: parcelId },
+      // Call NestJS API to delete parcel
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/parcels`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ parcel_id: parcelId }),
       });
 
-      if (error) {
-        console.error('❌ Edge Function error:', error);
-        throw new Error(error.message || 'Erreur lors de la suppression de la parcelle');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Erreur lors de la suppression (${response.status})`);
       }
+
+      const data = await response.json();
 
       if (!data?.success) {
         const errorMessage = data?.error || 'La suppression a échoué';
-        console.error('❌ Delete failed:', errorMessage);
         throw new Error(errorMessage);
       }
 
-      console.log('✅ Parcel deleted successfully via Edge Function:', data.deleted_parcel?.id);
       return parcelId;
     },
-    onSuccess: (parcelId) => {
-      console.log('✅ Delete success callback for parcel:', parcelId);
+    onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['parcels', farmId] });
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
-      queryClient.invalidateQueries({ queryKey: ['parcel', parcelId] });
-      
+
       // Close dialog after successful deletion
       setParcelToDelete(null);
       deleteParcelMutation.reset();
     },
-    onError: (error: any) => {
-      console.error('❌ Delete error:', error);
+    onError: (error: Error) => {
       
       let errorMessage = 'Erreur lors de la suppression de la parcelle';
       
@@ -759,7 +759,6 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
             <Button
               onClick={() => {
                 if (parcelToDelete && !deleteParcelMutation.isPending) {
-                  console.log('🔴 Delete button clicked for parcel:', parcelToDelete.id);
                   deleteParcelMutation.mutate(parcelToDelete.id);
                 }
               }}

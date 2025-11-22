@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { authSupabase } from '../../lib/auth-supabase';
 import {
   Dialog,
   DialogContent,
@@ -66,18 +66,33 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
         console.warn('Version non spécifiée dans le fichier d\'export');
       }
 
-      // Call import Edge Function
-      const { data, error: importError } = await supabase.functions.invoke('import-farm', {
-        body: {
+      // Get the access token from the current session
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Non authentifié');
+      }
+
+      // Call NestJS API to import farm
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/farms/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
           organization_id: organizationId,
           export_data: exportData,
           skip_duplicates: skipDuplicates,
-        },
+        }),
       });
 
-      if (importError) {
-        throw new Error(importError.message || 'Erreur lors de l\'import');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Erreur lors de l'import (${response.status})`);
       }
+
+      const data = await response.json();
 
       if (data?.success) {
         const imported = data.imported;
@@ -102,9 +117,9 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
         const errorMessages = data?.errors || ['Erreur lors de l\'import'];
         throw new Error(errorMessages.join('\n'));
       }
-    } catch (error: any) {
-      console.error('Import error:', error);
-      setError(error.message || 'Erreur lors de l\'import');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'import';
+      setError(errorMessage);
     } finally {
       setIsImporting(false);
     }

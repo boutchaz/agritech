@@ -21,13 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
 
 interface FarmNode {
   farm_id: string;
@@ -73,7 +66,6 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const [selectedFarmForParcels, setSelectedFarmForParcels] = useState<{ id: string; name: string } | null>(null);
   const [selectedFarmForDetails, setSelectedFarmForDetails] = useState<string | null>(null);
   const [farmToDelete, setFarmToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [relatedDataCounts, setRelatedDataCounts] = useState<{
     parcels: number;
@@ -354,7 +346,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
         supabase.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
         supabase.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', currentOrganization?.id || ''),
+        supabase.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
         supabase.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
       ]);
 
@@ -381,38 +373,43 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     fetchRelatedDataCounts(farm.id);
   };
 
-  // Delete farm mutation using Edge Function
+  // Delete farm mutation using NestJS API
   const deleteFarmMutation = useMutation({
     mutationFn: async (farmId: string) => {
-      console.log('🗑️ Starting delete farm via Edge Function:', farmId);
 
-      // Check if user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.id) {
-        throw new Error('Utilisateur non authentifié');
+      // Get the access token from the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Non authentifié');
       }
 
-      // Call the Edge Function
-      const { data, error } = await supabase.functions.invoke('delete-farm', {
-        body: { farm_id: farmId },
+      // Call NestJS API to delete farm
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/farms`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ farm_id: farmId }),
       });
 
-      if (error) {
-        console.error('❌ Edge Function error:', error);
-        throw new Error(error.message || 'Erreur lors de la suppression de la ferme');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ API error:', errorData);
+        throw new Error(errorData.message || `Erreur lors de la suppression (${response.status})`);
       }
+
+      const data = await response.json();
 
       if (!data?.success) {
         const errorMessage = data?.error || 'La suppression a échoué';
-        console.error('❌ Delete failed:', errorMessage);
         throw new Error(errorMessage);
       }
 
-      console.log('✅ Farm deleted successfully via Edge Function:', data.deleted_farm?.id);
       return farmId;
     },
-    onSuccess: (farmId) => {
-      console.log('✅ Delete success callback for farm:', farmId);
+    onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
@@ -426,8 +423,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       setRelatedDataCounts(null);
       deleteFarmMutation.reset();
     },
-    onError: (error: any) => {
-      console.error('❌ Delete error:', error);
+    onError: (error: Error) => {
       
       let errorMessage = 'Erreur lors de la suppression de la ferme';
       
@@ -537,7 +533,6 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         onSearchChange={setSearchTerm}
         onExportAll={handleExportAll}
         onImport={() => setShowImportDialog(true)}
-        selectedFarmId={selectedFarmId}
         onExportFarm={handleExportFarm}
       />
 
