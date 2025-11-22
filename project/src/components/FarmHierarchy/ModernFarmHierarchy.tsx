@@ -121,30 +121,38 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       // Get JWT token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
+        console.error('❌ No session token available');
         throw new Error('Not authenticated');
       }
 
       // Call NestJS API
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(
-        `${apiUrl}/api/v1/farms?organization_id=${organizationId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+      const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
+      console.log('📡 Calling API:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
         },
-      );
+      });
+
+      console.log('📥 Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        console.error('❌ Error fetching farms:', error);
-        throw new Error(error.message || 'Failed to fetch farms');
+        console.error('❌ API Error Response:', error);
+        throw new Error(error.message || `Failed to fetch farms (${response.status})`);
       }
 
       const result = await response.json();
-      const data = result.farms || [];
+      console.log('✅ API Response:', result);
 
+      const data = result.farms || [];
       console.log('✅ Farms fetched:', data.length, 'farms');
+
+      if (data.length === 0) {
+        console.warn('⚠️ No farms returned. Check if farms were imported to this organization ID.');
+      }
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();
