@@ -470,16 +470,16 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         throw new Error(errorMessage);
       }
 
-      return farmId;
+      return { farmId, farmName: farmToDelete?.name };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
       queryClient.invalidateQueries({ queryKey: ['farms'] });
-      
-      // Success feedback
-      toast.success(`La ferme "${farmToDelete?.name}" et toutes ses données associées ont été supprimées avec succès.`);
+
+      // Success feedback with captured farm name
+      toast.success(`La ferme "${result?.farmName}" et toutes ses données associées ont été supprimées avec succès.`);
 
       // Close dialog and reset state
       setFarmToDelete(null);

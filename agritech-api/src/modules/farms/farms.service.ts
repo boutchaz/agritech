@@ -76,13 +76,18 @@ export class FarmsService {
     let parcelCounts: Record<string, number> = {};
 
     if (farmIds.length > 0) {
+      this.logger.log(`Fetching parcels for ${farmIds.length} farms`);
+
       const { data: parcels, error: parcelsError } = await this.supabaseAdmin
         .from('parcels')
         .select('farm_id')
         .in('farm_id', farmIds)
         .eq('is_active', true);
 
-      if (!parcelsError && parcels) {
+      if (parcelsError) {
+        this.logger.error(`Error fetching parcels: ${parcelsError.message}`);
+      } else if (parcels) {
+        this.logger.log(`Found ${parcels.length} active parcels for ${farmIds.length} farms`);
         parcelCounts = parcels.reduce(
           (acc, p) => {
             acc[p.farm_id] = (acc[p.farm_id] || 0) + 1;
@@ -90,6 +95,9 @@ export class FarmsService {
           },
           {} as Record<string, number>,
         );
+        this.logger.log(`Parcel counts by farm: ${JSON.stringify(parcelCounts)}`);
+      } else {
+        this.logger.warn('No parcels found or parcels is null');
       }
     }
 
@@ -441,14 +449,20 @@ export class FarmsService {
     }
 
     // Step 2: Import parcels
+    this.logger.log(`Importing ${export_data.parcels?.length || 0} parcels...`);
+    this.logger.log(`Available farm ID mappings: ${JSON.stringify(idMappings.farms)}`);
+
     for (const parcel of export_data.parcels || []) {
       try {
-        const newFarmId =
-          idMappings.farms[parcel.original_farm_id || parcel.farm_id];
+        const lookupKey = parcel.original_farm_id || parcel.farm_id;
+        const newFarmId = idMappings.farms[lookupKey];
+
+        this.logger.log(`Importing parcel "${parcel.name}": lookupKey=${lookupKey}, newFarmId=${newFarmId}`);
+
         if (!newFarmId) {
-          errors.push(
-            `Failed to import parcel ${parcel.name}: farm not found`,
-          );
+          const errorMsg = `Failed to import parcel ${parcel.name}: farm not found (lookup key: ${lookupKey})`;
+          this.logger.error(errorMsg);
+          errors.push(errorMsg);
           continue;
         }
 
@@ -488,19 +502,21 @@ export class FarmsService {
               variety: parcel.variety,
               planting_date: parcel.planting_date,
               planting_type: parcel.planting_type,
+              is_active: parcel.is_active !== false, // Ensure is_active is set (default true)
             })
             .select('id')
             .single();
 
         if (parcelError) {
-          errors.push(
-            `Failed to import parcel ${parcel.name}: ${parcelError.message}`,
-          );
+          const errorMsg = `Failed to import parcel ${parcel.name}: ${parcelError.message}`;
+          this.logger.error(errorMsg);
+          errors.push(errorMsg);
           continue;
         }
 
         idMappings.parcels[parcel.original_id || parcel.id] = newParcel.id;
         importedParcels++;
+        this.logger.log(`✓ Successfully imported parcel "${parcel.name}" with ID ${newParcel.id} (farm_id: ${newFarmId})`);
       } catch (error) {
         errors.push(
           `Error importing parcel ${parcel.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
