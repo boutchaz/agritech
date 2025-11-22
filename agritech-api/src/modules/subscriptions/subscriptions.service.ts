@@ -45,6 +45,17 @@ export class SubscriptionsService {
       `Creating trial subscription for user ${userId} and organization ${organization_id}`,
     );
 
+    // Debug: Check all organization memberships for this user
+    this.logger.debug(`Checking organization memberships for user ${userId}`);
+    const { data: allOrgUsers } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role, is_active')
+      .eq('user_id', userId);
+
+    this.logger.debug(
+      `User ${userId} belongs to ${allOrgUsers?.length || 0} organizations: ${JSON.stringify(allOrgUsers)}`,
+    );
+
     // Verify user belongs to the organization
     const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
       .from('organization_users')
@@ -56,8 +67,10 @@ export class SubscriptionsService {
 
     if (orgUserError || !orgUser) {
       this.logger.error(
-        `User ${userId} does not belong to organization ${organization_id}`,
-        orgUserError,
+        `User ${userId} does not belong to organization ${organization_id}. Error: ${JSON.stringify(orgUserError)}`,
+      );
+      this.logger.error(
+        `Query result - orgUser: ${JSON.stringify(orgUser)}, orgUserError: ${JSON.stringify(orgUserError)}`,
       );
       throw new ForbiddenException(
         'User does not belong to this organization',
