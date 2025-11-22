@@ -9,10 +9,11 @@ import { supabase } from '../../lib/supabase';
 import { authSupabase } from '../../lib/auth-supabase';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
+import FarmListItem from './FarmListItem';
 import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
-import { Building2, X } from 'lucide-react';
+import { Building2, X, Trash2, Download } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,12 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const [selectedFarmForDetails, setSelectedFarmForDetails] = useState<string | null>(null);
   const [farmToDelete, setFarmToDelete] = useState<{ id: string; name: string } | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [selectedFarmIds, setSelectedFarmIds] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    type: 'all' as 'all' | 'main' | 'sub',
+    status: 'all' as 'all' | 'active' | 'inactive',
+  });
   const [relatedDataCounts, setRelatedDataCounts] = useState<{
     parcels: number;
     workers: number;
@@ -500,14 +507,24 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     }
   });
 
-  // Filter farms based on search
+  // Filter farms based on search and filters
   const filteredFarms = useMemo(() => {
-    if (!searchTerm) return farms;
-
     const filterTree = (nodes: FarmNode[]): FarmNode[] => {
       return nodes.reduce((acc: FarmNode[], node) => {
-        const matches = node.farm_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        // Apply search filter
+        const searchMatch = !searchTerm ||
+          node.farm_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           node.manager_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Apply type filter
+        const typeMatch = filters.type === 'all' || node.farm_type === filters.type;
+
+        // Apply status filter
+        const statusMatch = filters.status === 'all' ||
+          (filters.status === 'active' && node.is_active) ||
+          (filters.status === 'inactive' && !node.is_active);
+
+        const matches = searchMatch && typeMatch && statusMatch;
 
         if (matches) {
           acc.push({ ...node });
@@ -522,7 +539,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     };
 
     return filterTree(farms);
-  }, [farms, searchTerm]);
+  }, [farms, searchTerm, filters]);
 
   // Calculate totals from flat list
   const allFarms = useMemo(() => {
@@ -541,7 +558,66 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const totalFarms = allFarms.length;
   const totalArea = allFarms.reduce((sum, farm) => sum + farm.farm_size, 0);
 
-  // Render farm tree recursively
+  // Multi-selection handlers
+  const toggleFarmSelection = (farmId: string) => {
+    setSelectedFarmIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(farmId)) {
+        newSet.delete(farmId);
+      } else {
+        newSet.add(farmId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllFarms = () => {
+    setSelectedFarmIds(new Set(allFarms.map(f => f.farm_id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedFarmIds(new Set());
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedFarmIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      t('farmHierarchy.farm.confirmBatchDelete', { count: selectedFarmIds.size })
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session) {
+        toast.error('Session non disponible');
+        return;
+      }
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+      // Delete farms one by one
+      for (const farmId of selectedFarmIds) {
+        await fetch(`${apiUrl}/api/v1/farms/${farmId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      toast.success(`${selectedFarmIds.size} ferme(s) supprimée(s) avec succès`);
+      clearSelection();
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+    } catch (error) {
+      console.error('Error deleting farms:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Render farm tree recursively (Grid View)
   const renderFarmTree = (nodes: FarmNode[]) => {
     return nodes.map(farm => (
       <div key={farm.farm_id} className="space-y-3">
@@ -571,6 +647,32 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     ));
   };
 
+  // Render farm list (List View)
+  const renderFarmList = (nodes: FarmNode[]) => {
+    return nodes.map(farm => (
+      <FarmListItem
+        key={farm.farm_id}
+        farm={{
+          id: farm.farm_id,
+          name: farm.farm_name,
+          type: farm.farm_type,
+          size: farm.farm_size,
+          manager_name: farm.manager_name,
+          sub_farms_count: farm.sub_farms_count,
+          parcels_count: farm.parcels?.length || 0,
+          hierarchy_level: farm.hierarchy_level,
+          is_active: farm.is_active
+        }}
+        isSelected={selectedFarmIds.has(farm.farm_id)}
+        onSelect={() => setSelectedFarmForDetails(farm.farm_id)}
+        onToggleSelection={() => toggleFarmSelection(farm.farm_id)}
+        onManage={() => onManageFarm?.(farm.farm_id)}
+        onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+        onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
+      />
+    ));
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -596,6 +698,10 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         onExportAll={handleExportAll}
         onImport={() => setShowImportDialog(true)}
         onExportFarm={handleExportFarm}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        filters={filters}
+        onFiltersChange={setFilters}
       />
 
       {/* Add Farm Form Modal */}
@@ -649,6 +755,40 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         </div>
       )}
 
+      {/* Multi-selection Action Bar */}
+      {viewMode === 'list' && selectedFarmIds.size > 0 && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {selectedFarmIds.size} {selectedFarmIds.size === 1 ? 'ferme sélectionnée' : 'fermes sélectionnées'}
+              </span>
+              <button
+                onClick={clearSelection}
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                Désélectionner
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAllFarms}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Tout sélectionner
+              </button>
+              <button
+                onClick={handleBatchDelete}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Farms Grid/List */}
       {filteredFarms.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
@@ -673,8 +813,11 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           )}
         </div>
       ) : (
-        <div className={viewMode === 'grid' ? 'space-y-4' : 'space-y-3'}>
-          {renderFarmTree(filteredFarms)}
+        <div className="space-y-3">
+          {viewMode === 'grid' ? renderFarmTree(filteredFarms) : renderFarmList(allFarms.filter(farm =>
+            filteredFarms.some(f => f.farm_id === farm.farm_id ||
+              (f.children && f.children.some(c => c.farm_id === farm.farm_id)))
+          ))}
         </div>
       )}
 

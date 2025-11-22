@@ -25,6 +25,13 @@ interface FarmHierarchyHeaderProps {
   onImport?: () => void;
   selectedFarmId?: string | null;
   onExportFarm?: (farmId: string) => void;
+  showFilters?: boolean;
+  onToggleFilters?: () => void;
+  filters?: {
+    type: 'all' | 'main' | 'sub';
+    status: 'all' | 'active' | 'inactive';
+  };
+  onFiltersChange?: (filters: { type: 'all' | 'main' | 'sub'; status: 'all' | 'active' | 'inactive' }) => void;
 }
 
 const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
@@ -39,7 +46,11 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   onExportAll,
   onImport,
   selectedFarmId,
-  onExportFarm
+  onExportFarm,
+  showFilters = false,
+  onToggleFilters,
+  filters,
+  onFiltersChange,
 }) => {
   const { t } = useTranslation();
 
@@ -168,9 +179,23 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
         </div>
 
         {/* Filters Button */}
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('farmHierarchy.filters')}</span>
+        <button
+          onClick={onToggleFilters}
+          className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors ${
+            showFilters
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+        >
+          <Filter className={`w-4 h-4 ${showFilters ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`} />
+          <span className={`text-sm font-medium ${showFilters ? 'text-green-700 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            {t('farmHierarchy.filters')}
+          </span>
+          {filters && (filters.type !== 'all' || filters.status !== 'all') && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-green-600 text-white rounded-full">
+              {[filters.type !== 'all' ? 1 : 0, filters.status !== 'all' ? 1 : 0].reduce((a, b) => a + b)}
+            </span>
+          )}
         </button>
 
         {/* View Mode Toggle */}
@@ -197,6 +222,57 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && filters && onFiltersChange && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Type de ferme
+              </label>
+              <select
+                value={filters.type}
+                onChange={(e) => onFiltersChange({ ...filters, type: e.target.value as 'all' | 'main' | 'sub' })}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white"
+              >
+                <option value="all">Tous les types</option>
+                <option value="main">Fermes principales</option>
+                <option value="sub">Sous-fermes</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Statut
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as 'all' | 'active' | 'inactive' })}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Reset Filters */}
+          {(filters.type !== 'all' || filters.status !== 'all') && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => onFiltersChange({ type: 'all', status: 'all' })}
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
