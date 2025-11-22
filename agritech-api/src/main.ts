@@ -30,26 +30,48 @@ async function bootstrap() {
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');
   const allowedOrigins = corsOrigin.split(',').map(origin => origin.trim());
 
+  logger.log(`CORS Origins configured: ${allowedOrigins.join(', ')}`);
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or curl)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        logger.debug('CORS: Allowing request with no origin');
+        return callback(null, true);
+      }
+
+      logger.debug(`CORS: Checking origin: ${origin}`);
 
       // Check if origin is in allowed list
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        logger.debug(`CORS: Origin ${origin} is allowed`);
         return callback(null, true);
       }
 
       // For development, allow localhost with any port
       if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        logger.debug(`CORS: Allowing localhost origin in development: ${origin}`);
         return callback(null, true);
       }
 
+      logger.warn(`CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'X-Request-ID',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Set global prefix
