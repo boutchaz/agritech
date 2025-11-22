@@ -107,9 +107,11 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
 
         setSuccess(message);
 
+        // Immediately call onSuccess to invalidate queries
+        onSuccess();
+
         // Wait a bit before closing to show success message
         setTimeout(() => {
-          onSuccess();
           setFile(null);
           setSuccess(null);
         }, 2000);

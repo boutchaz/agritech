@@ -324,8 +324,14 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
   // Import handler
   const handleImportSuccess = () => {
-    setShowImportDialog(false);
-    queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+    // Invalidate all farm-related queries
+    queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
+    queryClient.invalidateQueries({ queryKey: ['farms'] });
+    queryClient.invalidateQueries({ queryKey: ['parcels'] });
+    queryClient.invalidateQueries({ queryKey: ['organization', organizationId] });
+
+    // Force refetch the farm hierarchy
+    queryClient.refetchQueries({ queryKey: ['farm-hierarchy', organizationId] });
   };
 
   // Fetch related data counts for a farm
