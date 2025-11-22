@@ -78,6 +78,11 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   } | null>(null);
   const [loadingRelatedData, setLoadingRelatedData] = useState(false);
 
+  // Debug: Log organization ID on mount and when it changes
+  if (!organizationId) {
+    console.error('❌ ModernFarmHierarchy: No organizationId provided!');
+  }
+
   const {
     register,
     handleSubmit,
