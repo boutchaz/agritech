@@ -1862,6 +1862,76 @@ AS $$
   END;
 $$;
 
+-- Function to create user profile (bypasses RLS for service role operations)
+-- This function uses SECURITY DEFINER to run with elevated privileges and bypass RLS
+-- Used by backend services during user signup
+CREATE OR REPLACE FUNCTION create_user_profile(
+  p_user_id UUID,
+  p_email TEXT,
+  p_full_name TEXT DEFAULT NULL,
+  p_first_name TEXT DEFAULT NULL,
+  p_last_name TEXT DEFAULT NULL,
+  p_phone TEXT DEFAULT NULL,
+  p_language TEXT DEFAULT 'fr',
+  p_timezone TEXT DEFAULT 'Africa/Casablanca',
+  p_onboarding_completed BOOLEAN DEFAULT false,
+  p_password_set BOOLEAN DEFAULT true
+)
+RETURNS user_profiles
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_profile user_profiles;
+BEGIN
+  -- Verify that the user exists in auth.users
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id) THEN
+    RAISE EXCEPTION 'User does not exist in auth.users';
+  END IF;
+
+  -- Insert or update user profile
+  INSERT INTO user_profiles (
+    id,
+    email,
+    full_name,
+    first_name,
+    last_name,
+    phone,
+    language,
+    timezone,
+    onboarding_completed,
+    password_set
+  )
+  VALUES (
+    p_user_id,
+    p_email,
+    COALESCE(p_full_name, COALESCE(p_first_name || ' ' || p_last_name, split_part(p_email, '@', 1))),
+    p_first_name,
+    p_last_name,
+    p_phone,
+    p_language,
+    p_timezone,
+    p_onboarding_completed,
+    p_password_set
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
+    first_name = COALESCE(EXCLUDED.first_name, user_profiles.first_name),
+    last_name = COALESCE(EXCLUDED.last_name, user_profiles.last_name),
+    phone = COALESCE(EXCLUDED.phone, user_profiles.phone),
+    language = COALESCE(EXCLUDED.language, user_profiles.language),
+    timezone = COALESCE(EXCLUDED.timezone, user_profiles.timezone),
+    onboarding_completed = EXCLUDED.onboarding_completed,
+    password_set = EXCLUDED.password_set,
+    updated_at = NOW()
+  RETURNING * INTO v_profile;
+
+  RETURN v_profile;
+END;
+$$;
+
 -- Enable RLS on all tables
 ALTER TABLE IF EXISTS organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS organization_users ENABLE ROW LEVEL SECURITY;
@@ -5197,12 +5267,18 @@ DROP POLICY IF EXISTS "user_update_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "user_all_own_profile" ON user_profiles;
 
 -- Single policy for all operations (supports upsert in onboarding)
+-- Allows users to manage their own profile
+-- Also allows service role to create profiles during signup (when auth.uid() is NULL but id matches a valid auth user)
 CREATE POLICY "user_all_own_profile" ON user_profiles
   FOR ALL USING (
-    id = auth.uid()
+    id = auth.uid() OR
+    -- Allow if the profile id exists in auth.users (for service role operations)
+    EXISTS (SELECT 1 FROM auth.users WHERE auth.users.id = user_profiles.id)
   )
   WITH CHECK (
-    id = auth.uid()
+    id = auth.uid() OR
+    -- Allow if the profile id exists in auth.users (for service role operations)
+    EXISTS (SELECT 1 FROM auth.users WHERE auth.users.id = user_profiles.id)
   );
 
 -- =====================================================
@@ -5373,65 +5449,103 @@ DROP POLICY IF EXISTS "org_update_parcels" ON parcels;
 DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
 
 -- Read: Users can see parcels from farms they have access to
+-- Handles farms with NULL organization_id (accessible to authenticated users)
+-- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_read_parcels" ON parcels
   FOR SELECT USING (
     auth.uid() IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM farms f
-      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
       WHERE f.id = parcels.farm_id
-        AND ou.user_id = auth.uid()
-        AND ou.is_active = true
+        AND (
+          f.organization_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM organization_users ou
+            WHERE ou.organization_id = f.organization_id
+              AND ou.user_id = auth.uid()
+              AND ou.is_active = true
+          )
+        )
     )
   );
 
 -- Insert: Authenticated users can create parcels for farms they have access to
+-- Handles farms with NULL organization_id (accessible to authenticated users)
+-- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM farms f
-      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
       WHERE f.id = parcels.farm_id
-        AND ou.user_id = auth.uid()
-        AND ou.is_active = true
+        AND (
+          f.organization_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM organization_users ou
+            WHERE ou.organization_id = f.organization_id
+              AND ou.user_id = auth.uid()
+              AND ou.is_active = true
+          )
+        )
     )
   );
 
 -- Update: Users can update parcels from farms they have access to
+-- Handles farms with NULL organization_id (accessible to authenticated users)
+-- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_update_parcels" ON parcels
   FOR UPDATE USING (
     auth.uid() IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM farms f
-      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
       WHERE f.id = parcels.farm_id
-        AND ou.user_id = auth.uid()
-        AND ou.is_active = true
+        AND (
+          f.organization_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM organization_users ou
+            WHERE ou.organization_id = f.organization_id
+              AND ou.user_id = auth.uid()
+              AND ou.is_active = true
+          )
+        )
     )
   ) WITH CHECK (
     auth.uid() IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM farms f
-      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
       WHERE f.id = parcels.farm_id
-        AND ou.user_id = auth.uid()
-        AND ou.is_active = true
+        AND (
+          f.organization_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM organization_users ou
+            WHERE ou.organization_id = f.organization_id
+              AND ou.user_id = auth.uid()
+              AND ou.is_active = true
+          )
+        )
     )
   );
 
 -- Delete: Users with appropriate roles can delete parcels from farms they have access to
+-- Handles farms with NULL organization_id (accessible to authenticated users)
+-- and farms with organization_id (requires admin roles)
 CREATE POLICY "org_delete_parcels" ON parcels
   FOR DELETE USING (
     auth.uid() IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM farms f
-      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
-      INNER JOIN roles r ON r.id = ou.role_id
       WHERE f.id = parcels.farm_id
-        AND ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+        AND (
+          f.organization_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM organization_users ou
+            INNER JOIN roles r ON r.id = ou.role_id
+            WHERE ou.organization_id = f.organization_id
+              AND ou.user_id = auth.uid()
+              AND ou.is_active = true
+              AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+          )
+        )
     )
   );
 

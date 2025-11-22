@@ -12,7 +12,12 @@ if (!supabaseAnonKey) {
   throw new Error('Missing Supabase anon key environment variable (VITE_SUPABASE_ANON_KEY or VITE_AUTH_SUPABASE_ANON_KEY)');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Re-export Database type for convenience
 export type { Database };

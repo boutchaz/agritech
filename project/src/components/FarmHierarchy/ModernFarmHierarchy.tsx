@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { authSupabase } from '../../lib/auth-supabase';
+import { useAuth } from '../../hooks/useAuth';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
 import FarmListItem from './FarmListItem';
@@ -62,6 +63,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   onManageFarm
 }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -276,8 +278,6 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   // Create farm mutation
   const createFarmMutation = useMutation({
     mutationFn: async (formData: FarmFormValues) => {
-      const { data: { user } } = await supabase.auth.getUser();
-
       if (!user) {
         throw new Error('User not authenticated');
       }

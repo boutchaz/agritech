@@ -12,4 +12,9 @@ if (!authSupabaseAnonKey) {
   throw new Error('Missing VITE_AUTH_SUPABASE_ANON_KEY environment variable');
 }
 
-export const authSupabase = createClient<Database>(authSupabaseUrl, authSupabaseAnonKey);
+export const authSupabase = createClient<Database>(authSupabaseUrl, authSupabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});

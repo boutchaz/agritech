@@ -179,22 +179,27 @@ export class AuthService {
     const fullName = `${signupDto.firstName} ${signupDto.lastName}`;
 
     try {
-      // 2. Create user profile
-      const { error: profileError } = await adminClient
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          email: email,
-          full_name: fullName,
-          phone: signupDto.phone || null,
-          timezone: 'Africa/Casablanca',
-          language: 'fr',
-          onboarding_completed: false,
-          password_set: true,
-        });
+      // 2. Create user profile using SECURITY DEFINER function (bypasses RLS)
+      const { data: profileData, error: profileError } = await adminClient.rpc(
+        'create_user_profile',
+        {
+          p_user_id: userId,
+          p_email: email,
+          p_full_name: fullName,
+          p_first_name: signupDto.firstName,
+          p_last_name: signupDto.lastName,
+          p_phone: signupDto.phone || null,
+          p_language: 'fr',
+          p_timezone: 'Africa/Casablanca',
+          p_onboarding_completed: false,
+          p_password_set: true,
+        },
+      );
 
-      if (profileError) {
-        this.logger.error(`Failed to create profile: ${profileError.message}`);
+      if (profileError || !profileData) {
+        this.logger.error(
+          `Failed to create profile: ${profileError?.message || 'Unknown error'}`,
+        );
         // Rollback: Delete the auth user
         await adminClient.auth.admin.deleteUser(userId);
         throw new BadRequestException('Failed to create user profile');

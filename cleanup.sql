@@ -26,13 +26,24 @@ DO $$
 DECLARE
     r RECORD;
 BEGIN
-    -- Drop all tables in public schema (except PostGIS system tables)
+    -- Drop all tables in public schema (excluding tables that belong to extensions)
     FOR r IN (
-        SELECT tablename
-        FROM pg_tables
-        WHERE schemaname = 'public'
-        AND tablename NOT IN ('spatial_ref_sys', 'geography_columns', 'geometry_columns', 'raster_columns', 'raster_overviews')
-        ORDER BY tablename
+        SELECT t.tablename
+        FROM pg_tables t
+        WHERE t.schemaname = 'public'
+        -- Exclude tables that belong to extensions (like PostGIS)
+        AND NOT EXISTS (
+            SELECT 1
+            FROM pg_class c
+            INNER JOIN pg_namespace n ON c.relnamespace = n.oid
+            LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
+            LEFT JOIN pg_extension e ON d.refobjid = e.oid
+            WHERE n.nspname = 'public'
+            AND c.relname = t.tablename
+            AND c.relkind = 'r'  -- regular table
+            AND e.oid IS NOT NULL
+        )
+        ORDER BY t.tablename
     ) LOOP
         RAISE NOTICE 'Dropping table: %', r.tablename;
         EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
@@ -47,13 +58,24 @@ DO $$
 DECLARE
     r RECORD;
 BEGIN
-    -- Drop all views in public schema (except PostGIS system views)
+    -- Drop all views in public schema (excluding views that belong to extensions)
     FOR r IN (
-        SELECT viewname
-        FROM pg_views
-        WHERE schemaname = 'public'
-        AND viewname NOT IN ('geography_columns', 'geometry_columns', 'raster_columns', 'raster_overviews')
-        ORDER BY viewname
+        SELECT v.viewname
+        FROM pg_views v
+        WHERE v.schemaname = 'public'
+        -- Exclude views that belong to extensions (like PostGIS)
+        AND NOT EXISTS (
+            SELECT 1
+            FROM pg_class c
+            INNER JOIN pg_namespace n ON c.relnamespace = n.oid
+            LEFT JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
+            LEFT JOIN pg_extension e ON d.refobjid = e.oid
+            WHERE n.nspname = 'public'
+            AND c.relname = v.viewname
+            AND c.relkind = 'v'  -- view
+            AND e.oid IS NOT NULL
+        )
+        ORDER BY v.viewname
     ) LOOP
         RAISE NOTICE 'Dropping view: %', r.viewname;
         EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.viewname) || ' CASCADE';
@@ -68,7 +90,7 @@ DO $$
 DECLARE
     r RECORD;
 BEGIN
-    -- Drop all functions in public schema
+    -- Drop all functions in public schema (excluding functions that belong to extensions)
     FOR r IN (
         SELECT
             p.proname as function_name,
@@ -76,6 +98,14 @@ BEGIN
         FROM pg_proc p
         INNER JOIN pg_namespace n ON p.pronamespace = n.oid
         WHERE n.nspname = 'public'
+        -- Exclude functions that belong to extensions (like PostGIS)
+        AND NOT EXISTS (
+            SELECT 1
+            FROM pg_depend d
+            INNER JOIN pg_extension e ON d.refobjid = e.oid
+            WHERE d.objid = p.oid
+            AND d.deptype = 'e'  -- extension dependency
+        )
         ORDER BY p.proname
     ) LOOP
         RAISE NOTICE 'Dropping function: %(%)', r.function_name, r.args;
@@ -111,13 +141,21 @@ DO $$
 DECLARE
     r RECORD;
 BEGIN
-    -- Drop all custom types in public schema
+    -- Drop all custom types in public schema (excluding types that belong to extensions)
     FOR r IN (
         SELECT typname
         FROM pg_type t
         INNER JOIN pg_namespace n ON t.typnamespace = n.oid
         WHERE n.nspname = 'public'
         AND t.typtype = 'e'  -- enum types
+        -- Exclude types that belong to extensions (like PostGIS)
+        AND NOT EXISTS (
+            SELECT 1
+            FROM pg_depend d
+            INNER JOIN pg_extension e ON d.refobjid = e.oid
+            WHERE d.objid = t.oid
+            AND d.deptype = 'e'  -- extension dependency
+        )
         ORDER BY typname
     ) LOOP
         RAISE NOTICE 'Dropping type: %', r.typname;
