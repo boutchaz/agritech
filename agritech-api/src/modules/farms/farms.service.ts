@@ -826,4 +826,216 @@ export class FarmsService {
       success: deletedFarms.length > 0 && errors.length === 0,
     };
   }
+
+  /**
+   * Export farm data (farms, parcels, satellite AOIs) in structured JSON format
+   * Supports single farm export (with optional sub-farms) or organization-wide export
+   */
+  async exportFarm(userId: string, dto: any) {
+    const { farm_id, organization_id, include_sub_farms = true } = dto;
+
+    this.logger.log(
+      `Exporting farms for user ${userId}: farm_id=${farm_id}, organization_id=${organization_id}, include_sub_farms=${include_sub_farms}`,
+    );
+
+    // Validate that at least one ID is provided
+    if (!farm_id && !organization_id) {
+      throw new BadRequestException(
+        'Missing required field: either farm_id or organization_id must be provided',
+      );
+    }
+
+    let farmsToExport: any[] = [];
+
+    if (farm_id) {
+      // Export specific farm (and optionally sub-farms)
+      const { data: farm, error: farmError } = await this.supabaseAdmin
+        .from('farms')
+        .select('*')
+        .eq('id', farm_id)
+        .maybeSingle();
+
+      if (farmError || !farm) {
+        this.logger.error('Farm not found', farmError);
+        throw new NotFoundException(
+          `Farm not found: ${farmError?.message || 'Unknown error'}`,
+        );
+      }
+
+      // Verify user has access to this farm's organization
+      const { data: orgUser } = await this.supabaseAdmin
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .eq('organization_id', farm.organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!orgUser) {
+        throw new ForbiddenException('You do not have access to this farm');
+      }
+
+      farmsToExport = [farm];
+
+      // If include_sub_farms, fetch all sub-farms recursively
+      if (include_sub_farms) {
+        const fetchSubFarms = async (
+          parentFarmId: string,
+          allFarms: any[],
+        ): Promise<any[]> => {
+          try {
+            const { data: subFarms, error: subError } =
+              await this.supabaseAdmin
+                .from('farms')
+                .select('*')
+                .eq('parent_farm_id', parentFarmId)
+                .eq('is_active', true);
+
+            if (subError) {
+              // If parent_farm_id column doesn't exist, skip
+              if (subError.code === '42703') {
+                this.logger.log(
+                  'parent_farm_id column not found, skipping sub-farms',
+                );
+                return allFarms;
+              }
+              this.logger.error('Error fetching sub-farms', subError);
+              return allFarms;
+            }
+
+            if (subFarms && subFarms.length > 0) {
+              allFarms.push(...subFarms);
+              // Recursively fetch sub-farms of sub-farms
+              for (const subFarm of subFarms) {
+                await fetchSubFarms(subFarm.id, allFarms);
+              }
+            }
+
+            return allFarms;
+          } catch (error) {
+            this.logger.error('Error in fetchSubFarms', error);
+            return allFarms;
+          }
+        };
+
+        const subFarms = await fetchSubFarms(farm_id, []);
+        farmsToExport.push(...subFarms);
+      }
+    } else if (organization_id) {
+      // Export all farms for organization
+      const { data: orgUser } = await this.supabaseAdmin
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .eq('organization_id', organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!orgUser) {
+        throw new ForbiddenException(
+          'You do not have access to this organization',
+        );
+      }
+
+      const { data: orgFarms, error: orgFarmsError } =
+        await this.supabaseAdmin
+          .from('farms')
+          .select('*')
+          .eq('organization_id', organization_id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+
+      if (orgFarmsError) {
+        this.logger.error('Error fetching organization farms', orgFarmsError);
+        throw new InternalServerErrorException(
+          `Error fetching farms: ${orgFarmsError.message}`,
+        );
+      }
+
+      farmsToExport = orgFarms || [];
+    }
+
+    if (farmsToExport.length === 0) {
+      throw new NotFoundException('No farms found to export');
+    }
+
+    const farmIds = farmsToExport.map((f) => f.id);
+
+    // Fetch all parcels for these farms
+    const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+      .from('parcels')
+      .select('*')
+      .in('farm_id', farmIds)
+      .order('created_at', { ascending: true });
+
+    if (parcelsError) {
+      this.logger.error('Error fetching parcels', parcelsError);
+      throw new InternalServerErrorException(
+        `Error fetching parcels: ${parcelsError.message}`,
+      );
+    }
+
+    const parcelIds = parcels?.map((p) => p.id) || [];
+
+    // Fetch all satellite AOIs for these farms and parcels
+    let satelliteAois: any[] = [];
+    if (farmIds.length > 0) {
+      try {
+        const orCondition =
+          parcelIds.length > 0
+            ? `farm_id.in.(${farmIds.join(',')}),parcel_id.in.(${parcelIds.join(',')})`
+            : `farm_id.in.(${farmIds.join(',')})`;
+
+        const { data: aois, error: aoisError } = await this.supabaseAdmin
+          .from('satellite_aois')
+          .select('*')
+          .or(orCondition)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+
+        if (aoisError) {
+          this.logger.error('Error fetching satellite AOIs', aoisError);
+          // Don't fail if AOIs can't be fetched, just log it
+        } else {
+          satelliteAois = aois || [];
+        }
+      } catch (error) {
+        this.logger.error('Error fetching satellite AOIs', error);
+        // Continue without AOIs
+      }
+    }
+
+    // Prepare export data (preserve original IDs for import mapping)
+    const exportData = {
+      exported_at: new Date().toISOString(),
+      version: '1.0.0',
+      farms: farmsToExport.map((farm) => ({
+        ...farm,
+        original_id: farm.id, // Keep original ID for mapping during import
+      })),
+      parcels: (parcels || []).map((parcel) => ({
+        ...parcel,
+        original_id: parcel.id,
+        original_farm_id: parcel.farm_id, // Keep original farm_id for mapping
+      })),
+      satellite_aois: satelliteAois.map((aoi) => ({
+        ...aoi,
+        original_id: aoi.id,
+        original_farm_id: aoi.farm_id,
+        original_parcel_id: aoi.parcel_id,
+      })),
+      metadata: {
+        total_farms: farmsToExport.length,
+        total_parcels: parcels?.length || 0,
+        total_aois: satelliteAois.length,
+      },
+    };
+
+    this.logger.log('Export completed:', exportData.metadata);
+
+    return {
+      success: true,
+      data: exportData,
+    };
+  }
 }

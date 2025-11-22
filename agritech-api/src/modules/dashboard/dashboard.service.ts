@@ -178,7 +178,7 @@ export class DashboardService {
     private async getWorkersSummary(
         organizationId: string,
     ): Promise<DashboardSummary['workers']> {
-        const { data: workers, error } = await this.supabase
+        const { data: workers, error } = await this.supabaseAdmin
             .from('workers')
             .select('id, is_active, user_id')
             .eq('organization_id', organizationId);

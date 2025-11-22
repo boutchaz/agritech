@@ -326,17 +326,33 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   // Export farm handler
   const handleExportFarm = async (farmId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('export-farm', {
-        body: { farm_id: farmId, include_sub_farms: true },
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Erreur lors de l\'export');
+      // Get JWT token
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Non authentifié');
       }
 
-      if (data?.success && data?.data) {
+      // Call NestJS API
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/farms/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ farm_id: farmId, include_sub_farms: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erreur lors de l\'export');
+      }
+
+      const result = await response.json();
+
+      if (result?.success && result?.data) {
         // Download as JSON file
-        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -347,7 +363,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         URL.revokeObjectURL(url);
         toast.success('Export réussi!');
       } else {
-        throw new Error(data?.error || 'Erreur lors de l\'export');
+        throw new Error(result?.error || 'Erreur lors de l\'export');
       }
     } catch (error: any) {
       console.error('Export error:', error);
@@ -358,17 +374,33 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   // Export all farms handler
   const handleExportAll = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('export-farm', {
-        body: { organization_id: organizationId },
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Erreur lors de l\'export');
+      // Get JWT token
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Non authentifié');
       }
 
-      if (data?.success && data?.data) {
+      // Call NestJS API
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/farms/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ organization_id: organizationId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erreur lors de l\'export');
+      }
+
+      const result = await response.json();
+
+      if (result?.success && result?.data) {
         // Download as JSON file
-        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -379,7 +411,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         URL.revokeObjectURL(url);
         toast.success('Export réussi!');
       } else {
-        throw new Error(data?.error || 'Erreur lors de l\'export');
+        throw new Error(result?.error || 'Erreur lors de l\'export');
       }
     } catch (error: any) {
       console.error('Export error:', error);

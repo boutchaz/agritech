@@ -25,6 +25,10 @@ import {
   BatchDeleteFarmsDto,
   BatchDeleteResponseDto,
 } from './dto/batch-delete-farms.dto';
+import {
+  ExportFarmDto,
+  ExportFarmResponseDto,
+} from './dto/export-farm.dto';
 
 @ApiTags('farms')
 @Controller('farms')
@@ -138,5 +142,26 @@ export class FarmsController {
       req.user.id,
       batchDeleteDto.farm_ids,
     );
+  }
+
+  @Post('export')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Export farm data',
+    description:
+      'Export farms, parcels, and satellite AOIs in structured JSON format. Supports single farm export (with optional sub-farms) or organization-wide export.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Export completed successfully',
+    type: ExportFarmResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - missing farm_id or organization_id' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to farm or organization' })
+  @ApiResponse({ status: 404, description: 'Farm or organization not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  async exportFarm(@Request() req, @Body() exportFarmDto: ExportFarmDto) {
+    return this.farmsService.exportFarm(req.user.id, exportFarmDto);
   }
 }
