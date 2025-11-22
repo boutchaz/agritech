@@ -1,9 +1,10 @@
-import { Controller, Delete, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Query, Body, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { FarmsService } from './farms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,11 +16,38 @@ import {
   ImportFarmDto,
   ImportFarmResponseDto,
 } from './dto/import-farm.dto';
+import { ListFarmsResponseDto } from './dto/list-farms.dto';
 
 @ApiTags('farms')
 @Controller('farms')
 export class FarmsController {
   constructor(private farmsService: FarmsService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List farms for an organization',
+    description: 'Get all farms for an organization with parcel counts',
+  })
+  @ApiQuery({
+    name: 'organization_id',
+    required: true,
+    description: 'Organization ID to fetch farms for',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Farms retrieved successfully',
+    type: ListFarmsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  async listFarms(
+    @Request() req,
+    @Query('organization_id') organizationId: string,
+  ) {
+    return this.farmsService.listFarms(req.user.id, organizationId);
+  }
 
   @Delete()
   @UseGuards(JwtAuthGuard)

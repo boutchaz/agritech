@@ -101,21 +101,39 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     }
   });
 
-  // Fetch farm hierarchy using RPC
+  // Fetch farm hierarchy using NestJS API
   const { data: farms = [], isLoading } = useQuery({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
       console.log('🔍 Fetching farms for organization:', organizationId);
-      const { data, error } = await supabase.rpc('get_farm_hierarchy_tree', {
-        org_uuid: organizationId
-      });
 
-      if (error) {
-        console.error('❌ Error fetching farms:', error);
-        throw error;
+      // Get JWT token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      console.log('✅ Farms fetched:', data?.length || 0, 'farms');
+      // Call NestJS API
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(
+        `${apiUrl}/api/v1/farms?organization_id=${organizationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error('❌ Error fetching farms:', error);
+        throw new Error(error.message || 'Failed to fetch farms');
+      }
+
+      const result = await response.json();
+      const data = result.farms || [];
+
+      console.log('✅ Farms fetched:', data.length, 'farms');
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();

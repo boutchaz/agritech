@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { DeleteFarmDto } from './dto/delete-farm.dto';
 import { ImportFarmDto } from './dto/import-farm.dto';
+import { ListFarmsResponseDto, FarmDto } from './dto/list-farms.dto';
 
 @Injectable()
 export class FarmsService {
@@ -32,6 +33,85 @@ export class FarmsService {
         persistSession: false,
       },
     });
+  }
+
+  async listFarms(
+    userId: string,
+    organizationId: string,
+  ): Promise<ListFarmsResponseDto> {
+    this.logger.log(
+      `Listing farms for organization ${organizationId}, user ${userId}`,
+    );
+
+    // Verify user has access to this organization
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error('User not authorized for organization', orgError);
+      throw new ForbiddenException(
+        'You do not have access to this organization',
+      );
+    }
+
+    // Fetch all farms for the organization with parcel counts
+    const { data: farms, error: farmsError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, name, size, manager_name, is_active')
+      .eq('organization_id', organizationId)
+      .order('name');
+
+    if (farmsError) {
+      this.logger.error('Error fetching farms', farmsError);
+      throw new InternalServerErrorException('Failed to fetch farms');
+    }
+
+    // Get parcel counts for each farm
+    const farmIds = farms.map((f) => f.id);
+    let parcelCounts: Record<string, number> = {};
+
+    if (farmIds.length > 0) {
+      const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+        .from('parcels')
+        .select('farm_id')
+        .in('farm_id', farmIds)
+        .eq('is_active', true);
+
+      if (!parcelsError && parcels) {
+        parcelCounts = parcels.reduce(
+          (acc, p) => {
+            acc[p.farm_id] = (acc[p.farm_id] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+      }
+    }
+
+    // Map to response format (matching RPC function structure)
+    const farmDtos: FarmDto[] = farms.map((farm) => ({
+      farm_id: farm.id,
+      farm_name: farm.name,
+      parent_farm_id: null, // farms table doesn't support hierarchy
+      farm_type: 'main', // farms table doesn't have farm_type
+      farm_size: farm.size,
+      manager_name: farm.manager_name || 'N/A',
+      is_active: farm.is_active ?? true,
+      hierarchy_level: 1, // farms table doesn't support hierarchy
+      parcel_count: parcelCounts[farm.id] || 0,
+      subparcel_count: 0, // not supported yet
+    }));
+
+    return {
+      success: true,
+      farms: farmDtos,
+      total: farmDtos.length,
+    };
   }
 
   async deleteFarm(userId: string, dto: DeleteFarmDto) {
