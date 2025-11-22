@@ -17,6 +17,10 @@ import {
   ImportFarmResponseDto,
 } from './dto/import-farm.dto';
 import { ListFarmsResponseDto } from './dto/list-farms.dto';
+import {
+  BatchDeleteFarmsDto,
+  BatchDeleteResponseDto,
+} from './dto/batch-delete-farms.dto';
 
 @ApiTags('farms')
 @Controller('farms')
@@ -93,5 +97,31 @@ export class FarmsController {
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async importFarm(@Request() req, @Body() importFarmDto: ImportFarmDto) {
     return this.farmsService.importFarm(req.user.id, importFarmDto);
+  }
+
+  @Post('batch-delete')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Batch delete multiple farms',
+    description:
+      'Delete multiple farms in a single request. Each farm is validated individually. Requires system_admin or organization_admin role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch delete completed (may have partial failures)',
+    type: BatchDeleteResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid farm IDs' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  async batchDeleteFarms(
+    @Request() req,
+    @Body() batchDeleteDto: BatchDeleteFarmsDto,
+  ) {
+    return this.farmsService.batchDeleteFarms(
+      req.user.id,
+      batchDeleteDto.farm_ids,
+    );
   }
 }

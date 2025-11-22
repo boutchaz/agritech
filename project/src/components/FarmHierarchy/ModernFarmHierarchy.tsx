@@ -76,6 +76,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     type: 'all' as 'all' | 'main' | 'sub',
     status: 'all' as 'all' | 'active' | 'inactive',
   });
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [relatedDataCounts, setRelatedDataCounts] = useState<{
     parcels: number;
     workers: number;
@@ -579,41 +580,64 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     setSelectedFarmIds(new Set());
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDeleteClick = () => {
     if (selectedFarmIds.size === 0) return;
+    setShowBatchDeleteConfirm(true);
+  };
 
-    const confirmed = window.confirm(
-      t('farmHierarchy.farm.confirmBatchDelete', { count: selectedFarmIds.size })
-    );
-
-    if (!confirmed) return;
+  const handleBatchDeleteConfirm = async () => {
+    if (selectedFarmIds.size === 0) return;
 
     try {
       const { data: { session } } = await authSupabase.auth.getSession();
       if (!session) {
         toast.error('Session non disponible');
+        setShowBatchDeleteConfirm(false);
         return;
       }
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-      // Delete farms one by one
-      for (const farmId of selectedFarmIds) {
-        await fetch(`${apiUrl}/api/v1/farms/${farmId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
+      // Call the new batch delete endpoint
+      const response = await fetch(`${apiUrl}/api/v1/farms/batch-delete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          farm_ids: Array.from(selectedFarmIds),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete farms');
+      }
+
+      const result = await response.json();
+
+      // Show success message with details
+      if (result.deleted > 0) {
+        toast.success(
+          `${result.deleted} ferme(s) supprimée(s) avec succès${result.failed > 0 ? `. ${result.failed} échec(s)` : ''}`
+        );
+      }
+
+      // Show errors if any
+      if (result.errors && result.errors.length > 0) {
+        result.errors.forEach((error: { name: string; error: string }) => {
+          toast.error(`${error.name}: ${error.error}`, { duration: 5000 });
         });
       }
 
-      toast.success(`${selectedFarmIds.size} ferme(s) supprimée(s) avec succès`);
       clearSelection();
+      setShowBatchDeleteConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
     } catch (error) {
       console.error('Error deleting farms:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression');
+      setShowBatchDeleteConfirm(false);
     }
   };
 
@@ -778,7 +802,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
                 Tout sélectionner
               </button>
               <button
-                onClick={handleBatchDelete}
+                onClick={handleBatchDeleteClick}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
@@ -961,6 +985,43 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
               {deleteFarmMutation.isPending ? t('farmHierarchy.farm.deleting') : t('farmHierarchy.farm.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch Delete Confirmation Dialog */}
+      <AlertDialog open={showBatchDeleteConfirm} onOpenChange={setShowBatchDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              Confirmation de suppression groupée
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Vous êtes sur le point de supprimer{' '}
+                <span className="font-bold text-red-600 dark:text-red-400">
+                  {selectedFarmIds.size} ferme{selectedFarmIds.size > 1 ? 's' : ''}
+                </span>
+                .
+              </p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-300 text-sm">
+                  ⚠️ Cette action est irréversible. Toutes les données associées (parcelles, tâches, analyses satellite, etc.) seront également supprimées.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBatchDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Supprimer {selectedFarmIds.size} ferme{selectedFarmIds.size > 1 ? 's' : ''}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

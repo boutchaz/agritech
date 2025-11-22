@@ -5375,10 +5375,13 @@ DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
 -- Read: Users can see parcels from farms they have access to
 CREATE POLICY "org_read_parcels" ON parcels
   FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      SELECT 1 FROM farms f
+      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
+      WHERE f.id = parcels.farm_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
     )
   );
 
@@ -5387,29 +5390,48 @@ CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      SELECT 1 FROM farms f
+      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
+      WHERE f.id = parcels.farm_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
     )
   );
 
 -- Update: Users can update parcels from farms they have access to
 CREATE POLICY "org_update_parcels" ON parcels
   FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      SELECT 1 FROM farms f
+      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
+      WHERE f.id = parcels.farm_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+    )
+  ) WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM farms f
+      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
+      WHERE f.id = parcels.farm_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
     )
   );
 
--- Delete: Users can delete parcels from farms they have access to
+-- Delete: Users with appropriate roles can delete parcels from farms they have access to
 CREATE POLICY "org_delete_parcels" ON parcels
   FOR DELETE USING (
+    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+      SELECT 1 FROM farms f
+      INNER JOIN organization_users ou ON ou.organization_id = f.organization_id
+      INNER JOIN roles r ON r.id = ou.role_id
+      WHERE f.id = parcels.farm_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
     )
   );
 

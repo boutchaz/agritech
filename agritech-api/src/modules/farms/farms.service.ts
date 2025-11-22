@@ -608,4 +608,139 @@ export class FarmsService {
       warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
+
+  async batchDeleteFarms(userId: string, farmIds: string[]) {
+    this.logger.log(
+      `Batch deleting ${farmIds.length} farms for user ${userId}`,
+    );
+
+    const deletedFarms: Array<{ id: string; name: string }> = [];
+    const errors: Array<{ id: string; name: string; error: string }> = [];
+
+    // Process each farm deletion
+    for (const farmId of farmIds) {
+      try {
+        // Verify the farm exists and get organization info
+        const { data: existingFarm, error: checkError } =
+          await this.supabaseAdmin
+            .from('farms')
+            .select('id, name, organization_id')
+            .eq('id', farmId)
+            .maybeSingle();
+
+        if (checkError || !existingFarm) {
+          errors.push({
+            id: farmId,
+            name: 'Unknown',
+            error: checkError?.message || 'Farm not found',
+          });
+          continue;
+        }
+
+        const organizationId = existingFarm.organization_id;
+
+        if (!organizationId) {
+          errors.push({
+            id: farmId,
+            name: existingFarm.name,
+            error: 'Farm is not associated with any organization',
+          });
+          continue;
+        }
+
+        // Check user's role in the organization (only check once per org)
+        const { data: orgUser, error: roleError } = await this.supabaseAdmin
+          .from('organization_users')
+          .select('role_id, roles!inner(name)')
+          .eq('organization_id', organizationId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (roleError || !orgUser) {
+          errors.push({
+            id: farmId,
+            name: existingFarm.name,
+            error: 'You do not have access to this organization',
+          });
+          continue;
+        }
+
+        // Extract role name
+        const userRole = (orgUser as any).roles?.name;
+        const allowedRoles = ['system_admin', 'organization_admin'];
+        const hasRequiredRole = userRole && allowedRoles.includes(userRole);
+
+        if (!hasRequiredRole) {
+          errors.push({
+            id: farmId,
+            name: existingFarm.name,
+            error: `Insufficient permissions. Required: System Administrator or Organization Administrator.`,
+          });
+          continue;
+        }
+
+        // Check subscription
+        const { data: subscriptionCheck, error: subscriptionError } =
+          await this.supabaseAdmin.rpc('has_valid_subscription', {
+            org_id: organizationId,
+          });
+
+        const hasValidSubscription =
+          subscriptionCheck === true ||
+          (typeof subscriptionCheck === 'boolean' && subscriptionCheck);
+
+        if (subscriptionError || !hasValidSubscription) {
+          errors.push({
+            id: farmId,
+            name: existingFarm.name,
+            error: 'An active subscription is required to delete farms',
+          });
+          continue;
+        }
+
+        // Delete the farm (CASCADE will handle related data)
+        const { error: deleteError } = await this.supabaseAdmin
+          .from('farms')
+          .delete()
+          .eq('id', farmId);
+
+        if (deleteError) {
+          errors.push({
+            id: farmId,
+            name: existingFarm.name,
+            error: deleteError.message,
+          });
+          continue;
+        }
+
+        // Successfully deleted
+        deletedFarms.push({
+          id: farmId,
+          name: existingFarm.name,
+        });
+
+        this.logger.log(`✓ Successfully deleted farm: ${existingFarm.name}`);
+      } catch (error) {
+        this.logger.error(`Error deleting farm ${farmId}:`, error);
+        errors.push({
+          id: farmId,
+          name: 'Unknown',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    this.logger.log(
+      `Batch delete completed: ${deletedFarms.length} deleted, ${errors.length} failed`,
+    );
+
+    return {
+      deleted: deletedFarms.length,
+      failed: errors.length,
+      deleted_farms: deletedFarms,
+      errors: errors,
+      success: deletedFarms.length > 0 && errors.length === 0,
+    };
+  }
 }
