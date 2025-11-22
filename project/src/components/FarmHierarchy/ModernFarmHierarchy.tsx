@@ -105,11 +105,17 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const { data: farms = [], isLoading } = useQuery({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
+      console.log('🔍 Fetching farms for organization:', organizationId);
       const { data, error } = await supabase.rpc('get_farm_hierarchy_tree', {
         org_uuid: organizationId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching farms:', error);
+        throw error;
+      }
+
+      console.log('✅ Farms fetched:', data?.length || 0, 'farms');
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();
