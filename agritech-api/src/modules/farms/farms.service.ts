@@ -296,14 +296,8 @@ export class FarmsService {
     let importedParcels = 0;
     let importedAois = 0;
 
-    // Step 1: Import farms (main farms first, then sub-farms)
-    const mainFarms = export_data.farms.filter(
-      (f: any) => !f.parent_farm_id,
-    );
-    const subFarms = export_data.farms.filter((f: any) => f.parent_farm_id);
-
-    // Import main farms first
-    for (const farm of mainFarms) {
+    // Step 1: Import all farms (farms table doesn't support hierarchy)
+    for (const farm of export_data.farms) {
       try {
         // Check for duplicates if skip_duplicates is enabled
         if (skip_duplicates) {
@@ -328,15 +322,24 @@ export class FarmsService {
             name: farm.name,
             location: farm.location,
             size: farm.size,
-            area_unit: farm.area_unit || 'hectares',
+            size_unit: farm.size_unit || farm.area_unit || 'hectare',
             description: farm.description,
-            latitude: farm.latitude,
-            longitude: farm.longitude,
-            farm_type: farm.farm_type || 'main',
-            hierarchy_level: farm.hierarchy_level || 1,
-            manager_id: null, // Don't import manager_id, they may not exist
-            is_active: farm.is_active !== false,
+            address: farm.address,
+            city: farm.city,
+            state: farm.state,
+            postal_code: farm.postal_code,
+            country: farm.country,
+            soil_type: farm.soil_type,
+            climate_zone: farm.climate_zone,
+            irrigation_type: farm.irrigation_type,
+            manager_name: farm.manager_name,
+            manager_email: farm.manager_email,
+            manager_phone: farm.manager_phone,
             established_date: farm.established_date,
+            certification_status: farm.certification_status,
+            coordinates: farm.coordinates,
+            status: farm.status || 'active',
+            is_active: farm.is_active !== false,
           })
           .select('id')
           .single();
@@ -353,70 +356,6 @@ export class FarmsService {
       } catch (error) {
         errors.push(
           `Error importing farm ${farm.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-      }
-    }
-
-    // Import sub-farms (with parent mapping)
-    for (const farm of subFarms) {
-      try {
-        const newParentFarmId = idMappings.farms[farm.parent_farm_id];
-        if (!newParentFarmId) {
-          errors.push(
-            `Failed to import sub-farm ${farm.name}: parent farm not found`,
-          );
-          continue;
-        }
-
-        if (skip_duplicates) {
-          const { data: existing } = await this.supabaseAdmin
-            .from('farms')
-            .select('id')
-            .eq('organization_id', organization_id)
-            .eq('parent_farm_id', newParentFarmId)
-            .eq('name', farm.name)
-            .maybeSingle();
-
-          if (existing) {
-            warnings.push(`Skipped duplicate sub-farm: ${farm.name}`);
-            idMappings.farms[farm.original_id || farm.id] = existing.id;
-            continue;
-          }
-        }
-
-        const { data: newFarm, error: farmError } = await this.supabaseAdmin
-          .from('farms')
-          .insert({
-            organization_id,
-            name: farm.name,
-            location: farm.location,
-            size: farm.size,
-            area_unit: farm.area_unit || 'hectares',
-            description: farm.description,
-            latitude: farm.latitude,
-            longitude: farm.longitude,
-            parent_farm_id: newParentFarmId,
-            farm_type: farm.farm_type || 'sub',
-            hierarchy_level: farm.hierarchy_level || 2,
-            manager_id: null,
-            is_active: farm.is_active !== false,
-            established_date: farm.established_date,
-          })
-          .select('id')
-          .single();
-
-        if (farmError) {
-          errors.push(
-            `Failed to import sub-farm ${farm.name}: ${farmError.message}`,
-          );
-          continue;
-        }
-
-        idMappings.farms[farm.original_id || farm.id] = newFarm.id;
-        importedFarms++;
-      } catch (error) {
-        errors.push(
-          `Error importing sub-farm ${farm.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
       }
     }
