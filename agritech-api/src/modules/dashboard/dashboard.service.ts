@@ -1,5 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { FarmsService } from '../farms/farms.service';
 import { ParcelsService } from '../parcels/parcels.service';
 
@@ -38,11 +39,29 @@ export interface WidgetData {
 
 @Injectable()
 export class DashboardService {
+    private readonly supabaseAdmin: SupabaseClient;
+
     constructor(
-        @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
+        private readonly configService: ConfigService,
         private readonly farmsService: FarmsService,
         private readonly parcelsService: ParcelsService,
-    ) { }
+    ) {
+        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+        const supabaseServiceKey = this.configService.get<string>(
+            'SUPABASE_SERVICE_ROLE_KEY',
+        );
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            throw new Error('Missing Supabase configuration');
+        }
+
+        this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        });
+    }
 
     async getDashboardSummary(
         organizationId: string,
@@ -72,7 +91,7 @@ export class DashboardService {
     ): Promise<DashboardSummary['parcels']> {
         if (farmId) {
             // If specific farm requested, query parcels directly
-            const { data: parcels, error } = await this.supabase
+            const { data: parcels, error } = await this.supabaseAdmin
                 .from('parcels')
                 .select('id, area, calculated_area, crop_type')
                 .eq('farm_id', farmId);
@@ -95,7 +114,7 @@ export class DashboardService {
         }
 
         // Get all farms for the organization
-        const { data: farms, error: farmsError } = await this.supabase
+        const { data: farms, error: farmsError } = await this.supabaseAdmin
             .from('farms')
             .select('id')
             .eq('organization_id', organizationId);
@@ -108,10 +127,10 @@ export class DashboardService {
             return { total: 0, totalArea: 0, byCrop: {} };
         }
 
-        const { data: parcels, error } = await this.supabase
-            .from('parcels')
-            .select('id, area, calculated_area, crop_type')
-            .in('farm_id', farmIds);
+        const { data: parcels, error } = await this.supabaseAdmin
+                .from('parcels')
+                .select('id, area, calculated_area, crop_type')
+                .in('farm_id', farmIds);
 
         if (error) throw error;
 
@@ -133,7 +152,7 @@ export class DashboardService {
     private async getTasksSummary(
         organizationId: string,
     ): Promise<DashboardSummary['tasks']> {
-        const { data: tasks, error } = await this.supabase
+        const { data: tasks, error } = await this.supabaseAdmin
             .from('tasks')
             .select('id, status, scheduled_start')
             .eq('organization_id', organizationId);
@@ -171,7 +190,7 @@ export class DashboardService {
 
         // Get tasks for today to determine workers working today
         const today = new Date().toISOString().split('T')[0];
-        const { data: todayTasks } = await this.supabase
+        const { data: todayTasks } = await this.supabaseAdmin
             .from('tasks')
             .select('assigned_to')
             .eq('organization_id', organizationId)
@@ -188,7 +207,7 @@ export class DashboardService {
     private async getHarvestsSummary(
         organizationId: string,
     ): Promise<DashboardSummary['harvests']> {
-        const { data: harvests, error } = await this.supabase
+        const { data: harvests, error } = await this.supabaseAdmin
             .from('harvest_records')
             .select('id, harvest_date, quantity')
             .eq('organization_id', organizationId);
@@ -219,7 +238,7 @@ export class DashboardService {
     private async getInventorySummary(
         organizationId: string,
     ): Promise<DashboardSummary['inventory']> {
-        const { data: inventory, error } = await this.supabase
+        const { data: inventory, error } = await this.supabaseAdmin
             .from('inventory')
             .select('id, quantity, min_stock_level')
             .eq('organization_id', organizationId)
