@@ -33,7 +33,9 @@ export class PoliciesGuard implements CanActivate {
             request.organizationId ||
             request.headers['x-organization-id'] ||
             request.query?.organizationId ||
-            request.body?.organizationId;
+            request.query?.organization_id ||
+            request.body?.organizationId ||
+            request.user?.organizationId;
 
         if (!organizationId) {
             throw new BadRequestException('Organization ID is required for permission checks');

@@ -1,6 +1,4 @@
-import { supabase } from '../lib/supabase';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { apiClient } from '../lib/api-client';
 
 export interface DashboardSummary {
     parcels: {
@@ -32,59 +30,24 @@ export interface DashboardSummary {
 
 export interface WidgetData {
     type: string;
-    data: any;
+    data: unknown;
 }
 
 class DashboardService {
-    private async getAuthHeaders(): Promise<HeadersInit> {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-            throw new Error('No active session');
-        }
-
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-        };
-    }
-
     async getDashboardSummary(farmId?: string): Promise<DashboardSummary> {
-        const headers = await this.getAuthHeaders();
-        const url = new URL(`${API_URL}/dashboard/summary`);
-
+        let endpoint = '/api/v1/dashboard/summary';
+        
         if (farmId) {
+            const url = new URL(endpoint, 'http://dummy');
             url.searchParams.append('farmId', farmId);
+            endpoint = url.pathname + url.search;
         }
 
-        const response = await fetch(url.toString(), {
-            method: 'GET',
-            headers,
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: response.statusText }));
-            throw new Error(error.message || 'Failed to fetch dashboard summary');
-        }
-
-        return response.json();
+        return apiClient.get<DashboardSummary>(endpoint);
     }
 
     async getWidgetData(widgetType: string): Promise<WidgetData> {
-        const headers = await this.getAuthHeaders();
-        const url = `${API_URL}/dashboard/widgets/${widgetType}`;
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers,
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: response.statusText }));
-            throw new Error(error.message || `Failed to fetch ${widgetType} widget data`);
-        }
-
-        return response.json();
+        return apiClient.get<WidgetData>(`/api/v1/dashboard/widgets/${widgetType}`);
     }
 }
 

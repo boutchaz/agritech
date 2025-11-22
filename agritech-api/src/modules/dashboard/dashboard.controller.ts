@@ -5,6 +5,7 @@ import {
     Param,
     UseGuards,
     Request,
+    BadRequestException,
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,16 +22,29 @@ export class DashboardController {
     @CheckPolicies((ability) => ability.can(Action.Read, 'Dashboard'))
     async getDashboardSummary(
         @Request() req,
+        @Query('organization_id') organizationId: string,
         @Query('farmId') farmId?: string,
     ) {
-        const organizationId = req.user.organizationId;
-        return this.dashboardService.getDashboardSummary(organizationId, farmId);
+        // Fallback to request.organizationId if not in query (set by OrganizationGuard)
+        const orgId = organizationId || req.organizationId || req.user?.organizationId;
+        if (!orgId) {
+            throw new BadRequestException('Organization ID is required');
+        }
+        return this.dashboardService.getDashboardSummary(orgId, farmId);
     }
 
     @Get('widgets/:type')
     @CheckPolicies((ability) => ability.can(Action.Read, 'Dashboard'))
-    async getWidgetData(@Request() req, @Param('type') type: string) {
-        const organizationId = req.user.organizationId;
-        return this.dashboardService.getWidgetData(organizationId, type);
+    async getWidgetData(
+        @Request() req,
+        @Param('type') type: string,
+        @Query('organization_id') organizationId: string,
+    ) {
+        // Fallback to request.organizationId if not in query (set by OrganizationGuard)
+        const orgId = organizationId || req.organizationId || req.user?.organizationId;
+        if (!orgId) {
+            throw new BadRequestException('Organization ID is required');
+        }
+        return this.dashboardService.getWidgetData(orgId, type);
     }
 }

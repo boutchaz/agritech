@@ -1,11 +1,114 @@
 # Edge Functions to NestJS - Migration Progress
 
-**Last Updated**: 2025-11-22
-**Status**: In Progress (3/24 completed - 12.5%)
+**Last Updated**: 2025-11-23
+**Status**: In Progress (7/24 completed - 29%)
 
 ---
 
-## ✅ Completed Migrations (3)
+## ✅ Completed Migrations (7)
+
+### 1. on-user-created → auth/signup
+- **Edge Function**: `on-user-created`
+- **NestJS Endpoint**: `POST /api/v1/auth/signup`
+- **Status**: ✅ Deployed and Working
+- **Files**:
+  - Backend: `src/modules/auth/auth.service.ts` (signup method)
+  - Backend: `src/modules/auth/auth.controller.ts`
+  - Frontend: `project/src/routes/register.tsx`
+- **Documentation**: [SIGNUP_MIGRATION.md](agritech-api/SIGNUP_MIGRATION.md)
+- **Performance**: 60-75% faster (1-2s vs 5-8s)
+- **Deployed**: Yes
+- **Notes**: Fully working, handles org creation, role assignment, session creation
+
+### 2. create-trial-subscription → subscriptions/trial
+- **Edge Function**: `create-trial-subscription`
+- **NestJS Endpoint**: `POST /api/v1/subscriptions/trial`
+- **Status**: ✅ Fixed (role_id issue), Ready to Deploy
+- **Files**:
+  - Backend: `src/modules/subscriptions/subscriptions.service.ts`
+  - Backend: `src/modules/subscriptions/subscriptions.controller.ts`
+  - Backend: `src/modules/subscriptions/dto/create-trial-subscription.dto.ts`
+  - Frontend: `project/src/routes/select-trial.tsx`
+- **Documentation**: [TRIAL_SUBSCRIPTION_MIGRATION.md](TRIAL_SUBSCRIPTION_MIGRATION.md)
+- **Issue Found**: Was querying `role` column instead of `role_id`
+- **Fix Applied**: Changed to use `role_id` (foreign key)
+- **Performance**: 75-85% faster
+- **Deployed**: Pending
+- **Notes**: Build successful, needs deployment and testing
+
+### 3. check-subscription → subscriptions/check
+- **Edge Function**: `check-subscription`
+- **NestJS Endpoint**: `POST /api/v1/subscriptions/check`
+- **Status**: ✅ Code Complete, Ready to Deploy
+- **Files**:
+  - Backend: `src/modules/subscriptions/subscriptions.service.ts` (checkSubscription method)
+  - Backend: `src/modules/subscriptions/subscriptions.controller.ts`
+  - Backend: `src/modules/subscriptions/dto/check-subscription.dto.ts`
+  - Frontend: `project/src/hooks/useSubscriptionCheck.ts`
+- **Features**:
+  - Subscription validity check
+  - Feature access check (optional)
+  - Usage statistics (farms, parcels, users)
+  - RPC function calls (has_valid_subscription, has_feature_access, can_create_*)
+- **Performance**: Expected 70-80% faster
+- **Deployed**: Pending
+- **Notes**: Handles all subscription validation logic backend-side
+
+### 4. delete-farm → farms DELETE
+- **Edge Function**: `delete-farm`
+- **NestJS Endpoint**: `DELETE /api/v1/farms`
+- **Status**: ✅ Code Complete
+- **Files**:
+  - Backend: `src/modules/farms/farms.service.ts` (deleteFarm method)
+  - Backend: `src/modules/farms/farms.controller.ts`
+  - Backend: `src/modules/farms/dto/delete-farm.dto.ts`
+  - Frontend: `project/src/components/FarmHierarchy/ModernFarmHierarchy.tsx`
+- **Performance**: Expected 75-85% faster
+- **Deployed**: Pending
+
+### 5. delete-parcel → parcels DELETE
+- **Edge Function**: `delete-parcel`
+- **NestJS Endpoint**: `DELETE /api/v1/parcels`
+- **Status**: ✅ Code Complete
+- **Files**:
+  - Backend: `src/modules/parcels/parcels.service.ts` (deleteParcel method)
+  - Backend: `src/modules/parcels/parcels.controller.ts`
+  - Backend: `src/modules/parcels/dto/delete-parcel.dto.ts`
+- **Performance**: Expected 75-85% faster
+- **Deployed**: Pending
+
+### 6. import-farm → farms/import
+- **Edge Function**: `import-farm`
+- **NestJS Endpoint**: `POST /api/v1/farms/import`
+- **Status**: ✅ Code Complete
+- **Files**:
+  - Backend: `src/modules/farms/farms.service.ts` (importFarm method)
+  - Backend: `src/modules/farms/farms.controller.ts`
+  - Backend: `src/modules/farms/dto/import-farm.dto.ts`
+- **Features**:
+  - Import farms, parcels, satellite AOIs
+  - Skip duplicates option
+  - ID mapping for relationships
+- **Performance**: Expected 70-80% faster
+- **Deployed**: Pending
+
+### 7. export-farm → farms/export ⭐ NEW
+- **Edge Function**: `export-farm`
+- **NestJS Endpoint**: `POST /api/v1/farms/export`
+- **Status**: ✅ Code Complete, Ready to Test
+- **Files**:
+  - Backend: `src/modules/farms/farms.service.ts` (exportFarm method)
+  - Backend: `src/modules/farms/farms.controller.ts`
+  - Backend: `src/modules/farms/dto/export-farm.dto.ts`
+  - Frontend: `project/src/components/FarmHierarchy/ModernFarmHierarchy.tsx`
+- **Features**:
+  - Single farm export with recursive sub-farms
+  - Organization-wide export
+  - Exports farms, parcels, satellite AOIs
+  - Preserves original IDs for import mapping
+- **Performance**: Expected 70-80% faster
+- **Deployed**: No
+- **Notes**: Backend builds successfully, ready for manual testing
 
 ### 1. on-user-created → auth/signup
 - **Edge Function**: `on-user-created`
@@ -75,7 +178,10 @@
 
 ---
 
-## 📋 Remaining Migrations (21)
+## 📋 Remaining Migrations (17)
+
+### Phase 2: Farm Management (1)
+- generate-index-image (actively used, CPU-intensive - consider keeping as Edge Function)
 
 ### Phase 2: Farm Management (4)
 - delete-farm (actively used)
@@ -163,6 +269,9 @@ curl -X POST https://agritech-api.thebzlab.online/api/v1/subscriptions/check \
 | on-user-created | 5-8s | 1-2s | 60-75% |
 | create-trial-subscription | 1.5-3.5s | 200-500ms | 75-85% |
 | check-subscription | 1-2s | 200-400ms | 70-80% (est) |
+| delete-farm | 800ms-1.5s | 150-300ms | 75-85% (est) |
+| delete-parcel | 600ms-1.2s | 120-250ms | 75-85% (est) |
+| export-farm | 1-2s | 200-400ms | 70-80% (est) |
 
 ### Development Benefits
 - ✅ Type safety with DTOs
@@ -237,15 +346,33 @@ src/modules/
 │   ├── auth.controller.ts (signup endpoint added)
 │   └── dto/signup.dto.ts (created)
 │
-└── subscriptions/
-    ├── subscriptions.module.ts (created)
-    ├── subscriptions.service.ts (created - 2 methods)
-    ├── subscriptions.controller.ts (created - 2 endpoints)
+├── subscriptions/
+│   ├── subscriptions.module.ts (created)
+│   ├── subscriptions.service.ts (created - 2 methods)
+│   ├── subscriptions.controller.ts (created - 2 endpoints)
+│   └── dto/
+│       ├── create-trial-subscription.dto.ts (created)
+│       └── check-subscription.dto.ts (created)
+│
+├── farms/
+│   ├── farms.module.ts (created)
+│   ├── farms.service.ts (created - 5 methods: list, delete, import, export, batchDelete)
+│   ├── farms.controller.ts (created - 5 endpoints)
+│   └── dto/
+│       ├── delete-farm.dto.ts (created)
+│       ├── import-farm.dto.ts (created)
+│       ├── export-farm.dto.ts (created)
+│       ├── list-farms.dto.ts (created)
+│       └── batch-delete-farms.dto.ts (created)
+│
+└── parcels/
+    ├── parcels.module.ts (created)
+    ├── parcels.service.ts (created - 1 method)
+    ├── parcels.controller.ts (created - 1 endpoint)
     └── dto/
-        ├── create-trial-subscription.dto.ts (created)
-        └── check-subscription.dto.ts (created)
+        └── delete-parcel.dto.ts (created)
 
-app.module.ts (added SubscriptionsModule)
+app.module.ts (added SubscriptionsModule, FarmsModule, ParcelsModule)
 ```
 
 ### Frontend (project/)
@@ -255,8 +382,12 @@ src/
 │   ├── register.tsx (updated - use NestJS signup)
 │   └── select-trial.tsx (updated - use NestJS trial creation)
 │
-└── hooks/
-    └── useSubscriptionCheck.ts (updated - use NestJS subscription check)
+├── hooks/
+│   └── useSubscriptionCheck.ts (updated - use NestJS subscription check)
+│
+└── components/
+    └── FarmHierarchy/
+        └── ModernFarmHierarchy.tsx (updated - use NestJS for delete, export)
 ```
 
 ---
@@ -269,6 +400,7 @@ src/
 4. **DEPLOY_TRIAL_SUBSCRIPTION.md** - Deployment guide
 5. **QUICK_FIX_DEPLOYMENT.md** - Fix for role_id issue
 6. **MIGRATION_PROGRESS.md** (this file) - Overall progress tracker
+7. **MIGRATION_SESSION_SUMMARY.md** - Session summaries
 
 ---
 
@@ -277,14 +409,15 @@ src/
 ### Immediate (Today)
 1. ✅ Fix create-trial-subscription (DONE - role_id issue)
 2. ✅ Migrate check-subscription (DONE)
-3. ⏳ **Deploy both to production**
-4. ⏳ **Test end-to-end flow**
+3. ✅ Migrate export-farm (DONE)
+4. ⏳ **Test export-farm functionality**
+5. ⏳ **Deploy to production**
 
 ### Short Term (This Week)
-5. Verify user-auth-data endpoint exists
 6. Migrate polar-webhook (critical for payments)
-7. Migrate delete-farm and delete-parcel
-8. Migrate export-farm
+7. Verify user-auth-data endpoint exists
+8. Deploy all completed migrations
+9. Test end-to-end flows
 
 ### Medium Term (Next 2 Weeks)
 9. Complete farm management migrations
@@ -304,8 +437,12 @@ src/
 
 ### Phase 1 Complete When:
 - [x] on-user-created migrated and deployed
-- [ ] create-trial-subscription deployed and tested
-- [ ] check-subscription deployed and tested
+- [x] create-trial-subscription migrated (pending deploy)
+- [x] check-subscription migrated (pending deploy)
+- [x] delete-farm migrated (pending deploy)
+- [x] delete-parcel migrated (pending deploy)
+- [x] import-farm migrated (pending deploy)
+- [x] export-farm migrated (pending test)
 - [ ] polar-webhook migrated
 - [ ] user-auth-data verified
 - [ ] All core user flows working on NestJS
@@ -335,8 +472,8 @@ If issues occur after migration:
 
 ---
 
-**Progress**: 3/24 complete (12.5%)
-**Estimated Completion**: 3-4 weeks at current pace
+**Progress**: 7/24 complete (29%)
+**Estimated Completion**: 2-3 weeks at current pace
 **Status**: ✅ On Track
 
-🚀 **Ready to deploy create-trial-subscription and check-subscription!**
+🚀 **Ready to test export-farm and deploy all completed migrations!**
