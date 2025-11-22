@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
+import { authSupabase } from '../../lib/auth-supabase';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
 import ParcelManagementModal from './ParcelManagementModal';
@@ -124,7 +125,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       console.log('🔍 Fetching farms for organization:', organizationId);
 
       // Get JWT token
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await authSupabase.auth.getSession();
       if (!session?.access_token) {
         console.error('❌ No session token available');
         throw new Error('Not authenticated');
@@ -432,7 +433,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     mutationFn: async (farmId: string) => {
 
       // Get the access token from the current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await authSupabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error('Non authentifié');
       }
