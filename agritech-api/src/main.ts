@@ -28,9 +28,28 @@ async function bootstrap() {
 
   // Enable CORS
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');
+  const allowedOrigins = corsOrigin.split(',').map(origin => origin.trim());
+
   app.enableCors({
-    origin: corsOrigin.split(','),
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, Postman, or curl)
+      if (!origin) return callback(null, true);
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+
+      // For development, allow localhost with any port
+      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Set global prefix
