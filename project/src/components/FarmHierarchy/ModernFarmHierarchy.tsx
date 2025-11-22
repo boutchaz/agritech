@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { authSupabase } from '../../lib/auth-supabase';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
@@ -297,9 +298,9 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       reset();
       setShowAddForm(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Error creating farm:', error);
-      alert(t('app.error') + ': ' + (error.message || ''));
+      toast.error(t('app.error') + ': ' + (error.message || ''));
     }
   });
 
@@ -329,13 +330,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        alert('Export réussi!');
+        toast.success('Export réussi!');
       } else {
         throw new Error(data?.error || 'Erreur lors de l\'export');
       }
     } catch (error: any) {
       console.error('Export error:', error);
-      alert(`Erreur lors de l'export: ${error.message}`);
+      toast.error(`Erreur lors de l'export: ${error.message}`);
     }
   };
 
@@ -361,13 +362,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        alert('Export réussi!');
+        toast.success('Export réussi!');
       } else {
         throw new Error(data?.error || 'Erreur lors de l\'export');
       }
     } catch (error: any) {
       console.error('Export error:', error);
-      alert(`Erreur lors de l'export: ${error.message}`);
+      toast.error(`Erreur lors de l'export: ${error.message}`);
     }
   };
 
@@ -471,24 +472,23 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       queryClient.invalidateQueries({ queryKey: ['farms'] });
       
       // Success feedback
-      alert(`✓ La ferme "${farmToDelete?.name}" et toutes ses données associées ont été supprimées avec succès.`);
-      
+      toast.success(`La ferme "${farmToDelete?.name}" et toutes ses données associées ont été supprimées avec succès.`);
+
       // Close dialog and reset state
       setFarmToDelete(null);
       setRelatedDataCounts(null);
       deleteFarmMutation.reset();
     },
     onError: (error: Error) => {
-      
       let errorMessage = 'Erreur lors de la suppression de la ferme';
-      
+
       if (error?.message) {
         errorMessage += `: ${error.message}`;
       } else if (error?.details) {
         errorMessage += `: ${error.details}`;
       }
 
-      alert(errorMessage);
+      toast.error(errorMessage);
       // Don't close dialog on error so user can try again or see the error
     }
   });
