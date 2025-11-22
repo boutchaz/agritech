@@ -179,20 +179,34 @@ export class FarmsService {
     }
 
     // Prepare farm data
-    const farmData = {
+    // Note: farms table schema has: size_unit (not area_unit), status, manager_name (not manager_id)
+    // Does NOT have: farm_type, parent_farm_id, hierarchy_level, manager_id
+    const farmData: any = {
       organization_id: organizationId,
       name: dto.name,
-      location: dto.location,
-      size: dto.size,
-      size_unit: dto.size_unit || 'hectares', // Map size_unit to size_unit column if it exists, or area_unit
-      area_unit: dto.area_unit || dto.size_unit || 'hectares', // Handle both potential column names
-      description: dto.description,
-      farm_type: dto.farm_type || 'main',
-      parent_farm_id: dto.parent_farm_id || null,
-      manager_id: dto.manager_id || null,
-      is_active: true,
-      hierarchy_level: dto.parent_farm_id ? 2 : 1 // Simple logic for now
+      location: dto.location || null,
+      size: dto.size || null,
+      size_unit: dto.size_unit || 'hectare', // Default to 'hectare' per schema
+      description: dto.description || null,
+      manager_name: dto.manager_name || null,
+      manager_email: dto.manager_email || null,
+      manager_phone: dto.manager_phone || null,
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+      status: dto.status || 'active',
     };
+
+    // Only add optional fields if they are provided
+    if (dto.address) farmData.address = dto.address;
+    if (dto.city) farmData.city = dto.city;
+    if (dto.state) farmData.state = dto.state;
+    if (dto.postal_code) farmData.postal_code = dto.postal_code;
+    if (dto.country) farmData.country = dto.country;
+    if (dto.soil_type) farmData.soil_type = dto.soil_type;
+    if (dto.climate_zone) farmData.climate_zone = dto.climate_zone;
+    if (dto.irrigation_type) farmData.irrigation_type = dto.irrigation_type;
+    if (dto.established_date) farmData.established_date = dto.established_date;
+    if (dto.certification_status) farmData.certification_status = dto.certification_status;
+    if (dto.coordinates) farmData.coordinates = dto.coordinates;
 
     // Insert farm
     const { data: newFarm, error: createError } = await this.supabaseAdmin
