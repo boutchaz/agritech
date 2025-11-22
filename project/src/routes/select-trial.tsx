@@ -285,7 +285,7 @@ function SelectTrialPage() {
   const handleStartTrial = async () => {
     // Use currentOrganization if available, otherwise use first organization from array
     const orgToUse = currentOrganization || (organizations && organizations.length > 0 ? organizations[0] : null)
-    
+
     if (!orgToUse?.id || !user?.id) {
       setError('Organization or user not found. Please try again.')
       return
@@ -295,17 +295,32 @@ function SelectTrialPage() {
     setError(null)
 
     try {
-      // Call Edge Function to create trial subscription (bypasses RLS)
-      const { data, error: functionError } = await authSupabase.functions.invoke('create-trial-subscription', {
-        body: {
+      // Get the access token from the current session
+      const { data: { session } } = await authSupabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
+
+      // Call NestJS API to create trial subscription
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const response = await fetch(`${apiUrl}/api/v1/subscriptions/trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
           organization_id: orgToUse.id,
           plan_type: selectedPlan,
-        },
+        }),
       })
 
-      if (functionError) {
-        throw new Error(functionError.message || 'Failed to create trial subscription')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Failed to create trial subscription (${response.status})`)
       }
+
+      const data = await response.json()
 
       if (!data || !data.success) {
         throw new Error(data?.error || 'Failed to create trial subscription')
