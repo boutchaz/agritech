@@ -91,14 +91,25 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const { data: organization } = useQuery({
     queryKey: ['organization', organizationId],
     queryFn: async () => {
+      console.log('🔍 Fetching organization:', organizationId);
       const { data, error } = await supabase
         .from('organizations')
         .select('name')
         .eq('id', organizationId)
-        .single();
-      if (error) throw error;
+        .maybeSingle(); // Use maybeSingle to avoid error when org doesn't exist
+
+      if (error) {
+        console.error('❌ Error fetching organization:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('⚠️ Organization not found or no access:', organizationId);
+      }
+
       return data;
-    }
+    },
+    enabled: !!organizationId
   });
 
   // Fetch farm hierarchy using NestJS API
