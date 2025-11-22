@@ -1496,9 +1496,13 @@ GRANT EXECUTE ON FUNCTION seed_default_work_units(UUID) TO service_role;
 
 COMMENT ON FUNCTION seed_default_work_units IS 'Seeds default work units for an organization. Returns the number of units inserted.';
 
--- Get farm hierarchy tree for an organization
--- Updated to handle NULL org_uuid and ensure proper column aliases match RETURNS TABLE
--- Uses SECURITY DEFINER to bypass RLS when querying farms and parcels
+-- =====================================================
+-- DEPRECATED: get_farm_hierarchy_tree
+-- =====================================================
+-- This RPC function has been migrated to NestJS API: GET /api/v1/farms
+-- Reason: Complex recursive CTE logic is easier to maintain in TypeScript
+-- Kept as stub for backward compatibility during migration period
+-- =====================================================
 CREATE OR REPLACE FUNCTION get_farm_hierarchy_tree(
   org_uuid UUID,
   root_farm_id UUID DEFAULT NULL
@@ -1520,51 +1524,20 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Return empty result if org_uuid is NULL
-  IF org_uuid IS NULL THEN
-    RETURN;
-  END IF;
+  -- DEPRECATED: Use NestJS API endpoint GET /api/v1/farms instead
+  -- This function is kept for backward compatibility only
+  RAISE NOTICE 'get_farm_hierarchy_tree is deprecated. Use NestJS API: GET /api/v1/farms?organization_id=%', org_uuid;
 
-  -- SECURITY DEFINER bypasses RLS, so we can directly query farms and parcels
-  RETURN QUERY
-  WITH RECURSIVE farm_tree AS (
-    -- Base case: root farms or specific farm
-    SELECT
-      f.id,
-      f.name,
-      NULL::UUID as parent_farm_id,
-      'main'::TEXT as farm_type,
-      f.size,
-      COALESCE(f.manager_name, 'N/A') as manager,
-      f.is_active,
-      1 as level
-    FROM public.farms f
-    WHERE f.organization_id = org_uuid
-      AND (root_farm_id IS NULL OR f.id = root_farm_id)
-  )
-  SELECT
-    ft.id::UUID as farm_id,
-    ft.name::TEXT as farm_name,
-    ft.parent_farm_id::UUID,
-    ft.farm_type::TEXT,
-    ft.size::NUMERIC as farm_size,
-    ft.manager::TEXT as manager_name,
-    ft.is_active::BOOLEAN,
-    ft.level::INTEGER as hierarchy_level,
-    COUNT(DISTINCT p.id)::BIGINT as parcel_count,
-    0::BIGINT as subparcel_count
-  FROM farm_tree ft
-  LEFT JOIN public.parcels p ON p.farm_id = ft.id
-  GROUP BY ft.id, ft.name, ft.parent_farm_id, ft.farm_type, ft.size, ft.manager, ft.is_active, ft.level
-  ORDER BY ft.level, ft.name;
+  -- Return empty result set with correct schema
+  RETURN;
 END;
 $$;
 
--- Grant execute permission
+-- Grant execute permission (kept for compatibility)
 GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO service_role;
 
-COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'Returns hierarchical farm tree for an organization with parcel counts';
+COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'DEPRECATED: Migrated to NestJS API GET /api/v1/farms';
 
 -- =====================================================
 -- SUBSCRIPTION VALIDATION FUNCTION
