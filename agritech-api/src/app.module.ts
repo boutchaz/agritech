@@ -20,6 +20,10 @@ import { StockEntriesModule } from './modules/stock-entries/stock-entries.module
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { FarmsModule } from './modules/farms/farms.module';
 import { ParcelsModule } from './modules/parcels/parcels.module';
+import { CaslModule } from './modules/casl/casl.module';
+import { UsersModule } from './modules/users/users.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -32,6 +36,9 @@ import { ParcelsModule } from './modules/parcels/parcels.module';
     // Core modules
     DatabaseModule,
     AuthModule,
+    CaslModule,
+    UsersModule,
+    OrganizationsModule,
 
     // Business logic modules
     SequencesModule,
@@ -48,8 +55,9 @@ import { ParcelsModule } from './modules/parcels/parcels.module';
     SubscriptionsModule,
     FarmsModule,
     ParcelsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

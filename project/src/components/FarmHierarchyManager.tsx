@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { farmsService } from '../services/farmsService';
 import {
   Building2,
   Plus,
@@ -86,22 +87,11 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
   const fetchFarmHierarchy = async () => {
     try {
-      // Try hierarchy function first
-      const { data, error } = await supabase.rpc('get_farm_hierarchy_tree', {
-        org_uuid: organizationId
-      });
-
-      if (error && error.code === 'PGRST202') {
-        // Function doesn't exist, fallback to basic farm fetch
-        await fetchBasicFarms();
-        return;
-      }
-
-      if (error) throw error;
+      const data = await farmsService.getFarmHierarchy(organizationId);
       setFarms(data || []);
     } catch (error: any) {
       console.error('Error fetching farm hierarchy:', error);
-      // Try fallback method
+      // Fallback to basic fetch if API fails (optional, but good for resilience during migration)
       await fetchBasicFarms();
     } finally {
       setLoading(false);
@@ -181,7 +171,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
         farm_id: farm.farm_id,
         farm_name: farm.farm_name,
         role: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin' ? 'main_manager' :
-              orgUser.role?.name === 'manager' || orgUser.role?.name === 'farm_manager' ? 'sub_manager' : 'supervisor',
+          orgUser.role?.name === 'manager' || orgUser.role?.name === 'farm_manager' ? 'sub_manager' : 'supervisor',
         permissions: {
           manage_farms: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin',
           manage_sub_farms: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
@@ -221,41 +211,19 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
     try {
       let farmId: string;
 
-      if (newFarm.farm_type === 'sub' && selectedParentFarm) {
-        // Create sub-farm using the hierarchy function
-        const { data, error } = await supabase.rpc('create_sub_farm', {
-          parent_farm_id_param: selectedParentFarm,
-          sub_farm_name: newFarm.name,
-          sub_farm_location: newFarm.location,
-          sub_farm_area: newFarm.size,
-          area_unit_param: newFarm.size_unit,
-          sub_farm_description: newFarm.description,
-          manager_id_param: newFarm.manager_id || null
-        });
+      const farmData = {
+        name: newFarm.name,
+        location: newFarm.location,
+        size: newFarm.size,
+        size_unit: newFarm.size_unit,
+        description: newFarm.description,
+        farm_type: newFarm.farm_type,
+        parent_farm_id: newFarm.farm_type === 'sub' ? selectedParentFarm : null,
+        manager_id: newFarm.manager_id || null
+      };
 
-        if (error) throw error;
-        farmId = data;
-      } else {
-        // Create main farm
-        const { data, error } = await supabase
-          .from('farms')
-          .insert({
-            organization_id: organizationId,
-            name: newFarm.name,
-            location: newFarm.location,
-            size: newFarm.size,
-            area_unit: newFarm.size_unit,
-            description: newFarm.description,
-            farm_type: 'main',
-            hierarchy_level: 1,
-            manager_id: newFarm.manager_id || null
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        farmId = data.id;
-      }
+      const createdFarm = await farmsService.createFarm(organizationId, farmData);
+      farmId = createdFarm.id;
 
       // Reset form and refresh data
       setNewFarm({
@@ -287,12 +255,11 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
     return (
       <div key={farm.farm_id} className="ml-4">
-        <div 
-          className={`flex items-center p-3 rounded-lg border ${
-            farm.farm_type === 'main' 
-              ? 'bg-blue-50 border-blue-200' 
-              : 'bg-gray-50 border-gray-200'
-          } ${level > 0 ? 'ml-6' : ''}`}
+        <div
+          className={`flex items-center p-3 rounded-lg border ${farm.farm_type === 'main'
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-gray-50 border-gray-200'
+            } ${level > 0 ? 'ml-6' : ''}`}
           style={{ marginLeft: `${level * 24}px` }}
         >
           {/* Expand/Collapse Button */}
@@ -335,7 +302,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 {/* Manager Info */}
                 <div className="flex items-center text-sm text-gray-600">
@@ -345,13 +312,12 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
                 {/* User Role Badge */}
                 {userRole && (
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    userRole.role === 'main_manager' 
-                      ? 'bg-blue-100 text-blue-800'
-                      : userRole.role === 'sub_manager'
+                  <span className={`px-2 py-1 text-xs rounded-full ${userRole.role === 'main_manager'
+                    ? 'bg-blue-100 text-blue-800'
+                    : userRole.role === 'sub_manager'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}>
+                    }`}>
                     {userRole.role.replace('_', ' ')}
                   </span>
                 )}
@@ -451,7 +417,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Create New Farm</h3>
-            
+
             <form onSubmit={handleCreateFarm} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -459,9 +425,9 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
                 </label>
                 <select
                   value={newFarm.farm_type}
-                  onChange={(e) => setNewFarm(prev => ({ 
-                    ...prev, 
-                    farm_type: e.target.value as 'main' | 'sub' 
+                  onChange={(e) => setNewFarm(prev => ({
+                    ...prev,
+                    farm_type: e.target.value as 'main' | 'sub'
                   }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >

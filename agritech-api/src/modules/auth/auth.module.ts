@@ -6,10 +6,14 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { DatabaseModule } from '../database/database.module';
+import { UsersModule } from '../users/users.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    UsersModule,
+    OrganizationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -26,4 +30,4 @@ import { DatabaseModule } from '../database/database.module';
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, PassportModule],
 })
-export class AuthModule {}
+export class AuthModule { }

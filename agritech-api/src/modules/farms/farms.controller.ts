@@ -8,6 +8,10 @@ import {
 } from '@nestjs/swagger';
 import { FarmsService } from './farms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { Action } from '../casl/action.enum';
+import { AppAbility } from '../casl/casl-ability.factory';
 import {
   DeleteFarmDto,
   DeleteFarmResponseDto,
@@ -24,11 +28,11 @@ import {
 
 @ApiTags('farms')
 @Controller('farms')
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class FarmsController {
-  constructor(private farmsService: FarmsService) {}
+  constructor(private farmsService: FarmsService) { }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'List farms for an organization',
@@ -46,6 +50,7 @@ export class FarmsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
   async listFarms(
     @Request() req,
     @Query('organization_id') organizationId: string,
@@ -53,8 +58,17 @@ export class FarmsController {
     return this.farmsService.listFarms(req.user.id, organizationId);
   }
 
+  @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new farm' })
+  @ApiResponse({ status: 201, description: 'Farm created successfully' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'Farm'))
+  async create(@Request() req, @Body() createFarmDto: any) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.createFarm(req.user.id, organizationId, createFarmDto);
+  }
+
   @Delete()
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Delete a farm',
@@ -70,12 +84,12 @@ export class FarmsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions or invalid subscription' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Delete, 'Farm'))
   async deleteFarm(@Request() req, @Body() deleteFarmDto: DeleteFarmDto) {
     return this.farmsService.deleteFarm(req.user.id, deleteFarmDto);
   }
 
   @Post('import')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Import farms, parcels, and satellite AOIs',
@@ -95,12 +109,12 @@ export class FarmsController {
   @ApiResponse({ status: 400, description: 'Bad request - invalid export data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'Farm'))
   async importFarm(@Request() req, @Body() importFarmDto: ImportFarmDto) {
     return this.farmsService.importFarm(req.user.id, importFarmDto);
   }
 
   @Post('batch-delete')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Batch delete multiple farms',
@@ -115,6 +129,7 @@ export class FarmsController {
   @ApiResponse({ status: 400, description: 'Bad request - invalid farm IDs' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Delete, 'Farm'))
   async batchDeleteFarms(
     @Request() req,
     @Body() batchDeleteDto: BatchDeleteFarmsDto,

@@ -198,18 +198,8 @@ export class SubscriptionsService {
       throw new ForbiddenException('Access denied to organization');
     }
 
-    // Check subscription validity using database function
-    const { data: isValid, error: validError } = await this.supabaseAdmin.rpc(
-      'has_valid_subscription',
-      { org_id: organizationId },
-    );
-
-    if (validError) {
-      this.logger.error('Error checking subscription validity', validError);
-      throw new InternalServerErrorException(
-        'Failed to check subscription validity',
-      );
-    }
+    // Check subscription validity using service method
+    const isValid = await this.hasValidSubscription(organizationId);
 
     // Get subscription details
     const { data: subscription } = await this.supabaseAdmin
@@ -225,10 +215,10 @@ export class SubscriptionsService {
         ? !subscription
           ? 'no_subscription'
           : subscription.status === 'canceled'
-          ? 'canceled'
-          : subscription.status === 'past_due'
-          ? 'past_due'
-          : 'expired'
+            ? 'canceled'
+            : subscription.status === 'past_due'
+              ? 'past_due'
+              : 'expired'
         : undefined,
     };
 
@@ -314,5 +304,31 @@ export class SubscriptionsService {
     );
 
     return response;
+  }
+
+  /**
+   * Check if organization has a valid subscription
+   * Migrated from has_valid_subscription SQL function
+   */
+  async hasValidSubscription(organizationId: string): Promise<boolean> {
+    const { data: subscription, error } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('status, current_period_end')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Error checking subscription: ${error.message}`);
+      return false;
+    }
+
+    if (!subscription) {
+      return false;
+    }
+
+    const isValidStatus = ['active', 'trialing'].includes(subscription.status);
+    const isNotExpired = !subscription.current_period_end || new Date(subscription.current_period_end) >= new Date();
+
+    return isValidStatus && isNotExpired;
   }
 }

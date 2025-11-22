@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
+import { farmsService } from '../services/farmsService';
 import type { Database } from '../types/database.types';
 import {
   Building2,
@@ -101,9 +102,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
   } = useQuery({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_farm_hierarchy_tree', {
-        org_uuid: organizationId
-      });
+      const data = await farmsService.getFarmHierarchy(organizationId);
 
       if (error) throw error;
 
@@ -153,14 +152,16 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
         if (!parcelsError && parcelsData) {
           // Group parcels by farm_id
           const parcelsByFarm = parcelsData.reduce((acc, parcel) => {
-            if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
-            acc[parcel.farm_id].push({
-              id: parcel.id,
-              name: parcel.name,
-              crop_type: parcel.description || 'No description',
-              area: parcel.area || 0,
-              farm_id: parcel.farm_id
-            });
+            if (parcel.farm_id) {
+              if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
+              acc[parcel.farm_id].push({
+                id: parcel.id,
+                name: parcel.name,
+                crop_type: parcel.description || 'No description',
+                area: parcel.area || 0,
+                farm_id: parcel.farm_id
+              });
+            }
             return acc;
           }, {} as Record<string, ParcelInfo[]>);
 
@@ -179,39 +180,13 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
   // Create farm mutation with typed insert
   const createFarmMutation = useMutation({
     mutationFn: async (formData: CreateFarmFormValues): Promise<Farm> => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Typed farm insert
-      const farmInsert: FarmInsert = {
+      const farmData = {
         name: formData.name,
         organization_id: organizationId,
         status: 'active',
       };
 
-      const { data: newFarm, error: farmError } = await supabase
-        .from('farms')
-        .insert(farmInsert)
-        .select()
-        .single();
-
-      if (farmError) throw farmError;
-
-      // Assign the current user as admin of the new farm
-      const { error: roleError } = await supabase
-        .from('farm_management_roles')
-        .insert({
-          farm_id: newFarm.id,
-          user_id: user.id,
-          role: 'admin',
-          is_active: true
-        });
-
-      if (roleError) throw roleError;
-
+      const newFarm = await farmsService.createFarm(organizationId, farmData);
       return newFarm;
     },
     onSuccess: () => {
@@ -372,9 +347,8 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 type="text"
                 placeholder="Nom de la nouvelle ferme"
                 {...register('name')}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 aria-invalid={errors.name ? 'true' : 'false'}
               />
               {errors.name && (

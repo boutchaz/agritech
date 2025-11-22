@@ -1,9 +1,10 @@
-import { Controller, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Delete, Body, UseGuards, Request, Get, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ParcelsService } from './parcels.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,7 +16,35 @@ import {
 @ApiTags('parcels')
 @Controller('parcels')
 export class ParcelsController {
-  constructor(private parcelsService: ParcelsService) {}
+  constructor(private parcelsService: ParcelsService) { }
+
+  @Get('performance')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get parcel performance summary' })
+  @ApiQuery({ name: 'farmId', required: false })
+  @ApiQuery({ name: 'parcelId', required: false })
+  @ApiQuery({ name: 'fromDate', required: false })
+  @ApiQuery({ name: 'toDate', required: false })
+  async getPerformanceSummary(
+    @Request() req,
+    @Query('farmId') farmId?: string,
+    @Query('parcelId') parcelId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.parcelsService.getPerformanceSummary(
+      req.user.id,
+      organizationId,
+      {
+        farmId,
+        parcelId,
+        fromDate: fromDate ? new Date(fromDate) : undefined,
+        toDate: toDate ? new Date(toDate) : undefined,
+      },
+    );
+  }
 
   @Delete()
   @UseGuards(JwtAuthGuard)

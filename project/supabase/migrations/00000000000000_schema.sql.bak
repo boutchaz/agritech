@@ -1,7 +1,4 @@
 -- =====================================================
--- BASE SCHEMA (Tables, Types, Indexes)
--- =====================================================
--- =====================================================
 -- COMPREHENSIVE SCHEMA - All Tables Required by Frontend
 -- =====================================================
 -- This file contains the complete database schema including:
@@ -4801,10 +4798,539 @@ BEGIN
   -- Farm Worker: read most resources, create/update parcels
   INSERT INTO role_permissions (role_id, permission_id)
   SELECT v_farm_worker_id, id FROM permissions
+  WHERE (resource IN ('farms', 'parcels', 'stock', 'users') AND action = 'read')
+     OR (resource = 'parcels' AND action IN ('create', 'update'));
+
+  -- Day Laborer: very limited, read-only on tasks
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_day_laborer_id, id FROM permissions
+  WHERE resource = 'reports' AND action = 'read';
+
+  -- Viewer: read-only access
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_viewer_id, id FROM permissions
+  WHERE action = 'read';
+
+END $$;
+
+-- Populate role_id for existing users based on their role text
+-- This maps the text role to the actual roles table
+DO $$
+BEGIN
+  -- Only run if the role column still exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    -- Update organization_users with role_id based on role text
+    UPDATE organization_users ou
+    SET role_id = r.id
+    FROM roles r
+    WHERE ou.role = r.name
+    AND ou.role_id IS NULL;
+  END IF;
+END $$;
+
+-- Add first_name and last_name columns to user_profiles if they don't exist
+DO $$
+BEGIN
+  -- Add first_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'first_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
+  END IF;
+
+  -- Add last_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'last_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
+  END IF;
+
+  -- Populate first_name and last_name from full_name if they are empty
+  UPDATE user_profiles
+  SET
+    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
+    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
+  WHERE full_name IS NOT NULL
+  AND (first_name IS NULL OR last_name IS NULL);
+END $$;
+
+-- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
+DO $$
+DECLARE
+  default_viewer_role_id UUID;
+BEGIN
+  -- Get the viewer role ID as a fallback
+  SELECT id INTO default_viewer_role_id FROM roles WHERE name = 'viewer';
+
+  -- Set default viewer role for any users with NULL role_id
+  IF default_viewer_role_id IS NOT NULL THEN
+    UPDATE organization_users
+    SET role_id = default_viewer_role_id
+    WHERE role_id IS NULL;
+  END IF;
+
+  -- First, ensure role_id is NOT NULL (it should be populated by now)
+  -- If any row still has NULL role_id, this will fail and alert us
+  IF EXISTS (SELECT 1 FROM organization_users WHERE role_id IS NULL) THEN
+    RAISE EXCEPTION 'Cannot drop role column: some users still have NULL role_id even after applying default viewer role.';
+  END IF;
+
+  -- Drop the foreign key constraint on role VARCHAR if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_fkey'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_fkey;
+  END IF;
+
+  -- Drop the CHECK constraint on role if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_check'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_check;
+  END IF;
+
+  -- Make role_id NOT NULL now that we've confirmed it's populated
+  ALTER TABLE organization_users ALTER COLUMN role_id SET NOT NULL;
+
+  -- Drop the role VARCHAR column
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    ALTER TABLE organization_users DROP COLUMN role;
+  END IF;
+END $$;
+
+-- Fix the stock entry posting trigger to use SECURITY DEFINER to bypass RLS
+DROP FUNCTION IF EXISTS process_stock_entry_posting() CASCADE;
+
+CREATE OR REPLACE FUNCTION process_stock_entry_posting()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  entry_item RECORD;
+  movement_type TEXT;
+BEGIN
+  -- Only process when status changes to 'Posted'
+  IF NEW.status = 'Posted' AND (OLD.status IS NULL OR OLD.status != 'Posted') THEN
+
+    -- Set posted timestamp
+    NEW.posted_at = NOW();
+
+    -- Determine movement type based on entry type
+    CASE NEW.entry_type
+      WHEN 'Material Receipt' THEN
+        movement_type := 'IN';
+      WHEN 'Material Issue' THEN
+        movement_type := 'OUT';
+      WHEN 'Stock Transfer' THEN
+        movement_type := 'TRANSFER';
+      WHEN 'Stock Reconciliation' THEN
+        movement_type := 'RECONCILIATION';
+      ELSE
+        movement_type := 'OTHER';
+    END CASE;
+
+    -- Create stock movements for each item
+    FOR entry_item IN
+      SELECT * FROM stock_entry_items WHERE stock_entry_id = NEW.id
+    LOOP
+      -- For Material Receipt: add to target warehouse
+      IF NEW.entry_type = 'Material Receipt' AND NEW.to_warehouse_id IS NOT NULL THEN
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          'IN',
+          NEW.entry_date,
+          entry_item.quantity,
+          entry_item.unit,
+          entry_item.quantity,
+          entry_item.cost_per_unit,
+          entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- Add to stock valuation
+        INSERT INTO stock_valuation (
+          organization_id,
+          item_id,
+          warehouse_id,
+          quantity,
+          cost_per_unit,
+          stock_entry_id,
+          batch_number,
+          serial_number,
+          remaining_quantity
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          entry_item.quantity,
+          COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.batch_number,
+          entry_item.serial_number,
+          entry_item.quantity
+        );
+      END IF;
+
+      -- For Material Issue: remove from source warehouse
+      IF NEW.entry_type = 'Material Issue' AND NEW.from_warehouse_id IS NOT NULL THEN
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.from_warehouse_id,
+          'OUT',
+          NEW.entry_date,
+          -entry_item.quantity,
+          entry_item.unit,
+          -entry_item.quantity,
+          entry_item.cost_per_unit,
+          -entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- TODO: Consume from stock valuation (FIFO/LIFO logic)
+      END IF;
+
+      -- For Stock Transfer: OUT from source, IN to target
+      IF NEW.entry_type = 'Stock Transfer' AND NEW.from_warehouse_id IS NOT NULL AND NEW.to_warehouse_id IS NOT NULL THEN
+        -- OUT from source
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.from_warehouse_id,
+          'TRANSFER',
+          NEW.entry_date,
+          -entry_item.quantity,
+          entry_item.unit,
+          -entry_item.quantity,
+          entry_item.cost_per_unit,
+          -entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- IN to target
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          'TRANSFER',
+          NEW.entry_date,
+          entry_item.quantity,
+          entry_item.unit,
+          entry_item.quantity,
+          entry_item.cost_per_unit,
+          entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+      END IF;
+
+    END LOOP;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- DISABLED: Trigger moved to NestJS StockEntriesService
+-- The stock entry posting logic is now handled by StockEntriesService in NestJS
+-- This trigger created stock_movements and stock_valuation records automatically
+DROP TRIGGER IF EXISTS stock_entry_posting_trigger ON stock_entries;
+
+-- CREATE TRIGGER stock_entry_posting_trigger
+--   BEFORE UPDATE ON stock_entries
+--   FOR EACH ROW
+--   EXECUTE FUNCTION process_stock_entry_posting();
+
+-- Add comment (DEPRECATED - moved to NestJS)
+COMMENT ON FUNCTION process_stock_entry_posting() IS
+  'DEPRECATED: Moved to NestJS StockEntriesService. This function is kept for reference and rollback purposes only. Automatically creates stock movements and updates inventory when a stock entry is posted. Uses SECURITY DEFINER to bypass RLS.';
 
 -- =====================================================
--- RLS POLICIES
+-- DATA SEEDING & FIXES
 -- =====================================================
+-- This section ensures user profiles and organizations exist for existing auth users
+
+-- Create user profiles for all auth users that don't have one
+DO $$
+DECLARE
+    v_user RECORD;
+BEGIN
+    FOR v_user IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
+        INSERT INTO user_profiles (
+            id,
+            email,
+            full_name,
+            language,
+            timezone,
+            onboarding_completed,
+            password_set
+        )
+        VALUES (
+            v_user.id,
+            v_user.email,
+            COALESCE(
+                NULLIF(TRIM(COALESCE(v_user.raw_user_meta_data->>'full_name', '')), ''),
+                COALESCE(v_user.raw_user_meta_data->>'first_name', '') || ' ' || COALESCE(v_user.raw_user_meta_data->>'last_name', ''),
+                split_part(v_user.email, '@', 1)
+            ),
+            'fr',
+            'Africa/Casablanca',
+            true,
+            true
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            onboarding_completed = true,
+            password_set = true,
+            updated_at = NOW();
+    END LOOP;
+    
+    RAISE NOTICE '✅ User profiles synced for all auth users';
+END $$;
+
+-- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_exists boolean;
+BEGIN
+    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
+    
+    IF NOT v_org_exists THEN
+        INSERT INTO organizations (
+            id,
+            name,
+            slug,
+            email,
+            currency_code,
+            timezone,
+            is_active
+        )
+        VALUES (
+            v_org_id,
+            'AgriTech Organization',
+            'agritech-org',
+            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
+            'MAD',
+            'Africa/Casablanca',
+            true
+        );
+        RAISE NOTICE '✅ Created organization: AgriTech Organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already exists';
+    END IF;
+END $$;
+
+-- Link all auth users to the default organization as admins if they don't have an organization
+DO $$
+DECLARE
+    v_user RECORD;
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_admin_role_id UUID;
+    v_linked_count integer := 0;
+BEGIN
+    -- Get the organization_admin role_id
+    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
+    
+    IF v_org_admin_role_id IS NULL THEN
+        RAISE EXCEPTION 'organization_admin role not found';
+    END IF;
+    
+    FOR v_user IN 
+        SELECT u.id 
+        FROM auth.users u
+        WHERE NOT EXISTS (
+            SELECT 1 FROM organization_users ou 
+            WHERE ou.user_id = u.id AND ou.is_active = true
+        )
+    LOOP
+        INSERT INTO organization_users (
+            user_id,
+            organization_id,
+            role_id,
+            is_active
+        )
+        VALUES (
+            v_user.id,
+            v_org_id,
+            v_org_admin_role_id,
+            true
+        )
+        ON CONFLICT (user_id, organization_id) 
+        DO UPDATE SET 
+            is_active = true,
+            role_id = v_org_admin_role_id,
+            updated_at = NOW();
+        
+        v_linked_count := v_linked_count + 1;
+    END LOOP;
+    
+    IF v_linked_count > 0 THEN
+        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
+    ELSE
+        RAISE NOTICE 'ℹ️  All users already linked to organizations';
+    END IF;
+END $$;
+
+-- Create a trial subscription for the organization if it doesn't have one
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_sub_exists boolean;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 FROM subscriptions 
+        WHERE organization_id = v_org_id 
+        AND status IN ('trialing', 'active')
+    ) INTO v_sub_exists;
+    
+    IF NOT v_sub_exists THEN
+        INSERT INTO subscriptions (
+            organization_id,
+            status,
+            plan_id,
+            current_period_start,
+            current_period_end,
+            cancel_at_period_end
+        )
+        VALUES (
+            v_org_id,
+            'trialing',
+            'basic',
+            NOW(),
+            NOW() + INTERVAL '30 days',
+            false
+        )
+        ON CONFLICT DO NOTHING;
+        
+        RAISE NOTICE '✅ Created trial subscription for organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
+    END IF;
+END $$;
+
+-- Final verification and summary
+DO $$
+DECLARE
+    v_user_count integer;
+    v_profile_count integer;
+    v_org_count integer;
+    v_org_user_count integer;
+    v_sub_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_user_count FROM auth.users;
+    SELECT COUNT(*) INTO v_profile_count FROM user_profiles;
+    SELECT COUNT(*) INTO v_org_count FROM organizations;
+    SELECT COUNT(*) INTO v_org_user_count FROM organization_users WHERE is_active = true;
+    SELECT COUNT(*) INTO v_sub_count FROM subscriptions WHERE status IN ('trialing', 'active');
+    
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'DATABASE INITIALIZATION SUMMARY';
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'Auth users: %', v_user_count;
+    RAISE NOTICE 'User profiles: %', v_profile_count;
+    RAISE NOTICE 'Organizations: %', v_org_count;
+    RAISE NOTICE 'Active organization memberships: %', v_org_user_count;
+    RAISE NOTICE 'Active subscriptions: %', v_sub_count;
+    RAISE NOTICE '================================================';
+    RAISE NOTICE '✅ Schema initialization complete!';
+    RAISE NOTICE '================================================';
+END $$;
+
 -- =====================================================
 -- COMPREHENSIVE RLS POLICIES FIX
 -- Added: 2025-11-06
@@ -6905,10 +7431,6 @@ CREATE POLICY "org_delete_cloud_coverage_checks" ON cloud_coverage_checks
     is_organization_member(organization_id)
   );
 
-
--- =====================================================
--- FUNCTIONS & HELPERS
--- =====================================================
 -- =====================================================
 -- INTERNATIONAL CHART OF ACCOUNTS SEEDING FUNCTIONS
 -- =====================================================
@@ -7316,6 +7838,191 @@ COMMENT ON FUNCTION seed_chart_of_accounts IS
 'Generic function to seed chart of accounts from templates based on organization country and accounting standard. Supports MA/PCEC, TN/PCN, FR/PCG, US/GAAP, GB/FRS102.';
 
 -- =====================================================
+-- FRANCE CHART OF ACCOUNTS
+-- =====================================================
+
+-- =====================================================
+-- FRENCH CHART OF ACCOUNTS (Plan Comptable Général - PCG)
+-- =====================================================
+-- Currency: EUR (Euro)
+-- Standard: Plan Comptable Général (PCG 2014)
+-- Suitable for: Agricultural businesses in France
+-- DEPRECATED: Use seed_chart_of_accounts() instead
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION seed_french_chart_of_accounts(p_org_id UUID)
+RETURNS TABLE(
+  accounts_created INTEGER,
+  success BOOLEAN,
+  message TEXT
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
+    RETURN QUERY SELECT 0, false, 'Organization not found'::TEXT;
+    RETURN;
+  END IF;
+
+  -- CLASS 1: CAPITAL (CAPITAUX PROPRES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '101', 'Capital social', 'Equity', 'Capital', false, true, 'EUR'),
+    (p_org_id, '106', 'Réserves', 'Equity', 'Retained Earnings', false, true, 'EUR'),
+    (p_org_id, '120', 'Résultat de l''exercice', 'Equity', 'Current Year Earnings', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 2: FIXED ASSETS (IMMOBILISATIONS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '211', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '213', 'Constructions agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '215', 'Installations techniques', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2154', 'Matériel agricole', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2155', 'Tracteurs et véhicules', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '218', 'Autres immobilisations corporelles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2181', 'Cheptel reproducteur', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2182', 'Plantations pérennes', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2813', 'Amortissements constructions', 'Asset', 'Accumulated Depreciation', false, true, 'EUR'),
+    (p_org_id, '2815', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 3: INVENTORY (STOCKS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '311', 'Semences et plants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '312', 'Engrais et amendements', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '313', 'Produits phytosanitaires', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '314', 'Aliments pour le bétail', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '315', 'Combustibles et carburants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '321', 'Cultures en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '322', 'Élevage en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '355', 'Produits agricoles finis', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3551', 'Céréales', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3552', 'Fruits et légumes', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3553', 'Vin et produits viticoles', 'Asset', 'Inventory', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 4: THIRD PARTIES (TIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '401', 'Fournisseurs', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4011', 'Fournisseurs - intrants', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4081', 'Fournisseurs - factures non parvenues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '411', 'Clients', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4111', 'Clients - ventes agricoles', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '416', 'Clients douteux', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4181', 'Clients - factures à établir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '421', 'Personnel - rémunérations dues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '431', 'Sécurité sociale', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '437', 'Autres organismes sociaux', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4424', 'Impôt sur les sociétés', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '443', 'Opérations avec l''État', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4431', 'Subventions à recevoir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44551', 'TVA à décaisser', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '44562', 'TVA déductible sur immobilisations', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44566', 'TVA déductible sur autres biens', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44571', 'TVA collectée', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '467', 'Autres comptes débiteurs ou créditeurs', 'Asset', 'Receivable', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 5: FINANCIAL ACCOUNTS (COMPTES FINANCIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '512', 'Banque', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5121', 'Banque - Compte principal', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5124', 'Banque - Compte agricole', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '531', 'Caisse', 'Asset', 'Cash', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 6: EXPENSES (CHARGES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '601', 'Achats stockés - Matières premières', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6011', 'Achats semences et plants', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6012', 'Achats engrais', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6013', 'Achats produits phytosanitaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6014', 'Achats aliments pour bétail', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6015', 'Achats animaux', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '602', 'Achats stockés - Autres approvisionnements', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6021', 'Achats combustibles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6022', 'Achats produits d''entretien', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Achats non stockés', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Fournitures non stockables (eau)', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '611', 'Sous-traitance générale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6111', 'Travaux agricoles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '613', 'Locations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6132', 'Locations matériel agricole', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '615', 'Entretien et réparations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6151', 'Entretien bâtiments', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6155', 'Entretien matériel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '616', 'Primes d''assurances', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6161', 'Assurances multirisque', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '622', 'Rémunérations d''intermédiaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6226', 'Honoraires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6227', 'Frais vétérinaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '624', 'Transports de biens', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6241', 'Transports sur achats', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6242', 'Transports sur ventes', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '625', 'Déplacements, missions', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '626', 'Frais postaux et télécommunications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6261', 'Téléphone', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6262', 'Internet', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Eau et électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Eau', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6063', 'Électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '641', 'Rémunérations du personnel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6411', 'Salaires permanents', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6412', 'Salaires saisonniers', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6413', 'Primes et gratifications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '645', 'Charges de sécurité sociale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6451', 'Cotisations URSSAF', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6452', 'Cotisations MSA', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '661', 'Charges d''intérêts', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6611', 'Intérêts emprunts bancaires', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '666', 'Pertes de change', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6811', 'Dotations aux amortissements', 'Expense', 'Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 7: REVENUES (PRODUITS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '701', 'Ventes de produits finis', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7011', 'Ventes céréales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7012', 'Ventes fruits et légumes', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7013', 'Ventes vin', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7014', 'Ventes lait', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7015', 'Ventes viande', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7016', 'Ventes animaux vivants', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7017', 'Ventes œufs', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '706', 'Prestations de services', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7061', 'Travaux agricoles', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '74', 'Subventions d''exploitation', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '741', 'Aides PAC', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7411', 'Aides aux surfaces', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7412', 'Aides animales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7413', 'Aides découplées', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '748', 'Autres subventions', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '758', 'Produits divers de gestion courante', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7581', 'Indemnités d''assurance', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '763', 'Revenus des créances', 'Revenue', 'Financial Revenue', false, true, 'EUR'),
+    (p_org_id, '766', 'Gains de change', 'Revenue', 'Financial Revenue', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  SELECT COUNT(*)::INTEGER INTO v_count FROM accounts WHERE organization_id = p_org_id;
+  RETURN QUERY SELECT v_count, true, 'French chart of accounts created successfully'::TEXT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN QUERY SELECT 0, false, SQLERRM::TEXT;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION seed_french_chart_of_accounts TO authenticated;
+
+COMMENT ON FUNCTION seed_french_chart_of_accounts IS
+'Seeds complete French chart of accounts (PCG) for an organization';
+
 -- =====================================================
 -- COST AND REVENUE LEDGER INTEGRATION
 -- =====================================================
@@ -7400,10 +8107,179 @@ BEGIN
 END;
 $$;
 
+-- Trigger function to create journal entry when cost is inserted
+-- DEPRECATED: Moved to NestJS AccountingAutomationService
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_cost_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_expense_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
 
--- =====================================================
--- FIXES & AUDIT
--- =====================================================
+  -- Get expense account using mapping system (works for all countries)
+  v_expense_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cost_type',
+    NEW.cost_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_expense_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'expense',
+      COALESCE(NEW.description, 'Cost entry: ' || NEW.cost_type),
+      NEW.id,
+      'cost',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit expense, credit cash)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_expense_account_id, NEW.amount, 0, NEW.description),
+      (v_journal_entry_id, v_cash_account_id, 0, NEW.amount, 'Payment for ' || NEW.cost_type);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for cost % - missing account mappings (expense: %, cash: %)',
+      NEW.id, v_expense_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Add comment (DEPRECATED - moved to NestJS)
+COMMENT ON FUNCTION create_cost_journal_entry() IS
+  'DEPRECATED: Moved to NestJS AccountingAutomationService. This function is kept for reference and rollback purposes only.';
+
+-- Trigger function to create journal entry when revenue is inserted
+-- DEPRECATED: Moved to NestJS AccountingAutomationService
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_revenue_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_revenue_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
+
+  -- Get revenue account using mapping system (works for all countries)
+  v_revenue_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'revenue_type',
+    NEW.revenue_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_revenue_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'revenue',
+      COALESCE(NEW.description, 'Revenue entry: ' || NEW.revenue_type),
+      NEW.id,
+      'revenue',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit cash, credit revenue)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_cash_account_id, NEW.amount, 0, 'Receipt for ' || NEW.revenue_type),
+      (v_journal_entry_id, v_revenue_account_id, 0, NEW.amount, NEW.description);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for revenue % - missing account mappings (revenue: %, cash: %)',
+      NEW.id, v_revenue_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Add comment (DEPRECATED - moved to NestJS)
+COMMENT ON FUNCTION create_revenue_journal_entry() IS
+  'DEPRECATED: Moved to NestJS AccountingAutomationService. This function is kept for reference and rollback purposes only.';
+
+-- DISABLED: Triggers moved to NestJS AccountingAutomationService
+-- The journal entry creation logic is now handled by AccountingAutomationService
+-- These triggers automatically created journal entries from costs and revenues
+DROP TRIGGER IF EXISTS trg_cost_create_journal_entry ON costs;
+-- CREATE TRIGGER trg_cost_create_journal_entry
+--   AFTER INSERT ON costs
+--   FOR EACH ROW
+--   EXECUTE FUNCTION create_cost_journal_entry();
+
+DROP TRIGGER IF EXISTS trg_revenue_create_journal_entry ON revenues;
+-- CREATE TRIGGER trg_revenue_create_journal_entry
+--   AFTER INSERT ON revenues
+--   FOR EACH ROW
+--   EXECUTE FUNCTION create_revenue_journal_entry();
+
 -- Create sequence for journal entry numbers if it doesn't exist
 CREATE SEQUENCE IF NOT EXISTS journal_entry_seq START 1;
 
@@ -7527,10 +8403,6 @@ VALUES (
 COMMENT ON TABLE migration_audit_log IS
   'Audit log for database migrations. Tracks when business logic is moved between database and application layers.';
 
-
--- =====================================================
--- VIEWS
--- =====================================================
 -- =====================================================
 -- VIEWS
 -- =====================================================
@@ -7562,314 +8434,3 @@ WHERE ou.is_active = true;
 GRANT SELECT ON assignable_users TO authenticated;
 GRANT SELECT ON assignable_users TO service_role;
 COMMENT ON VIEW assignable_users IS 'View combining users, profiles, roles, and worker information for task assignment';
-
--- =====================================================
--- SEED DATA & MIGRATIONS
--- =====================================================
-  WHERE (resource IN ('farms', 'parcels', 'stock', 'users') AND action = 'read')
-     OR (resource = 'parcels' AND action IN ('create', 'update'));
-
-  -- Day Laborer: very limited, read-only on tasks
-  INSERT INTO role_permissions (role_id, permission_id)
-  SELECT v_day_laborer_id, id FROM permissions
-  WHERE resource = 'reports' AND action = 'read';
-
-  -- Viewer: read-only access
-  INSERT INTO role_permissions (role_id, permission_id)
-  SELECT v_viewer_id, id FROM permissions
-  WHERE action = 'read';
-
-END $$;
--- Populate role_id for existing users based on their role text
--- This maps the text role to the actual roles table
-DO $$
-BEGIN
-  -- Only run if the role column still exists
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role'
-  ) THEN
-    -- Update organization_users with role_id based on role text
-    UPDATE organization_users ou
-    SET role_id = r.id
-    FROM roles r
-    WHERE ou.role = r.name
-    AND ou.role_id IS NULL;
-  END IF;
-END $$;
-
--- Add first_name and last_name columns to user_profiles if they don't exist
-DO $$
-BEGIN
-  -- Add first_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'first_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
-  END IF;
-
-  -- Add last_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'last_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
-  END IF;
-
-  -- Populate first_name and last_name from full_name if they are empty
-  UPDATE user_profiles
-  SET
-    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
-    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
-  WHERE full_name IS NOT NULL
-  AND (first_name IS NULL OR last_name IS NULL);
-END $$;
-
--- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
-DO $$
-DECLARE
-  default_viewer_role_id UUID;
-BEGIN
-  -- Get the viewer role ID as a fallback
-  SELECT id INTO default_viewer_role_id FROM roles WHERE name = 'viewer';
-
-  -- Set default viewer role for any users with NULL role_id
-  IF default_viewer_role_id IS NOT NULL THEN
-    UPDATE organization_users
-    SET role_id = default_viewer_role_id
-    WHERE role_id IS NULL;
-  END IF;
-
-  -- First, ensure role_id is NOT NULL (it should be populated by now)
-  -- If any row still has NULL role_id, this will fail and alert us
-  IF EXISTS (SELECT 1 FROM organization_users WHERE role_id IS NULL) THEN
-    RAISE EXCEPTION 'Cannot drop role column: some users still have NULL role_id even after applying default viewer role.';
-  END IF;
-
-  -- Drop the foreign key constraint on role VARCHAR if it exists
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_fkey'
-  ) THEN
-    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_fkey;
-  END IF;
-
-  -- Drop the CHECK constraint on role if it exists
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_check'
-  ) THEN
-    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_check;
-  END IF;
-
-  -- Make role_id NOT NULL now that we've confirmed it's populated
-  ALTER TABLE organization_users ALTER COLUMN role_id SET NOT NULL;
-
-  -- Drop the role VARCHAR column
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role'
-  ) THEN
-    ALTER TABLE organization_users DROP COLUMN role;
-  END IF;
-END $$;
--- DATA SEEDING & FIXES
--- =====================================================
--- This section ensures user profiles and organizations exist for existing auth users
-
--- Create user profiles for all auth users that don't have one
-DO $$
-DECLARE
-    v_user RECORD;
-BEGIN
-    FOR v_user IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
-        INSERT INTO user_profiles (
-            id,
-            email,
-            full_name,
-            language,
-            timezone,
-            onboarding_completed,
-            password_set
-        )
-        VALUES (
-            v_user.id,
-            v_user.email,
-            COALESCE(
-                NULLIF(TRIM(COALESCE(v_user.raw_user_meta_data->>'full_name', '')), ''),
-                COALESCE(v_user.raw_user_meta_data->>'first_name', '') || ' ' || COALESCE(v_user.raw_user_meta_data->>'last_name', ''),
-                split_part(v_user.email, '@', 1)
-            ),
-            'fr',
-            'Africa/Casablanca',
-            true,
-            true
-        )
-        ON CONFLICT (id) DO UPDATE SET
-            email = EXCLUDED.email,
-            onboarding_completed = true,
-            password_set = true,
-            updated_at = NOW();
-    END LOOP;
-    
-    RAISE NOTICE '✅ User profiles synced for all auth users';
-END $$;
-
--- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_exists boolean;
-BEGIN
-    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
-    
-    IF NOT v_org_exists THEN
-        INSERT INTO organizations (
-            id,
-            name,
-            slug,
-            email,
-            currency_code,
-            timezone,
-            is_active
-        )
-        VALUES (
-            v_org_id,
-            'AgriTech Organization',
-            'agritech-org',
-            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
-            'MAD',
-            'Africa/Casablanca',
-            true
-        );
-        RAISE NOTICE '✅ Created organization: AgriTech Organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already exists';
-    END IF;
-END $$;
-
--- Link all auth users to the default organization as admins if they don't have an organization
-DO $$
-DECLARE
-    v_user RECORD;
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_admin_role_id UUID;
-    v_linked_count integer := 0;
-BEGIN
-    -- Get the organization_admin role_id
-    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
-    
-    IF v_org_admin_role_id IS NULL THEN
-        RAISE EXCEPTION 'organization_admin role not found';
-    END IF;
-    
-    FOR v_user IN 
-        SELECT u.id 
-        FROM auth.users u
-        WHERE NOT EXISTS (
-            SELECT 1 FROM organization_users ou 
-            WHERE ou.user_id = u.id AND ou.is_active = true
-        )
-    LOOP
-        INSERT INTO organization_users (
-            user_id,
-            organization_id,
-            role_id,
-            is_active
-        )
-        VALUES (
-            v_user.id,
-            v_org_id,
-            v_org_admin_role_id,
-            true
-        )
-        ON CONFLICT (user_id, organization_id) 
-        DO UPDATE SET 
-            is_active = true,
-            role_id = v_org_admin_role_id,
-            updated_at = NOW();
-        
-        v_linked_count := v_linked_count + 1;
-    END LOOP;
-    
-    IF v_linked_count > 0 THEN
-        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
-    ELSE
-        RAISE NOTICE 'ℹ️  All users already linked to organizations';
-    END IF;
-END $$;
-
--- Create a trial subscription for the organization if it doesn't have one
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_sub_exists boolean;
-BEGIN
-    SELECT EXISTS(
-        SELECT 1 FROM subscriptions 
-        WHERE organization_id = v_org_id 
-        AND status IN ('trialing', 'active')
-    ) INTO v_sub_exists;
-    
-    IF NOT v_sub_exists THEN
-        INSERT INTO subscriptions (
-            organization_id,
-            status,
-            plan_id,
-            current_period_start,
-            current_period_end,
-            cancel_at_period_end
-        )
-        VALUES (
-            v_org_id,
-            'trialing',
-            'basic',
-            NOW(),
-            NOW() + INTERVAL '30 days',
-            false
-        )
-        ON CONFLICT DO NOTHING;
-        
-        RAISE NOTICE '✅ Created trial subscription for organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
-    END IF;
-END $$;
-
--- Final verification and summary
-DO $$
-DECLARE
-    v_user_count integer;
-    v_profile_count integer;
-    v_org_count integer;
-    v_org_user_count integer;
-    v_sub_count integer;
-BEGIN
-    SELECT COUNT(*) INTO v_user_count FROM auth.users;
-    SELECT COUNT(*) INTO v_profile_count FROM user_profiles;
-    SELECT COUNT(*) INTO v_org_count FROM organizations;
-    SELECT COUNT(*) INTO v_org_user_count FROM organization_users WHERE is_active = true;
-    SELECT COUNT(*) INTO v_sub_count FROM subscriptions WHERE status IN ('trialing', 'active');
-    
-    RAISE NOTICE '================================================';
-    RAISE NOTICE 'DATABASE INITIALIZATION SUMMARY';
-    RAISE NOTICE '================================================';
-    RAISE NOTICE 'Auth users: %', v_user_count;
-    RAISE NOTICE 'User profiles: %', v_profile_count;
-    RAISE NOTICE 'Organizations: %', v_org_count;
-    RAISE NOTICE 'Active organization memberships: %', v_org_user_count;
-    RAISE NOTICE 'Active subscriptions: %', v_sub_count;
-    RAISE NOTICE '================================================';
-    RAISE NOTICE '✅ Schema initialization complete!';
-    RAISE NOTICE '================================================';
-END $$;
-

@@ -11,13 +11,17 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { DeleteFarmDto } from './dto/delete-farm.dto';
 import { ImportFarmDto } from './dto/import-farm.dto';
 import { ListFarmsResponseDto, FarmDto } from './dto/list-farms.dto';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class FarmsService {
   private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(FarmsService.name);
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private subscriptionsService: SubscriptionsService,
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseServiceKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
@@ -122,6 +126,92 @@ export class FarmsService {
     };
   }
 
+  /**
+   * Get farm hierarchy tree
+   * Migrated from get_farm_hierarchy_tree SQL function
+   */
+  async getFarmHierarchy(userId: string, organizationId: string) {
+    // Reuse listFarms logic as the underlying data structure is currently flat
+    const farmsList = await this.listFarms(userId, organizationId);
+
+    // Transform to tree structure (currently just root nodes)
+    const tree = farmsList.farms.map(farm => ({
+      id: farm.farm_id,
+      name: farm.farm_name,
+      type: farm.farm_type,
+      size: farm.farm_size,
+      manager: farm.manager_name,
+      isActive: farm.is_active,
+      parcelCount: farm.parcel_count,
+      children: [] // No sub-farms supported yet
+    }));
+
+    return tree;
+  }
+
+  async createFarm(userId: string, organizationId: string, dto: any) {
+    this.logger.log(`Creating farm for user ${userId} in org ${organizationId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('role_id, roles!inner(name)')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Check permissions (admin/manager)
+    const userRole = (orgUser as any).roles?.name;
+    const allowedRoles = ['system_admin', 'organization_admin', 'farm_manager'];
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      throw new ForbiddenException('Insufficient permissions to create farms');
+    }
+
+    // Check subscription
+    const hasValidSubscription = await this.subscriptionsService.hasValidSubscription(organizationId);
+    if (!hasValidSubscription) {
+      throw new ForbiddenException('Active subscription required to create farms');
+    }
+
+    // Prepare farm data
+    const farmData = {
+      organization_id: organizationId,
+      name: dto.name,
+      location: dto.location,
+      size: dto.size,
+      size_unit: dto.size_unit || 'hectares', // Map size_unit to size_unit column if it exists, or area_unit
+      area_unit: dto.area_unit || dto.size_unit || 'hectares', // Handle both potential column names
+      description: dto.description,
+      farm_type: dto.farm_type || 'main',
+      parent_farm_id: dto.parent_farm_id || null,
+      manager_id: dto.manager_id || null,
+      is_active: true,
+      hierarchy_level: dto.parent_farm_id ? 2 : 1 // Simple logic for now
+    };
+
+    // Insert farm
+    const { data: newFarm, error: createError } = await this.supabaseAdmin
+      .from('farms')
+      .insert(farmData)
+      .select()
+      .single();
+
+    if (createError) {
+      this.logger.error('Error creating farm', createError);
+      throw new InternalServerErrorException(`Failed to create farm: ${createError.message}`);
+    }
+
+    this.logger.log(`Farm created successfully: ${newFarm.id}`);
+    return newFarm;
+  }
+
+
+
   async deleteFarm(userId: string, dto: DeleteFarmDto) {
     const { farm_id } = dto;
 
@@ -194,19 +284,12 @@ export class FarmsService {
     }
 
     // Check subscription
-    const { data: subscriptionCheck, error: subscriptionError } =
-      await this.supabaseAdmin.rpc('has_valid_subscription', {
-        org_id: organizationId,
-      });
+    const hasValidSubscription = await this.subscriptionsService.hasValidSubscription(organizationId);
 
-    const hasValidSubscription =
-      subscriptionCheck === true ||
-      (typeof subscriptionCheck === 'boolean' && subscriptionCheck);
-
-    if (subscriptionError || !hasValidSubscription) {
-      this.logger.error('Subscription check failed', subscriptionError);
+    if (!hasValidSubscription) {
+      this.logger.error('Subscription check failed: invalid or expired');
       throw new ForbiddenException(
-        `An active subscription is required to delete farms. Subscription status: ${hasValidSubscription ? 'Valid' : 'Invalid'}.`,
+        `An active subscription is required to delete farms.`,
       );
     }
 
@@ -298,8 +381,8 @@ export class FarmsService {
     const deletedFarmsArray = Array.isArray(deletedFarms)
       ? deletedFarms
       : deletedFarms
-      ? [deletedFarms]
-      : [];
+        ? [deletedFarms]
+        : [];
 
     if (deletedFarmsArray.length === 0) {
       this.logger.warn(

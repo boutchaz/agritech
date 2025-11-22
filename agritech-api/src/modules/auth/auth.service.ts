@@ -8,6 +8,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from '../database/database.service';
 import { SignupDto } from './dto/signup.dto';
+import { UsersService } from '../users/users.service';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +18,9 @@ export class AuthService {
   constructor(
     private databaseService: DatabaseService,
     private jwtService: JwtService,
-  ) {}
+    private usersService: UsersService,
+    private organizationsService: OrganizationsService,
+  ) { }
 
   /**
    * Validate a Supabase JWT token
@@ -179,31 +183,19 @@ export class AuthService {
     const fullName = `${signupDto.firstName} ${signupDto.lastName}`;
 
     try {
-      // 2. Create user profile using SECURITY DEFINER function (bypasses RLS)
-      const { data: profileData, error: profileError } = await adminClient.rpc(
-        'create_user_profile',
-        {
-          p_user_id: userId,
-          p_email: email,
-          p_full_name: fullName,
-          p_first_name: signupDto.firstName,
-          p_last_name: signupDto.lastName,
-          p_phone: signupDto.phone || null,
-          p_language: 'fr',
-          p_timezone: 'Africa/Casablanca',
-          p_onboarding_completed: false,
-          p_password_set: true,
-        },
-      );
-
-      if (profileError || !profileData) {
-        this.logger.error(
-          `Failed to create profile: ${profileError?.message || 'Unknown error'}`,
-        );
-        // Rollback: Delete the auth user
-        await adminClient.auth.admin.deleteUser(userId);
-        throw new BadRequestException('Failed to create user profile');
-      }
+      // 2. Create user profile using UsersService (migrated from RPC)
+      await this.usersService.createProfile({
+        userId,
+        email,
+        firstName: signupDto.firstName,
+        lastName: signupDto.lastName,
+        fullName,
+        phone: signupDto.phone || undefined,
+        language: 'fr',
+        timezone: 'Africa/Casablanca',
+        onboardingCompleted: false,
+        passwordSet: true,
+      });
 
       let organizationId: string;
       let organizationName: string;
@@ -253,60 +245,20 @@ export class AuthService {
           throw new BadRequestException('Failed to join organization');
         }
       } else {
-        // 4. No invitation - Create new organization
+        // 4. No invitation - Create new organization using OrganizationsService
         organizationName =
           signupDto.organizationName ||
           `${signupDto.firstName}'s Organization`;
 
-        // Generate unique slug with retry logic
-        const maxRetries = 5;
-        let retryCount = 0;
-        let orgCreated = false;
+        const newOrg = await this.organizationsService.create({
+          name: organizationName,
+          currencyCode: 'MAD',
+          timezone: 'Africa/Casablanca',
+          isActive: true,
+        });
 
-        while (!orgCreated && retryCount < maxRetries) {
-          organizationSlug = this.generateOrganizationSlug(
-            organizationName,
-            retryCount,
-          );
-
-          const { data: newOrg, error: orgError } = await adminClient
-            .from('organizations')
-            .insert({
-              name: organizationName,
-              slug: organizationSlug,
-              currency_code: 'MAD',
-              timezone: 'Africa/Casablanca',
-              is_active: true,
-            })
-            .select()
-            .single();
-
-          if (orgError) {
-            if (
-              orgError.code === '23505' &&
-              orgError.message.includes('slug')
-            ) {
-              // Duplicate slug, retry with different slug
-              retryCount++;
-              this.logger.warn(
-                `Slug collision for ${organizationSlug}, retry ${retryCount}`,
-              );
-              continue;
-            } else {
-              this.logger.error(`Failed to create organization: ${orgError.message}`);
-              throw new BadRequestException('Failed to create organization');
-            }
-          }
-
-          organizationId = newOrg.id;
-          orgCreated = true;
-        }
-
-        if (!orgCreated) {
-          throw new ConflictException(
-            'Failed to create organization with unique slug after multiple attempts',
-          );
-        }
+        organizationId = newOrg.id;
+        organizationSlug = newOrg.slug;
 
         // Get organization_admin role
         const orgAdminRoleId = await this.getOrgAdminRoleId(adminClient);
@@ -370,31 +322,6 @@ export class AuthService {
       await adminClient.auth.admin.deleteUser(userId);
       throw error;
     }
-  }
-
-  /**
-   * Generate organization slug with optional retry suffix
-   */
-  private generateOrganizationSlug(name: string, retryCount: number): string {
-    // Convert to lowercase, remove special chars, replace spaces with hyphens
-    let slug = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-
-    // Add retry suffix if needed
-    if (retryCount > 0) {
-      const randomSuffix = Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, '0');
-      slug = `${slug}-${randomSuffix}`;
-    }
-
-    return slug;
   }
 
   /**
