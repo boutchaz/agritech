@@ -49,7 +49,7 @@ export class SubscriptionsService {
     this.logger.debug(`Checking organization memberships for user ${userId}`);
     const { data: allOrgUsers } = await this.supabaseAdmin
       .from('organization_users')
-      .select('organization_id, role, is_active')
+      .select('organization_id, role_id, is_active')
       .eq('user_id', userId);
 
     this.logger.debug(
@@ -59,7 +59,7 @@ export class SubscriptionsService {
     // Verify user belongs to the organization
     const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
       .from('organization_users')
-      .select('organization_id, role, is_active')
+      .select('organization_id, role_id, is_active')
       .eq('user_id', userId)
       .eq('organization_id', organization_id)
       .eq('is_active', true)
