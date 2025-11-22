@@ -66,6 +66,8 @@ async function bootstrap() {
       'Origin',
       'X-Requested-With',
       'X-Request-ID',
+      'X-Organization-Id',
+      'x-organization-id',
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
     ],
