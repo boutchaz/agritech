@@ -198,13 +198,20 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       // Fetch parcels for each farm
       const farmIds = Array.from(farmMap.keys());
+      console.log('🔍 Fetching parcels for', farmIds.length, 'farms');
+
       if (farmIds.length > 0) {
         const { data: parcelsData, error: parcelsError } = await supabase
           .from('parcels')
           .select('id, name, farm_id, area')
           .in('farm_id', farmIds);
 
+        if (parcelsError) {
+          console.error('❌ Error fetching parcels:', parcelsError);
+        }
+
         if (!parcelsError && parcelsData) {
+          console.log('✅ Parcels fetched:', parcelsData.length, 'parcels');
           // Group parcels by farm_id and calculate total area
           const parcelsByFarm = parcelsData.reduce((acc, parcel) => {
             if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
