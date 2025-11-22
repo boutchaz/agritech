@@ -1,15 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExportMetadataDto {
   @ApiProperty({ description: 'Total number of farms' })
+  @IsNumber()
   total_farms: number;
 
   @ApiProperty({ description: 'Total number of parcels' })
+  @IsNumber()
   total_parcels: number;
 
   @ApiProperty({ description: 'Total number of AOIs' })
+  @IsNumber()
   total_aois: number;
 }
 
