@@ -1,5 +1,7 @@
-import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { ConfigService } from '@nestjs/config';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export interface CreateOrganizationDto {
     name: string;
@@ -13,8 +15,28 @@ export interface CreateOrganizationDto {
 @Injectable()
 export class OrganizationsService {
     private readonly logger = new Logger(OrganizationsService.name);
+    private readonly supabaseAdmin: SupabaseClient;
 
-    constructor(private databaseService: DatabaseService) { }
+    constructor(
+        private databaseService: DatabaseService,
+        private configService: ConfigService,
+    ) {
+        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+        const supabaseServiceKey = this.configService.get<string>(
+            'SUPABASE_SERVICE_ROLE_KEY',
+        );
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            throw new Error('Missing Supabase configuration');
+        }
+
+        this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        });
+    }
 
     /**
      * Create a new organization
@@ -84,6 +106,38 @@ export class OrganizationsService {
             return null;
         }
         return data;
+    }
+
+    async getOrganization(userId: string, organizationId: string) {
+        this.logger.log(`Getting organization ${organizationId} for user ${userId}`);
+
+        // Verify user access
+        const { data: orgUser, error: orgError } = await this.supabaseAdmin
+            .from('organization_users')
+            .select('organization_id')
+            .eq('organization_id', organizationId)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (orgError || !orgUser) {
+            this.logger.error('User not authorized for organization', orgError);
+            throw new ForbiddenException('You do not have access to this organization');
+        }
+
+        // Fetch organization
+        const { data: organization, error: fetchError } = await this.supabaseAdmin
+            .from('organizations')
+            .select('id, name, description, slug, currency_code, timezone, is_active, created_at, updated_at')
+            .eq('id', organizationId)
+            .single();
+
+        if (fetchError || !organization) {
+            this.logger.error('Organization not found', fetchError);
+            throw new NotFoundException('Organization not found');
+        }
+
+        return organization;
     }
 
     private generateSlug(name: string): string {

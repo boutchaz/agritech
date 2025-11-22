@@ -13,7 +13,7 @@ import {
   getVarietiesByCropType,
   type CropCategory,
 } from '../../lib/plantingSystemData';
-import { supabase } from '../../lib/supabase';
+import { parcelsService, type Parcel } from '../../services/parcelsService';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -43,25 +43,7 @@ import {
 } from '../ui/radix-select';
 import { Textarea } from '../ui/Textarea';
 
-interface Parcel {
-  id: string;
-  name: string;
-  description?: string;
-  area: number;
-  area_unit: string;
-  crop_category?: string;
-  crop_type?: string;
-  variety?: string;
-  planting_system?: string;
-  spacing?: string;
-  density_per_hectare?: number;
-  plant_count?: number;
-  planting_date?: string;
-  planting_year?: number;
-  rootstock?: string;
-  soil_type?: string;
-  irrigation_type?: string;
-}
+// Parcel interface is now imported from parcelsService
 
 interface ParcelManagementModalProps {
   farmId: string;
@@ -171,33 +153,20 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     }
   }, [selectedArea, selectedDensity, setValue]);
 
-  // Fetch parcels for this farm
-  // TODO: Create GET /api/v1/parcels?farm_id=:farmId endpoint in NestJS
-  // For now, using Supabase directly until NestJS endpoint is available
+  // Fetch parcels for this farm using parcelsService (apiClient)
   const { data: parcels = [], isLoading } = useQuery({
     queryKey: ['parcels', farmId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .eq('farm_id', farmId)
-        .order('name');
-
-      if (error) throw error;
-      return data as Parcel[];
-    }
+    queryFn: () => parcelsService.listParcels(farmId)
   });
 
-  // Create/Update parcel mutation
-  // TODO: Create POST /api/v1/parcels and PUT /api/v1/parcels/:id endpoints in NestJS
-  // For now, using Supabase directly until NestJS endpoints are available
+  // Create/Update parcel mutation using parcelsService (apiClient)
   const saveParcelMutation = useMutation({
     mutationFn: async (formData: ParcelFormValues) => {
       const parcelData = {
         name: formData.name,
         description: formData.description,
         area: formData.area,
-        area_unit: formData.area_unit,
+        area_unit: formData.area_unit || 'hectares',
         crop_category: formData.crop_category,
         crop_type: formData.crop_type,
         variety: formData.variety,
@@ -214,28 +183,13 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 
       if (editingParcel) {
         // Update existing parcel
-        const { data, error } = await supabase
-          .from('parcels')
-          .update(parcelData)
-          .eq('id', editingParcel.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
+        return parcelsService.updateParcel(editingParcel.id, parcelData);
       } else {
         // Create new parcel
-        const { data, error } = await supabase
-          .from('parcels')
-          .insert({
-            farm_id: farmId,
-            ...parcelData,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
+        return parcelsService.createParcel({
+          farm_id: farmId,
+          ...parcelData,
+        });
       }
     },
     onSuccess: () => {
@@ -250,37 +204,13 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     }
   });
 
-  // Delete parcel mutation using NestJS API
+  // Delete parcel mutation using parcelsService (apiClient)
   const deleteParcelMutation = useMutation({
     mutationFn: async (parcelId: string) => {
+      const result = await parcelsService.deleteParcel(parcelId);
 
-      // Get the access token from the current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Non authentifié');
-      }
-
-      // Call NestJS API to delete parcel
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/v1/parcels`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ parcel_id: parcelId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erreur lors de la suppression (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      if (!data?.success) {
-        const errorMessage = data?.error || 'La suppression a échoué';
-        throw new Error(errorMessage);
+      if (!result?.success) {
+        throw new Error('La suppression a échoué');
       }
 
       return parcelId;
@@ -296,17 +226,10 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       deleteParcelMutation.reset();
     },
     onError: (error: Error) => {
-      
       let errorMessage = 'Erreur lors de la suppression de la parcelle';
       
       if (error?.message) {
         errorMessage += `: ${error.message}`;
-      } else if (error?.details) {
-        errorMessage += `: ${error.details}`;
-      } else if (error?.code === 'PGRST116') {
-        errorMessage = 'Aucune parcelle trouvée avec cet ID';
-      } else if (error?.code === '42501') {
-        errorMessage = 'Vous n\'avez pas les permissions nécessaires pour supprimer cette parcelle';
       }
       
       alert(errorMessage);

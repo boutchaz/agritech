@@ -1,54 +1,117 @@
-import { supabase } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export interface Farm {
+  id: string;
+  organization_id: string;
+  name: string;
+  location?: string;
+  size?: number;
+  size_unit?: string;
+  description?: string;
+  manager_name?: string;
+  manager_email?: string;
+  manager_phone?: string;
+  status?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-export const farmsService = {
-    async getFarmHierarchy(organizationId: string) {
-        const { data: { session } } = await supabase.auth.getSession();
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  slug?: string;
+  currency_code?: string;
+  timezone?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-        if (!session) {
-            throw new Error('No active session');
-        }
+export interface RelatedDataCounts {
+  parcels: number;
+  workers: number;
+  tasks: number;
+  satellite_data: number;
+  warehouses: number;
+  inventory_items: number;
+  structures: number;
+}
 
-        const response = await fetch(`${API_URL}/api/v1/farms/hierarchy`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'x-organization-id': organizationId,
-                'Content-Type': 'application/json',
-            },
-        });
+/**
+ * Get the current organization ID from localStorage
+ */
+function getCurrentOrganizationId(): string | null {
+  try {
+    const orgStr = localStorage.getItem('currentOrganization');
+    if (orgStr) {
+      const org = JSON.parse(orgStr);
+      return org.id || null;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error reading organization from localStorage:', error);
+    return null;
+  }
+}
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to fetch farm hierarchy');
-        }
+class FarmsService {
+  async getFarm(farmId: string): Promise<Farm> {
+    return apiClient.get<Farm>(`/api/v1/farms/${farmId}`);
+  }
 
-        return response.json();
-    },
+  async getOrganization(organizationId: string): Promise<Organization> {
+    return apiClient.get<Organization>(`/api/v1/organizations/${organizationId}`);
+  }
 
-    async createFarm(organizationId: string, farmData: any) {
-        const { data: { session } } = await supabase.auth.getSession();
+  async getRelatedDataCounts(farmId: string): Promise<RelatedDataCounts> {
+    return apiClient.get<RelatedDataCounts>(`/api/v1/farms/${farmId}/related-data-counts`);
+  }
 
-        if (!session) {
-            throw new Error('No active session');
-        }
+  async createFarm(data: {
+    name: string;
+    location?: string;
+    size?: number;
+    size_unit?: string;
+    description?: string;
+    manager_name?: string;
+    manager_email?: string;
+    manager_phone?: string;
+    is_active?: boolean;
+    status?: string;
+  }): Promise<Farm> {
+    const organizationId = getCurrentOrganizationId();
+    if (!organizationId) {
+      throw new Error('Organization ID is required. Please select an organization first.');
+    }
 
-        const response = await fetch(`${API_URL}/api/v1/farms`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'x-organization-id': organizationId,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(farmData),
-        });
+    // Note: The API expects X-Organization-Id header, which is automatically added by apiClient
+    return apiClient.post<Farm>('/api/v1/farms', data);
+  }
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to create farm');
-        }
+  async deleteFarm(farmId: string): Promise<{ success: boolean; deleted_farm?: { id: string; name: string } }> {
+    // Use apiRequest directly since DELETE with body is needed
+    const { apiRequest } = await import('../lib/api-client');
+    return apiRequest<{ success: boolean; deleted_farm?: { id: string; name: string } }>('/api/v1/farms', {
+      method: 'DELETE',
+      body: JSON.stringify({ farm_id: farmId }),
+    });
+  }
 
-        return response.json();
-    },
-};
+  async batchDeleteFarms(farmIds: string[]): Promise<{ deleted: number; failed: number; errors?: Array<{ name: string; error: string }> }> {
+    return apiClient.post<{ deleted: number; failed: number; errors?: Array<{ name: string; error: string }> }>('/api/v1/farms/batch-delete', {
+      farm_ids: farmIds,
+    });
+  }
+
+  async exportFarm(data: {
+    farm_id?: string;
+    organization_id?: string;
+    include_sub_farms?: boolean;
+  }): Promise<{ success: boolean; data?: unknown; error?: string }> {
+    return apiClient.post<{ success: boolean; data?: unknown; error?: string }>('/api/v1/farms/export', data);
+  }
+}
+
+export const farmsService = new FarmsService();

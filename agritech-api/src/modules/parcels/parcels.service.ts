@@ -9,6 +9,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { DeleteParcelDto } from './dto/delete-parcel.dto';
+import { CreateParcelDto } from './dto/create-parcel.dto';
+import { UpdateParcelDto } from './dto/update-parcel.dto';
+import { ListParcelsResponseDto } from './dto/list-parcels.dto';
 
 @Injectable()
 export class ParcelsService {
@@ -305,5 +308,225 @@ export class ParcelsService {
     });
 
     return result;
+  }
+
+  async listParcels(
+    userId: string,
+    organizationId: string,
+    farmId?: string,
+  ): Promise<ListParcelsResponseDto> {
+    this.logger.log(`Listing parcels for organization ${organizationId}${farmId ? `, farm ${farmId}` : ''}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error('User not authorized for organization', orgError);
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Build query
+    let query = this.supabaseAdmin
+      .from('parcels')
+      .select(`
+        id,
+        farm_id,
+        name,
+        description,
+        area,
+        area_unit,
+        crop_category,
+        crop_type,
+        variety,
+        planting_system,
+        spacing,
+        density_per_hectare,
+        plant_count,
+        planting_date,
+        planting_year,
+        rootstock,
+        soil_type,
+        irrigation_type,
+        is_active,
+        created_at,
+        updated_at,
+        farms!inner (
+          id,
+          organization_id
+        )
+      `)
+      .eq('farms.organization_id', organizationId);
+
+    if (farmId) {
+      query = query.eq('farm_id', farmId);
+    }
+
+    query = query.order('name', { ascending: true });
+
+    const { data: parcels, error: parcelsError } = await query;
+
+    if (parcelsError) {
+      this.logger.error('Error fetching parcels', parcelsError);
+      throw new InternalServerErrorException('Failed to fetch parcels');
+    }
+
+    return {
+      success: true,
+      parcels: parcels || [],
+    };
+  }
+
+  async createParcel(
+    userId: string,
+    organizationId: string,
+    dto: CreateParcelDto,
+  ) {
+    this.logger.log(`Creating parcel for user ${userId} in org ${organizationId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Verify farm belongs to organization
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, organization_id')
+      .eq('id', dto.farm_id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (farmError || !farm) {
+      this.logger.error('Farm not found or access denied', farmError);
+      throw new NotFoundException('Farm not found or you do not have access to it');
+    }
+
+    // Prepare parcel data
+    const parcelData: any = {
+      farm_id: dto.farm_id,
+      name: dto.name,
+      description: dto.description || null,
+      area: dto.area,
+      area_unit: dto.area_unit || 'hectares',
+      crop_category: dto.crop_category || null,
+      crop_type: dto.crop_type || null,
+      variety: dto.variety || null,
+      planting_system: dto.planting_system || null,
+      spacing: dto.spacing || null,
+      density_per_hectare: dto.density_per_hectare || null,
+      plant_count: dto.plant_count || null,
+      planting_date: dto.planting_date || null,
+      planting_year: dto.planting_year || null,
+      rootstock: dto.rootstock || null,
+      soil_type: dto.soil_type || null,
+      irrigation_type: dto.irrigation_type || null,
+      is_active: true,
+    };
+
+    // Insert parcel
+    const { data: newParcel, error: createError } = await this.supabaseAdmin
+      .from('parcels')
+      .insert(parcelData)
+      .select()
+      .single();
+
+    if (createError) {
+      this.logger.error('Error creating parcel', createError);
+      throw new InternalServerErrorException(`Failed to create parcel: ${createError.message}`);
+    }
+
+    this.logger.log(`Parcel created successfully: ${newParcel.id}`);
+    return newParcel;
+  }
+
+  async updateParcel(
+    userId: string,
+    organizationId: string,
+    parcelId: string,
+    dto: UpdateParcelDto,
+  ) {
+    this.logger.log(`Updating parcel ${parcelId} for user ${userId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Verify parcel exists and belongs to organization
+    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
+      .from('parcels')
+      .select(`
+        id,
+        farm_id,
+        farms!inner (
+          id,
+          organization_id
+        )
+      `)
+      .eq('id', parcelId)
+      .eq('farms.organization_id', organizationId)
+      .single();
+
+    if (checkError || !existingParcel) {
+      this.logger.error('Parcel not found or access denied', checkError);
+      throw new NotFoundException('Parcel not found or you do not have access to it');
+    }
+
+    // Prepare update data (only include fields that are provided)
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.area !== undefined) updateData.area = dto.area;
+    if (dto.area_unit !== undefined) updateData.area_unit = dto.area_unit;
+    if (dto.crop_category !== undefined) updateData.crop_category = dto.crop_category;
+    if (dto.crop_type !== undefined) updateData.crop_type = dto.crop_type;
+    if (dto.variety !== undefined) updateData.variety = dto.variety;
+    if (dto.planting_system !== undefined) updateData.planting_system = dto.planting_system;
+    if (dto.spacing !== undefined) updateData.spacing = dto.spacing;
+    if (dto.density_per_hectare !== undefined) updateData.density_per_hectare = dto.density_per_hectare;
+    if (dto.plant_count !== undefined) updateData.plant_count = dto.plant_count;
+    if (dto.planting_date !== undefined) updateData.planting_date = dto.planting_date;
+    if (dto.planting_year !== undefined) updateData.planting_year = dto.planting_year;
+    if (dto.rootstock !== undefined) updateData.rootstock = dto.rootstock;
+    if (dto.soil_type !== undefined) updateData.soil_type = dto.soil_type;
+    if (dto.irrigation_type !== undefined) updateData.irrigation_type = dto.irrigation_type;
+
+    // Update parcel
+    const { data: updatedParcel, error: updateError } = await this.supabaseAdmin
+      .from('parcels')
+      .update(updateData)
+      .eq('id', parcelId)
+      .select()
+      .single();
+
+    if (updateError) {
+      this.logger.error('Error updating parcel', updateError);
+      throw new InternalServerErrorException(`Failed to update parcel: ${updateError.message}`);
+    }
+
+    this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
+    return updatedParcel;
   }
 }

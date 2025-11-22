@@ -1,17 +1,41 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
 import { OrganizationsService, CreateOrganizationDto } from './organizations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { Action } from '../casl/action.enum';
+import { AppAbility } from '../casl/casl-ability.factory';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('organizations')
 @Controller('organizations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class OrganizationsController {
     constructor(private readonly organizationsService: OrganizationsService) { }
 
+    @Get(':id')
+    @ApiOperation({ summary: 'Get organization by ID' })
+    @ApiParam({
+        name: 'id',
+        description: 'Organization ID',
+        type: String,
+    })
+    @ApiResponse({ status: 200, description: 'Organization retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+    @ApiResponse({ status: 404, description: 'Organization not found' })
+    @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Organization'))
+    async getOrganization(
+        @Request() req,
+        @Param('id') organizationId: string,
+    ) {
+        return this.organizationsService.getOrganization(req.user.id, organizationId);
+    }
+
     @Get('my-organizations')
     @ApiOperation({ summary: 'Get user organizations' })
+    @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Organization'))
     async getUserOrganizations(@Request() req) {
         // This logic is currently in AuthService.getUserOrganizations
         // We should move it here eventually, but for now we focus on creation

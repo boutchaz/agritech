@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Post, Query, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Query, Body, UseGuards, Request, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -29,6 +29,7 @@ import {
   ExportFarmDto,
   ExportFarmResponseDto,
 } from './dto/export-farm.dto';
+import { ApiParam } from '@nestjs/swagger';
 
 @ApiTags('farms')
 @Controller('farms')
@@ -60,6 +61,60 @@ export class FarmsController {
     @Query('organization_id') organizationId: string,
   ) {
     return this.farmsService.listFarms(req.user.id, organizationId);
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get farm details by ID',
+    description: 'Get detailed information about a specific farm',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Farm ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Farm retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to farm' })
+  @ApiResponse({ status: 404, description: 'Farm not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  async getFarm(
+    @Request() req,
+    @Param('id') farmId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.getFarm(req.user.id, organizationId, farmId);
+  }
+
+  @Get(':id/related-data-counts')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get related data counts for a farm',
+    description: 'Get counts of related data (parcels, workers, tasks, etc.) for a specific farm',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Farm ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Related data counts retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to farm' })
+  @ApiResponse({ status: 404, description: 'Farm not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  async getFarmRelatedDataCounts(
+    @Request() req,
+    @Param('id') farmId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.getFarmRelatedDataCounts(req.user.id, organizationId, farmId);
   }
 
   @Post()

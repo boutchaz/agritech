@@ -1,7 +1,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../lib/supabase';
+import { farmsService } from '../../services/farmsService';
+import { parcelsService } from '../../services/parcelsService';
 import {
   MapPin,
   Users,
@@ -36,55 +37,23 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Fetch farm details
-  // TODO: Create GET /api/v1/farms/:id endpoint in NestJS
-  // For now, using Supabase directly until NestJS endpoint is available
+  // Fetch farm details using farmsService (apiClient)
   const { data: farm, isLoading } = useQuery({
     queryKey: ['farm-details', farmId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('farms')
-        .select('*')
-        .eq('id', farmId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    }
+    queryFn: () => farmsService.getFarm(farmId)
   });
 
-  // Fetch parcels
-  // TODO: Create GET /api/v1/parcels?farm_id=:farmId endpoint in NestJS
-  // For now, using Supabase directly until NestJS endpoint is available
+  // Fetch parcels using parcelsService (apiClient)
   const { data: parcels = [] } = useQuery({
     queryKey: ['farm-parcels', farmId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .eq('farm_id', farmId);
-
-      if (error) throw error;
-      return data;
-    }
+    queryFn: () => parcelsService.listParcels(farmId),
+    enabled: !!farmId
   });
 
-  // Fetch organization name
-  // TODO: Create GET /api/v1/organizations/:id endpoint in NestJS
-  // For now, using Supabase directly until NestJS endpoint is available
+  // Fetch organization name using farmsService (apiClient)
   const { data: organization } = useQuery({
     queryKey: ['organization', farm?.organization_id],
-    queryFn: async () => {
-      if (!farm?.organization_id) return null;
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', farm.organization_id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => farm?.organization_id ? farmsService.getOrganization(farm.organization_id) : null,
     enabled: !!farm?.organization_id
   });
 

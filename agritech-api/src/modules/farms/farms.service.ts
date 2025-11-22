@@ -224,6 +224,97 @@ export class FarmsService {
     return newFarm;
   }
 
+  async getFarm(userId: string, organizationId: string, farmId: string) {
+    this.logger.log(`Getting farm ${farmId} for user ${userId} in org ${organizationId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error('User not authorized for organization', orgError);
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Fetch farm
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('*')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (farmError || !farm) {
+      this.logger.error('Farm not found or access denied', farmError);
+      throw new NotFoundException('Farm not found or you do not have access to it');
+    }
+
+    return farm;
+  }
+
+  async getFarmRelatedDataCounts(userId: string, organizationId: string, farmId: string) {
+    this.logger.log(`Getting related data counts for farm ${farmId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Verify farm belongs to organization
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, organization_id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (farmError || !farm) {
+      throw new NotFoundException('Farm not found or you do not have access to it');
+    }
+
+    // Get counts for all related data
+    const [
+      parcelsRes,
+      workersRes,
+      tasksRes,
+      satelliteRes,
+      warehousesRes,
+      inventoryRes,
+      structuresRes
+    ] = await Promise.all([
+      this.supabaseAdmin.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+      this.supabaseAdmin.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
+    ]);
+
+    return {
+      parcels: parcelsRes.count || 0,
+      workers: workersRes.count || 0,
+      tasks: tasksRes.count || 0,
+      satellite_data: satelliteRes.count || 0,
+      warehouses: warehousesRes.count || 0,
+      inventory_items: inventoryRes.count || 0,
+      structures: structuresRes.count || 0,
+    };
+  }
+
 
 
   async deleteFarm(userId: string, dto: DeleteFarmDto) {

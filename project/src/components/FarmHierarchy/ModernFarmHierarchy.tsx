@@ -5,8 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { supabase } from '../../lib/supabase';
-import { authSupabase } from '../../lib/auth-supabase';
+import { apiClient } from '../../lib/api-client';
+import { farmsService } from '../../services/farmsService';
+import { parcelsService } from '../../services/parcelsService';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
 import FarmListItem from './FarmListItem';
@@ -57,8 +58,8 @@ type FarmFormValues = {
 
 const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   organizationId,
-  _onFarmSelect,
-  _onAddParcel,
+  onFarmSelect: _onFarmSelect,
+  onAddParcel: _onAddParcel,
   onManageFarm
 }) => {
   const { t } = useTranslation();
@@ -102,58 +103,10 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     resolver: zodResolver(getFarmSchema(t)),
   });
 
-  // Fetch organization using NestJS API
-  // TODO: Create GET /api/v1/organizations/:id endpoint in NestJS
-  // For now, using auth/organizations and filtering client-side
+  // Fetch organization using farmsService (apiClient)
   const { data: organization } = useQuery({
     queryKey: ['organization', organizationId],
-    queryFn: async () => {
-      console.log('🔍 Fetching organization:', organizationId);
-      
-      // Get JWT token
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Try NestJS API first
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiUrl}/api/v1/auth/organizations`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (response.ok) {
-          const organizations = await response.json();
-          const org = organizations.find((o: any) => o.id === organizationId);
-          if (org) {
-            return { name: org.name, id: org.id };
-          }
-        }
-      } catch (apiError) {
-        console.warn('⚠️ NestJS API failed, falling back to Supabase:', apiError);
-      }
-
-      // Fallback to Supabase
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', organizationId)
-        .maybeSingle(); // Use maybeSingle to avoid error when org doesn't exist
-
-      if (error) {
-        console.error('❌ Error fetching organization:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.warn('⚠️ Organization not found or no access:', organizationId);
-      }
-
-      return data;
-    },
+    queryFn: () => farmsService.getOrganization(organizationId),
     enabled: !!organizationId
   });
 
@@ -163,33 +116,12 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     queryFn: async () => {
       console.log('🔍 Fetching farms for organization:', organizationId);
 
-      // Get JWT token
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        console.error('❌ No session token available');
-        throw new Error('Not authenticated');
-      }
-
-      // Call NestJS API
+      // Call NestJS API using apiClient
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
       console.log('📡 Calling API:', url);
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      console.log('📥 Response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        console.error('❌ API Error Response:', error);
-        throw new Error(error.message || `Failed to fetch farms (${response.status})`);
-      }
-
-      const result = await response.json();
+      const result = await apiClient.get<{ success: boolean; farms: unknown[] }>(url);
       console.log('✅ API Response:', result);
 
       const data = result.farms || [];
@@ -234,34 +166,28 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         }
       });
 
-      // Fetch parcels for each farm
-      // TODO: Create GET /api/v1/parcels endpoint in NestJS (with farm_id filter)
-      // For now, using Supabase directly until NestJS endpoint is available
+      // Fetch parcels for each farm using parcelsService (apiClient)
       const farmIds = Array.from(farmMap.keys());
       console.log('🔍 Fetching parcels for', farmIds.length, 'farms');
 
       if (farmIds.length > 0) {
-        const { data: parcelsData, error: parcelsError } = await supabase
-          .from('parcels')
-          .select('id, name, farm_id, area')
-          .in('farm_id', farmIds);
-
-        if (parcelsError) {
-          console.error('❌ Error fetching parcels:', parcelsError);
-        }
-
-        if (!parcelsError && parcelsData) {
+        try {
+          // Fetch parcels for all farms in the organization (no farm_id filter to get all)
+          const parcelsData = await parcelsService.listParcels();
           console.log('✅ Parcels fetched:', parcelsData.length, 'parcels');
-          // Group parcels by farm_id and calculate total area
-          const parcelsByFarm = parcelsData.reduce((acc, parcel) => {
-            if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
-            acc[parcel.farm_id].push({
-              id: parcel.id,
-              name: parcel.name,
-              area: parcel.area || 0
-            });
-            return acc;
-          }, {} as Record<string, any[]>);
+
+          // Filter parcels for our farms and group by farm_id
+          const parcelsByFarm = parcelsData
+            .filter((p) => farmIds.includes(p.farm_id))
+            .reduce((acc: Record<string, Array<{ id: string; name: string; area: number }>>, parcel) => {
+              if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
+              acc[parcel.farm_id].push({
+                id: parcel.id,
+                name: parcel.name,
+                area: parcel.area || 0
+              });
+              return acc;
+            }, {});
 
           // Assign parcels to farms and calculate actual size from parcels
           farmMap.forEach((farm) => {
@@ -269,13 +195,15 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             farm.parcels = farmParcels;
 
             // Calculate actual farm size from parcels
-            const calculatedSize = farmParcels.reduce((sum, p) => sum + (p.area || 0), 0);
+            const calculatedSize = farmParcels.reduce((sum: number, p: { area: number }) => sum + (p.area || 0), 0);
 
             // Use calculated size if we have parcels, otherwise use the farm's size field
             if (calculatedSize > 0) {
               farm.farm_size = calculatedSize;
             }
           });
+        } catch (parcelsError) {
+          console.error('❌ Error fetching parcels:', parcelsError);
         }
       }
 
@@ -305,38 +233,14 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     enabled: !!organizationId
   });
 
-  // Create farm mutation using NestJS API
+  // Create farm mutation using farmsService (apiClient)
   const createFarmMutation = useMutation({
     mutationFn: async (formData: FarmFormValues) => {
-      // Get JWT token
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Call NestJS API
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/v1/farms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'X-Organization-Id': organizationId,
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          farm_type: 'main',
-          is_active: true,
-        }),
+      return farmsService.createFarm({
+        name: formData.name,
+        is_active: true,
+        status: 'active',
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `Failed to create farm (${response.status})`);
-      }
-
-      const result = await response.json();
-      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
@@ -353,32 +257,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     createFarmMutation.mutate(data);
   };
 
-  // Export farm handler
+  // Export farm handler using farmsService (apiClient)
   const handleExportFarm = async (farmId: string) => {
     try {
-      // Get JWT token
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Non authentifié');
-      }
-
-      // Call NestJS API
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/v1/farms/export`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ farm_id: farmId, include_sub_farms: true }),
+      const result = await farmsService.exportFarm({ 
+        farm_id: farmId, 
+        include_sub_farms: true 
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erreur lors de l\'export');
-      }
-
-      const result = await response.json();
 
       if (result?.success && result?.data) {
         // Download as JSON file
@@ -395,38 +280,19 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       } else {
         throw new Error(result?.error || 'Erreur lors de l\'export');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Export error:', error);
-      toast.error(`Erreur lors de l'export: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'export';
+      toast.error(`Erreur lors de l'export: ${errorMessage}`);
     }
   };
 
-  // Export all farms handler
+  // Export all farms handler using farmsService (apiClient)
   const handleExportAll = async () => {
     try {
-      // Get JWT token
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Non authentifié');
-      }
-
-      // Call NestJS API
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/v1/farms/export`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ organization_id: organizationId }),
+      const result = await farmsService.exportFarm({ 
+        organization_id: organizationId 
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erreur lors de l\'export');
-      }
-
-      const result = await response.json();
 
       if (result?.success && result?.data) {
         // Download as JSON file
@@ -443,9 +309,10 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       } else {
         throw new Error(result?.error || 'Erreur lors de l\'export');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Export error:', error);
-      toast.error(`Erreur lors de l'export: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'export';
+      toast.error(`Erreur lors de l'export: ${errorMessage}`);
     }
   };
 
@@ -461,38 +328,19 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     queryClient.refetchQueries({ queryKey: ['farm-hierarchy', organizationId] });
   };
 
-  // Fetch related data counts for a farm
-  // TODO: Create GET /api/v1/farms/:id/related-data-counts endpoint in NestJS
-  // For now, using Supabase directly until NestJS endpoint is available
+  // Fetch related data counts for a farm using farmsService (apiClient)
   const fetchRelatedDataCounts = async (farmId: string) => {
     setLoadingRelatedData(true);
     try {
-      const [
-        parcelsRes,
-        workersRes,
-        tasksRes,
-        satelliteRes,
-        warehousesRes,
-        inventoryRes,
-        structuresRes
-      ] = await Promise.all([
-        supabase.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-        supabase.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-        supabase.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
-      ]);
-
+      const data = await farmsService.getRelatedDataCounts(farmId);
       setRelatedDataCounts({
-        parcels: parcelsRes.count || 0,
-        workers: workersRes.count || 0,
-        tasks: tasksRes.count || 0,
-        satellite_data: satelliteRes.count || 0,
-        warehouses: warehousesRes.count || 0,
-        inventory_items: inventoryRes.count || 0,
-        structures: structuresRes.count || 0,
+        parcels: data.parcels || 0,
+        workers: data.workers || 0,
+        tasks: data.tasks || 0,
+        satellite_data: data.satellite_data || 0,
+        warehouses: data.warehouses || 0,
+        inventory_items: data.inventory_items || 0,
+        structures: data.structures || 0,
       });
     } catch (error) {
       console.error('Error fetching related data counts:', error);
@@ -508,38 +356,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     fetchRelatedDataCounts(farm.id);
   };
 
-  // Delete farm mutation using NestJS API
+  // Delete farm mutation using farmsService (apiClient)
   const deleteFarmMutation = useMutation({
     mutationFn: async (farmId: string) => {
+      const result = await farmsService.deleteFarm(farmId);
 
-      // Get the access token from the current session
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Non authentifié');
-      }
-
-      // Call NestJS API to delete farm
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/v1/farms`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ farm_id: farmId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ API error:', errorData);
-        throw new Error(errorData.message || `Erreur lors de la suppression (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      if (!data?.success) {
-        const errorMessage = data?.error || 'La suppression a échoué';
-        throw new Error(errorMessage);
+      if (!result?.success) {
+        throw new Error('La suppression a échoué');
       }
 
       return { farmId, farmName: farmToDelete?.name };
@@ -563,8 +386,6 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       if (error?.message) {
         errorMessage += `: ${error.message}`;
-      } else if (error?.details) {
-        errorMessage += `: ${error.details}`;
       }
 
       toast.error(errorMessage);
@@ -653,33 +474,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     if (selectedFarmIds.size === 0) return;
 
     try {
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session) {
-        toast.error('Session non disponible');
-        setShowBatchDeleteConfirm(false);
-        return;
-      }
-
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-      // Call the new batch delete endpoint
-      const response = await fetch(`${apiUrl}/api/v1/farms/batch-delete`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          farm_ids: Array.from(selectedFarmIds),
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete farms');
-      }
-
-      const result = await response.json();
+      const result = await farmsService.batchDeleteFarms(Array.from(selectedFarmIds));
 
       // Show success message with details
       if (result.deleted > 0) {
