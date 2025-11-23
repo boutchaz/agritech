@@ -331,4 +331,43 @@ export class SubscriptionsService {
 
     return isValidStatus && isNotExpired;
   }
+
+  async getSubscription(userId: string, organizationId: string) {
+    this.logger.log(
+      `Getting subscription for user ${userId} and organization ${organizationId}`,
+    );
+
+    // Verify user belongs to the organization
+    const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (orgUserError || !orgUser) {
+      this.logger.error(
+        `User ${userId} does not have access to organization ${organizationId}`,
+      );
+      throw new ForbiddenException('Access denied to organization');
+    }
+
+    // Get subscription details
+    const { data: subscription, error: subscriptionError } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('id, organization_id, status, plan_id, plan_type, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (subscriptionError && subscriptionError.code !== 'PGRST116') {
+      this.logger.error('Error fetching subscription', subscriptionError);
+      throw new InternalServerErrorException(
+        `Failed to fetch subscription: ${subscriptionError.message}`,
+      );
+    }
+
+    // Return null if no subscription found (this is expected, not an error)
+    return subscription || null;
+  }
 }

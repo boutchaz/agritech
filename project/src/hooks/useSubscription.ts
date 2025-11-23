@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { PlanType } from '../lib/polar';
+import { subscriptionsService } from '../services/subscriptionsService';
 
 export interface Subscription {
   id: string;
@@ -48,34 +49,8 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
       }
 
       try {
-        const { data, error } = await authSupabase
-          .from('subscriptions')
-          .select('id, organization_id, status, plan_id, plan_type, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
-          .eq('organization_id', orgId)
-          .maybeSingle();
-
-        if (error) {
-          // Distinguish between network errors and "no subscription" errors
-          const isNetworkError = error.message?.includes('Failed to fetch') || 
-                                 error.message?.includes('NetworkError') ||
-                                 error.code === 'PGRST301' || // Connection timeout
-                                 error.code === 'PGRST116'; // No rows returned (this is actually OK - means no subscription)
-          
-          if (error.code === 'PGRST116') {
-            // No subscription found - this is expected, not an error
-            return null;
-          }
-          
-          if (isNetworkError) {
-            console.warn('⚠️ Network error fetching subscription, will retry:', error);
-            throw error; // Re-throw to trigger retry
-          }
-          
-          console.error('❌ Error fetching subscription:', error);
-          return null;
-        }
-
-        return data as Subscription | null;
+        // Use subscriptionsService (apiClient) instead of Supabase
+        return await subscriptionsService.getSubscription(orgId);
       } catch (error) {
         // Re-throw network errors to trigger retry
         if (error instanceof Error && (
@@ -85,7 +60,10 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         )) {
           throw error;
         }
-        // For other errors, return null
+        // For other errors, return null (e.g., 404 means no subscription found)
+        if (error instanceof Error && error.message?.includes('404')) {
+          return null; // No subscription found - this is expected
+        }
         console.error('❌ Error fetching subscription:', error);
         return null;
       }

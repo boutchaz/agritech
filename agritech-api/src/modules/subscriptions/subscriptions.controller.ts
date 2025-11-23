@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,14 +16,44 @@ import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
 } from './dto/check-subscription.dto';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { Action } from '../casl/action.enum';
+import { AppAbility } from '../casl/casl-ability.factory';
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class SubscriptionsController {
   constructor(private subscriptionsService: SubscriptionsService) {}
 
+  @Get()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get subscription for an organization',
+    description: 'Retrieve subscription details for the current organization',
+  })
+  @ApiQuery({
+    name: 'organization_id',
+    required: true,
+    description: 'Organization ID to fetch subscription for',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscription retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @ApiResponse({ status: 404, description: 'No subscription found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
+  async getSubscription(
+    @Request() req,
+    @Query('organization_id') organizationId: string,
+  ) {
+    return this.subscriptionsService.getSubscription(req.user.id, organizationId);
+  }
+
   @Post('trial')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a trial subscription for an organization' })
   @ApiResponse({
@@ -44,7 +75,6 @@ export class SubscriptionsController {
   }
 
   @Post('check')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Check subscription status and feature access',
