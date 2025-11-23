@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, FileText, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List, BarChart3 } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -251,18 +251,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 {renderIcon(Map)}
                 {renderText(t('nav.parcels'))}
-              </Button>
-            </ProtectedNavItem>
-
-            {/* Production Intelligence Section */}
-            <ProtectedNavItem action="read" subject="Analysis">
-              <Button
-                variant="ghost"
-                className={getButtonClassName(currentPath === '/production-intelligence')}
-                onClick={(e) => handleNavigation('/production-intelligence', e)}
-              >
-                {renderIcon(BarChart3)}
-                {renderText(t('nav.productionIntelligence'))}
               </Button>
             </ProtectedNavItem>
 
