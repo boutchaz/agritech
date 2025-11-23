@@ -31,22 +31,23 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class SubscriptionsService {
+  /**
+   * Get subscription for an organization
+   * @param organizationId - Organization ID from React context (preferred) or localStorage fallback
+   */
   async getSubscription(organizationId?: string): Promise<Subscription | null> {
-    // Get organization ID from parameter or localStorage
+    // Get organization ID from parameter (from React context) or localStorage fallback
     const orgId = organizationId || getCurrentOrganizationId();
     
     if (!orgId) {
       throw new Error('Organization ID is required. Please select an organization first.');
     }
 
-    // Explicitly pass organization ID in headers to ensure it's included
-    // apiClient will merge this with its default headers (auth token, etc.)
+    // Pass organization ID from React context to apiClient
+    // This ensures the header is always included, even if localStorage is not set
     try {
-      return await apiClient.get<Subscription | null>('/api/v1/subscriptions', {
-        headers: {
-          'X-Organization-Id': orgId,
-        },
-      });
+      // Pass organizationId as 3rd parameter to apiClient.get()
+      return await apiClient.get<Subscription | null>('/api/v1/subscriptions', {}, orgId);
     } catch (error) {
       // Handle 404 as null (no subscription found is expected)
       if (error instanceof Error && error.message.includes('404')) {

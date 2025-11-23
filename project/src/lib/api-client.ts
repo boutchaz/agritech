@@ -21,15 +21,17 @@ function getCurrentOrganizationId(): string | null {
 
 /**
  * Get authentication headers with organization ID
+ * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
-export async function getApiHeaders(): Promise<HeadersInit> {
+export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session?.access_token) {
     throw new Error('No active session');
   }
 
-  const organizationId = getCurrentOrganizationId();
+  // Use provided organizationId from context, or fall back to localStorage
+  const orgId = organizationId || getCurrentOrganizationId();
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -37,8 +39,8 @@ export async function getApiHeaders(): Promise<HeadersInit> {
   };
 
   // Add organization ID header if available
-  if (organizationId) {
-    headers['X-Organization-Id'] = organizationId;
+  if (orgId) {
+    headers['X-Organization-Id'] = orgId;
   }
 
   return headers;
@@ -47,12 +49,15 @@ export async function getApiHeaders(): Promise<HeadersInit> {
 /**
  * Make an authenticated API request with automatic organization ID header
  * @param url - Full URL or relative path (if relative, will use API_URL)
+ * @param options - Request options
+ * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function apiRequest<T>(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  organizationId?: string | null
 ): Promise<T> {
-  const headers = await getApiHeaders();
+  const headers = await getApiHeaders(organizationId);
   // If url is already a full URL, use it; otherwise prepend API_URL
   const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
 
@@ -81,67 +86,86 @@ export async function apiRequest<T>(
  */
 export class ApiClient {
   private baseUrl: string;
+  private organizationId?: string | null;
 
   constructor(baseUrl: string = API_URL) {
     this.baseUrl = baseUrl;
   }
 
   /**
-   * Make a GET request
+   * Set the organization ID for all requests from this client instance
+   * Useful when you have the organization ID from React context
    */
-  async get<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  setOrganizationId(organizationId: string | null | undefined) {
+    this.organizationId = organizationId;
+  }
+
+  /**
+   * Make a GET request
+   * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
+   */
+  async get<T>(endpoint: string, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
     return apiRequest<T>(url, {
       ...options,
       method: 'GET',
-    });
+    }, orgId);
   }
 
   /**
    * Make a POST request
+   * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async post<T>(endpoint: string, data?: unknown, options: RequestInit = {}): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
     return apiRequest<T>(url, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    });
+    }, orgId);
   }
 
   /**
    * Make a PUT request
+   * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async put<T>(endpoint: string, data?: unknown, options: RequestInit = {}): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
     return apiRequest<T>(url, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
-    });
+    }, orgId);
   }
 
   /**
    * Make a PATCH request
+   * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async patch<T>(endpoint: string, data?: unknown, options: RequestInit = {}): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
     return apiRequest<T>(url, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
-    });
+    }, orgId);
   }
 
   /**
    * Make a DELETE request
+   * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async delete<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  async delete<T>(endpoint: string, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
     return apiRequest<T>(url, {
       ...options,
       method: 'DELETE',
-    });
+    }, orgId);
   }
 }
 
