@@ -66,7 +66,9 @@
     "customers": "Customers",
     "agriculture": "Agriculture",
     "elevage": "Livestock",
-    "alerts": "Alerts"
+    "alerts": "Alerts",
+    "suppliers": "Suppliers",
+    "warehouses": "Warehouses"
   },
   "stock": {
     "title": "Stock Management",
@@ -1498,6 +1500,38 @@
     "setDefault": {
       "success": "Default template updated",
       "failed": "Failed to set default template"
+    }
+  },
+  "network": {
+    "offline": {
+      "title": "No Internet Connection",
+      "description": "You are currently offline. Some features may not be available.",
+      "indicator": "Offline",
+      "retry": "Retry Connection"
+    },
+    "online": {
+      "title": "Back Online",
+      "description": "Your connection has been restored.",
+      "indicator": "Connected"
+    },
+    "slow": {
+      "title": "Slow Connection",
+      "description": "Your network connection is slow ({{type}}). Some features may take longer to load.",
+      "indicator": "Slow Connection"
+    },
+    "noConnection": {
+      "title": "No Internet Connection",
+      "description": "Please check your internet connection and try again.",
+      "retry": "Retry Connection",
+      "checking": "Checking connection...",
+      "willAutoReconnect": "The application will automatically reconnect when your connection is restored.",
+      "troubleshooting": {
+        "title": "Troubleshooting Tips",
+        "tip1": "Check your WiFi or mobile data connection",
+        "tip2": "Try restarting your router or modem",
+        "tip3": "Move closer to your WiFi access point",
+        "tip4": "Contact your network administrator if the problem persists"
+      }
     }
   },
   "quotes": {

@@ -66,7 +66,9 @@
     "customers": "Clients",
     "agriculture": "Agriculture",
     "elevage": "Élevage",
-    "alerts": "Alertes"
+    "alerts": "Alertes",
+    "suppliers": "Fournisseurs",
+    "warehouses": "Entrepôts"
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -1498,6 +1500,38 @@
     "setDefault": {
       "success": "Modèle par défaut mis à jour",
       "failed": "Échec de la définition du modèle par défaut"
+    }
+  },
+  "network": {
+    "offline": {
+      "title": "Pas de connexion Internet",
+      "description": "Vous êtes actuellement hors ligne. Certaines fonctionnalités peuvent ne pas être disponibles.",
+      "indicator": "Hors ligne",
+      "retry": "Réessayer la connexion"
+    },
+    "online": {
+      "title": "Connexion rétablie",
+      "description": "Votre connexion a été restaurée.",
+      "indicator": "Connecté"
+    },
+    "slow": {
+      "title": "Connexion lente",
+      "description": "Votre connexion réseau est lente ({{type}}). Certaines fonctionnalités peuvent prendre plus de temps à charger.",
+      "indicator": "Connexion lente"
+    },
+    "noConnection": {
+      "title": "Pas de connexion Internet",
+      "description": "Veuillez vérifier votre connexion Internet et réessayer.",
+      "retry": "Réessayer la connexion",
+      "checking": "Vérification de la connexion...",
+      "willAutoReconnect": "L'application se reconnectera automatiquement lorsque votre connexion sera rétablie.",
+      "troubleshooting": {
+        "title": "Conseils de dépannage",
+        "tip1": "Vérifiez votre connexion WiFi ou données mobiles",
+        "tip2": "Essayez de redémarrer votre routeur ou modem",
+        "tip3": "Rapprochez-vous de votre point d'accès WiFi",
+        "tip4": "Contactez votre administrateur réseau si le problème persiste"
+      }
     }
   },
   "quotes": {

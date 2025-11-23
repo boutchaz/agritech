@@ -7,6 +7,8 @@ import { MultiTenantAuthProvider } from '../components/MultiTenantAuthProvider'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
+import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
+import { OfflineIndicator } from '../components/OfflineIndicator'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -21,20 +23,23 @@ const queryClient = new QueryClient({
 export const Route = createRootRoute({
   component: () => (
     <QueryClientProvider client={queryClient}>
-      <MultiTenantAuthProvider>
-        <ExperienceLevelProvider>
-          <AbilityProvider>
-            <GlobalCommandPalette>
-              <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <Outlet />
-                <Toaster richColors position="top-right" />
-                <TanStackRouterDevtools />
-                <ReactQueryDevtools initialIsOpen={false} />
-              </div>
-            </GlobalCommandPalette>
-          </AbilityProvider>
-        </ExperienceLevelProvider>
-      </MultiTenantAuthProvider>
+      <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
+        <MultiTenantAuthProvider>
+          <ExperienceLevelProvider>
+            <AbilityProvider>
+              <GlobalCommandPalette>
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                  <Outlet />
+                  <OfflineIndicator />
+                  <Toaster richColors position="top-right" />
+                  <TanStackRouterDevtools />
+                  <ReactQueryDevtools initialIsOpen={false} />
+                </div>
+              </GlobalCommandPalette>
+            </AbilityProvider>
+          </ExperienceLevelProvider>
+        </MultiTenantAuthProvider>
+      </NetworkStatusProvider>
     </QueryClientProvider>
   ),
 })

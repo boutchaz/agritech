@@ -54,6 +54,8 @@ import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-work'
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
+import { Route as StockWarehousesRouteImport } from './routes/stock/warehouses'
+import { Route as StockSuppliersRouteImport } from './routes/stock/suppliers'
 import { Route as StockReportsRouteImport } from './routes/stock/reports'
 import { Route as StockReceptionRouteImport } from './routes/stock/reception'
 import { Route as StockItemsRouteImport } from './routes/stock/items'
@@ -72,8 +74,6 @@ import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
-import { Route as StockInventoryWarehousesRouteImport } from './routes/stock/inventory/warehouses'
-import { Route as StockInventorySuppliersRouteImport } from './routes/stock/inventory/suppliers'
 import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
 import { Route as ParcelsParcelIdWeatherRouteImport } from './routes/parcels.$parcelId.weather'
 import { Route as ParcelsParcelIdSoilRouteImport } from './routes/parcels.$parcelId.soil'
@@ -306,6 +306,16 @@ const TasksCalendarRoute = TasksCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => TasksRoute,
 } as any)
+const StockWarehousesRoute = StockWarehousesRouteImport.update({
+  id: '/warehouses',
+  path: '/warehouses',
+  getParentRoute: () => StockRoute,
+} as any)
+const StockSuppliersRoute = StockSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => StockRoute,
+} as any)
 const StockReportsRoute = StockReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -395,17 +405,6 @@ const ParcelsParcelIdIndexRoute = ParcelsParcelIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ParcelsParcelIdRoute,
-} as any)
-const StockInventoryWarehousesRoute =
-  StockInventoryWarehousesRouteImport.update({
-    id: '/warehouses',
-    path: '/warehouses',
-    getParentRoute: () => StockInventoryRoute,
-  } as any)
-const StockInventorySuppliersRoute = StockInventorySuppliersRouteImport.update({
-  id: '/suppliers',
-  path: '/suppliers',
-  getParentRoute: () => StockInventoryRoute,
 } as any)
 const StockInventoryStockRoute = StockInventoryStockRouteImport.update({
   id: '/stock',
@@ -501,6 +500,8 @@ export interface FileRoutesByFullPath {
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
+  '/stock/suppliers': typeof StockSuppliersRoute
+  '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
@@ -514,8 +515,6 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
-  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
-  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
   '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory/': typeof StockInventoryIndexRoute
 }
@@ -568,6 +567,8 @@ export interface FileRoutesByTo {
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
+  '/stock/suppliers': typeof StockSuppliersRoute
+  '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding': typeof OnboardingIndexRoute
@@ -581,8 +582,6 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
-  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
-  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory': typeof StockInventoryIndexRoute
 }
@@ -643,6 +642,8 @@ export interface FileRoutesById {
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
+  '/stock/suppliers': typeof StockSuppliersRoute
+  '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
@@ -656,8 +657,6 @@ export interface FileRoutesById {
   '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
-  '/stock/inventory/suppliers': typeof StockInventorySuppliersRoute
-  '/stock/inventory/warehouses': typeof StockInventoryWarehousesRoute
   '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
   '/stock/inventory/': typeof StockInventoryIndexRoute
 }
@@ -718,6 +717,8 @@ export interface FileRouteTypes {
     | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
+    | '/stock/suppliers'
+    | '/stock/warehouses'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding/'
@@ -731,8 +732,6 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
-    | '/stock/inventory/suppliers'
-    | '/stock/inventory/warehouses'
     | '/parcels/$parcelId/'
     | '/stock/inventory/'
   fileRoutesByTo: FileRoutesByTo
@@ -785,6 +784,8 @@ export interface FileRouteTypes {
     | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
+    | '/stock/suppliers'
+    | '/stock/warehouses'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding'
@@ -798,8 +799,6 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
-    | '/stock/inventory/suppliers'
-    | '/stock/inventory/warehouses'
     | '/parcels/$parcelId'
     | '/stock/inventory'
   id:
@@ -859,6 +858,8 @@ export interface FileRouteTypes {
     | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
+    | '/stock/suppliers'
+    | '/stock/warehouses'
     | '/tasks/calendar'
     | '/workers/piece-work'
     | '/onboarding/'
@@ -872,8 +873,6 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
-    | '/stock/inventory/suppliers'
-    | '/stock/inventory/warehouses'
     | '/parcels/$parcelId/'
     | '/stock/inventory/'
   fileRoutesById: FileRoutesById
@@ -1238,6 +1237,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksCalendarRouteImport
       parentRoute: typeof TasksRoute
     }
+    '/stock/warehouses': {
+      id: '/stock/warehouses'
+      path: '/warehouses'
+      fullPath: '/stock/warehouses'
+      preLoaderRoute: typeof StockWarehousesRouteImport
+      parentRoute: typeof StockRoute
+    }
+    '/stock/suppliers': {
+      id: '/stock/suppliers'
+      path: '/suppliers'
+      fullPath: '/stock/suppliers'
+      preLoaderRoute: typeof StockSuppliersRouteImport
+      parentRoute: typeof StockRoute
+    }
     '/stock/reports': {
       id: '/stock/reports'
       path: '/reports'
@@ -1363,20 +1376,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/parcels/$parcelId/'
       preLoaderRoute: typeof ParcelsParcelIdIndexRouteImport
       parentRoute: typeof ParcelsParcelIdRoute
-    }
-    '/stock/inventory/warehouses': {
-      id: '/stock/inventory/warehouses'
-      path: '/warehouses'
-      fullPath: '/stock/inventory/warehouses'
-      preLoaderRoute: typeof StockInventoryWarehousesRouteImport
-      parentRoute: typeof StockInventoryRoute
-    }
-    '/stock/inventory/suppliers': {
-      id: '/stock/inventory/suppliers'
-      path: '/suppliers'
-      fullPath: '/stock/inventory/suppliers'
-      preLoaderRoute: typeof StockInventorySuppliersRouteImport
-      parentRoute: typeof StockInventoryRoute
     }
     '/stock/inventory/stock': {
       id: '/stock/inventory/stock'
@@ -1509,15 +1508,11 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 interface StockInventoryRouteChildren {
   StockInventoryStockRoute: typeof StockInventoryStockRoute
-  StockInventorySuppliersRoute: typeof StockInventorySuppliersRoute
-  StockInventoryWarehousesRoute: typeof StockInventoryWarehousesRoute
   StockInventoryIndexRoute: typeof StockInventoryIndexRoute
 }
 
 const StockInventoryRouteChildren: StockInventoryRouteChildren = {
   StockInventoryStockRoute: StockInventoryStockRoute,
-  StockInventorySuppliersRoute: StockInventorySuppliersRoute,
-  StockInventoryWarehousesRoute: StockInventoryWarehousesRoute,
   StockInventoryIndexRoute: StockInventoryIndexRoute,
 }
 
@@ -1531,6 +1526,8 @@ interface StockRouteChildren {
   StockItemsRoute: typeof StockItemsRoute
   StockReceptionRoute: typeof StockReceptionRoute
   StockReportsRoute: typeof StockReportsRoute
+  StockSuppliersRoute: typeof StockSuppliersRoute
+  StockWarehousesRoute: typeof StockWarehousesRoute
   StockIndexRoute: typeof StockIndexRoute
 }
 
@@ -1540,6 +1537,8 @@ const StockRouteChildren: StockRouteChildren = {
   StockItemsRoute: StockItemsRoute,
   StockReceptionRoute: StockReceptionRoute,
   StockReportsRoute: StockReportsRoute,
+  StockSuppliersRoute: StockSuppliersRoute,
+  StockWarehousesRoute: StockWarehousesRoute,
   StockIndexRoute: StockIndexRoute,
 }
 

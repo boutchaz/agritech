@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List, Warehouse } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -496,6 +496,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {renderIcon(UserCheck)}
                     {renderText(t('nav.customers'))}
                   </Button>
+
+                  <ProtectedNavItem action="read" subject="Stock">
+                    <Button
+                      variant="ghost"
+                      className={getButtonClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
+                      onClick={(e) => handleNavigation('/stock/suppliers', e)}
+                    >
+                      {renderIcon(Users)}
+                      {renderText(t('nav.suppliers'))}
+                    </Button>
+                  </ProtectedNavItem>
+
+                  <ProtectedNavItem action="read" subject="Stock">
+                    <Button
+                      variant="ghost"
+                      className={getButtonClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
+                      onClick={(e) => handleNavigation('/stock/warehouses', e)}
+                    >
+                      {renderIcon(Warehouse)}
+                      {renderText(t('nav.warehouses'))}
+                    </Button>
+                  </ProtectedNavItem>
 
                   <ProtectedNavItem action="read" subject="AccountingReport">
                     <Button
