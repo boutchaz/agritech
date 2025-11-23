@@ -29,9 +29,18 @@ export class PoliciesGuard implements CanActivate {
 
         // Organization ID should have been extracted by a previous guard (e.g., OrganizationGuard)
         // or we extract it here again as fallback
+        // Check headers in multiple case variations (HTTP headers are case-insensitive but Node.js lookup might be case-sensitive)
+        const findHeaderValue = (headers: Record<string, any>, name: string): string | null => {
+            const lowerName = name.toLowerCase();
+            const key = Object.keys(headers).find(k => k.toLowerCase() === lowerName);
+            return key ? (headers[key] as string) : null;
+        };
+        
+        const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
+        
         const organizationId =
             request.organizationId ||
-            request.headers['x-organization-id'] ||
+            headerOrgId ||
             request.query?.organizationId ||
             request.query?.organization_id ||
             request.body?.organizationId ||
