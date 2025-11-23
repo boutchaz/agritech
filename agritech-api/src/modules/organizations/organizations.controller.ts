@@ -14,6 +14,15 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@ne
 export class OrganizationsController {
     constructor(private readonly organizationsService: OrganizationsService) { }
 
+    @Get('my-organizations')
+    @ApiOperation({ summary: 'Get user organizations' })
+    @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Organization'))
+    async getUserOrganizations(@Request() req) {
+        // This logic is currently in AuthService.getUserOrganizations
+        // We should move it here eventually, but for now we focus on creation
+        return [];
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get organization by ID' })
     @ApiParam({
@@ -32,13 +41,5 @@ export class OrganizationsController {
     ) {
         return this.organizationsService.getOrganization(req.user.id, organizationId);
     }
-
-    @Get('my-organizations')
-    @ApiOperation({ summary: 'Get user organizations' })
-    @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Organization'))
-    async getUserOrganizations(@Request() req) {
-        // This logic is currently in AuthService.getUserOrganizations
-        // We should move it here eventually, but for now we focus on creation
-        return [];
-    }
 }
+

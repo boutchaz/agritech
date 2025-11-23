@@ -11,14 +11,16 @@ interface OfflineIndicatorProps {
 
 /**
  * Small indicator that shows network status
+ * Only displays when offline or connection is slow
  * Displays in the top-right corner by default
  */
 export function OfflineIndicator({ className, showWhenOnline = false }: OfflineIndicatorProps) {
   const { isOnline, isSlowConnection, connectionType } = useNetworkStatusContext();
   const { t } = useTranslation();
 
-  // Don't show if online and showWhenOnline is false
-  if (isOnline && !showWhenOnline && !isSlowConnection) {
+  // Only show the indicator when there's a problem or explicitly requested
+  // Don't show when connection is good
+  if (isOnline && !isSlowConnection && !showWhenOnline) {
     return null;
   }
 
@@ -28,8 +30,8 @@ export function OfflineIndicator({ className, showWhenOnline = false }: OfflineI
         'fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-lg transition-all',
         {
           'bg-destructive text-destructive-foreground': !isOnline,
-          'bg-warning text-warning-foreground': isOnline && isSlowConnection,
-          'bg-success text-success-foreground': isOnline && !isSlowConnection,
+          'bg-yellow-500 text-white': isOnline && isSlowConnection,
+          'bg-green-500 text-white': showWhenOnline && isOnline && !isSlowConnection,
         },
         className
       )}
@@ -48,12 +50,12 @@ export function OfflineIndicator({ className, showWhenOnline = false }: OfflineI
             {t('network.slow.indicator')} ({connectionType})
           </span>
         </>
-      ) : (
+      ) : showWhenOnline ? (
         <>
           <Wifi className="h-4 w-4" />
           <span>{t('network.online.indicator')}</span>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

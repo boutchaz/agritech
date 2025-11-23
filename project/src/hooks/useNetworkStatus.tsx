@@ -72,7 +72,7 @@ export function useNetworkStatus() {
 
       clearTimeout(timeoutId);
       return response.ok;
-    } catch (error) {
+    } catch {
       return false;
     }
   }, []);
@@ -138,26 +138,36 @@ export function useNetworkStatus() {
 }
 
 // Helper functions
-function getConnectionInfo(): any {
+interface NetworkConnection {
+  effectiveType?: string;
+  rtt?: number;
+  downlink?: number;
+  saveData?: boolean;
+  addEventListener?: (event: string, handler: () => void) => void;
+  removeEventListener?: (event: string, handler: () => void) => void;
+}
+
+function getConnectionInfo(): NetworkConnection | null {
   if (typeof navigator === 'undefined') return null;
 
-  // @ts-ignore - Network Information API is not fully typed
+  // @ts-expect-error - Network Information API is not fully typed
   return navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 }
 
-function isSlowConnection(connection: any): boolean {
+function isSlowConnection(connection: NetworkConnection): boolean {
   // Consider slow if:
-  // - effectiveType is 2g or slow-2g
-  // - rtt (round trip time) is > 500ms
-  // - downlink is < 0.5 Mbps
+  // - effectiveType is 2g or slow-2g (very slow mobile)
+  // - rtt (round trip time) is > 1000ms (1 second - very high latency)
+  // - downlink is < 0.5 Mbps AND effectiveType is 2g/slow-2g
   const effectiveType = connection.effectiveType;
   const rtt = connection.rtt;
   const downlink = connection.downlink;
 
-  return (
-    effectiveType === 'slow-2g' ||
-    effectiveType === '2g' ||
-    (rtt && rtt > 500) ||
-    (downlink && downlink < 0.5)
-  );
+  // Only consider truly slow connections
+  const isVerySlowMobile = effectiveType === 'slow-2g' || effectiveType === '2g';
+  const hasHighLatency = rtt && rtt > 1000; // 1 second is really bad
+  const hasLowBandwidthAndSlowType =
+    (downlink && downlink < 0.5) && isVerySlowMobile;
+
+  return isVerySlowMobile || hasHighLatency || hasLowBandwidthAndSlowType;
 }
