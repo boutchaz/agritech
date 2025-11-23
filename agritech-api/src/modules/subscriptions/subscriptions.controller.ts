@@ -1,10 +1,9 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -31,12 +30,7 @@ export class SubscriptionsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get subscription for an organization',
-    description: 'Retrieve subscription details for the current organization',
-  })
-  @ApiQuery({
-    name: 'organization_id',
-    required: true,
-    description: 'Organization ID to fetch subscription for',
+    description: 'Retrieve subscription details for the current organization. Organization ID is passed via X-Organization-Id header.',
   })
   @ApiResponse({
     status: 200,
@@ -46,10 +40,11 @@ export class SubscriptionsController {
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   @ApiResponse({ status: 404, description: 'No subscription found' })
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
-  async getSubscription(
-    @Request() req,
-    @Query('organization_id') organizationId: string,
-  ) {
+  async getSubscription(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required in X-Organization-Id header');
+    }
     return this.subscriptionsService.getSubscription(req.user.id, organizationId);
   }
 

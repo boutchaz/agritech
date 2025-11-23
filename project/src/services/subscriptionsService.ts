@@ -32,17 +32,25 @@ function getCurrentOrganizationId(): string | null {
 
 class SubscriptionsService {
   async getSubscription(organizationId?: string): Promise<Subscription | null> {
+    // Organization ID is automatically added to headers by apiClient
+    // But we validate it's available
     const orgId = organizationId || getCurrentOrganizationId();
     
     if (!orgId) {
       throw new Error('Organization ID is required. Please select an organization first.');
     }
 
-    const url = new URL('/api/v1/subscriptions', 'http://dummy');
-    url.searchParams.append('organization_id', orgId);
-
-    const result = await apiClient.get<Subscription | null>(url.pathname + url.search);
-    return result;
+    // apiClient automatically adds X-Organization-Id header from localStorage
+    // GET /api/v1/subscriptions - no query params needed, org ID comes from header
+    try {
+      return await apiClient.get<Subscription | null>('/api/v1/subscriptions');
+    } catch (error) {
+      // Handle 404 as null (no subscription found is expected)
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
+      throw error;
+    }
   }
 }
 
