@@ -23,8 +23,9 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       STRAPI_ADMIN_BACKEND_URL: ${STRAPI_URL:-http://localhost:1337}
     volumes:
-      - .:/srv/app
-      - /srv/app/node_modules
+      # Only mount uploads directory for persistent storage
+      # Do NOT mount source code in production - it overwrites the built dist folder
+      - ./public/uploads:/srv/app/public/uploads
     ports:
       - "1337:1337"
     networks:
