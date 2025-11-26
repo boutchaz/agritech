@@ -1,14 +1,13 @@
 # CMS (Strapi)
 node_modules/
-build/
 .strapi-updater.json
 .env
 *.log
 .tmp/
 .git/
 
-# Note: .cache/ and dist/ are needed in the Docker image after build
-# They are generated during the build process and should be included
+# Note: build/, dist/, and .strapi/ are generated during Docker build
+# and need to be included in the final image
 
 # OS
 .DS_Store
