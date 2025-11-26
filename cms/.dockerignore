@@ -1,0 +1,25 @@
+# CMS (Strapi)
+node_modules/
+.cache/
+build/
+.strapi-updater.json
+.env
+*.log
+dist/
+.tmp/
+.git/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Uploads
+public/uploads/*
+!public/uploads/.gitkeep

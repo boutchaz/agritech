@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # Strapi CMS
+  strapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agritech-strapi
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: strapi-db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${STRAPI_DB_NAME:-agritech_strapi}
+      DATABASE_USERNAME: ${STRAPI_DB_USER:-strapi}
+      DATABASE_PASSWORD: ${STRAPI_DB_PASSWORD}
+      DATABASE_SSL: false
+      JWT_SECRET: ${STRAPI_JWT_SECRET}
+      ADMIN_JWT_SECRET: ${STRAPI_ADMIN_JWT_SECRET}
+      APP_KEYS: ${STRAPI_APP_KEYS}
+      API_TOKEN_SALT: ${STRAPI_API_TOKEN_SALT}
+      TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT}
+      NODE_ENV: ${NODE_ENV:-development}
+      STRAPI_ADMIN_BACKEND_URL: ${STRAPI_URL:-http://localhost:1337}
+    volumes:
+      - .:/srv/app
+      - /srv/app/node_modules
+    ports:
+      - "1337:1337"
+    networks:
+      - strapi-network
+    depends_on:
+      - strapi-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.strapi.rule=Host(`cms-agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)"
+      - "traefik.http.services.strapi.loadbalancer.server.port=1337"
+
+  # Strapi PostgreSQL Database
+  strapi-db:
+    image: postgres:15-alpine
+    container_name: agritech-strapi-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${STRAPI_DB_USER:-strapi}
+      POSTGRES_PASSWORD: ${STRAPI_DB_PASSWORD}
+      POSTGRES_DB: ${STRAPI_DB_NAME:-agritech_strapi}
+    volumes:
+      - strapi-db-data:/var/lib/postgresql/data
+    networks:
+      - strapi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STRAPI_DB_USER:-strapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  strapi-network:
+    driver: bridge
+
+volumes:
+  strapi-db-data:
