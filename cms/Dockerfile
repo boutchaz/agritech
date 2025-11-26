@@ -47,7 +47,6 @@ RUN npm install --only=production && \
 
 # Copy built app from builder
 COPY --from=builder /srv/app/dist ./dist
-COPY --from=builder /srv/app/build ./build
 COPY --from=builder /srv/app/public ./public
 COPY --from=builder /srv/app/database ./database
 
@@ -56,8 +55,8 @@ COPY --from=builder /srv/app/config ./config
 COPY --from=builder /srv/app/src ./src
 COPY --from=builder /srv/app/tsconfig.json ./tsconfig.json
 
-# Copy .strapi directory if it exists (contains metadata)
-RUN mkdir -p .strapi
+# Create necessary runtime directories
+RUN mkdir -p .strapi .tmp
 
 # Expose port
 EXPOSE 1337
