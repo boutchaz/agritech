@@ -57,23 +57,45 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class FarmsService {
-  async getFarm(farmId: string): Promise<Farm> {
-    return apiClient.get<Farm>(`/api/v1/farms/${farmId}`);
+  async getFarm(farmId: string, organizationId?: string): Promise<Farm> {
+    // Pass organizationId in header if provided
+    const orgId = organizationId || getCurrentOrganizationId();
+    return apiClient.get<Farm>(
+      `/api/v1/farms/${farmId}`,
+      {},
+      orgId
+    );
   }
 
   async listFarms(organizationId: string): Promise<Farm[]> {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
-    const result = await apiClient.get<{ success: boolean; farms: Farm[] }>(url);
+    // Pass organizationId in header as well
+    const result = await apiClient.get<{ success: boolean; farms: Farm[] }>(
+      url,
+      {},
+      organizationId
+    );
     return result.farms || [];
   }
 
   async getOrganization(organizationId: string): Promise<Organization> {
-    return apiClient.get<Organization>(`/api/v1/organizations/${organizationId}`);
+    // Pass organizationId both in URL and as header (required by backend)
+    return apiClient.get<Organization>(
+      `/api/v1/organizations/${organizationId}`,
+      {}, // options
+      organizationId // organizationId for header
+    );
   }
 
-  async getRelatedDataCounts(farmId: string): Promise<RelatedDataCounts> {
-    return apiClient.get<RelatedDataCounts>(`/api/v1/farms/${farmId}/related-data-counts`);
+  async getRelatedDataCounts(farmId: string, organizationId?: string): Promise<RelatedDataCounts> {
+    // Pass organizationId in header if provided
+    const orgId = organizationId || getCurrentOrganizationId();
+    return apiClient.get<RelatedDataCounts>(
+      `/api/v1/farms/${farmId}/related-data-counts`,
+      {},
+      orgId
+    );
   }
 
   async createFarm(data: {
@@ -93,23 +115,37 @@ class FarmsService {
       throw new Error('Organization ID is required. Please select an organization first.');
     }
 
-    // Note: The API expects X-Organization-Id header, which is automatically added by apiClient
-    return apiClient.post<Farm>('/api/v1/farms', data);
+    // Pass organizationId explicitly in header
+    return apiClient.post<Farm>(
+      '/api/v1/farms',
+      data,
+      {},
+      organizationId
+    );
   }
 
   async deleteFarm(farmId: string): Promise<{ success: boolean; deleted_farm?: { id: string; name: string } }> {
     // Use apiRequest directly since DELETE with body is needed
     const { apiRequest } = await import('../lib/api-client');
-    return apiRequest<{ success: boolean; deleted_farm?: { id: string; name: string } }>('/api/v1/farms', {
-      method: 'DELETE',
-      body: JSON.stringify({ farm_id: farmId }),
-    });
+    const organizationId = getCurrentOrganizationId();
+    return apiRequest<{ success: boolean; deleted_farm?: { id: string; name: string } }>(
+      '/api/v1/farms',
+      {
+        method: 'DELETE',
+        body: JSON.stringify({ farm_id: farmId }),
+      },
+      organizationId
+    );
   }
 
   async batchDeleteFarms(farmIds: string[]): Promise<{ deleted: number; failed: number; errors?: Array<{ name: string; error: string }> }> {
-    return apiClient.post<{ deleted: number; failed: number; errors?: Array<{ name: string; error: string }> }>('/api/v1/farms/batch-delete', {
-      farm_ids: farmIds,
-    });
+    const organizationId = getCurrentOrganizationId();
+    return apiClient.post<{ deleted: number; failed: number; errors?: Array<{ name: string; error: string }> }>(
+      '/api/v1/farms/batch-delete',
+      { farm_ids: farmIds },
+      {},
+      organizationId
+    );
   }
 
   async exportFarm(data: {
@@ -117,7 +153,13 @@ class FarmsService {
     organization_id?: string;
     include_sub_farms?: boolean;
   }): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    return apiClient.post<{ success: boolean; data?: unknown; error?: string }>('/api/v1/farms/export', data);
+    const organizationId = data.organization_id || getCurrentOrganizationId();
+    return apiClient.post<{ success: boolean; data?: unknown; error?: string }>(
+      '/api/v1/farms/export',
+      data,
+      {},
+      organizationId
+    );
   }
 }
 

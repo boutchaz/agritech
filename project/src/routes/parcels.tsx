@@ -186,7 +186,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
         isDarkMode={isDarkMode}
         onThemeToggle={() => {}}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main data-testid="parcels-page" className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -264,7 +264,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
             </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
-            <div className="space-y-6">
+            <div data-testid="parcels-empty-state" className="space-y-6">
               {/* Show farms overview when no specific farm is selected */}
               {!selectedFarmId && !currentFarm && farms.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
@@ -320,6 +320,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 {(currentFarm || selectedFarmId) && (
                   <div className="space-x-3">
                     <button
+                      data-testid="create-parcel-button"
                       onClick={() => setShowAddParcelMap(true)}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
@@ -376,12 +377,13 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               {/* Parcel selection now navigates to dedicated parcel detail pages */}
 
               {parcels.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                <div data-testid="parcels-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                   {parcels.map((parcel) => {
                     const farm = farms.find(f => f.id === parcel.farm_id);
                     return (
                       <div
                         key={parcel.id}
+                        data-testid={`parcel-card-${parcel.id}`}
                         className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all cursor-pointer hover:shadow-lg hover:border-green-300 hover:bg-green-50"
                         onClick={(e) => {
                           console.log('Card clicked!', parcel.id, e);

@@ -49,19 +49,24 @@ function getCurrentOrganizationId(): string | null {
 class ParcelsService {
   async listParcels(farmId?: string): Promise<Parcel[]> {
     const organizationId = getCurrentOrganizationId();
-    
+
     if (!organizationId) {
       throw new Error('Organization ID is required. Please select an organization first.');
     }
 
     const url = new URL('/api/v1/parcels', 'http://dummy');
     url.searchParams.append('organization_id', organizationId);
-    
+
     if (farmId) {
       url.searchParams.append('farm_id', farmId);
     }
 
-    const result = await apiClient.get<ListParcelsResponse>(url.pathname + url.search);
+    // Pass organizationId in header as well
+    const result = await apiClient.get<ListParcelsResponse>(
+      url.pathname + url.search,
+      {},
+      organizationId
+    );
     return result.parcels || [];
   }
 
@@ -84,7 +89,13 @@ class ParcelsService {
     soil_type?: string;
     irrigation_type?: string;
   }): Promise<Parcel> {
-    return apiClient.post<Parcel>('/api/v1/parcels', data);
+    const organizationId = getCurrentOrganizationId();
+    return apiClient.post<Parcel>(
+      '/api/v1/parcels',
+      data,
+      {},
+      organizationId
+    );
   }
 
   async updateParcel(
@@ -108,7 +119,13 @@ class ParcelsService {
       irrigation_type?: string;
     }
   ): Promise<Parcel> {
-    return apiClient.put<Parcel>(`/api/v1/parcels/${parcelId}`, data);
+    const organizationId = getCurrentOrganizationId();
+    return apiClient.put<Parcel>(
+      `/api/v1/parcels/${parcelId}`,
+      data,
+      {},
+      organizationId
+    );
   }
 
   async getParcelById(parcelId: string): Promise<Parcel | null> {
@@ -121,10 +138,15 @@ class ParcelsService {
   async deleteParcel(parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string } }> {
     // Use apiRequest directly since DELETE with body is needed
     const { apiRequest } = await import('../lib/api-client');
-    return apiRequest<{ success: boolean; deleted_parcel?: { id: string; name: string } }>('/api/v1/parcels', {
-      method: 'DELETE',
-      body: JSON.stringify({ parcel_id: parcelId }),
-    });
+    const organizationId = getCurrentOrganizationId();
+    return apiRequest<{ success: boolean; deleted_parcel?: { id: string; name: string } }>(
+      '/api/v1/parcels',
+      {
+        method: 'DELETE',
+        body: JSON.stringify({ parcel_id: parcelId }),
+      },
+      organizationId
+    );
   }
 }
 

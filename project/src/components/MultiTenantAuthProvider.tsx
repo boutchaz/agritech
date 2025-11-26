@@ -14,6 +14,7 @@ import {
 } from '../hooks/useAuthQueries';
 import { useSubscription } from '../hooks/useSubscription';
 import { isSubscriptionValid } from '../lib/polar';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 interface Organization {
   id: string;
@@ -75,10 +76,10 @@ export const AuthContext = createContext<AuthContextType>({
   userRole: null,
   loading: true,
   needsOnboarding: false,
-  setCurrentOrganization: () => {},
-  setCurrentFarm: () => {},
-  signOut: async () => {},
-  refreshUserData: async () => {},
+  setCurrentOrganization: () => { },
+  setCurrentFarm: () => { },
+  signOut: async () => { },
+  refreshUserData: async () => { },
   hasRole: () => false,
   isAtLeastRole: () => false,
 });
@@ -182,11 +183,27 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   //   isOnOnboardingPage
   // });
 
+  // Get Zustand store actions
+  const setOrganizationInStore = useOrganizationStore(state => state.setCurrentOrganization);
+
   // Handle organization change
   const handleSetCurrentOrganization = (org: Organization) => {
     setCurrentOrganization(org);
     setCurrentFarm(null); // Clear current farm when switching organizations
+
+    // Save to both localStorage (for backward compatibility) and Zustand store
     localStorage.setItem('currentOrganization', JSON.stringify(org));
+    setOrganizationInStore({
+      id: org.id,
+      name: org.name,
+      description: undefined,
+      slug: org.slug || undefined,
+      currency_code: org.currency || undefined,
+      timezone: org.timezone || undefined,
+      is_active: org.is_active,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
   };
 
   // Handle farm change
@@ -320,24 +337,49 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Set default organization when organizations load
   useEffect(() => {
     if (organizations.length > 0 && !currentOrganization) {
-      // Try to restore from localStorage first
-      const savedOrg = localStorage.getItem('currentOrganization');
-      if (savedOrg) {
+      // Try to restore from Zustand store first, then localStorage
+      const storedOrg = useOrganizationStore.getState().currentOrganization;
+      const savedOrgStr = localStorage.getItem('currentOrganization');
+
+      let orgToRestore = null;
+
+      // Try Zustand store first
+      if (storedOrg) {
+        const validOrg = organizations.find(o => o.id === storedOrg.id);
+        if (validOrg) {
+          orgToRestore = validOrg;
+        }
+      }
+
+      // Fallback to localStorage if Zustand store doesn't have it
+      if (!orgToRestore && savedOrgStr) {
         try {
-          const org = JSON.parse(savedOrg);
-          // Verify the saved org still exists in user's organizations
+          const org = JSON.parse(savedOrgStr);
           const validOrg = organizations.find(o => o.id === org.id);
           if (validOrg) {
-            setCurrentOrganization(validOrg);
-            return;
+            orgToRestore = validOrg;
           }
         } catch (error) {
           console.error('Error parsing saved organization:', error);
         }
       }
 
-      // Default to first organization
-      setCurrentOrganization(organizations[0]);
+      // Use restored org or default to first organization
+      const finalOrg = orgToRestore || organizations[0];
+      setCurrentOrganization(finalOrg);
+
+      // Sync to Zustand store
+      setOrganizationInStore({
+        id: finalOrg.id,
+        name: finalOrg.name,
+        description: undefined,
+        slug: finalOrg.slug || undefined,
+        currency_code: finalOrg.currency || undefined,
+        timezone: finalOrg.timezone || undefined,
+        is_active: finalOrg.is_active,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
     }
   }, [organizations, currentOrganization]);
 
@@ -392,6 +434,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         setCurrentOrganization(null);
         setCurrentFarm(null);
         setShowAuth(true);
+        // Clear Zustand store
+        useOrganizationStore.getState().clearOrganization();
         // localStorage is cleared by the signOut mutation
 
         // Redirect to login on sign out (but not on initial load)
@@ -436,10 +480,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   useEffect(() => {
     const subscriptionQuery = queryClient.getQueryState(['subscription', currentOrganization?.id || 'none']);
     const isSubscriptionQueryLoading = subscriptionQuery?.status === 'pending' || subscriptionLoading;
-    const hasSubscriptionError = subscriptionQuery?.error && subscriptionQuery.error instanceof Error && 
-      (subscriptionQuery.error.message?.includes('Failed to fetch') || 
-       subscriptionQuery.error.message?.includes('NetworkError'));
-    
+    const hasSubscriptionError = subscriptionQuery?.error && subscriptionQuery.error instanceof Error &&
+      (subscriptionQuery.error.message?.includes('Failed to fetch') ||
+        subscriptionQuery.error.message?.includes('NetworkError'));
+
     // Don't redirect if:
     // 1. Still loading subscription
     // 2. Subscription query has network errors (might be temporary)
@@ -502,10 +546,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     const reason = !subscription
       ? 'no_subscription'
       : subscription.status === 'canceled'
-      ? 'canceled'
-      : subscription.status === 'past_due'
-      ? 'past_due'
-      : 'expired';
+        ? 'canceled'
+        : subscription.status === 'past_due'
+          ? 'past_due'
+          : 'expired';
     return (
       <AuthContext.Provider value={value}>
         <SubscriptionRequired reason={reason} />

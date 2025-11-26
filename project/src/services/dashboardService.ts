@@ -53,24 +53,29 @@ function getCurrentOrganizationId(): string | null {
 class DashboardService {
     async getDashboardSummary(farmId?: string): Promise<DashboardSummary> {
         const organizationId = getCurrentOrganizationId();
-        
+
         if (!organizationId) {
             throw new Error('Organization ID is required. Please select an organization first.');
         }
 
         const url = new URL('/api/v1/dashboard/summary', 'http://dummy');
         url.searchParams.append('organization_id', organizationId);
-        
+
         if (farmId) {
             url.searchParams.append('farmId', farmId);
         }
 
-        return apiClient.get<DashboardSummary>(url.pathname + url.search);
+        // Pass organizationId in header as well
+        return apiClient.get<DashboardSummary>(
+            url.pathname + url.search,
+            {},
+            organizationId
+        );
     }
 
     async getWidgetData(widgetType: string): Promise<WidgetData> {
         const organizationId = getCurrentOrganizationId();
-        
+
         if (!organizationId) {
             throw new Error('Organization ID is required. Please select an organization first.');
         }
@@ -78,7 +83,12 @@ class DashboardService {
         const url = new URL(`/api/v1/dashboard/widgets/${widgetType}`, 'http://dummy');
         url.searchParams.append('organization_id', organizationId);
 
-        return apiClient.get<WidgetData>(url.pathname + url.search);
+        // Pass organizationId in header as well
+        return apiClient.get<WidgetData>(
+            url.pathname + url.search,
+            {},
+            organizationId
+        );
     }
 }
 

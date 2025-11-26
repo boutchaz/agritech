@@ -1,20 +1,17 @@
 import { supabase } from './supabase';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
- * Get the current organization ID from localStorage
+ * Get the current organization ID from Zustand store
  */
 function getCurrentOrganizationId(): string | null {
   try {
-    const orgStr = localStorage.getItem('currentOrganization');
-    if (orgStr) {
-      const org = JSON.parse(orgStr);
-      return org.id || null;
-    }
-    return null;
+    const currentOrganization = useOrganizationStore.getState().currentOrganization;
+    return currentOrganization?.id || null;
   } catch (error) {
-    console.error('Error reading organization from localStorage:', error);
+    console.error('Error reading organization from store:', error);
     return null;
   }
 }
@@ -70,10 +67,10 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ 
+    const error = await response.json().catch(() => ({
       message: response.statusText,
       error: 'Unknown error',
-      statusCode: response.status 
+      statusCode: response.status
     }));
     throw new Error(error.message || error.error || 'API request failed');
   }

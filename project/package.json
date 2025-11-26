@@ -95,11 +95,12 @@
     "recharts": "^3.2.1",
     "socket.io-client": "^4.7.4",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.56.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
@@ -112,7 +113,7 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.3",
-    "playwright": "^1.55.1",
+    "playwright": "^1.56.1",
     "postcss": "^8",
     "tailwindcss": "^3",
     "tsx": "^4.20.5",
