@@ -19,6 +19,9 @@ export interface Parcel {
   rootstock?: string;
   soil_type?: string;
   irrigation_type?: string;
+  boundary?: number[][];
+  calculated_area?: number;
+  perimeter?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

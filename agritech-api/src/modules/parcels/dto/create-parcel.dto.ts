@@ -136,5 +136,34 @@ export class CreateParcelDto {
   @IsOptional()
   @IsString()
   irrigation_type?: string;
+
+  @ApiPropertyOptional({
+    description: 'Parcel boundary coordinates (array of [longitude, latitude] pairs)',
+    example: [
+      [-759185.3554873749, 4028238.0941472454],
+      [-759185.3554873749, 4028195.435298061],
+      [-759167.0127388571, 4028195.4248612197],
+      [-759167.2092993675, 4028239.087386639],
+      [-759185.3554873749, 4028238.0941472454]
+    ],
+  })
+  @IsOptional()
+  boundary?: number[][];
+
+  @ApiPropertyOptional({
+    description: 'Calculated area from boundary',
+    example: 0.05,
+  })
+  @IsOptional()
+  @IsNumber()
+  calculated_area?: number;
+
+  @ApiPropertyOptional({
+    description: 'Perimeter of the parcel',
+    example: 100.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  perimeter?: number;
 }
 
