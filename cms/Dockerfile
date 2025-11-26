@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install dependencies for building native modules
 RUN apk update && apk add --no-cache \
@@ -18,7 +18,8 @@ WORKDIR /srv/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+# Use npm install instead of npm ci to handle lock file mismatches
+RUN npm install --only=production
 
 # Copy app files
 COPY . .
