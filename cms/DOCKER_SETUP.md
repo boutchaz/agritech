@@ -4,11 +4,22 @@
 
 Your Strapi CMS is now configured to run with Docker!
 
-### 1. Start the Services
+### Production Mode
+
+For production deployment (builds are baked into the image):
 
 ```bash
 cd cms
 docker-compose up -d
+```
+
+### Development Mode
+
+For local development with hot reloading:
+
+```bash
+cd cms
+docker-compose -f docker-compose.dev.yml up
 ```
 
 ### 2. Monitor Logs
