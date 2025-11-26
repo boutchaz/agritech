@@ -15,7 +15,7 @@ import { fromLonLat, transform } from 'ol/proj';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import Draw from 'ol/interaction/Draw';
 import type { SensorData } from '../types';
-import { useAddParcel } from '../hooks/useParcelsQuery';
+import { useAddParcel, useUpdateParcel } from '../hooks/useParcelsQuery';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3, Wand2, Grid3x3, Navigation, Search, X, Loader2, Maximize2, Minimize2, Leaf, Sprout } from 'lucide-react';
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
@@ -53,6 +53,8 @@ interface MapProps {
   selectedParcelId?: string | null;
   onParcelSelect?: (parcelId: string) => void;
   parcels?: any[]; // Allow passing parcels as prop
+  editingParcelId?: string | null;
+  onBoundaryUpdated?: () => void;
 }
 
 interface ParcelDetails {
@@ -109,7 +111,9 @@ const MapComponent: React.FC<MapProps> = ({
   onParcelAdded,
   selectedParcelId,
   onParcelSelect,
-  parcels: propParcels
+  parcels: propParcels,
+  editingParcelId,
+  onBoundaryUpdated
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -209,6 +213,7 @@ const MapComponent: React.FC<MapProps> = ({
 
   // Always call the hook, but pass farmId which might be undefined
   const addParcelMutation = useAddParcel();
+  const updateParcelMutation = useUpdateParcel();
 
   // Use prop parcels if provided, otherwise empty array
   const parcels = Array.isArray(propParcels) ? propParcels : [];
@@ -227,12 +232,12 @@ const MapComponent: React.FC<MapProps> = ({
     if (parcelDetails.planting_system) {
       const system = availablePlantingSystems.find(
         s => s.type === parcelDetails.planting_system ||
-             `${s.type} (${s.spacing})` === parcelDetails.planting_system
+          `${s.type} (${s.spacing})` === parcelDetails.planting_system
       );
       if (system) {
         const density = 'treesPerHectare' in system ? system.treesPerHectare :
-                       'plantsPerHectare' in system ? system.plantsPerHectare :
-                       'seedsPerHectare' in system ? system.seedsPerHectare : 0;
+          'plantsPerHectare' in system ? system.plantsPerHectare :
+            'seedsPerHectare' in system ? system.seedsPerHectare : 0;
         setParcelDetails(prev => ({
           ...prev,
           density_per_hectare: density,
@@ -272,6 +277,40 @@ const MapComponent: React.FC<MapProps> = ({
       });
     }
   }, [loadAvailableIndices]);
+
+  // Load existing parcel data when editingParcelId is set
+  useEffect(() => {
+    if (editingParcelId && parcels) {
+      const parcel = parcels.find(p => p.id === editingParcelId);
+      if (parcel) {
+        setParcelName(parcel.name);
+        if (parcel.boundary && parcel.boundary.length > 0) {
+          setTempBoundary(parcel.boundary);
+          setCalculatedArea(parcel.calculated_area || parcel.area || 0);
+          setCalculatedPerimeter(parcel.perimeter || 0);
+        }
+        // Load other parcel details
+        setParcelDetails({
+          soil_type: parcel.soil_type || '',
+          area: parcel.area || 0,
+          planting_density: parcel.density_per_hectare || 0,
+          irrigation_type: parcel.irrigation_type || '',
+          crop_category: parcel.crop_category || '',
+          crop_type: parcel.crop_type || '',
+          variety: parcel.variety || '',
+          planting_system: parcel.planting_system || '',
+          spacing: parcel.spacing || '',
+          density_per_hectare: parcel.density_per_hectare || 0,
+          plant_count: parcel.plant_count || 0,
+          planting_date: parcel.planting_date || '',
+          planting_type: parcel.planting_type || '',
+          rootstock: parcel.rootstock || ''
+        });
+        // Don't show the form immediately - let the user draw the boundary first
+        // The form will be shown after they finish drawing (in the drawend event)
+      }
+    }
+  }, [editingParcelId, parcels]);
 
   // Handle place names visibility
   useEffect(() => {
@@ -353,11 +392,11 @@ const MapComponent: React.FC<MapProps> = ({
   useEffect(() => {
     if (mapInstanceRef.current) {
       const storedZoomCenter = zoomCenterRef.current;
-      
+
       // Update layer visibility
       const layers = mapInstanceRef.current.getLayers();
       const layerArray = layers.getArray();
-      
+
       layerArray.forEach((layer) => {
         if (layer instanceof TileLayer) {
           const source = layer.getSource();
@@ -371,7 +410,7 @@ const MapComponent: React.FC<MapProps> = ({
           }
         }
       });
-      
+
       // Restore zoom and center after layer updates (if we stored them before state change)
       if (storedZoomCenter?.zoom && storedZoomCenter?.center) {
         const { zoom, center } = storedZoomCenter;
@@ -680,290 +719,296 @@ const MapComponent: React.FC<MapProps> = ({
         mapInstanceRef.current = null;
       }
 
-    const vectorSource = new VectorSource();
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-    });
-
-    // OpenStreetMap layer
-    const osmLayer = new TileLayer({
-      source: new OSM(),
-      visible: mapType === 'osm'
-    });
-
-    // Satellite layer (using ESRI World Imagery - free)
-    const satelliteLayer = new TileLayer({
-      source: new XYZ({
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        maxZoom: 19,
-        attributions: 'Tiles © Esri'
-      }),
-      visible: mapType === 'satellite'
-    });
-
-    // Labels overlay (place names) - always available
-    const labelsLayer = new TileLayer({
-      source: new XYZ({
-        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        maxZoom: 19,
-        attributions: 'Labels © Esri'
-      }),
-      visible: showPlaceNames
-    });
-
-    const view = new View({
-      center: fromLonLat([center[1], center[0]]),
-      zoom: 6,
-    });
-    
-    viewRef.current = view;
-    
-    const map = new Map({
-      target: mapRef.current,
-      layers: [
-        osmLayer,
-        satelliteLayer,
-        labelsLayer,
-        vectorLayer,
-      ],
-      view: view,
-    });
-
-    // Note: Using React-based full-screen instead of OpenLayers FullScreen control
-
-
-    // Popup now handled via React state instead of OpenLayers overlay
-
-    if (farmId && enableDrawing) {
-      const draw = new Draw({
+      const vectorSource = new VectorSource();
+      const vectorLayer = new VectorLayer({
         source: vectorSource,
-        type: 'Polygon',
-        style: drawingMode === 'assisted' ? parcelStyles.drawing : undefined,
       });
-      map.addInteraction(draw);
-      drawInteractionRef.current = draw;
 
-      if (autoSnapEnabled) {
-        const snap = ParcelAutomation.createSnapInteraction(vectorSource);
-        map.addInteraction(snap);
-      }
+      // OpenStreetMap layer
+      const osmLayer = new TileLayer({
+        source: new OSM(),
+        visible: mapType === 'osm'
+      });
 
-      const drawingAssist = new ParcelDrawingAssist(vectorSource);
-      if (drawingMode === 'assisted') {
-        drawingAssist.enableMagneticSnap();
-        drawingAssist.enableRightAngleMode();
-      }
+      // Satellite layer (using ESRI World Imagery - free)
+      const satelliteLayer = new TileLayer({
+        source: new XYZ({
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 19,
+          attributions: 'Tiles © Esri'
+        }),
+        visible: mapType === 'satellite'
+      });
 
-      draw.on('drawstart', () => {
-        if (vectorSourceRef.current) {
-          const tempFeatures = vectorSourceRef.current.getFeatures()
-            .filter(f => f.get('temp') === true);
-          tempFeatures.forEach((f: Feature) => vectorSourceRef.current?.removeFeature(f));
+      // Labels overlay (place names) - always available
+      const labelsLayer = new TileLayer({
+        source: new XYZ({
+          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 19,
+          attributions: 'Labels © Esri'
+        }),
+        visible: showPlaceNames
+      });
+
+      const view = new View({
+        center: fromLonLat([center[1], center[0]]),
+        zoom: 6,
+      });
+
+      viewRef.current = view;
+
+      const map = new Map({
+        target: mapRef.current,
+        layers: [
+          osmLayer,
+          satelliteLayer,
+          labelsLayer,
+          vectorLayer,
+        ],
+        view: view,
+      });
+
+      // Note: Using React-based full-screen instead of OpenLayers FullScreen control
+
+
+      // Popup now handled via React state instead of OpenLayers overlay
+
+      if (farmId && enableDrawing) {
+        const draw = new Draw({
+          source: vectorSource,
+          type: 'Polygon',
+          style: drawingMode === 'assisted' ? parcelStyles.drawing : undefined,
+        });
+        map.addInteraction(draw);
+        drawInteractionRef.current = draw;
+
+        if (autoSnapEnabled) {
+          const snap = ParcelAutomation.createSnapInteraction(vectorSource);
+          map.addInteraction(snap);
         }
-      });
 
-      draw.on('drawend', (event) => {
-        const feature = event.feature;
-        const geometry = feature.getGeometry();
-        if (geometry instanceof Polygon) {
-          const area = ParcelAutomation.calculateArea(geometry);
-          const perimeter = ParcelAutomation.calculatePerimeter(geometry);
+        const drawingAssist = new ParcelDrawingAssist(vectorSource);
+        if (drawingMode === 'assisted') {
+          drawingAssist.enableMagneticSnap();
+          drawingAssist.enableRightAngleMode();
+        }
+
+        draw.on('drawstart', () => {
+          if (vectorSourceRef.current) {
+            const tempFeatures = vectorSourceRef.current.getFeatures()
+              .filter(f => f.get('temp') === true);
+            tempFeatures.forEach((f: Feature) => vectorSourceRef.current?.removeFeature(f));
+          }
+        });
+
+        draw.on('drawend', (event) => {
+          const feature = event.feature;
+          const geometry = feature.getGeometry();
+          if (geometry instanceof Polygon) {
+            const area = ParcelAutomation.calculateArea(geometry);
+            const perimeter = ParcelAutomation.calculatePerimeter(geometry);
 
 
-          setCalculatedArea(area);
-          setCalculatedPerimeter(perimeter);
+            setCalculatedArea(area);
+            setCalculatedPerimeter(perimeter);
 
-          const coordinates = geometry.getCoordinates()[0];
-          // Store coordinates in EPSG:3857 format (Web Mercator) for consistency
-          let boundary = coordinates.map((coord: number[]) => [coord[0], coord[1]]);
+            const coordinates = geometry.getCoordinates()[0];
+            // Store coordinates in EPSG:3857 format (Web Mercator) for consistency
+            let boundary = coordinates.map((coord: number[]) => [coord[0], coord[1]]);
 
-          console.log('Drawing coordinates (EPSG:3857):', boundary[0], 'to', boundary[boundary.length - 1]);
+            console.log('Drawing coordinates (EPSG:3857):', boundary[0], 'to', boundary[boundary.length - 1]);
 
-          // Ensure the polygon is closed
-          if (boundary.length > 0) {
-            const firstPoint = boundary[0];
-            const lastPoint = boundary[boundary.length - 1];
-            if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-              boundary.push([firstPoint[0], firstPoint[1]]);
+            // Ensure the polygon is closed
+            if (boundary.length > 0) {
+              const firstPoint = boundary[0];
+              const lastPoint = boundary[boundary.length - 1];
+              if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+                boundary.push([firstPoint[0], firstPoint[1]]);
+              }
+            }
+
+            if (drawingMode === 'assisted') {
+              // For smoothing, we need to work with the projected coordinates
+              boundary = ParcelAutomation.smoothBoundary(boundary, 0.2);
+              boundary = ParcelAutomation.simplifyBoundary(boundary);
+            }
+
+            const validation = ParcelAutomation.validateBoundary(boundary);
+            if (!validation.valid) {
+              feature.setStyle(parcelStyles.error);
+              alert(`Erreur de dessin: ${validation.errors.join(', ')}`);
+              vectorSource.removeFeature(feature);
+              return;
+            }
+
+            setTempBoundary(boundary);
+            setParcelDetails(prev => ({ ...prev, area, calculated_area: area }));
+
+            // If editing an existing parcel, skip name dialog and go directly to form
+            if (editingParcelId) {
+              setShowParcelForm(true);
+            } else {
+              setShowNameDialog(true);
+            }
+          }
+        });
+      }
+
+      vectorSourceRef.current = vectorSource;
+
+      // Add existing parcels as polygons on the map
+      console.log('Rendering parcels on map:', parcels.length, 'parcels'); // Debug
+
+      parcels.forEach(parcel => {
+        console.log('Processing parcel:', parcel.name, 'has boundary:', !!parcel.boundary, 'sample coord:', parcel.boundary?.[0]); // Debug
+        if (parcel.boundary && parcel.boundary.length > 0) {
+          // Check if coordinates are already in projected format (EPSG:3857) or geographic (EPSG:4326)
+          const firstCoord = parcel.boundary[0];
+          let coordinates;
+
+          // If coordinates have large absolute values (> 20000), they're likely already in Web Mercator (EPSG:3857)
+          // Geographic coordinates should be between -180 to 180 for longitude and -90 to 90 for latitude
+          if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
+            console.log(`EPSG:3857 detected - Using coordinates as-is: [${firstCoord[0]}, ${firstCoord[1]}]`);
+            coordinates = parcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
+          } else {
+            console.log(`Geographic coords detected - Converting to EPSG:3857: [${firstCoord[0]}, ${firstCoord[1]}]`);
+            coordinates = parcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
+          }
+
+          console.log('Final coordinates for rendering:', coordinates[0], 'to', coordinates[coordinates.length - 1]);
+
+          // Test coordinate conversion - what would this look like in geographic coords?
+          const testCoordGeo = transform([coordinates[0][0], coordinates[0][1]], 'EPSG:3857', 'EPSG:4326');
+          console.log('First coordinate converted to geographic (lon, lat):', testCoordGeo);
+
+          // Ensure polygon is closed
+          if (coordinates.length > 0) {
+            const firstCoord = coordinates[0];
+            const lastCoord = coordinates[coordinates.length - 1];
+            if (firstCoord[0] !== lastCoord[0] || firstCoord[1] !== lastCoord[1]) {
+              coordinates.push(firstCoord);
             }
           }
 
-          if (drawingMode === 'assisted') {
-            // For smoothing, we need to work with the projected coordinates
-            boundary = ParcelAutomation.smoothBoundary(boundary, 0.2);
-            boundary = ParcelAutomation.simplifyBoundary(boundary);
+          const feature = new Feature({
+            geometry: new Polygon([coordinates]),
+            name: parcel.name,
+            type: 'Parcelle',
+            details: {
+              ...parcel,
+              area: parcel.calculated_area || parcel.area,
+              perimeter: parcel.perimeter
+            },
+            parcelId: parcel.id
+          });
+
+          // Highlight if selected
+          if (selectedParcelId && parcel.id === selectedParcelId) {
+            feature.setStyle(parcelStyles.selected);
+          } else {
+            feature.setStyle(parcelStyles.default);
           }
 
-          const validation = ParcelAutomation.validateBoundary(boundary);
-          if (!validation.valid) {
-            feature.setStyle(parcelStyles.error);
-            alert(`Erreur de dessin: ${validation.errors.join(', ')}`);
-            vectorSource.removeFeature(feature);
-            return;
-          }
-
-          setTempBoundary(boundary);
-          setParcelDetails(prev => ({ ...prev, area, calculated_area: area }));
-          setShowNameDialog(true);
+          vectorSource.addFeature(feature);
         }
       });
-    }
 
-    vectorSourceRef.current = vectorSource;
-
-    // Add existing parcels as polygons on the map
-    console.log('Rendering parcels on map:', parcels.length, 'parcels'); // Debug
-
-    parcels.forEach(parcel => {
-      console.log('Processing parcel:', parcel.name, 'has boundary:', !!parcel.boundary, 'sample coord:', parcel.boundary?.[0]); // Debug
-      if (parcel.boundary && parcel.boundary.length > 0) {
-        // Check if coordinates are already in projected format (EPSG:3857) or geographic (EPSG:4326)
-        const firstCoord = parcel.boundary[0];
-        let coordinates;
-
-        // If coordinates have large absolute values (> 20000), they're likely already in Web Mercator (EPSG:3857)
-        // Geographic coordinates should be between -180 to 180 for longitude and -90 to 90 for latitude
-        if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
-          console.log(`EPSG:3857 detected - Using coordinates as-is: [${firstCoord[0]}, ${firstCoord[1]}]`);
-          coordinates = parcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
-        } else {
-          console.log(`Geographic coords detected - Converting to EPSG:3857: [${firstCoord[0]}, ${firstCoord[1]}]`);
-          coordinates = parcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
-        }
-
-        console.log('Final coordinates for rendering:', coordinates[0], 'to', coordinates[coordinates.length - 1]);
-
-        // Test coordinate conversion - what would this look like in geographic coords?
-        const testCoordGeo = transform([coordinates[0][0], coordinates[0][1]], 'EPSG:3857', 'EPSG:4326');
-        console.log('First coordinate converted to geographic (lon, lat):', testCoordGeo);
-
-        // Ensure polygon is closed
-        if (coordinates.length > 0) {
-          const firstCoord = coordinates[0];
-          const lastCoord = coordinates[coordinates.length - 1];
-          if (firstCoord[0] !== lastCoord[0] || firstCoord[1] !== lastCoord[1]) {
-            coordinates.push(firstCoord);
-          }
-        }
-
-        const feature = new Feature({
-          geometry: new Polygon([coordinates]),
-          name: parcel.name,
-          type: 'Parcelle',
-          details: {
-            ...parcel,
-            area: parcel.calculated_area || parcel.area,
-            perimeter: parcel.perimeter
-          },
-          parcelId: parcel.id
+      zones.forEach(zone => {
+        const circle = new Feature({
+          geometry: new Circle(
+            fromLonLat([zone.center[1], zone.center[0]]),
+            zone.radius
+          ),
         });
 
-        // Highlight if selected
-        if (selectedParcelId && parcel.id === selectedParcelId) {
-          feature.setStyle(parcelStyles.selected);
-        } else {
-          feature.setStyle(parcelStyles.default);
-        }
+        circle.setStyle(new Style({
+          fill: new Fill({
+            color: `${zone.color}33`,
+          }),
+          stroke: new Stroke({
+            color: zone.color,
+            width: 2,
+          }),
+        }));
+
+        const marker = new Feature({
+          geometry: new Point(fromLonLat([zone.center[1], zone.center[0]])),
+          name: zone.name,
+          type: zone.type,
+        });
+
+        marker.setStyle(new Style({
+          image: new CircleStyle({
+            radius: 7,
+            fill: new Fill({ color: zone.color }),
+            stroke: new Stroke({
+              color: 'white',
+              width: 2,
+            }),
+          }),
+        }));
+
+        vectorSource.addFeatures([circle, marker]);
+      });
+
+      (sensors || []).forEach(sensor => {
+        if (!sensor.location) return;
+
+        const coordinates = typeof sensor.location === 'string' ? sensor.location.split(',').map(Number) : [];
+        if (coordinates.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) return;
+
+        const feature = new Feature({
+          geometry: new Point(fromLonLat([coordinates[1], coordinates[0]])),
+          properties: {
+            type: sensor.type,
+            value: sensor.value,
+            unit: sensor.unit,
+            location: sensor.location,
+          },
+        });
+
+        feature.setStyle(new Style({
+          image: new CircleStyle({
+            radius: 6,
+            fill: new Fill({ color: '#4ade80' }),
+            stroke: new Stroke({
+              color: 'white',
+              width: 2,
+            }),
+          }),
+        }));
 
         vectorSource.addFeature(feature);
-      }
-    });
-
-    zones.forEach(zone => {
-      const circle = new Feature({
-        geometry: new Circle(
-          fromLonLat([zone.center[1], zone.center[0]]),
-          zone.radius
-        ),
       });
 
-      circle.setStyle(new Style({
-        fill: new Fill({
-          color: `${zone.color}33`,
-        }),
-        stroke: new Stroke({
-          color: zone.color,
-          width: 2,
-        }),
-      }));
+      map.on('click', (event) => {
+        const featureLike = map.forEachFeatureAtPixel(event.pixel, f => f);
 
-      const marker = new Feature({
-        geometry: new Point(fromLonLat([zone.center[1], zone.center[0]])),
-        name: zone.name,
-        type: zone.type,
-      });
+        if (featureLike) {
+          if (!(featureLike instanceof Feature)) {
+            return;
+          }
+          const feature = featureLike as Feature;
+          const properties = feature.getProperties();
+          const geometry = feature.getGeometry();
 
-      marker.setStyle(new Style({
-        image: new CircleStyle({
-          radius: 7,
-          fill: new Fill({ color: zone.color }),
-          stroke: new Stroke({
-            color: 'white',
-            width: 2,
-          }),
-        }),
-      }));
+          // Handle parcel polygons
+          if (properties.type === 'Parcelle' && geometry instanceof Polygon) {
+            const extent = geometry.getExtent();
+            const center = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
 
-      vectorSource.addFeatures([circle, marker]);
-    });
-
-    (sensors || []).forEach(sensor => {
-      if (!sensor.location) return;
-
-      const coordinates = typeof sensor.location === 'string' ? sensor.location.split(',').map(Number) : [];
-      if (coordinates.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) return;
-
-      const feature = new Feature({
-        geometry: new Point(fromLonLat([coordinates[1], coordinates[0]])),
-        properties: {
-          type: sensor.type,
-          value: sensor.value,
-          unit: sensor.unit,
-          location: sensor.location,
-        },
-      });
-
-      feature.setStyle(new Style({
-        image: new CircleStyle({
-          radius: 6,
-          fill: new Fill({ color: '#4ade80' }),
-          stroke: new Stroke({
-            color: 'white',
-            width: 2,
-          }),
-        }),
-      }));
-
-      vectorSource.addFeature(feature);
-    });
-
-    map.on('click', (event) => {
-      const featureLike = map.forEachFeatureAtPixel(event.pixel, f => f);
-
-      if (featureLike) {
-        if (!(featureLike instanceof Feature)) {
-          return;
-        }
-        const feature = featureLike as Feature;
-        const properties = feature.getProperties();
-        const geometry = feature.getGeometry();
-
-        // Handle parcel polygons
-        if (properties.type === 'Parcelle' && geometry instanceof Polygon) {
-          const extent = geometry.getExtent();
-          const center = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
-
-          let content = '';
-          if (properties.name) {
-            content = `
+            let content = '';
+            if (properties.name) {
+              content = `
               <div class="p-2">
                 <h3 class="font-semibold">${properties.name}</h3>
                 <p class="text-sm text-gray-600">Type: ${properties.type}</p>
               </div>
             `;
-            if (properties.details) {
-              const details = properties.details;
-              content += `
+              if (properties.details) {
+                const details = properties.details;
+                content += `
                 <div class="text-sm text-gray-600">
                   <p>Surface: ${details.area || 'Non définie'} ha</p>
                   <p>Périmètre: ${details.perimeter || 'Non défini'} m</p>
@@ -973,48 +1018,48 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
               `;
 
-              // Highlight selected parcel
-              feature.setStyle(parcelStyles.selected);
+                // Highlight selected parcel
+                feature.setStyle(parcelStyles.selected);
 
-              // Remove highlight from other parcels
-              vectorSource.getFeatures().forEach((f) => {
-                if (f instanceof Feature) {
-                  if (f !== feature && f.get('type') === 'Parcelle') {
-                    f.setStyle(parcelStyles.default);
+                // Remove highlight from other parcels
+                vectorSource.getFeatures().forEach((f) => {
+                  if (f instanceof Feature) {
+                    if (f !== feature && f.get('type') === 'Parcelle') {
+                      f.setStyle(parcelStyles.default);
+                    }
                   }
+                });
+
+                setSelectedParcel({
+                  id: properties.parcelId,
+                  name: properties.name,
+                  ...details,
+                  boundary: details.boundary
+                });
+
+                // Notify parent component
+                if (onParcelSelect && properties.parcelId) {
+                  onParcelSelect(properties.parcelId);
                 }
-              });
-
-              setSelectedParcel({
-                id: properties.parcelId,
-                name: properties.name,
-                ...details,
-                boundary: details.boundary
-              });
-
-              // Notify parent component
-              if (onParcelSelect && properties.parcelId) {
-                onParcelSelect(properties.parcelId);
               }
             }
-          }
 
-          if (content) {
-            const [lng, lat] = transform(center, 'EPSG:3857', 'EPSG:4326');
-            setPopupData({
-              position: [lng, lat],
-              content: content,
-              visible: true
-            });
+            if (content) {
+              const [lng, lat] = transform(center, 'EPSG:3857', 'EPSG:4326');
+              setPopupData({
+                position: [lng, lat],
+                content: content,
+                visible: true
+              });
+            }
           }
-        }
-        // Handle sensors and other point features
-        else if (geometry instanceof Point) {
-          const coordinates = geometry.getCoordinates();
+          // Handle sensors and other point features
+          else if (geometry instanceof Point) {
+            const coordinates = geometry.getCoordinates();
 
-          if (properties.properties) {
-            const sensorProps = properties.properties;
-            const content = `
+            if (properties.properties) {
+              const sensorProps = properties.properties;
+              const content = `
               <div class="p-2">
                 <h3 class="font-semibold">Capteur ${sensorProps.type}</h3>
                 <p class="text-sm text-gray-600">
@@ -1026,89 +1071,89 @@ const MapComponent: React.FC<MapProps> = ({
               </div>
             `;
 
-            const [lng, lat] = transform(coordinates, 'EPSG:3857', 'EPSG:4326');
-            setPopupData({
-              position: [lng, lat],
-              content: content,
-              visible: true
+              const [lng, lat] = transform(coordinates, 'EPSG:3857', 'EPSG:4326');
+              setPopupData({
+                position: [lng, lat],
+                content: content,
+                visible: true
+              });
+            }
+          }
+        } else {
+          setPopupData(prev => ({ ...prev, visible: false }));
+          // Remove highlight from all parcels
+          vectorSource.getFeatures().forEach((f: Feature) => {
+            if (f.get('type') === 'Parcelle') {
+              f.setStyle(parcelStyles.default);
+            }
+          });
+          setSelectedParcel(null);
+        }
+      });
+
+      mapInstanceRef.current = map;
+
+      // Center on selected or first parcel if available
+      if (selectedParcelId) {
+        const selectedParcel = parcels.find(p => p.id === selectedParcelId);
+        if (selectedParcel && selectedParcel.boundary && selectedParcel.boundary.length > 0) {
+          // Handle coordinate transformation based on coordinate system
+          const firstCoord = selectedParcel.boundary[0];
+          let coords;
+
+          if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
+            // Already in EPSG:3857
+            coords = selectedParcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
+          } else {
+            // Convert from geographic
+            coords = selectedParcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
+          }
+
+          const polygon = new Polygon([coords]);
+          const extent = polygon.getExtent();
+
+          map.getView().fit(extent, {
+            padding: [200, 200, 200, 400],
+            maxZoom: 17
+          });
+        }
+      } else if (parcels.length > 0) {
+        // If no selected parcel, try to fit all parcels with boundaries
+        const parcelsWithBoundaries = parcels.filter(p => p.boundary && p.boundary.length > 0);
+
+        if (parcelsWithBoundaries.length > 0) {
+          // Create a combined extent for all parcels
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+          parcelsWithBoundaries.forEach(parcel => {
+            const firstCoord = parcel.boundary![0];
+
+            parcel.boundary!.forEach((coord: number[]) => {
+              let x, y;
+
+              if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
+                // Already in EPSG:3857
+                [x, y] = [coord[0], coord[1]];
+              } else {
+                // Convert from geographic
+                [x, y] = fromLonLat([coord[0], coord[1]]);
+              }
+
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            });
+          });
+
+          if (minX !== Infinity) {
+            map.getView().fit([minX, minY, maxX, maxY], {
+              padding: [100, 100, 100, 100],
+              maxZoom: 15
             });
           }
         }
-      } else {
-        setPopupData(prev => ({ ...prev, visible: false }));
-        // Remove highlight from all parcels
-        vectorSource.getFeatures().forEach((f: Feature) => {
-          if (f.get('type') === 'Parcelle') {
-            f.setStyle(parcelStyles.default);
-          }
-        });
-        setSelectedParcel(null);
       }
-    });
-
-    mapInstanceRef.current = map;
-
-    // Center on selected or first parcel if available
-    if (selectedParcelId) {
-      const selectedParcel = parcels.find(p => p.id === selectedParcelId);
-      if (selectedParcel && selectedParcel.boundary && selectedParcel.boundary.length > 0) {
-        // Handle coordinate transformation based on coordinate system
-        const firstCoord = selectedParcel.boundary[0];
-        let coords;
-
-        if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
-          // Already in EPSG:3857
-          coords = selectedParcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
-        } else {
-          // Convert from geographic
-          coords = selectedParcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
-        }
-
-        const polygon = new Polygon([coords]);
-        const extent = polygon.getExtent();
-
-        map.getView().fit(extent, {
-          padding: [200, 200, 200, 400],
-          maxZoom: 17
-        });
-      }
-    } else if (parcels.length > 0) {
-      // If no selected parcel, try to fit all parcels with boundaries
-      const parcelsWithBoundaries = parcels.filter(p => p.boundary && p.boundary.length > 0);
-
-      if (parcelsWithBoundaries.length > 0) {
-        // Create a combined extent for all parcels
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        parcelsWithBoundaries.forEach(parcel => {
-          const firstCoord = parcel.boundary![0];
-
-          parcel.boundary!.forEach((coord: number[]) => {
-            let x, y;
-
-            if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
-              // Already in EPSG:3857
-              [x, y] = [coord[0], coord[1]];
-            } else {
-              // Convert from geographic
-              [x, y] = fromLonLat([coord[0], coord[1]]);
-            }
-
-            minX = Math.min(minX, x);
-            minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x);
-            maxY = Math.max(maxY, y);
-          });
-        });
-
-        if (minX !== Infinity) {
-          map.getView().fit([minX, minY, maxX, maxY], {
-            padding: [100, 100, 100, 100],
-            maxZoom: 15
-          });
-        }
-      }
-    }
 
       return () => {
         // Proper cleanup
@@ -1180,42 +1225,79 @@ const MapComponent: React.FC<MapProps> = ({
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
-      const parcelData = {
-        name: parcelName,
-        farm_id: farmId,
-        boundary: tempBoundary,
-        description: '',
-        area: parcelDetails.area || calculatedArea,
-        area_unit: 'hectares',
-        soil_type: parcelDetails.soil_type || undefined,
-        irrigation_type: normalizedIrrigation || undefined,
-        // Enhanced planting system fields
-        crop_category: parcelDetails.crop_category || undefined,
-        crop_type: parcelDetails.crop_type || undefined,
-        variety: parcelDetails.variety || undefined,
-        planting_system: parcelDetails.planting_system || undefined,
-        spacing: parcelDetails.spacing || undefined,
-        density_per_hectare: parcelDetails.density_per_hectare || undefined,
-        plant_count: parcelDetails.plant_count || undefined,
-        planting_date: parcelDetails.planting_date || undefined,
-        planting_year: parcelDetails.planting_date ? new Date(parcelDetails.planting_date).getFullYear() : undefined,
-        planting_type: parcelDetails.planting_type || undefined,
-        rootstock: parcelDetails.rootstock || undefined,
-        calculated_area: calculatedArea,
-        perimeter: calculatedPerimeter
-      };
 
-      const newParcel = await addParcelMutation.mutateAsync(parcelData);
+      if (editingParcelId) {
+        // Update existing parcel - exclude farm_id
+        const updateData = {
+          name: parcelName,
+          boundary: tempBoundary,
+          description: '',
+          area: parcelDetails.area || calculatedArea,
+          area_unit: 'hectares',
+          soil_type: parcelDetails.soil_type || undefined,
+          irrigation_type: normalizedIrrigation || undefined,
+          crop_category: parcelDetails.crop_category || undefined,
+          crop_type: parcelDetails.crop_type || undefined,
+          variety: parcelDetails.variety || undefined,
+          planting_system: parcelDetails.planting_system || undefined,
+          spacing: parcelDetails.spacing || undefined,
+          density_per_hectare: parcelDetails.density_per_hectare || undefined,
+          plant_count: parcelDetails.plant_count || undefined,
+          planting_date: parcelDetails.planting_date || undefined,
+          planting_year: parcelDetails.planting_date ? new Date(parcelDetails.planting_date).getFullYear() : undefined,
+          planting_type: parcelDetails.planting_type || undefined,
+          rootstock: parcelDetails.rootstock || undefined,
+          calculated_area: calculatedArea,
+          perimeter: calculatedPerimeter
+        };
 
-      // Clean up drawing state
-      cleanupDrawingState();
+        await updateParcelMutation.mutateAsync({
+          id: editingParcelId,
+          updates: updateData
+        });
 
-      // Call the callback if provided, passing the new parcel
-      if (onParcelAdded) {
-        onParcelAdded(newParcel);
+        cleanupDrawingState();
+
+        if (onBoundaryUpdated) {
+          onBoundaryUpdated();
+        }
+      } else {
+        // Create new parcel - include farm_id
+        const createData = {
+          name: parcelName,
+          farm_id: farmId,
+          boundary: tempBoundary,
+          description: '',
+          area: parcelDetails.area || calculatedArea,
+          area_unit: 'hectares',
+          soil_type: parcelDetails.soil_type || undefined,
+          irrigation_type: normalizedIrrigation || undefined,
+          crop_category: parcelDetails.crop_category || undefined,
+          crop_type: parcelDetails.crop_type || undefined,
+          variety: parcelDetails.variety || undefined,
+          planting_system: parcelDetails.planting_system || undefined,
+          spacing: parcelDetails.spacing || undefined,
+          density_per_hectare: parcelDetails.density_per_hectare || undefined,
+          plant_count: parcelDetails.plant_count || undefined,
+          planting_date: parcelDetails.planting_date || undefined,
+          planting_year: parcelDetails.planting_date ? new Date(parcelDetails.planting_date).getFullYear() : undefined,
+          planting_type: parcelDetails.planting_type || undefined,
+          rootstock: parcelDetails.rootstock || undefined,
+          calculated_area: calculatedArea,
+          perimeter: calculatedPerimeter
+        };
+
+        const newParcel = await addParcelMutation.mutateAsync(createData);
+
+        cleanupDrawingState();
+
+        if (onParcelAdded) {
+          onParcelAdded(newParcel);
+        }
       }
     } catch (error) {
       console.error('Error saving parcel:', error);
+      alert(`Erreur lors de ${editingParcelId ? 'la mise à jour' : 'la création'} de la parcelle: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -1231,27 +1313,27 @@ const MapComponent: React.FC<MapProps> = ({
       {isFullScreen && <div className="fixed inset-0 z-40 bg-white" />}
       <div className={isFullScreen ? "fixed inset-0 z-50" : "space-y-4"}>
         <div className={`relative w-full ${isFullScreen ? "h-full" : "h-96"}`}>
-        <div
-          ref={mapRef}
-          className="w-full h-full"
-          key="openlayers-map-container"
-        />
+          <div
+            ref={mapRef}
+            className="w-full h-full"
+            key="openlayers-map-container"
+          />
 
-        {/* Full-Screen Close Button */}
-        {isFullScreen && (
-          <div className="absolute top-4 left-4 z-50">
-            <button
-              onClick={() => setIsFullScreen(false)}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title="Quitter le plein écran (Échap)"
-            >
-              <X className="h-5 w-5 text-gray-600" />
-            </button>
-          </div>
-        )}
+          {/* Full-Screen Close Button */}
+          {isFullScreen && (
+            <div className="absolute top-4 left-4 z-50">
+              <button
+                onClick={() => setIsFullScreen(false)}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title="Quitter le plein écran (Échap)"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          )}
 
-        {/* First-visit geolocation prompt */}
-        {/* {showGeolocPrompt && (
+          {/* First-visit geolocation prompt */}
+          {/* {showGeolocPrompt && (
           <div className="absolute top-4 left-4 z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-4 w-72 sm:w-80 border border-gray-200 dark:border-gray-700">
               <div className="flex items-start justify-between">
@@ -1284,60 +1366,60 @@ const MapComponent: React.FC<MapProps> = ({
             </div>
           </div>
         )} */}
-        {/* React-based popup to avoid DOM manipulation conflicts */}
-        {popupData.visible && popupData.position && (
-          <div
-            className="absolute bg-white rounded-lg shadow-lg border border-gray-200 p-4 pointer-events-none z-40"
-            style={{
-              ...getPopupPixelPosition(popupData.position),
-              transform: 'translate(-50%, -100%)',
-              minWidth: '200px',
-              maxWidth: '300px'
-            }}
-            dangerouslySetInnerHTML={{ __html: popupData.content }}
-          />
-        )}
-        
-        {farmId && enableDrawing && showNameDialog && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
-              <h3 className="text-lg font-semibold mb-4">Nommer la parcelle</h3>
-              <input
-                type="text"
-                value={parcelName}
-                onChange={(e) => setParcelName(e.target.value)}
-                placeholder="Nom de la parcelle"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md mb-4"
-                autoFocus
-              />
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={cleanupDrawingState}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleNameSubmit}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  disabled={!parcelName}
-                >
-                  Suivant
-                </button>
+          {/* React-based popup to avoid DOM manipulation conflicts */}
+          {popupData.visible && popupData.position && (
+            <div
+              className="absolute bg-white rounded-lg shadow-lg border border-gray-200 p-4 pointer-events-none z-40"
+              style={{
+                ...getPopupPixelPosition(popupData.position),
+                transform: 'translate(-50%, -100%)',
+                minWidth: '200px',
+                maxWidth: '300px'
+              }}
+              dangerouslySetInnerHTML={{ __html: popupData.content }}
+            />
+          )}
+
+          {farmId && enableDrawing && showNameDialog && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
+                <h3 className="text-lg font-semibold mb-4">Nommer la parcelle</h3>
+                <input
+                  type="text"
+                  value={parcelName}
+                  onChange={(e) => setParcelName(e.target.value)}
+                  placeholder="Nom de la parcelle"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md mb-4"
+                  autoFocus
+                />
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={cleanupDrawingState}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleNameSubmit}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    disabled={!parcelName}
+                  >
+                    Suivant
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <Dialog open={farmId && enableDrawing && showParcelForm} onOpenChange={(open) => {
-          if (!open) {
-            cleanupDrawingState();
-          }
-        }}>
-          <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-            <DialogHeader>
-              <DialogTitle className="text-gray-900 dark:text-white">Détails de la parcelle: {parcelName}</DialogTitle>
-            </DialogHeader>
+          <Dialog open={farmId && enableDrawing && showParcelForm} onOpenChange={(open) => {
+            if (!open) {
+              cleanupDrawingState();
+            }
+          }}>
+            <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900 dark:text-white">Détails de la parcelle: {parcelName}</DialogTitle>
+              </DialogHeader>
 
               <div className="space-y-6 py-4">
                 {/* Basic Information */}
@@ -1616,528 +1698,526 @@ const MapComponent: React.FC<MapProps> = ({
                 )}
               </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={cleanupDrawingState}
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={cleanupDrawingState}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleSaveParcel}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Enregistrer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Location and Search Controls */}
+          <div className="absolute top-4 right-4 space-y-2 z-20">
+            <div className="flex flex-col space-y-2">
+              {/* Location Button */}
+              <button
+                onClick={requestUserLocation}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title="Aller à ma position"
               >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleSaveParcel}
-                className="bg-green-600 hover:bg-green-700"
+                <Navigation className={`h-5 w-5 ${locationPermission === 'granted' ? 'text-blue-600' : 'text-gray-600'}`} />
+              </button>
+
+              {/* Search Button */}
+              <button
+                onClick={() => setShowSearchBox(!showSearchBox)}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title="Rechercher un lieu"
               >
-                Enregistrer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                <Search className="h-5 w-5 text-gray-600" />
+              </button>
 
-        {/* Location and Search Controls */}
-        <div className="absolute top-4 right-4 space-y-2 z-20">
-          <div className="flex flex-col space-y-2">
-            {/* Location Button */}
-            <button
-              onClick={requestUserLocation}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title="Aller à ma position"
-            >
-              <Navigation className={`h-5 w-5 ${locationPermission === 'granted' ? 'text-blue-600' : 'text-gray-600'}`} />
-            </button>
+              {/* Place Names Toggle Button */}
+              <button
+                onClick={() => setShowPlaceNames(!showPlaceNames)}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title={showPlaceNames ? "Masquer les noms de lieux" : "Afficher les noms de lieux"}
+              >
+                <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
+              </button>
 
-            {/* Search Button */}
-            <button
-              onClick={() => setShowSearchBox(!showSearchBox)}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title="Rechercher un lieu"
-            >
-              <Search className="h-5 w-5 text-gray-600" />
-            </button>
+              {/* Map Type Toggle Button */}
+              <button
+                onClick={() => {
+                  // Capture zoom and center BEFORE state change
+                  if (mapInstanceRef.current) {
+                    const view = mapInstanceRef.current.getView();
+                    const currentZoom = view.getZoom();
+                    const currentCenter = view.getCenter();
 
-            {/* Place Names Toggle Button */}
-            <button
-              onClick={() => setShowPlaceNames(!showPlaceNames)}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title={showPlaceNames ? "Masquer les noms de lieux" : "Afficher les noms de lieux"}
-            >
-              <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
-            </button>
-
-            {/* Map Type Toggle Button */}
-            <button
-              onClick={() => {
-                // Capture zoom and center BEFORE state change
-                if (mapInstanceRef.current) {
-                  const view = mapInstanceRef.current.getView();
-                  const currentZoom = view.getZoom();
-                  const currentCenter = view.getCenter();
-                  
-                  // Store in ref to restore after state update
-                  if (currentZoom && currentCenter) {
-                    zoomCenterRef.current = {
-                      zoom: currentZoom,
-                      center: currentCenter as number[]
-                    };
+                    // Store in ref to restore after state update
+                    if (currentZoom && currentCenter) {
+                      zoomCenterRef.current = {
+                        zoom: currentZoom,
+                        center: currentCenter as number[]
+                      };
+                    }
                   }
-                }
-                
-                // Then update the map type
-                setMapType(mapType === 'osm' ? 'satellite' : 'osm');
-              }}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title={mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte'}
-            >
-              {mapType === 'osm' ? (
-                <Satellite className="h-5 w-5 text-gray-600" />
-              ) : (
-                <div className="h-5 w-5 flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-gray-600 rounded-sm"></div>
-                </div>
-              )}
-            </button>
 
-            {/* Full-Screen Toggle Button */}
-            <button
-              onClick={() => setIsFullScreen(!isFullScreen)}
-              className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              title={isFullScreen ? "Quitter le plein écran" : "Mode plein écran"}
-            >
-              {isFullScreen ? (
-                <Minimize2 className="h-5 w-5 text-gray-600" />
-              ) : (
-                <Maximize2 className="h-5 w-5 text-gray-600" />
-              )}
-            </button>
-          </div>
-
-          {/* Search Box */}
-          {showSearchBox && !showNameDialog && !showParcelForm && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-80 z-30">
-              <div className="flex items-center space-x-2 mb-3">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Rechercher un lieu au Maroc..."
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-                >
-                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSearchBox(false);
-                    setSearchResults([]);
-                    setSearchQuery('');
-                  }}
-                  className="p-2 text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="max-h-60 overflow-y-auto space-y-2">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.place_id}
-                      onClick={() => goToSearchResult(result)}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
-                    >
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {result.display_name.split(',')[0]}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {result.display_name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searchResults.length === 0 && searchQuery && !isSearching && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Aucun résultat trouvé
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {farmId && enableDrawing && !showNameDialog && !showParcelForm && (
-          <div className="absolute top-4 left-4 space-y-3 z-10">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Cliquez sur la carte et dessinez le contour de votre parcelle
-              </p>
-
-              <div className="flex items-center space-x-2 mb-3">
-                <button
-                  onClick={() => setDrawingMode(drawingMode === 'manual' ? 'assisted' : 'manual')}
-                  className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${
-                    drawingMode === 'assisted'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  <Wand2 className="h-4 w-4" />
-                  <span>Mode assisté</span>
-                </button>
-
-                <button
-                  onClick={() => setAutoSnapEnabled(!autoSnapEnabled)}
-                  className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${
-                    autoSnapEnabled
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                  <span>Magnétisme</span>
-                </button>
-              </div>
-
-              {calculatedArea > 0 && (
-                <div className="text-xs space-y-1 pt-2 border-t border-gray-200 dark:border-gray-600">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Surface: <span className="font-semibold text-gray-900 dark:text-white">{calculatedArea} ha</span>
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Périmètre: <span className="font-semibold text-gray-900 dark:text-white">{calculatedPerimeter} m</span>
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Satellite Indices Dialog */}
-        {showIndicesDialog && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                <Satellite className="h-5 w-5 text-blue-600" />
-                <span>Calculer les Indices de Végétation</span>
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Période d'analyse
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Date de début</label>
-                      <input
-                        type="date"
-                        value={dateRange.start_date}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
-                      <input
-                        type="date"
-                        value={dateRange.end_date}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Indices à calculer
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
-                    {availableIndices.map((index) => (
-                      <label key={index} className="flex items-center space-x-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedIndices.includes(index)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIndices(prev => [...prev, index]);
-                            } else {
-                              setSelectedIndices(prev => prev.filter(i => i !== index));
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-gray-700 dark:text-gray-300">{index}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {indicesError && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-                    <p className="text-sm text-red-600 dark:text-red-400">{indicesError}</p>
+                  // Then update the map type
+                  setMapType(mapType === 'osm' ? 'satellite' : 'osm');
+                }}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title={mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte'}
+              >
+                {mapType === 'osm' ? (
+                  <Satellite className="h-5 w-5 text-gray-600" />
+                ) : (
+                  <div className="h-5 w-5 flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-gray-600 rounded-sm"></div>
                   </div>
                 )}
-              </div>
+              </button>
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setShowIndicesDialog(false)}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleCalculateIndices}
-                  disabled={indicesLoading || selectedIndices.length === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 flex items-center space-x-2"
-                >
-                  {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-                  <span>Calculer</span>
-                </button>
-              </div>
+              {/* Full-Screen Toggle Button */}
+              <button
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                title={isFullScreen ? "Quitter le plein écran" : "Mode plein écran"}
+              >
+                {isFullScreen ? (
+                  <Minimize2 className="h-5 w-5 text-gray-600" />
+                ) : (
+                  <Maximize2 className="h-5 w-5 text-gray-600" />
+                )}
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* Time Series Dialog */}
-        {showTimeSeriesDialog && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px]">
-              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
-                <span>Analyse de Série Temporelle</span>
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Période d'analyse
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Date de début</label>
-                      <input
-                        type="date"
-                        value={dateRange.start_date}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
-                      <input
-                        type="date"
-                        value={dateRange.end_date}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Index à analyser
-                  </label>
-                  <select
-                    value={selectedTimeSeriesIndex}
-                    onChange={(e) => setSelectedTimeSeriesIndex(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            {/* Search Box */}
+            {showSearchBox && !showNameDialog && !showParcelForm && (
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-80 z-30">
+                <div className="flex items-center space-x-2 mb-3">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Rechercher un lieu au Maroc..."
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                   >
-                    {availableIndices.map((index) => (
-                      <option key={index} value={index}>{index}</option>
-                    ))}
-                  </select>
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSearchBox(false);
+                      setSearchResults([]);
+                      setSearchQuery('');
+                    }}
+                    className="p-2 text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
 
-                {indicesError && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-                    <p className="text-sm text-red-600 dark:text-red-400">{indicesError}</p>
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.place_id}
+                        onClick={() => goToSearchResult(result)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                      >
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {result.display_name.split(',')[0]}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {result.display_name}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
-              </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setShowTimeSeriesDialog(false)}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleGetTimeSeries}
-                  disabled={indicesLoading}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 flex items-center space-x-2"
-                >
-                  {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-                  <span>Analyser</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {selectedParcel && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold flex items-center space-x-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <span>{selectedParcel.name}</span>
-            </h3>
-
-            {/* Actions */}
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowIndicesDialog(true)}
-                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                disabled={indicesLoading || !selectedParcel.boundary}
-              >
-                <Satellite className="h-4 w-4" />
-                <span>Indices</span>
-              </button>
-              <button
-                onClick={() => setShowTimeSeriesDialog(true)}
-                className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
-                disabled={indicesLoading || !selectedParcel.boundary}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>Série Temporelle</span>
-              </button>
-              {/* Delete functionality removed - handled in parent component */}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-start space-x-3">
-              <Ruler className="h-5 w-5 text-blue-500 mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Surface</p>
-                <p className="text-lg font-semibold">{selectedParcel.area} ha</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Tree className="h-5 w-5 text-green-500 mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Arbres</p>
-                <p className="text-lg font-semibold">{selectedParcel.trees_count || 0}</p>
-                <p className="text-sm text-gray-500">
-                  {selectedParcel.planting_density} arbres/ha
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Droplets className="h-5 w-5 text-blue-500 mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Irrigation</p>
-                <p className="text-lg font-semibold">{selectedParcel.irrigation_type}</p>
-              </div>
-            </div>
-
-            {selectedParcel.varieties && (
-              <div className="flex items-start space-x-3">
-                <Tree className="h-5 w-5 text-green-500 mt-1" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Variétés</p>
-                  <p className="text-lg font-semibold">{selectedParcel.varieties.join(', ')}</p>
-                </div>
+                {searchResults.length === 0 && searchQuery && !isSearching && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Aucun résultat trouvé
+                  </p>
+                )}
               </div>
             )}
           </div>
 
-          {/* Satellite Indices Results */}
-          {indicesResults.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
-                <Satellite className="h-4 w-4 text-blue-600" />
-                <span>Indices de Végétation</span>
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {indicesResults.map((result, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                        {result.index}
-                      </span>
-                      <button
-                        onClick={() => handleExportIndexMap(result.index)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Télécharger la carte"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {result.value.toFixed(3)}
+          {farmId && enableDrawing && !showNameDialog && !showParcelForm && (
+            <div className="absolute top-4 left-4 space-y-3 z-10">
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Cliquez sur la carte et dessinez le contour de votre parcelle
+                </p>
+
+                <div className="flex items-center space-x-2 mb-3">
+                  <button
+                    onClick={() => setDrawingMode(drawingMode === 'manual' ? 'assisted' : 'manual')}
+                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${drawingMode === 'assisted'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    <span>Mode assisté</span>
+                  </button>
+
+                  <button
+                    onClick={() => setAutoSnapEnabled(!autoSnapEnabled)}
+                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${autoSnapEnabled
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                    <span>Magnétisme</span>
+                  </button>
+                </div>
+
+                {calculatedArea > 0 && (
+                  <div className="text-xs space-y-1 pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Surface: <span className="font-semibold text-gray-900 dark:text-white">{calculatedArea} ha</span>
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(result.timestamp).toLocaleDateString()}
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Périmètre: <span className="font-semibold text-gray-900 dark:text-white">{calculatedPerimeter} m</span>
                     </p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
 
-          {/* Time Series Results */}
-          {timeSeriesResults && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4 text-purple-600" />
-                <span>Série Temporelle - {timeSeriesResults.index}</span>
-              </h4>
-              
-              {timeSeriesResults.statistics && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Moyenne</p>
-                    <p className="text-lg font-semibold">{timeSeriesResults.statistics.mean.toFixed(3)}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Min</p>
-                    <p className="text-lg font-semibold">{timeSeriesResults.statistics.min.toFixed(3)}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Max</p>
-                    <p className="text-lg font-semibold">{timeSeriesResults.statistics.max.toFixed(3)}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Médiane</p>
-                    <p className="text-lg font-semibold">{timeSeriesResults.statistics.median.toFixed(3)}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Écart-type</p>
-                    <p className="text-lg font-semibold">{timeSeriesResults.statistics.std.toFixed(3)}</p>
-                  </div>
-                </div>
-              )}
+          {/* Satellite Indices Dialog */}
+          {showIndicesDialog && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <Satellite className="h-5 w-5 text-blue-600" />
+                  <span>Calculer les Indices de Végétation</span>
+                </h3>
 
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
-                <div className="space-y-2">
-                  {timeSeriesResults.data.map((point, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 dark:text-gray-300">
-                        {new Date(point.date).toLocaleDateString()}
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {point.value.toFixed(3)}
-                      </span>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Période d'analyse
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Date de début</label>
+                        <input
+                          type="date"
+                          value={dateRange.start_date}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
+                        <input
+                          type="date"
+                          value={dateRange.end_date}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Indices à calculer
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
+                      {availableIndices.map((index) => (
+                        <label key={index} className="flex items-center space-x-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={selectedIndices.includes(index)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIndices(prev => [...prev, index]);
+                              } else {
+                                setSelectedIndices(prev => prev.filter(i => i !== index));
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-gray-700 dark:text-gray-300">{index}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {indicesError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                      <p className="text-sm text-red-600 dark:text-red-400">{indicesError}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowIndicesDialog(false)}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleCalculateIndices}
+                    disabled={indicesLoading || selectedIndices.length === 0}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 flex items-center space-x-2"
+                  >
+                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    <span>Calculer</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Time Series Dialog */}
+          {showTimeSeriesDialog && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px]">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-purple-600" />
+                  <span>Analyse de Série Temporelle</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Période d'analyse
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Date de début</label>
+                        <input
+                          type="date"
+                          value={dateRange.start_date}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
+                        <input
+                          type="date"
+                          value={dateRange.end_date}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Index à analyser
+                    </label>
+                    <select
+                      value={selectedTimeSeriesIndex}
+                      onChange={(e) => setSelectedTimeSeriesIndex(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      {availableIndices.map((index) => (
+                        <option key={index} value={index}>{index}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {indicesError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                      <p className="text-sm text-red-600 dark:text-red-400">{indicesError}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowTimeSeriesDialog(false)}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleGetTimeSeries}
+                    disabled={indicesLoading}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 flex items-center space-x-2"
+                  >
+                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    <span>Analyser</span>
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </div>
-      )}
+
+        {selectedParcel && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold flex items-center space-x-2">
+                <MapPin className="h-5 w-5 text-green-600" />
+                <span>{selectedParcel.name}</span>
+              </h3>
+
+              {/* Actions */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowIndicesDialog(true)}
+                  className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  disabled={indicesLoading || !selectedParcel.boundary}
+                >
+                  <Satellite className="h-4 w-4" />
+                  <span>Indices</span>
+                </button>
+                <button
+                  onClick={() => setShowTimeSeriesDialog(true)}
+                  className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
+                  disabled={indicesLoading || !selectedParcel.boundary}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Série Temporelle</span>
+                </button>
+                {/* Delete functionality removed - handled in parent component */}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="flex items-start space-x-3">
+                <Ruler className="h-5 w-5 text-blue-500 mt-1" />
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Surface</p>
+                  <p className="text-lg font-semibold">{selectedParcel.area} ha</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Tree className="h-5 w-5 text-green-500 mt-1" />
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Arbres</p>
+                  <p className="text-lg font-semibold">{selectedParcel.trees_count || 0}</p>
+                  <p className="text-sm text-gray-500">
+                    {selectedParcel.planting_density} arbres/ha
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Droplets className="h-5 w-5 text-blue-500 mt-1" />
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Irrigation</p>
+                  <p className="text-lg font-semibold">{selectedParcel.irrigation_type}</p>
+                </div>
+              </div>
+
+              {selectedParcel.varieties && (
+                <div className="flex items-start space-x-3">
+                  <Tree className="h-5 w-5 text-green-500 mt-1" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Variétés</p>
+                    <p className="text-lg font-semibold">{selectedParcel.varieties.join(', ')}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Satellite Indices Results */}
+            {indicesResults.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
+                  <Satellite className="h-4 w-4 text-blue-600" />
+                  <span>Indices de Végétation</span>
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {indicesResults.map((result, index) => (
+                    <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          {result.index}
+                        </span>
+                        <button
+                          onClick={() => handleExportIndexMap(result.index)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Télécharger la carte"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {result.value.toFixed(3)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(result.timestamp).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Time Series Results */}
+            {timeSeriesResults && (
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  <span>Série Temporelle - {timeSeriesResults.index}</span>
+                </h4>
+
+                {timeSeriesResults.statistics && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">Moyenne</p>
+                      <p className="text-lg font-semibold">{timeSeriesResults.statistics.mean.toFixed(3)}</p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">Min</p>
+                      <p className="text-lg font-semibold">{timeSeriesResults.statistics.min.toFixed(3)}</p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">Max</p>
+                      <p className="text-lg font-semibold">{timeSeriesResults.statistics.max.toFixed(3)}</p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">Médiane</p>
+                      <p className="text-lg font-semibold">{timeSeriesResults.statistics.median.toFixed(3)}</p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">Écart-type</p>
+                      <p className="text-lg font-semibold">{timeSeriesResults.statistics.std.toFixed(3)}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <div className="space-y-2">
+                    {timeSeriesResults.data.map((point, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 dark:text-gray-300">
+                          {new Date(point.date).toLocaleDateString()}
+                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {point.value.toFixed(3)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

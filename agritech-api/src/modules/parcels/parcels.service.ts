@@ -434,6 +434,9 @@ export class ParcelsService {
       rootstock: dto.rootstock || null,
       soil_type: dto.soil_type || null,
       irrigation_type: dto.irrigation_type || null,
+      boundary: dto.boundary || null,
+      calculated_area: dto.calculated_area || null,
+      perimeter: dto.perimeter || null,
       is_active: true,
     };
 
@@ -512,6 +515,9 @@ export class ParcelsService {
     if (dto.rootstock !== undefined) updateData.rootstock = dto.rootstock;
     if (dto.soil_type !== undefined) updateData.soil_type = dto.soil_type;
     if (dto.irrigation_type !== undefined) updateData.irrigation_type = dto.irrigation_type;
+    if (dto.boundary !== undefined) updateData.boundary = dto.boundary;
+    if (dto.calculated_area !== undefined) updateData.calculated_area = dto.calculated_area;
+    if (dto.perimeter !== undefined) updateData.perimeter = dto.perimeter;
 
     // Update parcel
     const { data: updatedParcel, error: updateError } = await this.supabaseAdmin

@@ -60,9 +60,15 @@ const ParcelSatellite = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-2">
             Les données de délimitation de la parcelle sont requises pour l'analyse satellite.
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
             Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.
           </p>
+          <a
+            href={`/parcels?farmId=${parcel.farm_id}`}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            Définir les limites de la parcelle
+          </a>
         </div>
       )}
     </div>

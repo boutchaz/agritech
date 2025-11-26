@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUUID, IsString, IsNumber, IsOptional, IsDateString, Min, IsInt } from 'class-validator';
+import { IsUUID, IsString, IsNumber, IsOptional, IsDateString, Min, IsInt, IsArray, ArrayMinSize } from 'class-validator';
 
 export class CreateParcelDto {
   @ApiProperty({
@@ -137,7 +137,7 @@ export class CreateParcelDto {
   @IsString()
   irrigation_type?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Parcel boundary coordinates (array of [longitude, latitude] pairs)',
     example: [
       [-759185.3554873749, 4028238.0941472454],
@@ -147,8 +147,9 @@ export class CreateParcelDto {
       [-759185.3554873749, 4028238.0941472454]
     ],
   })
-  @IsOptional()
-  boundary?: number[][];
+  @IsArray()
+  @ArrayMinSize(3)
+  boundary: number[][];
 
   @ApiPropertyOptional({
     description: 'Calculated area from boundary',

@@ -52,6 +52,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(search.farmId || null);
+  const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
 
   // Track if we're currently syncing to prevent loops
   const isSyncingRef = useRef(false);
@@ -184,7 +185,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
         activeModule={activeModule}
         onModuleChange={setActiveModule}
         isDarkMode={isDarkMode}
-        onThemeToggle={() => {}}
+        onThemeToggle={() => { }}
       />
       <main data-testid="parcels-page" className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         <ModernPageHeader
@@ -305,23 +306,26 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                   </div>
                 </div>
               )}
-              
+
               {/* No parcels message */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {currentFarm || selectedFarmId
                     ? `Aucune parcelle trouvée pour ${(() => {
-                        const targetFarmId = selectedFarmId || currentFarm?.id;
-                        const farm = farms?.find(f => f.id === targetFarmId);
-                        return farm?.name || 'cette ferme';
-                      })()}.`
+                      const targetFarmId = selectedFarmId || currentFarm?.id;
+                      const farm = farms?.find(f => f.id === targetFarmId);
+                      return farm?.name || 'cette ferme';
+                    })()}.`
                     : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
                 </p>
                 {(currentFarm || selectedFarmId) && (
                   <div className="space-x-3">
                     <button
                       data-testid="create-parcel-button"
-                      onClick={() => setShowAddParcelMap(true)}
+                      onClick={() => {
+                        setEditingBoundaryParcelId(null);
+                        setShowAddParcelMap(true);
+                      }}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
                       Ajouter une parcelle
@@ -364,13 +368,18 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 selectedParcelId={null}
                 onParcelSelect={handleParcelSelect}
                 parcels={parcels}
+                editingParcelId={editingBoundaryParcelId}
                 onParcelAdded={(newParcel) => {
-                  // React Query will automatically refetch the data
                   setShowAddParcelMap(false);
+                  setEditingBoundaryParcelId(null);
                   // Navigate to the newly created parcel detail page
                   if (newParcel?.id) {
                     navigate({ to: `/parcels/${newParcel.id}` });
                   }
+                }}
+                onBoundaryUpdated={() => {
+                  setShowAddParcelMap(false);
+                  setEditingBoundaryParcelId(null);
                 }}
               />
 
@@ -384,11 +393,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                       <div
                         key={parcel.id}
                         data-testid={`parcel-card-${parcel.id}`}
-                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all cursor-pointer hover:shadow-lg hover:border-green-300 hover:bg-green-50"
-                        onClick={(e) => {
-                          console.log('Card clicked!', parcel.id, e);
-                          handleParcelSelect(parcel.id);
-                        }}
+                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all hover:shadow-lg hover:border-green-300"
                       >
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
@@ -487,6 +492,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setEditingBoundaryParcelId(parcel.id);
                                   setShowAddParcelMap(true);
                                 }}
                                 className="text-xs text-blue-600 hover:text-blue-700 underline"
@@ -665,10 +671,10 @@ const AppContent: React.FC = () => {
   // Match /parcels/{id} or /parcels/{id}/ or /parcels/{id}/something
   const isParcelDetailRoute = location.pathname.match(/^\/parcels\/[^/]+(\/.*)?$/);
 
-  console.log('📋 Parcels route check', { 
-    pathname: location.pathname, 
-    isParcelDetailRoute: !!isParcelDetailRoute, 
-    search 
+  console.log('📋 Parcels route check', {
+    pathname: location.pathname,
+    isParcelDetailRoute: !!isParcelDetailRoute,
+    search
   });
 
   // If we're on a parcel detail route, show the full-page detail view
