@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
+import { usersApi } from '../lib/api/users';
 import type { UserProfile, Farm, Organization } from '../lib/supabase';
 
 // Extended organization type with role info from join
@@ -23,34 +24,8 @@ export const useUserProfile = (userId: string | undefined) => {
       if (!userId) return null;
 
       try {
-        // Direct query to user_profiles table
-        const { data, error } = await authSupabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (error) {
-          // Distinguish between network errors and "no profile" errors
-          const isNetworkError = error.message?.includes('Failed to fetch') || 
-                                 error.message?.includes('NetworkError') ||
-                                 error.code === 'PGRST301'; // Connection timeout
-          
-          if (error.code === 'PGRST116') {
-            // No profile found - this is expected for new users, not an error
-            return null;
-          }
-          
-          if (isNetworkError) {
-            console.warn('⚠️ Network error fetching profile, will retry:', error);
-            throw error; // Re-throw to trigger retry
-          }
-          
-          console.error('Profile fetch error:', error);
-          // Don't throw, return null to trigger onboarding
-          return null;
-        }
-
+        // Use NestJS API instead of direct Supabase query
+        const data = await usersApi.getMe();
         return data;
       } catch (error) {
         // Re-throw network errors to trigger retry
@@ -59,9 +34,10 @@ export const useUserProfile = (userId: string | undefined) => {
           error.message?.includes('NetworkError') ||
           error.message?.includes('Network request failed')
         )) {
+          console.warn('⚠️ Network error fetching profile, will retry:', error);
           throw error;
         }
-        // For other errors, return null
+        // For other errors (404, 403), return null
         console.error('Profile fetch error:', error);
         return null;
       }

@@ -55,9 +55,17 @@ const PreferencesSettings: React.FC = () => {
 
       setIsLoadingPreferences(false);
     } else if (!user) {
+      // No user logged in
       setIsLoadingPreferences(false);
+    } else {
+      // User exists but profile not loaded yet - wait a bit then give up
+      const timeout = setTimeout(() => {
+        setIsLoadingPreferences(false);
+      }, 3000); // Stop loading after 3 seconds even if profile doesn't load
+
+      return () => clearTimeout(timeout);
     }
-  }, [profile, user]); // Removed i18n from dependencies to avoid infinite loop
+  }, [profile, user, i18n.language]); // Added i18n.language back as safe dependency
 
   const handleSave = async () => {
     if (!user) {
