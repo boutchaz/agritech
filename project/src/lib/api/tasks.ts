@@ -6,6 +6,8 @@ import type {
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskStatistics,
+  CompleteHarvestTaskRequest,
+  CompleteHarvestTaskResponse,
 } from '../../types/tasks';
 
 export interface TaskApiFilters {
@@ -105,6 +107,20 @@ export const tasksApi = {
     }
   ): Promise<Task> {
     return apiClient.patch<Task>(`/api/v1/organizations/${organizationId}/tasks/${taskId}/complete`, data);
+  },
+
+  /**
+   * Complete a harvest task and create harvest record
+   */
+  async completeWithHarvest(
+    organizationId: string,
+    taskId: string,
+    data: CompleteHarvestTaskRequest
+  ): Promise<CompleteHarvestTaskResponse> {
+    return apiClient.post<CompleteHarvestTaskResponse>(
+      `/api/v1/organizations/${organizationId}/tasks/${taskId}/complete-with-harvest`,
+      data
+    );
   },
 
   /**

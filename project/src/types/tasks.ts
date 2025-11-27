@@ -346,6 +346,47 @@ export interface TaskAssignmentRequest {
   notify?: boolean;
 }
 
+export interface HarvestWorkerInput {
+  worker_id: string;
+  hours_worked: number;
+  quantity_picked?: number;
+}
+
+export interface CompleteHarvestTaskRequest {
+  quality_rating?: number;
+  actual_cost?: number;
+  notes?: string;
+
+  // Harvest-specific fields
+  crop_id: string;
+  harvest_date: string;
+  quantity: number;
+  unit: 'kg' | 'tons' | 'units' | 'boxes' | 'crates' | 'liters';
+  quality_grade?: 'A' | 'B' | 'C' | 'Extra' | 'First' | 'Second' | 'Third';
+  quality_score?: number;
+  quality_notes?: string;
+  workers: HarvestWorkerInput[];
+  supervisor_id?: string;
+  storage_location?: string;
+  temperature?: number;
+  humidity?: number;
+  intended_for?: 'market' | 'storage' | 'processing' | 'export' | 'direct_client';
+  expected_price_per_unit?: number;
+  harvest_notes?: string;
+}
+
+export interface CompleteHarvestTaskResponse {
+  task: Task;
+  harvest: {
+    id: string;
+    harvest_date: string;
+    quantity: number;
+    unit: string;
+    harvest_task_id: string;
+    [key: string]: any;
+  };
+}
+
 export interface WorkerAvailability {
   worker_id: string;
   worker_name: string;

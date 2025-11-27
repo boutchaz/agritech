@@ -195,7 +195,48 @@ export interface MakeReceptionDecisionDto {
   decision: Exclude<ReceptionDecision, 'pending'>;
   decision_notes?: string;
   destination_warehouse_id?: string; // Required for 'storage' decision
-  item_id?: string; // Required for creating stock entry
+  sales_order_id?: string; // For direct_sale decision
+  transformation_order_id?: string; // For transformation decision
+  stock_entry_id?: string; // Created after decision
+}
+
+/**
+ * Defect information for quality control
+ */
+export interface Defect {
+  type: string;
+  severity: 'minor' | 'moderate' | 'severe';
+  description?: string;
+  percentage?: number;
+}
+
+/**
+ * DTO for processing payment and financial entries
+ */
+export interface ProcessReceptionPaymentDto {
+  create_payment: boolean;
+  worker_id?: string;
+  payment_type?: 'daily_wage' | 'per_unit' | 'bonus' | 'overtime';
+  amount?: number;
+  units_completed?: number;
+  rate_per_unit?: number;
+  hours_worked?: number;
+  payment_method?: 'cash' | 'bank_transfer' | 'check' | 'mobile_money';
+  notes?: string;
+
+  create_journal_entry: boolean;
+  debit_account_id?: string;
+  credit_account_id?: string;
+  journal_description?: string;
+}
+
+/**
+ * Response from processing payment
+ */
+export interface ProcessPaymentResponse {
+  batch: ReceptionBatch;
+  payment_record_id?: string | null;
+  journal_entry_id?: string | null;
 }
 
 /**
