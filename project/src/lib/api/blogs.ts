@@ -1,5 +1,4 @@
-import { apiClient } from '../api-client';
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const BASE_URL = '/api/v1/blogs';
 
 // =====================================================
@@ -63,6 +62,32 @@ export interface BlogFilters {
 }
 
 // =====================================================
+// PUBLIC API HELPER (no auth required)
+// =====================================================
+
+async function publicFetch<T>(endpoint: string): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      message: response.statusText,
+      error: 'Unknown error',
+      statusCode: response.status,
+    }));
+    throw new Error(error.message || error.error || 'API request failed');
+  }
+
+  return response.json();
+}
+
+// =====================================================
 // API CLIENT
 // =====================================================
 
@@ -85,41 +110,41 @@ export const blogsApi = {
     const queryString = params.toString();
     const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
 
-    return apiClient.get<PaginatedBlogs>(url);
+    return publicFetch<PaginatedBlogs>(url);
   },
 
   /**
    * Get featured blog posts
    */
   async getFeaturedBlogs(limit: number = 3): Promise<BlogPost[]> {
-    return apiClient.get<BlogPost[]>(`${BASE_URL}/featured?limit=${limit}`);
+    return publicFetch<BlogPost[]>(`${BASE_URL}/featured?limit=${limit}`);
   },
 
   /**
    * Get a single blog post by slug
    */
   async getBlogBySlug(slug: string): Promise<BlogPost> {
-    return apiClient.get<BlogPost>(`${BASE_URL}/${slug}`);
+    return publicFetch<BlogPost>(`${BASE_URL}/${slug}`);
   },
 
   /**
    * Get related blog posts
    */
   async getRelatedBlogs(slug: string, limit: number = 3): Promise<BlogPost[]> {
-    return apiClient.get<BlogPost[]>(`${BASE_URL}/${slug}/related?limit=${limit}`);
+    return publicFetch<BlogPost[]>(`${BASE_URL}/${slug}/related?limit=${limit}`);
   },
 
   /**
    * Get all blog categories
    */
   async getCategories(): Promise<BlogCategory[]> {
-    return apiClient.get<BlogCategory[]>(`${BASE_URL}/categories`);
+    return publicFetch<BlogCategory[]>(`${BASE_URL}/categories`);
   },
 
   /**
    * Get a single category by slug
    */
   async getCategoryBySlug(slug: string): Promise<BlogCategory> {
-    return apiClient.get<BlogCategory>(`${BASE_URL}/categories/${slug}`);
+    return publicFetch<BlogCategory>(`${BASE_URL}/categories/${slug}`);
   },
 };
