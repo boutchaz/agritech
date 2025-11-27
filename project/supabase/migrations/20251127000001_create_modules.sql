@@ -53,18 +53,22 @@ CREATE POLICY "Organization admins can update modules"
     TO authenticated
     USING (
         organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND is_active = true
-            AND role IN ('admin', 'owner')
+            SELECT ou.organization_id
+            FROM organization_users ou
+            JOIN roles r ON ou.role_id = r.id
+            WHERE ou.user_id = auth.uid()
+            AND ou.is_active = true
+            AND r.name IN ('system_admin', 'organization_admin')
         )
     )
     WITH CHECK (
         organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND is_active = true
-            AND role IN ('admin', 'owner')
+            SELECT ou.organization_id
+            FROM organization_users ou
+            JOIN roles r ON ou.role_id = r.id
+            WHERE ou.user_id = auth.uid()
+            AND ou.is_active = true
+            AND r.name IN ('system_admin', 'organization_admin')
         )
     );
 
@@ -73,10 +77,12 @@ CREATE POLICY "Organization admins can insert modules"
     TO authenticated
     WITH CHECK (
         organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND is_active = true
-            AND role IN ('admin', 'owner')
+            SELECT ou.organization_id
+            FROM organization_users ou
+            JOIN roles r ON ou.role_id = r.id
+            WHERE ou.user_id = auth.uid()
+            AND ou.is_active = true
+            AND r.name IN ('system_admin', 'organization_admin')
         )
     );
 

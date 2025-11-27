@@ -17,7 +17,7 @@ export class OrganizationModulesService {
     // Verify user has access to this organization
     const { data: orgUser, error: orgError } = await client
       .from('organization_users')
-      .select('organization_id, role')
+      .select('organization_id')
       .eq('organization_id', organizationId)
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -78,10 +78,13 @@ export class OrganizationModulesService {
   ) {
     const client = this.databaseService.getAdminClient();
 
-    // Verify user is admin/owner of the organization
+    // Verify user is admin of the organization
     const { data: orgUser, error: orgError } = await client
       .from('organization_users')
-      .select('organization_id, role')
+      .select(`
+        organization_id,
+        role:roles!organization_users_role_id_fkey(name)
+      `)
       .eq('organization_id', organizationId)
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -91,7 +94,8 @@ export class OrganizationModulesService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    if (orgUser.role !== 'admin' && orgUser.role !== 'owner') {
+    const roleName = orgUser.role?.name;
+    if (roleName !== 'system_admin' && roleName !== 'organization_admin') {
       throw new ForbiddenException('You do not have permission to update modules');
     }
 
