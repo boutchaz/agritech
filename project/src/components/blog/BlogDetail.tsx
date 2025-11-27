@@ -31,14 +31,19 @@ export function BlogDetail({ slug }: BlogDetailProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-8" />
-        <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-xl mb-8" />
-        <div className="space-y-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
-          ))}
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-blue-100 dark:bg-blue-900 border border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300 px-4 py-3 rounded mb-4">
+          Loading blog post: {slug}...
+        </div>
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-8" />
+          <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-xl mb-8" />
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -46,20 +51,27 @@ export function BlogDetail({ slug }: BlogDetailProps) {
 
   if (error || !post) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Post not found
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          The blog post you're looking for doesn't exist or has been removed.
-        </p>
-        <Link
-          to="/blog"
-          className="inline-flex items-center gap-2 text-green-600 dark:text-green-400 font-medium hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Blog
-        </Link>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+          <strong>Error:</strong> {error ? String(error) : 'Post data is null'}
+          <br />
+          <strong>Slug:</strong> {slug}
+        </div>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Post not found
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            The blog post you're looking for doesn't exist or has been removed.
+          </p>
+          <Link
+            to="/blog"
+            className="inline-flex items-center gap-2 text-green-600 dark:text-green-400 font-medium hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Blog
+          </Link>
+        </div>
       </div>
     );
   }
