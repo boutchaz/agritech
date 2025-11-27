@@ -209,4 +209,54 @@ export class ItemsController {
     const organizationId = req.headers['x-organization-id'];
     return this.itemsService.deleteItem(id, organizationId);
   }
+
+  // =====================================================
+  // STOCK LEVELS & FARM INTEGRATION ENDPOINTS
+  // =====================================================
+
+  @Get('stock-levels/farm')
+  @ApiOperation({ summary: 'Get stock levels grouped by farm with warehouse relationships' })
+  @ApiQuery({ name: 'farm_id', required: false, description: 'Filter by farm ID' })
+  @ApiQuery({ name: 'item_id', required: false, description: 'Filter by item ID' })
+  @ApiQuery({ name: 'low_stock_only', required: false, description: 'Show only low stock items' })
+  @ApiResponse({ status: 200, description: 'Farm stock levels retrieved successfully' })
+  async getFarmStockLevels(
+    @Req() req: any,
+    @Query('farm_id') farmId?: string,
+    @Query('item_id') itemId?: string,
+    @Query('low_stock_only') lowStockOnly?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.getFarmStockLevels(organizationId, {
+      farm_id: farmId,
+      item_id: itemId,
+      low_stock_only: lowStockOnly === 'true',
+    });
+  }
+
+  @Get(':id/farm-usage')
+  @ApiOperation({ summary: 'Get item usage by farm/parcel' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item farm usage retrieved successfully' })
+  async getItemFarmUsage(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.getItemFarmUsage(organizationId, id);
+  }
+
+  @Get('stock-levels')
+  @ApiOperation({ summary: 'Get stock levels for items with farm context' })
+  @ApiQuery({ name: 'farm_id', required: false, description: 'Filter by farm ID' })
+  @ApiQuery({ name: 'item_id', required: false, description: 'Filter by item ID' })
+  @ApiResponse({ status: 200, description: 'Stock levels retrieved successfully' })
+  async getStockLevels(
+    @Req() req: any,
+    @Query('farm_id') farmId?: string,
+    @Query('item_id') itemId?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.getStockLevels(organizationId, {
+      farm_id: farmId,
+      item_id: itemId,
+    });
+  }
 }

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useFarms } from '@/hooks/useParcelsQuery';
+import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -38,13 +40,16 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter } from 'lucide-react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useNavigate } from '@tanstack/react-router';
-import { supabase } from '@/lib/supabase';
+import { itemsApi } from '@/lib/api/items';
 import { toast } from 'sonner';
 import type { Item, CreateItemInput, UpdateItemInput } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
+import LowStockAlerts from './LowStockAlerts';
+import FarmStockLevels from './FarmStockLevels';
+import ItemFarmUsage from './ItemFarmUsage';
 
 interface ItemFormProps {
   item?: Item | null;
@@ -167,13 +172,21 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const updateItem = useUpdateItem();
   const [showGroupForm, setShowGroupForm] = useState(false);
 
-  // Fetch work units
+  // Fetch work units - Note: This is reference data, keeping direct Supabase call for now
+  // TODO: Migrate to NestJS API when work_units endpoint is available
   const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
     queryKey: ['work-units', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
 
-      const { data, error } = await supabase
+      // Using direct Supabase call for work_units (reference data)
+      // This should be migrated to NestJS API when endpoint is available
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+      const { data, error } = await supabaseClient
         .from('work_units')
         .select('*')
         .eq('organization_id', currentOrganization.id)
@@ -193,67 +206,27 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     queryFn: async () => {
       if (!item?.id || !currentOrganization?.id) return null;
 
-      // First try stock_valuation (preferred source)
-      const { data: valuationData, error: valuationError } = await supabase
-        .from('stock_valuation')
-        .select(`
-          item_id,
-          warehouse_id,
-          remaining_quantity,
-          total_cost,
-          warehouse:warehouses(id, name)
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .eq('item_id', item.id)
-        .gt('remaining_quantity', 0);
+      try {
+        const stockData = await itemsApi.getStockLevels(
+          { item_id: item.id },
+          currentOrganization.id,
+        );
 
-      if (valuationError) {
-        console.warn('Could not fetch from stock_valuation:', valuationError);
-      }
-
-      // If stock_valuation has data, use it
-      if (valuationData && valuationData.length > 0) {
-        const aggregated = valuationData.reduce((acc, val) => {
-          acc.total_quantity += parseFloat(val.remaining_quantity || 0);
-          acc.total_value += parseFloat(val.total_cost || 0);
-          acc.warehouses.push({
-            warehouse_id: val.warehouse_id,
-            warehouse_name: (val.warehouse as any)?.name || 'Unknown',
-            quantity: parseFloat(val.remaining_quantity || 0),
-            value: parseFloat(val.total_cost || 0),
-          });
-          return acc;
-        }, {
-          total_quantity: 0,
-          total_value: 0,
-          warehouses: [] as Array<{
-            warehouse_id: string;
-            warehouse_name: string;
-            quantity: number;
-            value: number;
-          }>,
-        });
-
-        if (aggregated.total_quantity > 0) {
-          return aggregated;
+        // Transform API response to match expected format
+        const itemStock = stockData[item.id];
+        if (itemStock && itemStock.total_quantity > 0) {
+          return {
+            total_quantity: itemStock.total_quantity,
+            total_value: itemStock.total_value,
+            warehouses: itemStock.warehouses || [],
+          };
         }
+
+        return null;
+      } catch (error) {
+        console.warn('Could not fetch stock level:', error);
+        return null;
       }
-
-      // Fallback: Check stock_movements to see if there are any entries
-      // This helps identify if stock entries exist but weren't properly processed
-      const { data: movementsData } = await supabase
-        .from('stock_movements')
-        .select('id, warehouse_id, quantity')
-        .eq('organization_id', currentOrganization.id)
-        .eq('item_id', item.id)
-        .limit(1);
-
-      // If there are movements but no valuation, the stock entry might not be posted
-      if (movementsData && movementsData.length > 0) {
-        console.info('Stock movements exist but no valuation found. Ensure stock entries are Posted.');
-      }
-
-      return null;
     },
     enabled: !!item?.id && !!currentOrganization?.id && !!item?.is_stock_item,
   });
@@ -271,6 +244,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     is_purchase_item: item?.is_purchase_item ?? true,
     is_stock_item: item?.is_stock_item ?? true,
     maintain_stock: item?.maintain_stock ?? true,
+    minimum_stock_level: item?.minimum_stock_level || undefined,
   });
 
   // Get first item group ID in a stable way to avoid infinite loops
@@ -289,6 +263,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         default_unit: item.default_unit || '',
         stock_uom: item.stock_uom || item.default_unit || '',
         standard_rate: item.standard_rate || undefined,
+        minimum_stock_level: item.minimum_stock_level || undefined,
         is_active: item.is_active ?? true,
         is_sales_item: item.is_sales_item ?? true,
         is_purchase_item: item.is_purchase_item ?? true,
@@ -306,6 +281,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         default_unit: '',
         stock_uom: '',
         standard_rate: undefined,
+        minimum_stock_level: undefined,
         is_active: true,
         is_sales_item: true,
         is_purchase_item: true,
@@ -382,8 +358,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               <Label htmlFor="item_code">{t('items.itemCode')} *</Label>
               <Input
                 id="item_code"
-                value={formData.item_code}
-                onChange={(e) => setFormData({ ...formData, item_code: e.target.value })}
+                value={(formData as CreateItemInput).item_code || ''}
+                onChange={(e) => setFormData({ ...formData, item_code: e.target.value } as CreateItemInput)}
                 placeholder={t('items.itemCodePlaceholder')}
                 disabled={!!item} // Don't allow editing code after creation
                 className="mt-1"
@@ -554,6 +530,22 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 className="mt-1"
               />
             </div>
+            <div>
+              <Label htmlFor="minimum_stock_level">{t('items.minimumStockLevel', 'Minimum Stock Level')}</Label>
+              <Input
+                id="minimum_stock_level"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.minimum_stock_level || ''}
+                onChange={(e) => setFormData({ ...formData, minimum_stock_level: parseFloat(e.target.value) || undefined })}
+                placeholder="0.00"
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {t('items.minimumStockLevelHint', 'Alert when stock falls below this level')}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -621,7 +613,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('items.byWarehouse')}:</p>
                       <div className="space-y-1">
-                        {itemStockLevel.warehouses.map((wh) => (
+                        {itemStockLevel.warehouses.map((wh: { warehouse_id: string; warehouse_name: string; quantity: number; value: number }) => (
                           <div key={wh.warehouse_id} className="flex items-center justify-between text-xs">
                             <span className="text-gray-600 dark:text-gray-400">{wh.warehouse_name}:</span>
                             <span className="font-medium text-gray-900 dark:text-white">
@@ -685,49 +677,104 @@ export default function ItemManagement() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
-  const navigate = useNavigate();
-  const { data: items = [], isLoading } = useItems({ is_active: true });
+  const [selectedFarm, setSelectedFarm] = useState<string>('all');
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItemForDetails, setSelectedItemForDetails] = useState<Item | null>(null);
+  
+  const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
+  const { data: farms = [] } = useFarms(currentOrganization?.id);
+  // Note: farmStockLevels is used for filtering, keeping it for future use
+  useFarmStockLevels({
+    farm_id: selectedFarm !== 'all' ? selectedFarm : undefined,
+    low_stock_only: lowStockOnly,
+  });
+  
   const deleteItem = useDeleteItem();
   const [showForm, setShowForm] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
 
-  // Fetch stock levels for items
-  const { data: stockLevels = [] } = useQuery({
-    queryKey: ['items-stock-levels', currentOrganization?.id],
+  // Fetch stock levels for items with farm context
+  const { data: stockLevels = {} } = useQuery({
+    queryKey: ['items-stock-levels', currentOrganization?.id, selectedFarm],
     queryFn: async () => {
-      if (!currentOrganization?.id) return [];
+      if (!currentOrganization?.id) return {};
 
-      const { data, error } = await supabase
-        .from('stock_valuation')
-        .select(`
-          item_id,
-          remaining_quantity,
-          total_cost
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .gt('remaining_quantity', 0);
-
-      if (error) {
-        console.warn('Could not fetch stock levels:', error);
-        return [];
-      }
-
-      // Aggregate by item_id
-      const aggregated = (data || []).reduce((acc, val) => {
-        if (!acc[val.item_id]) {
-          acc[val.item_id] = { total_quantity: 0, total_value: 0 };
-        }
-        acc[val.item_id].total_quantity += parseFloat(val.remaining_quantity || 0);
-        acc[val.item_id].total_value += parseFloat(val.total_cost || 0);
-        return acc;
-      }, {} as Record<string, { total_quantity: number; total_value: number }>);
-
-      return aggregated;
+      return itemsApi.getStockLevels(
+        {
+          farm_id: selectedFarm !== 'all' ? selectedFarm : undefined,
+        },
+        currentOrganization.id,
+      );
     },
     enabled: !!currentOrganization?.id,
   });
+
+  // Filter items based on search, farm, and low stock
+  const filteredItems = useMemo(() => {
+    let filtered = items;
+
+    // Filter by search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.item_code.toLowerCase().includes(term) ||
+          item.item_name.toLowerCase().includes(term) ||
+          item.description?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filter by farm (items that have stock in warehouses of selected farm)
+    if (selectedFarm !== 'all') {
+      const itemIdsWithStock = new Set(
+        Object.entries(stockLevels as Record<string, {
+          total_quantity: number;
+          total_value: number;
+          is_low_stock?: boolean;
+          warehouses?: Array<{
+            warehouse_id: string;
+            warehouse_name: string;
+            farm_id: string | null;
+            farm_name: string | null;
+            quantity: number;
+            value: number;
+          }>;
+        }>)
+          .filter(([_, stock]) =>
+            stock.warehouses?.some((wh: { farm_id: string | null }) => wh.farm_id === selectedFarm)
+          )
+          .map(([itemId]) => itemId)
+      );
+      filtered = filtered.filter((item) => itemIdsWithStock.has(item.id));
+    }
+
+    // Filter by low stock
+    if (lowStockOnly) {
+      const lowStockItemIds = new Set(
+        Object.entries(stockLevels as Record<string, {
+          total_quantity: number;
+          total_value: number;
+          is_low_stock?: boolean;
+          warehouses?: Array<{
+            warehouse_id: string;
+            warehouse_name: string;
+            farm_id: string | null;
+            farm_name: string | null;
+            quantity: number;
+            value: number;
+          }>;
+        }>)
+          .filter(([_, stock]) => stock.is_low_stock)
+          .map(([itemId]) => itemId)
+      );
+      filtered = filtered.filter((item) => lowStockItemIds.has(item.id));
+    }
+
+    return filtered;
+  }, [items, searchTerm, selectedFarm, lowStockOnly, stockLevels]);
 
   const handleEdit = (item: Item) => {
     setSelectedItem(item);
@@ -772,6 +819,54 @@ export default function ItemManagement() {
         </Button>
       </div>
 
+      {/* Low Stock Alerts Section */}
+      {!selectedFarm && !lowStockOnly && (
+        <LowStockAlerts maxItems={5} showActions={true} />
+      )}
+
+      {/* Filters */}
+      <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center gap-2 flex-1">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <Input
+            placeholder={t('items.searchPlaceholder', 'Search items...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        
+        <Select value={selectedFarm} onValueChange={setSelectedFarm}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
+            {farms.map((farm) => {
+              const farmId = (farm as any).farm_id || farm.id;
+              const farmName = (farm as any).farm_name || farm.name;
+              return (
+                <SelectItem key={farmId} value={farmId}>
+                  {farmName}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={lowStockOnly}
+            onChange={(e) => setLowStockOnly(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {t('items.lowStockOnly', 'Low Stock Only')}
+          </span>
+        </label>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -808,19 +903,42 @@ export default function ItemManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {items.length === 0 ? (
+              {filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                     {t('items.noItemsFound')}
                   </td>
                 </tr>
               ) : (
-                items.map((item) => {
-                  const stockLevel = (stockLevels as Record<string, { total_quantity: number; total_value: number }>)[item.id];
+                filteredItems.map((item) => {
+                  const stockLevel = (stockLevels as Record<string, {
+                    total_quantity: number;
+                    total_value: number;
+                    is_low_stock?: boolean;
+                    warehouses?: Array<{
+                      warehouse_id: string;
+                      warehouse_name: string;
+                      farm_id: string | null;
+                      farm_name: string | null;
+                      quantity: number;
+                      value: number;
+                    }>;
+                  }>)[item.id];
+                  const isLowStock = stockLevel?.is_low_stock || 
+                    (item.minimum_stock_level && stockLevel && 
+                     stockLevel.total_quantity < item.minimum_stock_level);
+                  
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                        {item.item_code}
+                        <div className="flex items-center gap-2">
+                          {item.item_code}
+                          {isLowStock && (
+                            <div title={t('items.lowStock', 'Low Stock')}>
+                              <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {item.item_name}
@@ -837,36 +955,59 @@ export default function ItemManagement() {
                       <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                         {stockLevel ? (
                           <div className="flex flex-col items-end">
-                            <span className="font-medium">
-                              {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                                {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
+                              </span>
+                            </div>
                             <span className="text-xs text-gray-500">
                               {formatCurrency(stockLevel.total_value)}
                             </span>
+                            {stockLevel.warehouses && stockLevel.warehouses.length > 0 && (
+                              <div className="mt-1 text-xs text-gray-500">
+                                {stockLevel.warehouses.length} {t('items.warehouse', 'warehouse(s)')}
+                                {selectedFarm === 'all' && stockLevel.warehouses.some((wh: { farm_name?: string | null }) => wh.farm_name) && (
+                                  <span className="ml-1">
+                                    ({stockLevel.warehouses
+                                      .filter((wh: { farm_name?: string | null }) => wh.farm_name)
+                                      .map((wh: { farm_name?: string | null }) => wh.farm_name)
+                                      .join(', ')})
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-400">{t('items.noStock')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            item.is_active
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                          }`}
-                        >
-                          {item.is_active ? t('items.active') : t('items.inactive')}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              item.is_active
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                            }`}
+                          >
+                            {item.is_active ? t('items.active') : t('items.inactive')}
+                          </span>
+                          {isLowStock && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              {t('items.lowStock', 'Low Stock')}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate({ to: '/stock/inventory/stock' })}
+                            onClick={() => setSelectedItemForDetails(item)}
                             className="text-blue-600 hover:text-blue-700"
-                            title={t('items.viewInventory')}
+                            title={t('items.viewDetails', 'View Details')}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -897,6 +1038,33 @@ export default function ItemManagement() {
       )}
 
       <ItemForm item={selectedItem} open={showForm} onOpenChange={setShowForm} />
+
+      {/* Item Details Dialog */}
+      {selectedItemForDetails && (
+        <Dialog open={!!selectedItemForDetails} onOpenChange={(open) => !open && setSelectedItemForDetails(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedItemForDetails.item_name}</DialogTitle>
+              <DialogDescription>
+                {t('items.itemDetails', 'Item Details and Stock Information')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 mt-4">
+              {/* Stock Levels by Farm */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">{t('items.stockByFarm', 'Stock by Farm')}</h3>
+                <FarmStockLevels item_id={selectedItemForDetails.id} showWarehouseDetails={true} />
+              </div>
+
+              {/* Farm Usage */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
+                <ItemFarmUsage item_id={selectedItemForDetails.id} showDetails={true} />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

@@ -91,6 +91,7 @@ export interface Item {
   has_batch_no: boolean;
   has_serial_no: boolean;
   has_expiry_date: boolean;
+  minimum_stock_level?: number; // Minimum stock level for low stock alerts
   
   // Valuation
   valuation_method: ValuationMethod;
@@ -369,6 +370,7 @@ export interface CreateItemInput {
   has_batch_no?: boolean;
   has_serial_no?: boolean;
   has_expiry_date?: boolean;
+  minimum_stock_level?: number;
   valuation_method?: ValuationMethod;
   default_sales_account_id?: string;
   default_expense_account_id?: string;
@@ -410,6 +412,7 @@ export interface UpdateItemInput {
   has_batch_no?: boolean;
   has_serial_no?: boolean;
   has_expiry_date?: boolean;
+  minimum_stock_level?: number;
   valuation_method?: ValuationMethod;
   default_sales_account_id?: string;
   default_expense_account_id?: string;
@@ -455,6 +458,8 @@ export interface ItemFilters {
   crop_type?: string;
   variety?: string;
   search?: string; // Search by item_code, item_name, or barcode
+  farm_id?: string; // Filter by farm (via warehouses)
+  low_stock_only?: boolean; // Show only items with low stock
 }
 
 // =====================================================

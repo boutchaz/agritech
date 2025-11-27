@@ -391,4 +391,410 @@ export class ItemsService {
 
     return data;
   }
+
+  // =====================================================
+  // STOCK LEVELS & FARM INTEGRATION
+  // =====================================================
+
+  /**
+   * Get stock levels grouped by farm with warehouse relationships
+   */
+  async getFarmStockLevels(
+    organizationId: string,
+    filters?: {
+      farm_id?: string;
+      item_id?: string;
+      low_stock_only?: boolean;
+    },
+  ): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // First, get warehouse IDs for the farm if filtering by farm
+    let warehouseIds: string[] | null = null;
+    if (filters?.farm_id) {
+      const { data: warehouses, error: whError } = await supabase
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('farm_id', filters.farm_id)
+        .eq('is_active', true);
+
+      if (whError) {
+        this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
+        throw new BadRequestException(`Failed to fetch warehouses: ${whError.message}`);
+      }
+
+      warehouseIds = warehouses?.map((w) => w.id) || [];
+      if (warehouseIds.length === 0) {
+        return []; // No warehouses for this farm
+      }
+    }
+
+    let query = supabase
+      .from('stock_valuation')
+      .select(`
+        item_id,
+        warehouse_id,
+        remaining_quantity,
+        total_cost,
+        warehouse:warehouses!inner(
+          id,
+          name,
+          farm_id,
+          farm:farms(id, name)
+        ),
+        item:items!inner(
+          id,
+          item_code,
+          item_name,
+          default_unit,
+          minimum_stock_level
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (warehouseIds) {
+      query = query.in('warehouse_id', warehouseIds);
+    }
+
+    if (filters?.item_id) {
+      query = query.eq('item_id', filters.item_id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch farm stock levels: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch farm stock levels: ${error.message}`);
+    }
+
+    // Group by item_id and aggregate
+    const itemMap = new Map<string, any>();
+
+    (data || []).forEach((row: any) => {
+      const item = row.item;
+      const warehouse = row.warehouse;
+      const farm = warehouse?.farm;
+
+      if (!item || !warehouse) return;
+
+      const itemId = item.id;
+      const quantity = parseFloat(row.remaining_quantity || 0);
+      const value = parseFloat(row.total_cost || 0);
+      const minStock = item.minimum_stock_level
+        ? parseFloat(item.minimum_stock_level)
+        : undefined;
+
+      if (!itemMap.has(itemId)) {
+        itemMap.set(itemId, {
+          item_id: itemId,
+          item_code: item.item_code,
+          item_name: item.item_name,
+          default_unit: item.default_unit,
+          minimum_stock_level: minStock,
+          total_quantity: 0,
+          total_value: 0,
+          is_low_stock: false,
+          by_farm: [],
+        });
+      }
+
+      const itemData = itemMap.get(itemId);
+      itemData.total_quantity += quantity;
+      itemData.total_value += value;
+
+      // Add farm-level stock
+      const farmStock = {
+        farm_id: farm?.id || null,
+        farm_name: farm?.name || null,
+        warehouse_id: warehouse.id,
+        warehouse_name: warehouse.name,
+        item_id: itemId,
+        total_quantity: quantity,
+        total_value: value,
+        is_low_stock: minStock !== undefined && quantity < minStock,
+        minimum_stock_level: minStock,
+      };
+
+      itemData.by_farm.push(farmStock);
+
+      // Check if overall stock is low
+      if (minStock !== undefined && itemData.total_quantity < minStock) {
+        itemData.is_low_stock = true;
+      }
+    });
+
+    let result = Array.from(itemMap.values());
+
+    // Filter low stock only if requested
+    if (filters?.low_stock_only) {
+      result = result.filter((item) => item.is_low_stock);
+    }
+
+    return result;
+  }
+
+  /**
+   * Get item usage by farm/parcel
+   */
+  async getItemFarmUsage(organizationId: string, itemId: string): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // Query stock movements (OUT movements indicate usage)
+    const { data: movements, error: movementsError } = await supabase
+      .from('stock_movements')
+      .select(`
+        id,
+        movement_date,
+        quantity,
+        warehouse_id,
+        warehouse:warehouses!inner(
+          id,
+          farm_id,
+          farm:farms(id, name)
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .eq('item_id', itemId)
+      .eq('movement_type', 'OUT')
+      .order('movement_date', { ascending: false });
+
+    if (movementsError) {
+      this.logger.warn(`Could not fetch stock movements: ${movementsError.message}`);
+    }
+
+    // Query tasks that might reference this item
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select(`
+        id,
+        created_at,
+        parcel_id,
+        parcel:parcels(
+          id,
+          name,
+          farm_id,
+          farm:farms(id, name)
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .not('parcel_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (tasksError) {
+      this.logger.warn(`Could not fetch tasks: ${tasksError.message}`);
+    }
+
+    // Aggregate usage by farm
+    const farmMap = new Map<string, any>();
+    const parcelMap = new Map<string, any>();
+
+    // Process stock movements
+    (movements || []).forEach((movement: any) => {
+      const warehouse = movement.warehouse;
+      const farm = warehouse?.farm;
+
+      if (!farm) return;
+
+      const farmId = farm.id;
+      const quantity = parseFloat(movement.quantity || 0);
+      const movementDate = movement.movement_date;
+
+      if (!farmMap.has(farmId)) {
+        farmMap.set(farmId, {
+          farm_id: farmId,
+          farm_name: farm.name,
+          usage_count: 0,
+          total_quantity_used: 0,
+          task_ids: [],
+        });
+      }
+
+      const farmUsage = farmMap.get(farmId);
+      farmUsage.usage_count += 1;
+      farmUsage.total_quantity_used += quantity;
+
+      if (!farmUsage.last_used_date || movementDate > farmUsage.last_used_date) {
+        farmUsage.last_used_date = movementDate;
+      }
+    });
+
+    // Process tasks
+    (tasks || []).forEach((task: any) => {
+      const parcel = task.parcel;
+      if (!parcel || !parcel.farm) return;
+
+      const farmId = parcel.farm.id;
+      const parcelId = parcel.id;
+
+      const parcelKey = `${farmId}_${parcelId}`;
+      if (!parcelMap.has(parcelKey)) {
+        parcelMap.set(parcelKey, {
+          farm_id: farmId,
+          farm_name: parcel.farm.name,
+          parcel_id: parcelId,
+          parcel_name: parcel.name,
+          usage_count: 0,
+          total_quantity_used: 0,
+          task_ids: [],
+        });
+      }
+
+      const parcelUsage = parcelMap.get(parcelKey);
+      parcelUsage.usage_count += 1;
+      parcelUsage.task_ids.push(task.id);
+
+      if (!farmMap.has(farmId)) {
+        farmMap.set(farmId, {
+          farm_id: farmId,
+          farm_name: parcel.farm.name,
+          usage_count: 0,
+          total_quantity_used: 0,
+          task_ids: [],
+        });
+      }
+
+      const farmUsage = farmMap.get(farmId);
+      farmUsage.usage_count += 1;
+      if (!farmUsage.task_ids.includes(task.id)) {
+        farmUsage.task_ids.push(task.id);
+      }
+    });
+
+    // Combine farm and parcel usage
+    const byFarm = Array.from(farmMap.values()).map((farmUsage) => {
+      const parcelUsages = Array.from(parcelMap.values()).filter(
+        (p) => p.farm_id === farmUsage.farm_id,
+      );
+
+      return {
+        ...farmUsage,
+        parcels: parcelUsages.length > 0 ? parcelUsages : undefined,
+      };
+    });
+
+    // Calculate totals
+    const totalUsageCount = byFarm.reduce((sum, f) => sum + f.usage_count, 0);
+    const totalQuantityUsed = byFarm.reduce((sum, f) => sum + f.total_quantity_used, 0);
+    const lastUsedDate = byFarm
+      .map((f) => f.last_used_date)
+      .filter(Boolean)
+      .sort()
+      .reverse()[0];
+
+    return {
+      item_id: itemId,
+      total_usage_count: totalUsageCount,
+      last_used_date: lastUsedDate,
+      total_quantity_used: totalQuantityUsed,
+      by_farm: byFarm,
+    };
+  }
+
+  /**
+   * Get stock levels for items with farm context
+   */
+  async getStockLevels(
+    organizationId: string,
+    filters?: {
+      farm_id?: string;
+      item_id?: string;
+    },
+  ): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // First, get warehouse IDs for the farm if filtering by farm
+    let warehouseIds: string[] | null = null;
+    if (filters?.farm_id) {
+      const { data: warehouses, error: whError } = await supabase
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('farm_id', filters.farm_id)
+        .eq('is_active', true);
+
+      if (whError) {
+        this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
+        throw new BadRequestException(`Failed to fetch warehouses: ${whError.message}`);
+      }
+
+      warehouseIds = warehouses?.map((w) => w.id) || [];
+      if (warehouseIds.length === 0) {
+        return {}; // No warehouses for this farm
+      }
+    }
+
+    let query = supabase
+      .from('stock_valuation')
+      .select(`
+        item_id,
+        remaining_quantity,
+        total_cost,
+        warehouse_id,
+        warehouse:warehouses!inner(
+          id,
+          name,
+          farm_id,
+          farm:farms(id, name)
+        ),
+        item:items!inner(
+          id,
+          item_code,
+          item_name,
+          default_unit
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (warehouseIds) {
+      query = query.in('warehouse_id', warehouseIds);
+    }
+
+    if (filters?.item_id) {
+      query = query.eq('item_id', filters.item_id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch stock levels: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch stock levels: ${error.message}`);
+    }
+
+    // Aggregate by item_id with farm context
+    const aggregated = (data || []).reduce((acc: any, val: any) => {
+      const itemId = val.item_id;
+      if (!acc[itemId]) {
+        acc[itemId] = {
+          total_quantity: 0,
+          total_value: 0,
+          is_low_stock: false,
+          warehouses: [],
+        };
+      }
+      const quantity = parseFloat(val.remaining_quantity || 0);
+      const value = parseFloat(val.total_cost || 0);
+      acc[itemId].total_quantity += quantity;
+      acc[itemId].total_value += value;
+
+      // Add warehouse info
+      if (val.warehouse) {
+        acc[itemId].warehouses.push({
+          warehouse_id: val.warehouse.id,
+          warehouse_name: val.warehouse.name,
+          farm_id: val.warehouse.farm_id,
+          farm_name: val.warehouse.farm?.name || null,
+          quantity,
+          value,
+        });
+      }
+
+      return acc;
+    }, {});
+
+    return aggregated;
+  }
 }

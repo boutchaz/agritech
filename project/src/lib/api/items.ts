@@ -149,4 +149,53 @@ export const itemsApi = {
   async delete(id: string, organizationId?: string): Promise<{ message: string }> {
     return apiClient.delete<{ message: string }>(`${BASE_URL}/${id}`, {}, organizationId);
   },
+
+  // =====================================================
+  // STOCK LEVELS & FARM INTEGRATION
+  // =====================================================
+
+  /**
+   * Get stock levels grouped by farm with warehouse relationships
+   */
+  async getFarmStockLevels(
+    filters?: {
+      farm_id?: string;
+      item_id?: string;
+      low_stock_only?: boolean;
+    },
+    organizationId?: string,
+  ): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.farm_id) params.append('farm_id', filters.farm_id);
+    if (filters?.item_id) params.append('item_id', filters.item_id);
+    if (filters?.low_stock_only) params.append('low_stock_only', 'true');
+
+    const url = `${BASE_URL}/stock-levels/farm${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<any[]>(url, {}, organizationId);
+  },
+
+  /**
+   * Get item usage by farm/parcel
+   */
+  async getItemFarmUsage(itemId: string, organizationId?: string): Promise<any> {
+    return apiClient.get<any>(`${BASE_URL}/${itemId}/farm-usage`, {}, organizationId);
+  },
+
+  /**
+   * Get stock levels for items with farm context
+   */
+  async getStockLevels(
+    filters?: {
+      farm_id?: string;
+      item_id?: string;
+    },
+    organizationId?: string,
+  ): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters?.farm_id) params.append('farm_id', filters.farm_id);
+    if (filters?.item_id) params.append('item_id', filters.item_id);
+
+    const url = `${BASE_URL}/stock-levels${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<any>(url, {}, organizationId);
+  },
 };
