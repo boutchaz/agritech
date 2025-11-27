@@ -27,6 +27,7 @@ import { CaslModule } from './modules/casl/casl.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { OrganizationModulesModule } from './modules/organization-modules/organization-modules.module';
+import { StructuresModule } from './modules/structures/structures.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
@@ -63,6 +64,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     SubscriptionsModule,
     FarmsModule,
     ParcelsModule,
+    StructuresModule,
     DashboardModule,
   ],
   controllers: [AppController],

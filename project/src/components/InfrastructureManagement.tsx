@@ -4,57 +4,14 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
+import { useStructures, useCreateStructure, useUpdateStructure, useDeleteStructure } from '../hooks/useStructures';
+import type { Structure as ApiStructure, CreateStructureInput } from '../lib/api/structures';
+import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 
-interface Structure {
-  id: string;
-  organization_id: string;
-  farm_id?: string;
-  name: string;
-  type: 'stable' | 'technical_room' | 'basin' | 'well';
-  location: {
-    lat: number;
-    lng: number;
-  };
-  installation_date: string;
-  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'needs_repair';
-  usage?: string;
-  structure_details: {
-    // Stable
-    width?: number;
-    length?: number;
-    height?: number;
-    construction_type?: string;
-    
-    // Basin
-    shape?: 'trapezoidal' | 'rectangular' | 'cubic' | 'circular';
-    dimensions?: {
-      width?: number;
-      length?: number;
-      height?: number;
-      radius?: number;
-      top_width?: number;
-      bottom_width?: number;
-    };
-    volume?: number;
-    
-    // Technical Room
-    equipment?: string[];
-    
-    // Well
-    depth?: number;
-    pump_type?: string;
-    pump_power?: number;
-  };
-  notes?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  farm?: {
-    name: string;
-  };
-}
+// Use the API Structure type
+type Structure = ApiStructure;
 
 const STRUCTURE_TYPES = [
   { value: 'stable', label: 'Écurie' },
@@ -76,17 +33,21 @@ interface Farm {
 }
 
 const InfrastructureManagement: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
-  const [structures, setStructures] = useState<Structure[]>([]);
+  const { currentOrganization } = useAuth();
+
+  // API hooks
+  const { data: structures = [], isLoading: loading, error: apiError } = useStructures();
+  const createStructure = useCreateStructure();
+  const updateStructure = useUpdateStructure();
+  const deleteStructure = useDeleteStructure();
+
   const [farms, setFarms] = useState<Farm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStructure, setEditingStructure] = useState<Structure | null>(null);
   const [activeTab, setActiveTab] = useState<'organization' | 'farm'>('organization');
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
 
-  const [newStructure, setNewStructure] = useState<Partial<Structure>>({
+  const [newStructure, setNewStructure] = useState<Partial<CreateStructureInput>>({
     name: '',
     type: 'stable',
     location: { lat: 0, lng: 0 },
@@ -96,8 +57,9 @@ const InfrastructureManagement: React.FC = () => {
     structure_details: {}
   });
 
+  const error = apiError ? 'Failed to fetch structures' : null;
+
   useEffect(() => {
-    fetchStructures();
     fetchFarms();
   }, [currentOrganization]);
 
@@ -118,34 +80,7 @@ const InfrastructureManagement: React.FC = () => {
     }
   };
 
-  const fetchStructures = async () => {
-    try {
-      if (!currentOrganization) {
-        setError('No organization selected');
-        setLoading(false);
-        return;
-      }
-
-      // Fetch structures for the current organization
-      const { data, error } = await supabase
-        .from('structures')
-        .select(`
-          *,
-          farm:farms(name)
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setStructures(data || []);
-    } catch (error) {
-      console.error('Error fetching structures:', error);
-      setError('Failed to fetch structures');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // fetchStructures is now handled by useStructures hook
 
   // Categorize structures
   const organizationStructures = useMemo(() =>
@@ -163,7 +98,7 @@ const InfrastructureManagement: React.FC = () => {
     [structures]
   );
 
-  const calculateBasinVolume = (shape: string, dimensions: any) => {
+  const calculateBasinVolume = (shape: string, dimensions: Record<string, number>) => {
     switch (shape) {
       case 'rectangular':
       case 'cubic':
@@ -180,7 +115,7 @@ const InfrastructureManagement: React.FC = () => {
 
   const handleStructureDetailsChange = (
     field: string,
-    value: any,
+    value: string | number,
     structureToUpdate: Partial<Structure> = newStructure
   ) => {
     const updatedDetails = { ...structureToUpdate.structure_details, [field]: value };
@@ -517,38 +452,23 @@ const InfrastructureManagement: React.FC = () => {
   };
 
   const handleAddStructure = async () => {
-    if (!newStructure.name || !newStructure.type || !currentOrganization) {
-      setError('Name, type, and organization are required');
+    if (!newStructure.name || !newStructure.type) {
+      toast.error('Nom et type sont requis');
       return;
     }
 
     try {
       // Determine farm_id based on active tab and selection
-      let farmId = null;
+      let farmId = undefined;
       if (activeTab === 'farm' && selectedFarmId) {
         farmId = selectedFarmId;
-      } else if (activeTab === 'farm' && currentFarm) {
-        farmId = currentFarm.id;
       }
 
-      const { data, error } = await supabase
-        .from('structures')
-        .insert([{
-          ...newStructure,
-          organization_id: currentOrganization.id,
-          farm_id: farmId,
-          location: newStructure.location || { lat: 0, lng: 0 },
-          structure_details: newStructure.structure_details || {}
-        }])
-        .select(`
-          *,
-          farm:farms(name)
-        `)
-        .single();
+      await createStructure.mutateAsync({
+        ...newStructure as CreateStructureInput,
+        farm_id: farmId,
+      });
 
-      if (error) throw error;
-
-      setStructures([...structures, data]);
       setShowAddModal(false);
       setNewStructure({
         name: '',
@@ -559,9 +479,10 @@ const InfrastructureManagement: React.FC = () => {
         usage: '',
         structure_details: {}
       });
+      toast.success('Structure créée avec succès');
     } catch (error) {
       console.error('Error adding structure:', error);
-      setError('Failed to add structure');
+      toast.error('Échec de la création de la structure');
     }
   };
 
@@ -569,20 +490,17 @@ const InfrastructureManagement: React.FC = () => {
     if (!editingStructure) return;
 
     try {
-      const { error } = await supabase
-        .from('structures')
-        .update(editingStructure)
-        .eq('id', editingStructure.id);
-
-      if (error) throw error;
-
-      setStructures(structures.map(s => 
-        s.id === editingStructure.id ? editingStructure : s
-      ));
+       
+      const { id: _id, created_at: _created, updated_at: _updated, organization_id: _orgId, farm: _farm, ...updateData } = editingStructure;
+      await updateStructure.mutateAsync({
+        id: editingStructure.id,
+        data: updateData
+      });
       setEditingStructure(null);
+      toast.success('Structure mise à jour avec succès');
     } catch (error) {
       console.error('Error updating structure:', error);
-      setError('Failed to update structure');
+      toast.error('Échec de la mise à jour de la structure');
     }
   };
 
@@ -590,17 +508,11 @@ const InfrastructureManagement: React.FC = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette structure ?')) return;
 
     try {
-      const { error } = await supabase
-        .from('structures')
-        .update({ is_active: false })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setStructures(structures.filter(s => s.id !== id));
+      await deleteStructure.mutateAsync(id);
+      toast.success('Structure supprimée avec succès');
     } catch (error) {
       console.error('Error deleting structure:', error);
-      setError('Failed to delete structure');
+      toast.error('Échec de la suppression de la structure');
     }
   };
 
