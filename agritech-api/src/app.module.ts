@@ -26,6 +26,7 @@ import { ParcelsModule } from './modules/parcels/parcels.module';
 import { CaslModule } from './modules/casl/casl.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { OrganizationModulesModule } from './modules/organization-modules/organization-modules.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     CaslModule,
     UsersModule,
     OrganizationsModule,
+    OrganizationModulesModule,
 
     // Business logic modules
     SequencesModule,

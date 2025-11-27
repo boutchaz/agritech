@@ -1,28 +1,23 @@
 import React, { useState } from 'react';
-import { Check, X, Boxes, Lock, ExternalLink } from 'lucide-react';
-import type { Module } from '../types';
+import { Check, X, Boxes, Lock, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import TreeManagement from './TreeManagement';
 import { useSubscription } from '../hooks/useSubscription';
+import { useModules, useUpdateModule } from '../hooks/useModules';
 import { isModuleAvailable, getPlanDetails } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
+import type { OrganizationModule } from '../lib/api/modules';
 
-interface ModulesSettingsProps {
-  modules?: Module[];
-  onModuleToggle?: (moduleId: string) => void;
-}
-
-const ModulesSettings: React.FC<ModulesSettingsProps> = ({
-  modules = [],
-  onModuleToggle = () => {}
-}) => {
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+const ModulesSettings: React.FC = () => {
+  const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
   const { data: subscription } = useSubscription();
+  const { data: modules = [], isLoading, error } = useModules();
+  const updateModule = useUpdateModule();
   const navigate = useNavigate();
 
   const agricultureModules = modules.filter(m => m.category === 'agriculture');
   const elevageModules = modules.filter(m => m.category === 'elevage');
 
-  const handleModuleToggle = (moduleId: string, currentActive: boolean) => {
+  const handleModuleToggle = async (moduleId: string, currentActive: boolean) => {
     // If trying to activate a module
     if (!currentActive) {
       // Check if module is available in current plan
@@ -36,10 +31,17 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
     }
 
     // Proceed with toggle
-    onModuleToggle(moduleId);
+    try {
+      await updateModule.mutateAsync({
+        moduleId,
+        data: { is_active: !currentActive },
+      });
+    } catch (error) {
+      console.error('Error toggling module:', error);
+    }
   };
 
-  const renderModuleSettings = (module: Module) => {
+  const renderModuleSettings = (module: OrganizationModule) => {
     switch (module.id) {
       case 'fruit-trees':
         return (
@@ -122,6 +124,27 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg flex items-center space-x-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-red-600 dark:text-red-400">
+            Erreur lors du chargement des modules. Veuillez réessayer.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center space-x-3">
@@ -178,9 +201,9 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
                   <div className="flex items-center space-x-3 flex-1">
                     <input
                       type="checkbox"
-                      checked={module.active}
+                      checked={module.is_active}
                       disabled={isLocked}
-                      onChange={() => handleModuleToggle(module.id, module.active)}
+                      onChange={() => handleModuleToggle(module.id, module.is_active)}
                       className="rounded border-gray-300 disabled:opacity-50"
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -203,7 +226,7 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
                       )}
                     </div>
                   </div>
-                  {module.active ? (
+                  {module.is_active ? (
                     <Check className="h-5 w-5 text-green-500" />
                   ) : isLocked ? (
                     <Lock className="h-5 w-5 text-gray-400" />
@@ -236,9 +259,9 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
                   <div className="flex items-center space-x-3 flex-1">
                     <input
                       type="checkbox"
-                      checked={module.active}
+                      checked={module.is_active}
                       disabled={isLocked}
-                      onChange={() => handleModuleToggle(module.id, module.active)}
+                      onChange={() => handleModuleToggle(module.id, module.is_active)}
                       className="rounded border-gray-300 disabled:opacity-50"
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -261,7 +284,7 @@ const ModulesSettings: React.FC<ModulesSettingsProps> = ({
                       )}
                     </div>
                   </div>
-                  {module.active ? (
+                  {module.is_active ? (
                     <Check className="h-5 w-5 text-green-500" />
                   ) : isLocked ? (
                     <Lock className="h-5 w-5 text-gray-400" />
