@@ -34,6 +34,7 @@ import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout-success'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BillingSalesOrdersRouteImport } from './routes/billing-sales-orders'
 import { Route as BillingQuotesRouteImport } from './routes/billing-quotes'
 import { Route as BillingPurchaseOrdersRouteImport } from './routes/billing-purchase-orders'
@@ -71,6 +72,7 @@ import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
@@ -205,6 +207,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout-success',
   path: '/checkout-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingSalesOrdersRoute = BillingSalesOrdersRouteImport.update({
@@ -391,6 +398,11 @@ const ParcelsParcelIdRoute = ParcelsParcelIdRouteImport.update({
   path: '/$parcelId',
   getParentRoute: () => ParcelsRoute,
 } as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -459,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
+  '/blog': typeof BlogRouteWithChildren
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -485,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
@@ -532,6 +546,7 @@ export interface FileRoutesByTo {
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
+  '/blog': typeof BlogRouteWithChildren
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -554,6 +569,7 @@ export interface FileRoutesByTo {
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -601,6 +617,7 @@ export interface FileRoutesById {
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
+  '/blog': typeof BlogRouteWithChildren
   '/checkout-success': typeof CheckoutSuccessRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
@@ -627,6 +644,7 @@ export interface FileRoutesById {
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
@@ -676,6 +694,7 @@ export interface FileRouteTypes {
     | '/billing-purchase-orders'
     | '/billing-quotes'
     | '/billing-sales-orders'
+    | '/blog'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -702,6 +721,7 @@ export interface FileRouteTypes {
     | '/utilities'
     | '/workers'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
@@ -749,6 +769,7 @@ export interface FileRouteTypes {
     | '/billing-purchase-orders'
     | '/billing-quotes'
     | '/billing-sales-orders'
+    | '/blog'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -771,6 +792,7 @@ export interface FileRouteTypes {
     | '/utilities'
     | '/workers'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -817,6 +839,7 @@ export interface FileRouteTypes {
     | '/billing-purchase-orders'
     | '/billing-quotes'
     | '/billing-sales-orders'
+    | '/blog'
     | '/checkout-success'
     | '/dashboard'
     | '/day-laborers'
@@ -843,6 +866,7 @@ export interface FileRouteTypes {
     | '/utilities'
     | '/workers'
     | '/auth/callback'
+    | '/blog/$slug'
     | '/parcels/$parcelId'
     | '/settings/dashboard'
     | '/settings/documents'
@@ -892,6 +916,7 @@ export interface RootRouteChildren {
   BillingPurchaseOrdersRoute: typeof BillingPurchaseOrdersRoute
   BillingQuotesRoute: typeof BillingQuotesRoute
   BillingSalesOrdersRoute: typeof BillingSalesOrdersRoute
+  BlogRoute: typeof BlogRouteWithChildren
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
@@ -1095,6 +1120,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout-success'
       fullPath: '/checkout-success'
       preLoaderRoute: typeof CheckoutSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing-sales-orders': {
@@ -1356,6 +1388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdRouteImport
       parentRoute: typeof ParcelsRoute
     }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -1428,6 +1467,16 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
 
 interface OnboardingRouteChildren {
   OnboardingIndexRoute: typeof OnboardingIndexRoute
@@ -1582,6 +1631,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingPurchaseOrdersRoute: BillingPurchaseOrdersRoute,
   BillingQuotesRoute: BillingQuotesRoute,
   BillingSalesOrdersRoute: BillingSalesOrdersRoute,
+  BlogRoute: BlogRouteWithChildren,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
