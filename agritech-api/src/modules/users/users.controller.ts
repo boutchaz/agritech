@@ -1,7 +1,8 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -12,7 +13,19 @@ export class UsersController {
 
     @Get('me')
     @ApiOperation({ summary: 'Get current user profile' })
+    @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Profile not found' })
     async getProfile(@Request() req) {
         return this.usersService.findOne(req.user.id);
+    }
+
+    @Patch('me')
+    @ApiOperation({ summary: 'Update current user profile' })
+    @ApiResponse({ status: 200, description: 'User profile updated successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async updateProfile(@Request() req, @Body() updateDto: UpdateUserProfileDto) {
+        return this.usersService.updateProfile(req.user.id, updateDto);
     }
 }

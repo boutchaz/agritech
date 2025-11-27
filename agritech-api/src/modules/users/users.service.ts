@@ -75,4 +75,25 @@ export class UsersService {
         }
         return data;
     }
+
+    async updateProfile(id: string, updateData: any) {
+        const client = this.databaseService.getAdminClient();
+
+        const { data, error } = await client
+            .from('user_profiles')
+            .update({
+                ...updateData,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            this.logger.error(`Failed to update user profile: ${error.message}`);
+            throw new InternalServerErrorException('Failed to update user profile');
+        }
+
+        return data;
+    }
 }
