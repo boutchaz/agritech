@@ -98,7 +98,7 @@ const PreferencesSettings: React.FC = () => {
       }
 
       // Invalidate auth profile query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
       // Show success toast
       toast.success(t('preferences.success'), {
