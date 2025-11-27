@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './MultiTenantAuthProvider';
-import { supabase } from '../lib/supabase';
+import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 
 const PreferencesSettings: React.FC = () => {
@@ -71,15 +71,10 @@ const PreferencesSettings: React.FC = () => {
     setIsSaving(true);
     try {
       // Update user profile in database
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          language,
-          timezone,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await usersApi.updateMe({
+        language,
+        timezone,
+      });
 
       // Update i18n language immediately
       if (i18n.language !== language) {

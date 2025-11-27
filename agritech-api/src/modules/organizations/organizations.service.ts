@@ -140,6 +140,47 @@ export class OrganizationsService {
         return organization;
     }
 
+    async updateOrganization(userId: string, organizationId: string, updateData: any) {
+        this.logger.log(`Updating organization ${organizationId} for user ${userId}`);
+
+        // Verify user access
+        const { data: orgUser, error: orgError } = await this.supabaseAdmin
+            .from('organization_users')
+            .select('organization_id, role')
+            .eq('organization_id', organizationId)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (orgError || !orgUser) {
+            this.logger.error('User not authorized for organization', orgError);
+            throw new ForbiddenException('You do not have access to this organization');
+        }
+
+        // Only admin and owner can update organization
+        if (orgUser.role !== 'admin' && orgUser.role !== 'owner') {
+            throw new ForbiddenException('You do not have permission to update this organization');
+        }
+
+        // Update organization
+        const { data: organization, error: updateError } = await this.supabaseAdmin
+            .from('organizations')
+            .update({
+                ...updateData,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', organizationId)
+            .select()
+            .single();
+
+        if (updateError || !organization) {
+            this.logger.error('Failed to update organization', updateError);
+            throw new InternalServerErrorException('Failed to update organization');
+        }
+
+        return organization;
+    }
+
     private generateSlug(name: string): string {
         return name
             .toLowerCase()
