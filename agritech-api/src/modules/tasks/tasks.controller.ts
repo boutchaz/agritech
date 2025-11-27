@@ -18,6 +18,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskFiltersDto } from './dto/task-filters.dto';
 import { AssignTaskDto } from './dto/assign-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
+import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 
 @ApiTags('tasks')
 @ApiBearerAuth()
@@ -107,6 +108,19 @@ export class TasksController {
     @Body() completeTaskDto: CompleteTaskDto,
   ) {
     return this.tasksService.complete(req.user.id, organizationId, taskId, completeTaskDto);
+  }
+
+  @Post(':taskId/complete-with-harvest')
+  @ApiOperation({ summary: 'Complete a harvest task and create harvest record' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async completeHarvestTask(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('taskId') taskId: string,
+    @Body() completeDto: CompleteHarvestTaskDto,
+  ) {
+    return this.tasksService.completeWithHarvest(req.user.id, organizationId, taskId, completeDto);
   }
 
   @Delete(':taskId')

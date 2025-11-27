@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskFiltersDto } from './dto/task-filters.dto';
 import { AssignTaskDto } from './dto/assign-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
+import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -355,6 +356,112 @@ export class TasksService {
         : undefined,
       farm_name: Array.isArray(task.farm) ? task.farm[0]?.name : task.farm?.name,
       parcel_name: Array.isArray(task.parcel) ? task.parcel[0]?.name : task.parcel?.name,
+    };
+  }
+
+  /**
+   * Complete a harvest task and create harvest record
+   */
+  async completeWithHarvest(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    completeDto: CompleteHarvestTaskDto,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify task belongs to organization and is a harvest task
+    const { data: existingTask } = await client
+      .from('tasks')
+      .select('id, task_type, farm_id, parcel_id, assigned_to')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!existingTask) {
+      throw new NotFoundException('Task not found');
+    }
+
+    if (existingTask.task_type !== 'harvesting') {
+      throw new BadRequestException('Only harvest tasks can create harvest records');
+    }
+
+    const now = new Date().toISOString();
+
+    // Complete the task
+    const { data: task, error: taskError } = await client
+      .from('tasks')
+      .update({
+        status: 'completed',
+        completed_date: now.split('T')[0],
+        actual_end: now,
+        completion_percentage: 100,
+        quality_rating: completeDto.quality_rating,
+        actual_cost: completeDto.actual_cost,
+        notes: completeDto.notes,
+      })
+      .eq('id', taskId)
+      .select(`
+        *,
+        worker:workers!assigned_to(first_name, last_name),
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `)
+      .single();
+
+    if (taskError) {
+      throw new Error(`Failed to complete task: ${taskError.message}`);
+    }
+
+    // Calculate estimated revenue if price provided
+    const estimated_revenue = completeDto.expected_price_per_unit
+      ? completeDto.quantity * completeDto.expected_price_per_unit
+      : undefined;
+
+    // Create harvest record
+    const { data: harvest, error: harvestError } = await client
+      .from('harvest_records')
+      .insert({
+        organization_id: organizationId,
+        farm_id: existingTask.farm_id,
+        parcel_id: existingTask.parcel_id,
+        crop_id: completeDto.crop_id,
+        harvest_date: completeDto.harvest_date,
+        quantity: completeDto.quantity,
+        unit: completeDto.unit,
+        quality_grade: completeDto.quality_grade,
+        quality_score: completeDto.quality_score,
+        quality_notes: completeDto.quality_notes,
+        harvest_task_id: taskId,
+        workers: completeDto.workers,
+        supervisor_id: completeDto.supervisor_id,
+        storage_location: completeDto.storage_location,
+        temperature: completeDto.temperature,
+        humidity: completeDto.humidity,
+        intended_for: completeDto.intended_for,
+        expected_price_per_unit: completeDto.expected_price_per_unit,
+        estimated_revenue,
+        status: 'stored',
+        notes: completeDto.harvest_notes,
+        created_by: userId,
+      })
+      .select()
+      .single();
+
+    if (harvestError) {
+      throw new Error(`Failed to create harvest record: ${harvestError.message}`);
+    }
+
+    return {
+      task: {
+        ...task,
+        worker_name: task.worker
+          ? `${task.worker.first_name} ${task.worker.last_name}`
+          : undefined,
+        farm_name: Array.isArray(task.farm) ? task.farm[0]?.name : task.farm?.name,
+        parcel_name: Array.isArray(task.parcel) ? task.parcel[0]?.name : task.parcel?.name,
+      },
+      harvest,
     };
   }
 
