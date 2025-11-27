@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Calendar, Clock, User, ArrowLeft, Tag } from 'lucide-react';
+import { marked } from 'marked';
+import { useMemo } from 'react';
 import { blogsApi } from '../../lib/api/blogs';
 import { BlogCard } from './BlogCard';
 
@@ -69,6 +71,15 @@ export function BlogDetail({ slug }: BlogDetailProps) {
       })
     : null;
 
+  // Convert markdown to HTML
+  const htmlContent = useMemo(() => {
+    if (!post.content) return '';
+    return marked(post.content, {
+      breaks: true,
+      gfm: true,
+    });
+  }, [post.content]);
+
   return (
     <article className="max-w-4xl mx-auto">
       {/* Back Link */}
@@ -128,7 +139,7 @@ export function BlogDetail({ slug }: BlogDetailProps) {
       {/* Content */}
       <div
         className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-green-600 dark:prose-a:text-green-400 prose-img:rounded-xl"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
 
       {/* Tags */}
