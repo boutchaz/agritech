@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import type { Worker, WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
+import { workersApi } from '../lib/api/workers';
+import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
 
 // Fetch workers for an organization
 export const useWorkers = (organizationId: string | null, farmId?: string | null) => {
@@ -8,30 +9,7 @@ export const useWorkers = (organizationId: string | null, farmId?: string | null
     queryKey: ['workers', organizationId, farmId],
     queryFn: async () => {
       if (!organizationId) return [];
-
-      let query = supabase
-        .from('workers')
-        .select(`
-          *,
-          organizations!inner(name),
-          farms(name)
-        `)
-        .eq('organization_id', organizationId)
-        .order('last_name', { ascending: true });
-
-      if (farmId) {
-        query = query.eq('farm_id', farmId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      return (data || []).map(worker => ({
-        ...worker,
-        organization_name: worker.organizations?.name,
-        farm_name: worker.farms?.name,
-      })) as Worker[];
+      return workersApi.getAll(organizationId, farmId || undefined);
     },
     enabled: !!organizationId,
   });
@@ -43,45 +21,21 @@ export const useActiveWorkers = (organizationId: string | null) => {
     queryKey: ['active-workers', organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
-
-      const { data, error } = await supabase
-        .from('active_workers_summary')
-        .select('*')
-        .eq('organization_id', organizationId);
-
-      if (error) throw error;
-      return (data || []) as Worker[];
+      return workersApi.getActive(organizationId);
     },
     enabled: !!organizationId,
   });
 };
 
 // Fetch single worker
-export const useWorker = (workerId: string | null) => {
+export const useWorker = (organizationId: string | null, workerId: string | null) => {
   return useQuery({
-    queryKey: ['worker', workerId],
+    queryKey: ['worker', organizationId, workerId],
     queryFn: async () => {
-      if (!workerId) return null;
-
-      const { data, error } = await supabase
-        .from('workers')
-        .select(`
-          *,
-          organizations(name),
-          farms(name)
-        `)
-        .eq('id', workerId)
-        .single();
-
-      if (error) throw error;
-
-      return {
-        ...data,
-        organization_name: data.organizations?.name,
-        farm_name: data.farms?.name,
-      } as Worker;
+      if (!organizationId || !workerId) return null;
+      return workersApi.getById(organizationId, workerId);
     },
-    enabled: !!workerId,
+    enabled: !!organizationId && !!workerId,
   });
 };
 
@@ -91,40 +45,12 @@ export const useCreateWorker = () => {
 
   return useMutation({
     mutationFn: async (data: WorkerFormData & { organization_id: string }) => {
-      // Sanitize data: convert empty strings to null for UUID and optional fields
-      const sanitizedData = {
-        ...data,
-        farm_id: data.farm_id || null,
-        email: data.email || null,
-        cin: data.cin || null,
-        phone: data.phone || null,
-        address: data.address || null,
-        date_of_birth: data.date_of_birth || null,
-        position: data.position || null,
-        cnss_number: data.cnss_number || null,
-        bank_account: data.bank_account || null,
-        payment_method: data.payment_method || null,
-        notes: data.notes || null,
-        monthly_salary: data.monthly_salary || null,
-        daily_rate: data.daily_rate || null,
-        metayage_type: data.metayage_type || null,
-        metayage_percentage: data.metayage_percentage || null,
-        calculation_basis: data.calculation_basis || null,
-        payment_frequency: data.payment_frequency || null,
-      };
-
-      const { data: worker, error } = await supabase
-        .from('workers')
-        .insert(sanitizedData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return worker as Worker;
+      const { organization_id, ...workerData } = data;
+      return workersApi.create(organization_id, workerData);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['workers', variables.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['active-workers', variables.organization_id] });
+    onSuccess: (worker) => {
+      queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
   });
 };
@@ -134,41 +60,12 @@ export const useUpdateWorker = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<WorkerFormData> }) => {
-      // Sanitize data: convert empty strings to null for UUID and optional fields
-      const sanitizedData: any = { ...data };
-
-      if ('farm_id' in sanitizedData) sanitizedData.farm_id = sanitizedData.farm_id || null;
-      if ('email' in sanitizedData) sanitizedData.email = sanitizedData.email || null;
-      if ('cin' in sanitizedData) sanitizedData.cin = sanitizedData.cin || null;
-      if ('phone' in sanitizedData) sanitizedData.phone = sanitizedData.phone || null;
-      if ('address' in sanitizedData) sanitizedData.address = sanitizedData.address || null;
-      if ('date_of_birth' in sanitizedData) sanitizedData.date_of_birth = sanitizedData.date_of_birth || null;
-      if ('position' in sanitizedData) sanitizedData.position = sanitizedData.position || null;
-      if ('cnss_number' in sanitizedData) sanitizedData.cnss_number = sanitizedData.cnss_number || null;
-      if ('bank_account' in sanitizedData) sanitizedData.bank_account = sanitizedData.bank_account || null;
-      if ('payment_method' in sanitizedData) sanitizedData.payment_method = sanitizedData.payment_method || null;
-      if ('notes' in sanitizedData) sanitizedData.notes = sanitizedData.notes || null;
-      if ('monthly_salary' in sanitizedData) sanitizedData.monthly_salary = sanitizedData.monthly_salary || null;
-      if ('daily_rate' in sanitizedData) sanitizedData.daily_rate = sanitizedData.daily_rate || null;
-      if ('metayage_type' in sanitizedData) sanitizedData.metayage_type = sanitizedData.metayage_type || null;
-      if ('metayage_percentage' in sanitizedData) sanitizedData.metayage_percentage = sanitizedData.metayage_percentage || null;
-      if ('calculation_basis' in sanitizedData) sanitizedData.calculation_basis = sanitizedData.calculation_basis || null;
-      if ('payment_frequency' in sanitizedData) sanitizedData.payment_frequency = sanitizedData.payment_frequency || null;
-
-      const { data: worker, error } = await supabase
-        .from('workers')
-        .update(sanitizedData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return worker as Worker;
+    mutationFn: async ({ id, organizationId, data }: { id: string; organizationId: string; data: Partial<WorkerFormData> }) => {
+      return workersApi.update(organizationId, id, data);
     },
     onSuccess: (worker) => {
       queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['worker', worker.id] });
+      queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
   });
@@ -179,17 +76,12 @@ export const useDeleteWorker = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (workerId: string) => {
-      const { error } = await supabase
-        .from('workers')
-        .delete()
-        .eq('id', workerId);
-
-      if (error) throw error;
+    mutationFn: async ({ workerId, organizationId }: { workerId: string; organizationId: string }) => {
+      return workersApi.delete(organizationId, workerId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workers'] });
-      queryClient.invalidateQueries({ queryKey: ['active-workers'] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workers', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['active-workers', variables.organizationId] });
     },
   });
 };
@@ -199,23 +91,12 @@ export const useDeactivateWorker = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ workerId, endDate }: { workerId: string; endDate?: string }) => {
-      const { data: worker, error } = await supabase
-        .from('workers')
-        .update({
-          is_active: false,
-          end_date: endDate || new Date().toISOString().split('T')[0],
-        })
-        .eq('id', workerId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return worker as Worker;
+    mutationFn: async ({ workerId, organizationId, endDate }: { workerId: string; organizationId: string; endDate?: string }) => {
+      return workersApi.deactivate(organizationId, workerId, endDate);
     },
     onSuccess: (worker) => {
       queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['worker', worker.id] });
+      queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
   });

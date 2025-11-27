@@ -156,8 +156,6 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const watchEmail = watch('email');
   const workerType = watch('worker_type');
   const metayageType = watch('metayage_type');
-  const dailyRate = watch('daily_rate');
-  const monthlySalary = watch('monthly_salary');
   const metayagePercentage = watch('metayage_percentage');
   const isCnssDecl = watch('is_cnss_declared');
   const specialties = watch('specialties') || [];
@@ -208,7 +206,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
       // 1. Create or update the worker
       if (isEditing) {
-        await updateWorker.mutateAsync({ id: worker.id, data });
+        await updateWorker.mutateAsync({ id: worker.id, organizationId, data });
       } else {
         const result = await createWorker.mutateAsync({ ...data, organization_id: organizationId });
         workerId = result.id;

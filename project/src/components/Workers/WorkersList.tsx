@@ -10,7 +10,6 @@ import {
   XCircle,
   UserX,
   Lock,
-  Shield,
   ShieldCheck,
   ShieldOff,
 } from 'lucide-react';
@@ -66,7 +65,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const handleDeactivate = async (workerId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir désactiver ce travailleur?')) {
       try {
-        await deactivateWorker.mutateAsync({ workerId });
+        await deactivateWorker.mutateAsync({ workerId, organizationId });
       } catch (error) {
         console.error('Error deactivating worker:', error);
       }
@@ -76,7 +75,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const handleDelete = async (workerId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible.')) {
       try {
-        await deleteWorker.mutateAsync(workerId);
+        await deleteWorker.mutateAsync({ workerId, organizationId });
       } catch (error) {
         console.error('Error deleting worker:', error);
       }
