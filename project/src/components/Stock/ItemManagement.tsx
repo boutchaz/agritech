@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
-import { useItemSelection } from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -44,7 +43,7 @@ import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, UpdateItemInput, CreateItemGroupInput } from '@/types/items';
+import type { Item, CreateItemInput, UpdateItemInput } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 
 interface ItemFormProps {
@@ -407,7 +406,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label htmlFor="item_group_id">{t('items.itemGroup')} *</Label>
+              <Label htmlFor="item_group_id">{t('items.group')} *</Label>
               <Button
                 type="button"
                 variant="ghost"
