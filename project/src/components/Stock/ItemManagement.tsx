@@ -273,6 +273,9 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     maintain_stock: item?.maintain_stock ?? true,
   });
 
+  // Get first item group ID in a stable way to avoid infinite loops
+  const firstItemGroupId = itemGroups[0]?.id;
+
   // Update formData when item changes (for edit mode) or reset for create mode
   useEffect(() => {
     if (item) {
@@ -299,7 +302,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         item_code: '',
         item_name: '',
         description: '',
-        item_group_id: itemGroups[0]?.id || '',
+        item_group_id: firstItemGroupId || '',
         default_unit: '',
         stock_uom: '',
         standard_rate: undefined,
@@ -310,14 +313,15 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         maintain_stock: true,
       });
     }
-  }, [item, currentOrganization?.id, itemGroups]);
+  }, [item, currentOrganization?.id, firstItemGroupId]);
 
   // Update formData when itemGroups change (for create mode)
+  // Note: Removed formData.item_group_id from dependencies to prevent infinite loop
   useEffect(() => {
     if (!item && itemGroups.length > 0 && !formData.item_group_id) {
       setFormData((prev) => ({ ...prev, item_group_id: itemGroups[0].id }));
     }
-  }, [itemGroups, item, formData.item_group_id]);
+  }, [itemGroups, item]);
 
   const handleGroupCreated = async () => {
     const { data: updatedGroups } = await refetchGroups();
