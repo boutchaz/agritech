@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
-import { supabase } from '../lib/supabase';
+import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
@@ -24,6 +24,9 @@ interface OrganizationData {
   status: 'active' | 'inactive' | 'suspended';
   currency?: string;
   currency_symbol?: string;
+  timezone?: string;
+  currency_code?: string;
+  is_active?: boolean;
 }
 
 const OrganizationSettings: React.FC = () => {
@@ -44,14 +47,30 @@ const OrganizationSettings: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', currentOrganization.id)
-          .single();
-
-        if (error) throw error;
-        setOrgData(data);
+        const data = await organizationsApi.getOne(currentOrganization.id);
+        // Map API response to component state
+        setOrgData({
+          id: data.id,
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          currency_code: data.currency_code,
+          currency: data.currency_code,
+          timezone: data.timezone,
+          is_active: data.is_active,
+          status: data.is_active ? 'active' : 'inactive',
+          // Fields not yet supported by API - keep as undefined
+          email: undefined,
+          phone: undefined,
+          address: undefined,
+          city: undefined,
+          state: undefined,
+          country: undefined,
+          postal_code: undefined,
+          contact_person: undefined,
+          website: undefined,
+          currency_symbol: undefined,
+        });
       } catch (err) {
         console.error('Error fetching organization data:', err);
         setError(t('organization.errors.loadError'));
@@ -71,27 +90,26 @@ const OrganizationSettings: React.FC = () => {
     setSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({
-          name: orgData.name,
-          email: orgData.email,
-          phone: orgData.phone,
-          address: orgData.address,
-          city: orgData.city,
-          state: orgData.state,
-          country: orgData.country,
-          postal_code: orgData.postal_code,
-          contact_person: orgData.contact_person,
-          website: orgData.website,
-          description: orgData.description,
-          currency: orgData.currency,
-          currency_symbol: orgData.currency_symbol,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentOrganization.id);
+      const updatedOrg = await organizationsApi.update(currentOrganization.id, {
+        name: orgData.name,
+        description: orgData.description,
+        // Note: Only fields supported by API (name, description, currency_code, timezone, is_active)
+        // Other fields like email, phone, address not yet supported by API
+      });
 
-      if (error) throw error;
+      // Update local state with API response while preserving unsupported fields
+      setOrgData({
+        ...orgData,
+        id: updatedOrg.id,
+        name: updatedOrg.name,
+        slug: updatedOrg.slug,
+        description: updatedOrg.description,
+        currency_code: updatedOrg.currency_code,
+        currency: updatedOrg.currency_code,
+        timezone: updatedOrg.timezone,
+        is_active: updatedOrg.is_active,
+        status: updatedOrg.is_active ? 'active' : 'inactive',
+      });
 
       // Invalidate ALL organization-related queries to ensure fresh data
       await Promise.all([
