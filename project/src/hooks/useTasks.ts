@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { tasksApi } from '../lib/api/tasks';
 import type {
-  Task,
-  TaskSummary,
   TaskFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
@@ -11,7 +10,6 @@ import type {
   TaskTimeLog,
   ClockInRequest,
   ClockOutRequest,
-  TaskStatistics,
   WorkerAvailability,
 } from '../types/tasks';
 
@@ -23,85 +21,21 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
   return useQuery({
     queryKey: ['tasks', organizationId, filters],
     queryFn: async () => {
-      let query = supabase
-        .from('tasks')
-        .select(`
-          *,
-          worker:workers!assigned_to(first_name, last_name),
-          farm:farms!farm_id(name),
-          parcel:parcels!parcel_id(name)
-        `)
-        .eq('organization_id', organizationId);
-
-      if (filters?.status) {
-        const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-        query = query.in('status', statuses);
-      }
-
-      if (filters?.priority) {
-        const priorities = Array.isArray(filters.priority) ? filters.priority : [filters.priority];
-        query = query.in('priority', priorities);
-      }
-
-      if (filters?.task_type) {
-        const types = Array.isArray(filters.task_type) ? filters.task_type : [filters.task_type];
-        query = query.in('task_type', types);
-      }
-
-      if (filters?.assigned_to) {
-        query = query.eq('assigned_to', filters.assigned_to);
-      }
-
-      if (filters?.farm_id) {
-        query = query.eq('farm_id', filters.farm_id);
-      }
-
-      if (filters?.parcel_id) {
-        query = query.eq('parcel_id', filters.parcel_id);
-      }
-
-      if (filters?.date_from) {
-        query = query.gte('scheduled_start', filters.date_from);
-      }
-
-      if (filters?.date_to) {
-        query = query.lte('scheduled_start', filters.date_to);
-      }
-
-      if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-      }
-
-      query = query.order('scheduled_start', { ascending: false, nullsFirst: false });
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return (data || []) as TaskSummary[];
+      if (!organizationId) return [];
+      return tasksApi.getAll(organizationId, filters);
     },
     enabled: !!organizationId,
   });
 }
 
-export function useTask(taskId: string | null) {
+export function useTask(organizationId: string | null, taskId: string | null) {
   return useQuery({
-    queryKey: ['task', taskId],
+    queryKey: ['task', organizationId, taskId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          worker:workers!assigned_to(first_name, last_name),
-          farm:farms!farm_id(name),
-          parcel:parcels!parcel_id(name)
-        `)
-        .eq('id', taskId!)
-        .single();
-
-      if (error) throw error;
-      return data as TaskSummary;
+      if (!organizationId || !taskId) return null;
+      return tasksApi.getById(organizationId, taskId);
     },
-    enabled: !!taskId,
+    enabled: !!organizationId && !!taskId,
   });
 }
 
@@ -127,6 +61,8 @@ export function useTaskComments(taskId: string | null) {
   return useQuery({
     queryKey: ['task-comments', taskId],
     queryFn: async () => {
+      if (!taskId) return [];
+
       const { data, error } = await supabase
         .from('task_comments')
         .select(`
@@ -134,7 +70,7 @@ export function useTaskComments(taskId: string | null) {
           user:auth.users!user_id(email),
           worker:workers!worker_id(first_name, last_name)
         `)
-        .eq('task_id', taskId!)
+        .eq('task_id', taskId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -155,13 +91,15 @@ export function useTaskTimeLogs(taskId: string | null) {
   return useQuery({
     queryKey: ['task-time-logs', taskId],
     queryFn: async () => {
+      if (!taskId) return [];
+
       const { data, error } = await supabase
         .from('task_time_logs')
         .select(`
           *,
           worker:workers!worker_id(first_name, last_name)
         `)
-        .eq('task_id', taskId!)
+        .eq('task_id', taskId)
         .order('start_time', { ascending: false });
 
       if (error) throw error;
@@ -196,41 +134,12 @@ export function useWorkerAvailability(workerId: string | null, date: string) {
   });
 }
 
-export function useTaskStatistics(organizationId: string, filters?: TaskFilters) {
+export function useTaskStatistics(organizationId: string) {
   return useQuery({
-    queryKey: ['task-statistics', organizationId, filters],
+    queryKey: ['task-statistics', organizationId],
     queryFn: async () => {
-      // Fetch tasks for statistics
-      const { data: tasks, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          worker:workers!assigned_to(first_name, last_name)
-        `)
-        .eq('organization_id', organizationId);
-
-      if (error) throw error;
-
-      // Calculate statistics
-      const total_tasks = tasks?.length || 0;
-      const completed_tasks = tasks?.filter(t => t.status === 'completed').length || 0;
-      const in_progress_tasks = tasks?.filter(t => t.status === 'in_progress').length || 0;
-      const overdue_tasks = tasks?.filter(t => t.status === 'overdue').length || 0;
-      
-      const stats: TaskStatistics = {
-        total_tasks,
-        completed_tasks,
-        in_progress_tasks,
-        overdue_tasks,
-        completion_rate: total_tasks > 0 ? (completed_tasks / total_tasks) * 100 : 0,
-        average_completion_time: 0, // Would need to calculate from time logs
-        total_cost: tasks?.reduce((sum, t) => sum + (t.actual_cost || 0), 0) || 0,
-        tasks_by_type: {},
-        tasks_by_priority: {},
-        tasks_by_worker: [],
-      };
-
-      return stats;
+      if (!organizationId) return null;
+      return tasksApi.getStatistics(organizationId);
     },
     enabled: !!organizationId,
   });
@@ -245,14 +154,8 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async (request: CreateTaskRequest & { organization_id: string }) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert(request)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Task;
+      const { organization_id, ...taskData } = request;
+      return tasksApi.create(organization_id, taskData);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
@@ -265,19 +168,11 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, updates }: { taskId: string; updates: UpdateTaskRequest }) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(updates)
-        .eq('id', taskId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Task;
+    mutationFn: async ({ taskId, organizationId, updates }: { taskId: string; organizationId: string; updates: UpdateTaskRequest }) => {
+      return tasksApi.update(organizationId, taskId, updates);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
       queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
       queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organization_id] });
     },
@@ -288,27 +183,13 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (taskId: string) => {
-      // Get task first to know organization_id
-      const { data: task } = await supabase
-        .from('tasks')
-        .select('organization_id')
-        .eq('id', taskId)
-        .single();
-
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-
-      if (error) throw error;
-      return { taskId, organizationId: task?.organization_id };
+    mutationFn: async ({ taskId, organizationId }: { taskId: string; organizationId: string }) => {
+      await tasksApi.delete(organizationId, taskId);
+      return { taskId, organizationId };
     },
     onSuccess: (data) => {
-      if (data.organizationId) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', data.organizationId] });
-        queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organizationId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['tasks', data.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organizationId] });
     },
   });
 }
@@ -317,22 +198,11 @@ export function useAssignTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, workerId }: { taskId: string; workerId: string }) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({ 
-          assigned_to: workerId,
-          status: 'assigned',
-        })
-        .eq('id', taskId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Task;
+    mutationFn: async ({ taskId, organizationId, workerId }: { taskId: string; organizationId: string; workerId: string }) => {
+      return tasksApi.assign(organizationId, taskId, workerId);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
       queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
     },
   });
@@ -436,37 +306,27 @@ export function useCompleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      taskId, 
-      qualityRating, 
-      actualCost, 
-      notes 
-    }: { 
-      taskId: string; 
-      qualityRating?: number; 
-      actualCost?: number; 
+    mutationFn: async ({
+      taskId,
+      organizationId,
+      qualityRating,
+      actualCost,
+      notes
+    }: {
+      taskId: string;
+      organizationId: string;
+      qualityRating?: number;
+      actualCost?: number;
       notes?: string;
     }) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({
-          status: 'completed',
-          completed_date: new Date().toISOString(),
-          actual_end: new Date().toISOString(),
-          completion_percentage: 100,
-          quality_rating: qualityRating,
-          actual_cost: actualCost,
-          notes: notes,
-        })
-        .eq('id', taskId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Task;
+      return tasksApi.complete(organizationId, taskId, {
+        quality_rating: qualityRating,
+        actual_cost: actualCost,
+        notes,
+      });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
       queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
       queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organization_id] });
     },
