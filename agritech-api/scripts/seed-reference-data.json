@@ -1,0 +1,257 @@
+{
+  "test_types": [
+    {
+      "name": "Soil pH Test",
+      "description": "Measures soil acidity/alkalinity level",
+      "parameters": {
+        "unit": "pH",
+        "range": "0-14",
+        "optimal": "6.0-7.0"
+      }
+    },
+    {
+      "name": "Soil Nitrogen Test",
+      "description": "Measures nitrogen content in soil",
+      "parameters": {
+        "unit": "ppm",
+        "range": "0-100",
+        "optimal": "20-40"
+      }
+    },
+    {
+      "name": "Soil Phosphorus Test",
+      "description": "Measures phosphorus content in soil",
+      "parameters": {
+        "unit": "ppm",
+        "range": "0-100",
+        "optimal": "25-50"
+      }
+    },
+    {
+      "name": "Soil Potassium Test",
+      "description": "Measures potassium content in soil",
+      "parameters": {
+        "unit": "ppm",
+        "range": "0-500",
+        "optimal": "150-250"
+      }
+    },
+    {
+      "name": "Soil Organic Matter Test",
+      "description": "Measures organic matter percentage in soil",
+      "parameters": {
+        "unit": "%",
+        "range": "0-10",
+        "optimal": "3-5"
+      }
+    },
+    {
+      "name": "Water Quality Test",
+      "description": "Tests irrigation water quality and safety",
+      "parameters": {
+        "tests": ["pH", "EC", "TDS", "Heavy Metals"]
+      }
+    },
+    {
+      "name": "Plant Tissue Analysis",
+      "description": "Analyzes nutrient levels in plant tissues",
+      "parameters": {
+        "nutrients": ["N", "P", "K", "Ca", "Mg", "Fe"]
+      }
+    }
+  ],
+  "product_categories": [
+    {
+      "name": "Fruits",
+      "description": "Fresh fruits and fruit products"
+    },
+    {
+      "name": "Vegetables",
+      "description": "Fresh vegetables and vegetable products"
+    },
+    {
+      "name": "Cereals",
+      "description": "Grains and cereal crops"
+    },
+    {
+      "name": "Legumes",
+      "description": "Beans, peas, and other leguminous crops"
+    },
+    {
+      "name": "Nuts",
+      "description": "Tree nuts and nut products"
+    },
+    {
+      "name": "Herbs & Spices",
+      "description": "Culinary and medicinal herbs and spices"
+    },
+    {
+      "name": "Oil Crops",
+      "description": "Crops grown for oil extraction"
+    },
+    {
+      "name": "Fodder Crops",
+      "description": "Crops grown for animal feed"
+    }
+  ],
+  "product_subcategories": {
+    "Fruits": [
+      {"name": "Citrus Fruits", "description": "Oranges, lemons, limes, grapefruits"},
+      {"name": "Stone Fruits", "description": "Peaches, plums, cherries, apricots"},
+      {"name": "Berries", "description": "Strawberries, blueberries, raspberries"},
+      {"name": "Tropical Fruits", "description": "Bananas, mangoes, pineapples, papayas"},
+      {"name": "Pome Fruits", "description": "Apples, pears, quinces"}
+    ],
+    "Vegetables": [
+      {"name": "Leafy Greens", "description": "Lettuce, spinach, kale, cabbage"},
+      {"name": "Root Vegetables", "description": "Carrots, beets, radishes, turnips"},
+      {"name": "Tubers", "description": "Potatoes, sweet potatoes, yams"},
+      {"name": "Solanaceous", "description": "Tomatoes, peppers, eggplants"},
+      {"name": "Cucurbits", "description": "Cucumbers, squash, melons, pumpkins"},
+      {"name": "Alliums", "description": "Onions, garlic, leeks, shallots"}
+    ],
+    "Cereals": [
+      {"name": "Wheat", "description": "Common wheat and durum wheat"},
+      {"name": "Rice", "description": "Paddy rice and processed rice"},
+      {"name": "Corn/Maize", "description": "Sweet corn and field corn"},
+      {"name": "Barley", "description": "Malting and feed barley"},
+      {"name": "Oats", "description": "Common oats for food and feed"}
+    ],
+    "Legumes": [
+      {"name": "Beans", "description": "Kidney beans, black beans, navy beans"},
+      {"name": "Peas", "description": "Garden peas, chickpeas"},
+      {"name": "Lentils", "description": "Red, green, and brown lentils"},
+      {"name": "Soybeans", "description": "Soybeans for oil and protein"}
+    ],
+    "Nuts": [
+      {"name": "Almonds", "description": "Sweet almonds"},
+      {"name": "Walnuts", "description": "English and black walnuts"},
+      {"name": "Pecans", "description": "Pecan nuts"},
+      {"name": "Cashews", "description": "Cashew nuts"},
+      {"name": "Hazelnuts", "description": "Filberts"}
+    ],
+    "Herbs & Spices": [
+      {"name": "Culinary Herbs", "description": "Basil, parsley, cilantro, thyme"},
+      {"name": "Medicinal Herbs", "description": "Chamomile, mint, lavender"},
+      {"name": "Spices", "description": "Pepper, cinnamon, cumin, turmeric"}
+    ],
+    "Oil Crops": [
+      {"name": "Sunflower", "description": "Sunflower seeds for oil"},
+      {"name": "Canola/Rapeseed", "description": "Canola oil crops"},
+      {"name": "Olive", "description": "Olives for oil extraction"},
+      {"name": "Palm Oil", "description": "Oil palm fruits"}
+    ],
+    "Fodder Crops": [
+      {"name": "Alfalfa", "description": "Alfalfa hay and silage"},
+      {"name": "Clover", "description": "Red and white clover"},
+      {"name": "Grass Hay", "description": "Timothy, bermuda grass"}
+    ]
+  },
+  "tree_categories_with_trees": [
+    {
+      "category": "Citrus Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Orange Tree",
+        "Lemon Tree",
+        "Lime Tree",
+        "Grapefruit Tree",
+        "Mandarin Tree",
+        "Tangerine Tree"
+      ]
+    },
+    {
+      "category": "Stone Fruit Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Peach Tree",
+        "Plum Tree",
+        "Cherry Tree",
+        "Apricot Tree",
+        "Nectarine Tree"
+      ]
+    },
+    {
+      "category": "Pome Fruit Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Apple Tree",
+        "Pear Tree",
+        "Quince Tree"
+      ]
+    },
+    {
+      "category": "Nut Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Almond Tree",
+        "Walnut Tree",
+        "Pecan Tree",
+        "Hazelnut Tree",
+        "Cashew Tree",
+        "Pistachio Tree"
+      ]
+    },
+    {
+      "category": "Tropical Fruit Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Mango Tree",
+        "Banana Plant",
+        "Coconut Palm",
+        "Date Palm",
+        "Papaya Tree",
+        "Avocado Tree",
+        "Guava Tree"
+      ]
+    },
+    {
+      "category": "Olive Trees",
+      "organization_note": "Will be populated per organization",
+      "trees": [
+        "Arbequina Olive",
+        "Picual Olive",
+        "Koroneiki Olive",
+        "Frantoio Olive"
+      ]
+    }
+  ],
+  "plantation_types": [
+    {
+      "type": "High Density",
+      "spacing": "4m x 4m",
+      "trees_per_ha": 625,
+      "organization_note": "Will be populated per organization"
+    },
+    {
+      "type": "Medium Density",
+      "spacing": "5m x 5m",
+      "trees_per_ha": 400,
+      "organization_note": "Will be populated per organization"
+    },
+    {
+      "type": "Standard Density",
+      "spacing": "6m x 6m",
+      "trees_per_ha": 278,
+      "organization_note": "Will be populated per organization"
+    },
+    {
+      "type": "Low Density",
+      "spacing": "8m x 8m",
+      "trees_per_ha": 156,
+      "organization_note": "Will be populated per organization"
+    },
+    {
+      "type": "Super High Density",
+      "spacing": "3m x 3m",
+      "trees_per_ha": 1111,
+      "organization_note": "Will be populated per organization"
+    },
+    {
+      "type": "Intensive Orchard",
+      "spacing": "4m x 2m",
+      "trees_per_ha": 1250,
+      "organization_note": "Will be populated per organization"
+    }
+  ]
+}
