@@ -61,10 +61,11 @@ export function useNetworkStatus() {
 
     try {
       // Try to fetch a small resource with no-cache
+      // Use the current origin to avoid 404s
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch('/favicon.ico', {
+      const response = await fetch(window.location.origin, {
         method: 'HEAD',
         cache: 'no-cache',
         signal: controller.signal,

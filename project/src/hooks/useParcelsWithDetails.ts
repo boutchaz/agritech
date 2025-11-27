@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import { authSupabase } from '@/lib/auth-supabase';
 
 export interface ParcelWithDetails {
   id: string;
@@ -36,12 +35,12 @@ export function useParcelsWithDetails() {
     queryKey: ['parcels-with-details', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) {
-        console.log('No organization ID available');
+        console.warn('No organization ID available');
         return [];
       }
 
       try {
-        console.log('Fetching parcels for organization:', currentOrganization.id);
+        console.warn('Fetching parcels for organization:', currentOrganization.id);
 
         // Step 1: Get all farms for this organization
         const { data: farms, error: farmsError } = await supabase
@@ -54,20 +53,20 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        console.log('Found farms:', farms?.length || 0);
+        console.warn('Found farms:', farms?.length || 0);
 
         if (!farms || farms.length === 0) {
-          console.log('No farms found for this organization');
+          console.warn('No farms found for this organization');
           return [];
         }
 
         const farmIds = farms.map(f => f.id);
-        console.log('Farm IDs:', farmIds);
+        console.warn('Farm IDs:', farmIds);
 
         // Step 2: Get all parcels for these farms
         const { data: parcels, error: parcelsError } = await supabase
           .from('parcels')
-          .select('id, name, farm_id, crop_id')
+          .select('id, name, farm_id')
           .in('farm_id', farmIds)
           .order('name');
 
@@ -76,10 +75,10 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        console.log('Found parcels:', parcels?.length || 0);
+        console.warn('Found parcels:', parcels?.length || 0);
 
         if (!parcels || parcels.length === 0) {
-          console.log('No parcels found for these farms');
+          console.warn('No parcels found for these farms');
           return [];
         }
 
@@ -113,7 +112,7 @@ export function useParcelsWithDetails() {
           crop: parcel.crop_id ? cropsMap.get(parcel.crop_id) : undefined,
         }));
 
-        console.log('Returning parcels with details:', result.length);
+        console.warn('Returning parcels with details:', result.length);
         return result;
       } catch (err) {
         console.error('useParcelsWithDetails error:', err);
