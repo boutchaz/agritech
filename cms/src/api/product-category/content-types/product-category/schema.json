@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "product_categories",
+  "info": {
+    "singularName": "product-category",
+    "pluralName": "product-categories",
+    "displayName": "Product Category",
+    "description": "Product classification system"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "product_subcategories": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::product-subcategory.product-subcategory",
+      "mappedBy": "product_category"
+    }
+  }
+}

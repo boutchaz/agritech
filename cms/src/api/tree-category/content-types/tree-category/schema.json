@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tree_categories",
+  "info": {
+    "singularName": "tree-category",
+    "pluralName": "tree-categories",
+    "displayName": "Tree Category",
+    "description": "Categories for organizing tree species"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "description": {
+      "type": "text"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    },
+    "trees": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::tree.tree",
+      "mappedBy": "tree_category"
+    }
+  }
+}

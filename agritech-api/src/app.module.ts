@@ -19,6 +19,7 @@ import { WorkersModule } from './modules/workers/workers.module';
 import { StockEntriesModule } from './modules/stock-entries/stock-entries.module';
 import { ItemsModule } from './modules/items/items.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
+import { ReferenceDataModule } from './modules/reference-data/reference-data.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { FarmsModule } from './modules/farms/farms.module';
 import { ParcelsModule } from './modules/parcels/parcels.module';
@@ -56,6 +57,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     StockEntriesModule,
     ItemsModule,
     WarehousesModule,
+    ReferenceDataModule,
     SubscriptionsModule,
     FarmsModule,
     ParcelsModule,

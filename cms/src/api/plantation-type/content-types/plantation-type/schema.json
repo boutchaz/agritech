@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "plantation_types",
+  "info": {
+    "singularName": "plantation-type",
+    "pluralName": "plantation-types",
+    "displayName": "Plantation Type",
+    "description": "Types of plantation configurations"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "configuration": {
+      "type": "json",
+      "required": false
+    },
+    "spacing": {
+      "type": "string",
+      "required": false
+    },
+    "trees_per_ha": {
+      "type": "integer",
+      "required": false
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    }
+  }
+}

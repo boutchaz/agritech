@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "test_types",
+  "info": {
+    "singularName": "test-type",
+    "pluralName": "test-types",
+    "displayName": "Test Type",
+    "description": "Types of soil/crop tests available"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "parameters": {
+      "type": "json",
+      "required": false
+    }
+  }
+}
