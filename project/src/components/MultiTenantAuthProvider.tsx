@@ -113,7 +113,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password', '/auth/callback'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password', '/auth/callback', '/blog'];
 
   // Routes that don't require password to be set (accessible with temporary password)
   const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
@@ -452,7 +452,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
 
   // Check if current route is public or trial selection
-  const isPublicRoute = publicRoutes.includes(location.pathname);
+  const isPublicRoute = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/blog');
   const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
   const isOnSetPasswordPage = location.pathname.startsWith('/set-password');
 
