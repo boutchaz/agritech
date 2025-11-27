@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
+import { usersApi } from '../lib/api/users';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -27,7 +28,7 @@ interface PasswordChangeData {
 
 const ProfileSettings: React.FC = () => {
   const { user, currentOrganization, userRole } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,35 +71,18 @@ const ProfileSettings: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
+        const data = await usersApi.getMe();
 
         if (data) {
           setProfile(data);
         } else {
-          // Create profile if it doesn't exist
-          const newProfile: Partial<UserProfile> = {
+          // Profile should exist, but if not, set defaults
+          setProfile({
             id: user.id,
             email: user.email,
             timezone: 'UTC',
             language: 'fr'
-          };
-
-          const { data: createdProfile, error: createError } = await supabase
-            .from('user_profiles')
-            .insert(newProfile)
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          setProfile(createdProfile);
+          });
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -119,21 +103,16 @@ const ProfileSettings: React.FC = () => {
     setSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          full_name: profile.full_name,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          phone: profile.phone,
-          timezone: profile.timezone,
-          language: profile.language,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      const updatedProfile = await usersApi.updateMe({
+        full_name: profile.full_name,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        timezone: profile.timezone,
+        language: profile.language,
+      });
 
-      if (error) throw error;
-
+      setProfile(updatedProfile);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
