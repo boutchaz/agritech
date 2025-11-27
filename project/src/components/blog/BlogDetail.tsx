@@ -13,7 +13,12 @@ interface BlogDetailProps {
 export function BlogDetail({ slug }: BlogDetailProps) {
   const { data: post, isLoading, error } = useQuery({
     queryKey: ['blog', slug],
-    queryFn: () => blogsApi.getBlogBySlug(slug),
+    queryFn: async () => {
+      console.log('[BlogDetail] Fetching blog:', slug);
+      const result = await blogsApi.getBlogBySlug(slug);
+      console.log('[BlogDetail] Blog fetched:', result?.title);
+      return result;
+    },
   });
 
   const { data: relatedPosts } = useQuery({
@@ -21,6 +26,8 @@ export function BlogDetail({ slug }: BlogDetailProps) {
     queryFn: () => blogsApi.getRelatedBlogs(slug, 3),
     enabled: !!post,
   });
+
+  console.log('[BlogDetail] Render state:', { slug, isLoading, hasPost: !!post, hasError: !!error });
 
   if (isLoading) {
     return (
