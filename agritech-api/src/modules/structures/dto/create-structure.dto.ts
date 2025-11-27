@@ -21,6 +21,7 @@ export class CreateStructureDto {
   @ApiPropertyOptional({
     description: 'Geographic location',
     type: 'object',
+    additionalProperties: true,
     example: { lat: 33.5731, lng: -7.5898 }
   })
   @IsOptional()
