@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('reference-data')
-@Controller('api/v1/reference-data')
+@Controller('reference-data')
 @UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class ReferenceDataController {

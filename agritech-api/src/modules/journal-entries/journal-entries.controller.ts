@@ -3,7 +3,7 @@ import { AccountingAutomationService } from './accounting-automation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
-@Controller('api/v1/accounting')
+@Controller('accounting')
 @UseGuards(JwtAuthGuard, OrganizationGuard)
 export class AccountingController {
   constructor(

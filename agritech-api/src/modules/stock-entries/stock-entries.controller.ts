@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('stock-entries')
-@Controller('api/v1/stock-entries')
+@Controller('stock-entries')
 @UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class StockEntriesController {

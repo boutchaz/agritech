@@ -21,7 +21,7 @@ import { ReceptionBatchFiltersDto } from './dto/reception-batch-filters.dto';
 
 @ApiTags('Reception Batches')
 @ApiBearerAuth()
-@Controller('api/v1/organizations/:organizationId/reception-batches')
+@Controller('organizations/:organizationId/reception-batches')
 @UseGuards(JwtAuthGuard)
 export class ReceptionBatchesController {
   constructor(
