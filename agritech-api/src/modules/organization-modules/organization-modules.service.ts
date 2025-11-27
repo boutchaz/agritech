@@ -160,14 +160,18 @@ export class OrganizationModulesService {
       throw new InternalServerErrorException('Failed to update module');
     }
 
-    // Transform response
+    // Transform response - modules is returned as array by Supabase
+    const moduleData = Array.isArray(updatedModule.modules)
+      ? updatedModule.modules[0]
+      : updatedModule.modules;
+
     return {
-      id: updatedModule.modules.id,
-      name: updatedModule.modules.name,
-      icon: updatedModule.modules.icon,
-      category: updatedModule.modules.category,
-      description: updatedModule.modules.description,
-      required_plan: updatedModule.modules.required_plan,
+      id: moduleData.id,
+      name: moduleData.name,
+      icon: moduleData.icon,
+      category: moduleData.category,
+      description: moduleData.description,
+      required_plan: moduleData.required_plan,
       is_active: updatedModule.is_active,
       settings: updatedModule.settings,
     };

@@ -7,7 +7,11 @@ export class UpdateModuleDto {
   @IsBoolean()
   is_active?: boolean;
 
-  @ApiPropertyOptional({ description: 'Module-specific settings as JSON', type: 'object' })
+  @ApiPropertyOptional({
+    description: 'Module-specific settings as JSON',
+    type: 'object',
+    additionalProperties: true
+  })
   @IsOptional()
   @IsObject()
   settings?: Record<string, any>;
