@@ -105,14 +105,24 @@ export class BlogsService {
       publicationState: 'live',
     };
 
-    const response = await this.strapiService.get('/blogs', params);
-    const posts = this.transformBlogPosts(response);
+    try {
+      this.logger.debug(`Fetching blog post with slug: ${slug}`);
+      const response = await this.strapiService.get('/blogs', params);
+      this.logger.debug(`Strapi response for slug ${slug}:`, JSON.stringify(response, null, 2));
+      
+      const posts = this.transformBlogPosts(response);
 
-    if (posts.length === 0) {
-      throw new NotFoundException(`Blog post with slug "${slug}" not found`);
+      if (posts.length === 0) {
+        this.logger.warn(`Blog post with slug "${slug}" not found or not published`);
+        throw new NotFoundException(`Blog post with slug "${slug}" not found`);
+      }
+
+      this.logger.debug(`Successfully transformed blog post: ${posts[0].title}`);
+      return posts[0];
+    } catch (error) {
+      this.logger.error(`Error fetching blog post with slug "${slug}":`, error);
+      throw error;
     }
-
-    return posts[0];
   }
 
   /**
@@ -139,8 +149,16 @@ export class BlogsService {
       publicationState: 'live',
     };
 
-    const response = await this.strapiService.get('/blogs', params);
-    return this.transformBlogPosts(response);
+    try {
+      this.logger.debug(`Fetching featured blogs with limit: ${limit}`);
+      const response = await this.strapiService.get('/blogs', params);
+      const posts = this.transformBlogPosts(response);
+      this.logger.debug(`Found ${posts.length} featured blog posts`);
+      return posts;
+    } catch (error) {
+      this.logger.error('Error fetching featured blogs:', error);
+      throw error;
+    }
   }
 
   /**
@@ -224,39 +242,94 @@ export class BlogsService {
   private transformBlogItem(item: any): BlogPost {
     const attrs = item.attributes || item;
 
-    return {
-      id: item.id,
-      title: attrs.title,
-      slug: attrs.slug,
-      excerpt: attrs.excerpt,
-      content: attrs.content,
-      featured_image: this.transformImage(attrs.featured_image),
-      author: attrs.author,
-      reading_time: attrs.reading_time || 5,
-      is_featured: attrs.is_featured || false,
-      tags: attrs.tags || [],
-      blog_category: this.transformCategory(attrs.blog_category),
-      seo_title: attrs.seo_title,
-      seo_description: attrs.seo_description,
-      publishedAt: attrs.publishedAt,
-      createdAt: attrs.createdAt,
-      updatedAt: attrs.updatedAt,
-    };
+    try {
+      return {
+        id: item.id,
+        title: attrs.title || '',
+        slug: attrs.slug || '',
+        excerpt: attrs.excerpt || '',
+        content: attrs.content || '',
+        featured_image: this.transformImage(attrs.featured_image),
+        author: attrs.author || 'AgriTech Team',
+        reading_time: attrs.reading_time || 5,
+        is_featured: attrs.is_featured || false,
+        tags: attrs.tags || [],
+        blog_category: this.transformCategory(attrs.blog_category),
+        seo_title: attrs.seo_title,
+        seo_description: attrs.seo_description,
+        publishedAt: attrs.publishedAt,
+        createdAt: attrs.createdAt,
+        updatedAt: attrs.updatedAt,
+      };
+    } catch (error) {
+      this.logger.error('Error transforming blog item:', error, { itemId: item.id });
+      throw error;
+    }
   }
 
   /**
    * Transform Strapi media format to clean image object
+   * Handles both Strapi v4 nested format and direct format
+   * Returns full URLs for images (not relative paths)
    */
   private transformImage(image: any): BlogPost['featured_image'] | undefined {
-    if (!image?.data) return undefined;
+    if (!image) return undefined;
 
-    const imgAttrs = image.data.attributes || image.data;
-    return {
-      url: imgAttrs.url,
-      alternativeText: imgAttrs.alternativeText,
-      width: imgAttrs.width,
-      height: imgAttrs.height,
+    // Get Strapi base URL (without /api suffix)
+    const strapiApiUrl = process.env.STRAPI_API_URL || 'https://cms.thebzlab.online/api';
+    const strapiBaseUrl = strapiApiUrl.replace('/api', '');
+    
+    // Helper to construct full URL
+    const getFullUrl = (url: string): string => {
+      if (!url) return '';
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // Ensure URL starts with / if it doesn't
+      const path = url.startsWith('/') ? url : `/${url}`;
+      return `${strapiBaseUrl}${path}`;
     };
+
+    // Handle Strapi v4 format: image.data.attributes
+    if (image?.data) {
+      const imgData = image.data;
+      const imgAttrs = imgData.attributes || imgData;
+      
+      // Handle array format (shouldn't happen for single image, but just in case)
+      if (Array.isArray(imgAttrs)) {
+        if (imgAttrs.length === 0) return undefined;
+        const firstImg = imgAttrs[0];
+        const url = firstImg.url || firstImg.attributes?.url;
+        if (!url) return undefined;
+        return {
+          url: getFullUrl(url),
+          alternativeText: firstImg.alternativeText || firstImg.attributes?.alternativeText,
+          width: firstImg.width || firstImg.attributes?.width,
+          height: firstImg.height || firstImg.attributes?.height,
+        };
+      }
+
+      if (!imgAttrs.url) return undefined;
+      return {
+        url: getFullUrl(imgAttrs.url),
+        alternativeText: imgAttrs.alternativeText,
+        width: imgAttrs.width,
+        height: imgAttrs.height,
+      };
+    }
+
+    // Handle direct format: image.attributes or image itself
+    const imgAttrs = image.attributes || image;
+    if (imgAttrs?.url) {
+      return {
+        url: getFullUrl(imgAttrs.url),
+        alternativeText: imgAttrs.alternativeText,
+        width: imgAttrs.width,
+        height: imgAttrs.height,
+      };
+    }
+
+    return undefined;
   }
 
   /**

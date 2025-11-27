@@ -64,11 +64,8 @@ export function BlogDetail({ slug }: BlogDetailProps) {
     );
   }
 
-  const imageUrl = post.featured_image?.url
-    ? post.featured_image.url.startsWith('http')
-      ? post.featured_image.url
-      : `${import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337'}${post.featured_image.url}`
-    : null;
+  // Image URL should already be a full URL from the NestJS API
+  const imageUrl = post.featured_image?.url || null;
 
   const formattedDate = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString('en-US', {
@@ -81,10 +78,12 @@ export function BlogDetail({ slug }: BlogDetailProps) {
   // Convert markdown to HTML
   const htmlContent = useMemo(() => {
     if (!post.content) return '';
-    return marked(post.content, {
+    const result = marked(post.content, {
       breaks: true,
       gfm: true,
     });
+    // Handle both sync and async marked versions
+    return typeof result === 'string' ? result : '';
   }, [post.content]);
 
   return (

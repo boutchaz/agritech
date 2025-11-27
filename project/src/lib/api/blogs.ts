@@ -124,7 +124,15 @@ export const blogsApi = {
    * Get a single blog post by slug
    */
   async getBlogBySlug(slug: string): Promise<BlogPost> {
-    return publicFetch<BlogPost>(`${BASE_URL}/${slug}`);
+    try {
+      console.log('[blogsApi] Fetching blog by slug:', slug);
+      const result = await publicFetch<BlogPost>(`${BASE_URL}/${slug}`);
+      console.log('[blogsApi] Blog fetched successfully:', result?.title);
+      return result;
+    } catch (error) {
+      console.error('[blogsApi] Error fetching blog by slug:', error);
+      throw error;
+    }
   },
 
   /**

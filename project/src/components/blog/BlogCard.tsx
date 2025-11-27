@@ -15,11 +15,8 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
     return null;
   }
 
-  const imageUrl = post.featured_image?.url
-    ? post.featured_image.url.startsWith('http')
-      ? post.featured_image.url
-      : `${import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337'}${post.featured_image.url}`
-    : null;
+  // Image URL should already be a full URL from the NestJS API
+  const imageUrl = post.featured_image?.url || null;
 
   const formattedDate = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString('en-US', {

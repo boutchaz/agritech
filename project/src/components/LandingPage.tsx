@@ -650,11 +650,8 @@ const LandingPage: React.FC = () => {
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {latestPosts.data.map((post) => {
-                const imageUrl = post.featured_image?.url
-                  ? post.featured_image.url.startsWith('http')
-                    ? post.featured_image.url
-                    : `${import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337'}${post.featured_image.url}`
-                  : null;
+                // Image URL should already be a full URL from the NestJS API
+                const imageUrl = post.featured_image?.url || null;
                 const formattedDate = post.publishedAt
                   ? new Date(post.publishedAt).toLocaleDateString('en-US', {
                       year: 'numeric',
