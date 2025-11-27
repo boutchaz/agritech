@@ -17,6 +17,8 @@ import { HarvestsModule } from './modules/harvests/harvests.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { StockEntriesModule } from './modules/stock-entries/stock-entries.module';
+import { ItemsModule } from './modules/items/items.module';
+import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { FarmsModule } from './modules/farms/farms.module';
 import { ParcelsModule } from './modules/parcels/parcels.module';
@@ -52,6 +54,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     TasksModule,
     WorkersModule,
     StockEntriesModule,
+    ItemsModule,
+    WarehousesModule,
     SubscriptionsModule,
     FarmsModule,
     ParcelsModule,

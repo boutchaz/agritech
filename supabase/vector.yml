@@ -1,0 +1,46 @@
+data_dir: /var/lib/vector
+
+# Sources
+sources:
+  docker_logs:
+    type: docker_logs
+
+# Transforms
+transforms:
+  # Parse JSON logs
+  parse_logs:
+    type: remap
+    inputs:
+      - docker_logs
+    source: |
+      . = parse_json!(.message)
+
+# Sinks
+sinks:
+  # Send to Logflare/Analytics
+  logflare:
+    type: http
+    inputs:
+      - parse_logs
+    uri: http://supabase-analytics:4000/api/logs
+    encoding:
+      codec: json
+    auth:
+      strategy: bearer
+      token: "${LOGFLARE_API_KEY}"
+    healthcheck:
+      enabled: true
+      uri: http://supabase-analytics:4000/health
+
+  # Also output to stdout for debugging
+  stdout:
+    type: console
+    inputs:
+      - docker_logs
+    encoding:
+      codec: text
+
+# Health check endpoint
+api:
+  enabled: true
+  address: 0.0.0.0:9001

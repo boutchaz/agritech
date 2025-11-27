@@ -18,11 +18,23 @@ export class StockEntryItemDto {
   @IsUUID()
   item_id: string;
 
+  @IsString()
+  @IsOptional()
+  item_name?: string;
+
   @IsNumber()
   quantity: number;
 
   @IsString()
   unit: string;
+
+  @IsUUID()
+  @IsOptional()
+  source_warehouse_id?: string;
+
+  @IsUUID()
+  @IsOptional()
+  target_warehouse_id?: string;
 
   @IsNumber()
   @IsOptional()
@@ -36,9 +48,22 @@ export class StockEntryItemDto {
   @IsOptional()
   serial_number?: string;
 
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  expiry_date?: Date;
+
+  @IsNumber()
+  @IsOptional()
+  system_quantity?: number;
+
+  @IsNumber()
+  @IsOptional()
+  physical_quantity?: number;
+
   @IsString()
   @IsOptional()
-  description?: string;
+  notes?: string;
 }
 
 export class CreateStockEntryDto {
@@ -49,7 +74,8 @@ export class CreateStockEntryDto {
   entry_type: StockEntryType;
 
   @IsString()
-  entry_number: string;
+  @IsOptional()
+  entry_number?: string;
 
   @Type(() => Date)
   @IsDate()
@@ -65,10 +91,27 @@ export class CreateStockEntryDto {
 
   @IsString()
   @IsOptional()
-  description?: string;
+  reference_type?: string;
+
+  @IsUUID()
+  @IsOptional()
+  reference_id?: string;
+
+  @IsString()
+  @IsOptional()
+  reference_number?: string;
+
+  @IsString()
+  @IsOptional()
+  purpose?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 
   @IsEnum(StockEntryStatus)
-  status: StockEntryStatus;
+  @IsOptional()
+  status?: StockEntryStatus;
 
   @IsArray()
   @ValidateNested({ each: true })

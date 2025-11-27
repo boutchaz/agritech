@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { stockEntriesApi } from '../lib/api/stock';
 import type {
   StockEntry,
   StockEntryWithItems,
@@ -27,44 +27,7 @@ export function useStockEntries(filters?: StockEntryFilters) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('stock_entries')
-        .select(`
-          *,
-          from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
-          to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .order('entry_date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (filters?.entry_type) {
-        query = query.eq('entry_type', filters.entry_type);
-      }
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.from_date) {
-        query = query.gte('entry_date', filters.from_date);
-      }
-      if (filters?.to_date) {
-        query = query.lte('entry_date', filters.to_date);
-      }
-      if (filters?.warehouse_id) {
-        query = query.or(`from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`);
-      }
-      if (filters?.reference_type) {
-        query = query.eq('reference_type', filters.reference_type);
-      }
-      if (filters?.search) {
-        query = query.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as StockEntry[];
+      return stockEntriesApi.getAll(filters, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -80,25 +43,9 @@ export function useStockEntry(entryId: string | null) {
     queryKey: ['stock-entry', entryId],
     queryFn: async () => {
       if (!entryId) throw new Error('Entry ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { data, error } = await supabase
-        .from('stock_entries')
-        .select(`
-          *,
-          items:stock_entry_items(
-            *,
-            item:items(id, item_code, item_name, default_unit)
-          ),
-          from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
-          to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
-        `)
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error('Stock entry not found');
-      return data as StockEntryWithItems;
+      return stockEntriesApi.getOne(entryId, currentOrganization.id);
     },
     enabled: !!entryId && !!currentOrganization?.id,
   });
@@ -109,71 +56,15 @@ export function useStockEntry(entryId: string | null) {
  */
 export function useCreateStockEntry() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (input: CreateStockEntryInput) => {
-      if (!currentOrganization?.id || !user?.id) {
+      if (!currentOrganization?.id) {
         throw new Error('No organization or user');
       }
 
-      // Generate entry number
-      const { data: entryNumber, error: numberError } = await supabase
-        .rpc('generate_stock_entry_number', {
-          p_organization_id: currentOrganization.id,
-        });
-
-      if (numberError) throw numberError;
-
-      // Create stock entry header
-      const { data: entry, error: entryError } = await supabase
-        .from('stock_entries')
-        .insert({
-          organization_id: currentOrganization.id,
-          entry_number: entryNumber,
-          entry_type: input.entry_type,
-          entry_date: input.entry_date,
-          from_warehouse_id: input.from_warehouse_id || null,
-          to_warehouse_id: input.to_warehouse_id || null,
-          reference_type: input.reference_type || null,
-          reference_id: input.reference_id || null,
-          reference_number: input.reference_number || null,
-          purpose: input.purpose || null,
-          notes: input.notes || null,
-          status: 'Draft',
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (entryError) throw entryError;
-
-      // Create stock entry items
-      const items = input.items.map((item, index) => ({
-        stock_entry_id: entry.id,
-        line_number: index + 1,
-        item_id: item.item_id,
-        item_name: item.item_name,
-        quantity: item.quantity,
-        unit: item.unit,
-        source_warehouse_id: item.source_warehouse_id ?? null,
-        target_warehouse_id: item.target_warehouse_id ?? null,
-        batch_number: item.batch_number ?? null,
-        serial_number: item.serial_number ?? null,
-        expiry_date: item.expiry_date ?? null,
-        cost_per_unit: item.cost_per_unit ?? null,
-        system_quantity: item.system_quantity ?? null,
-        physical_quantity: item.physical_quantity ?? null,
-        notes: item.notes ?? null,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('stock_entry_items')
-        .insert(items);
-
-      if (itemsError) throw itemsError;
-
-      return entry as StockEntry;
+      return stockEntriesApi.create(input, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -186,52 +77,15 @@ export function useCreateStockEntry() {
  */
 export function useUpdateStockEntry() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ entryId, input }: { entryId: string; input: UpdateStockEntryInput }) => {
-      console.log('🔵 NEW CODE LOADED - useUpdateStockEntry called with ID:', entryId);
-
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
       }
 
-      // Check if entry exists and is in Draft status
-      const { data: entry, error: fetchError } = await supabase
-        .from('stock_entries')
-        .select('status, organization_id')
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching stock entry for update:', fetchError);
-        throw fetchError;
-      }
-
-      if (!entry) {
-        console.warn(`Stock entry ${entryId} not found for organization ${currentOrganization.id}`);
-        throw new Error('Stock entry not found or access denied');
-      }
-
-      if (entry.status !== 'Draft') {
-        throw new Error('Only draft entries can be updated');
-      }
-
-      const { data, error } = await supabase
-        .from('stock_entries')
-        .update({
-          ...input,
-          updated_by: user.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as StockEntry;
+      return stockEntriesApi.update(entryId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -254,21 +108,7 @@ export function usePostStockEntry() {
         throw new Error('No organization selected');
       }
 
-      // Update status to Posted (trigger will handle stock updates)
-      const { data, error } = await supabase
-        .from('stock_entries')
-        .update({
-          status: 'Posted',
-          posted_at: new Date().toISOString(),
-        })
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error('Stock entry not found or already posted');
-      return data as StockEntry;
+      return stockEntriesApi.post(entryId, currentOrganization.id);
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -292,20 +132,7 @@ export function useCancelStockEntry() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('stock_entries')
-        .update({
-          status: 'Cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error('Stock entry not found or cannot be cancelled');
-      return data as StockEntry;
+      return stockEntriesApi.cancel(entryId, currentOrganization.id);
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -327,14 +154,7 @@ export function useDeleteStockEntry() {
         throw new Error('No organization selected');
       }
 
-      // RLS policy ensures only Draft entries can be deleted
-      const { error } = await supabase
-        .from('stock_entries')
-        .delete()
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      return stockEntriesApi.delete(entryId, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -355,41 +175,7 @@ export function useStockMovements(filters?: StockMovementFilters) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('stock_movements')
-        .select(`
-          *,
-          item:items(id, item_code, item_name, default_unit),
-          warehouse:warehouses(id, name),
-          stock_entry:stock_entries(id, entry_number, entry_type)
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .order('movement_date', { ascending: false });
-
-      // Apply filters
-      if (filters?.item_id) {
-        query = query.eq('item_id', filters.item_id);
-      }
-      if (filters?.warehouse_id) {
-        query = query.eq('warehouse_id', filters.warehouse_id);
-      }
-      if (filters?.movement_type) {
-        query = query.eq('movement_type', filters.movement_type);
-      }
-      if (filters?.from_date) {
-        query = query.gte('movement_date', filters.from_date);
-      }
-      if (filters?.to_date) {
-        query = query.lte('movement_date', filters.to_date);
-      }
-      if (filters?.stock_entry_id) {
-        query = query.eq('stock_entry_id', filters.stock_entry_id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as StockMovementWithDetails[];
+      return stockEntriesApi.getMovements(filters, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });

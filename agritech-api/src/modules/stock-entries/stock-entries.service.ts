@@ -1,13 +1,97 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { CreateStockEntryDto, StockEntryType, StockEntryStatus } from './dto/create-stock-entry.dto';
+import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
 
 @Injectable()
 export class StockEntriesService {
   private readonly logger = new Logger(StockEntriesService.name);
 
   constructor(private readonly databaseService: DatabaseService) {}
+
+  /**
+   * Get all stock entries with optional filters
+   */
+  async findAll(organizationId: string, filters?: any): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    let query = supabase
+      .from('stock_entries')
+      .select(`
+        *,
+        from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
+        to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
+      `)
+      .eq('organization_id', organizationId)
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (filters?.entry_type) {
+      query = query.eq('entry_type', filters.entry_type);
+    }
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+    if (filters?.from_date) {
+      query = query.gte('entry_date', filters.from_date);
+    }
+    if (filters?.to_date) {
+      query = query.lte('entry_date', filters.to_date);
+    }
+    if (filters?.warehouse_id) {
+      query = query.or(`from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`);
+    }
+    if (filters?.reference_type) {
+      query = query.eq('reference_type', filters.reference_type);
+    }
+    if (filters?.search) {
+      query = query.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch stock entries: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch stock entries: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Get a single stock entry with items
+   */
+  async findOne(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('stock_entries')
+      .select(`
+        *,
+        items:stock_entry_items(
+          *,
+          item:items(id, item_code, item_name, default_unit)
+        ),
+        from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
+        to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
+      `)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to fetch stock entry: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch stock entry: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new NotFoundException('Stock entry not found');
+    }
+
+    return data;
+  }
 
   /**
    * Create a stock entry with all related movements and valuations
@@ -21,18 +105,38 @@ export class StockEntriesService {
 
     // Use a database transaction for atomicity
     return this.executeInTransaction(supabase, async (client) => {
+      // 0. Generate entry number if not provided
+      let entryNumber = dto.entry_number;
+      if (!entryNumber) {
+        const { data: generatedNumber, error: numberError } = await client
+          .rpc('generate_stock_entry_number', {
+            p_organization_id: dto.organization_id,
+          });
+
+        if (numberError) {
+          this.logger.error(`Failed to generate entry number: ${numberError.message}`);
+          throw new BadRequestException(`Failed to generate entry number: ${numberError.message}`);
+        }
+
+        entryNumber = generatedNumber as string;
+      }
+
       // 1. Create stock entry
       const { data: stockEntry, error: entryError } = await client
         .from('stock_entries')
         .insert({
           organization_id: dto.organization_id,
           entry_type: dto.entry_type,
-          entry_number: dto.entry_number,
+          entry_number: entryNumber,
           entry_date: dto.entry_date,
           from_warehouse_id: dto.from_warehouse_id,
           to_warehouse_id: dto.to_warehouse_id,
-          description: dto.description,
-          status: dto.status,
+          reference_type: dto.reference_type,
+          reference_id: dto.reference_id,
+          reference_number: dto.reference_number,
+          purpose: dto.purpose,
+          notes: dto.notes,
+          status: dto.status || StockEntryStatus.DRAFT,
           created_by: dto.created_by,
           posted_at: dto.status === StockEntryStatus.POSTED ? new Date() : null,
         })
@@ -45,15 +149,22 @@ export class StockEntriesService {
       }
 
       // 2. Create stock entry items
-      const itemsToInsert = dto.items.map(item => ({
+      const itemsToInsert = dto.items.map((item, index) => ({
         stock_entry_id: stockEntry.id,
+        line_number: index + 1,
         item_id: item.item_id,
+        item_name: item.item_name,
         quantity: item.quantity,
         unit: item.unit,
-        cost_per_unit: item.cost_per_unit || 0,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-        description: item.description,
+        source_warehouse_id: item.source_warehouse_id ?? null,
+        target_warehouse_id: item.target_warehouse_id ?? null,
+        batch_number: item.batch_number ?? null,
+        serial_number: item.serial_number ?? null,
+        expiry_date: item.expiry_date ?? null,
+        cost_per_unit: item.cost_per_unit ?? null,
+        system_quantity: item.system_quantity ?? null,
+        physical_quantity: item.physical_quantity ?? null,
+        notes: item.notes ?? null,
       }));
 
       const { data: entryItems, error: itemsError } = await client
@@ -84,10 +195,62 @@ export class StockEntriesService {
   }
 
   /**
+   * Update a draft stock entry
+   */
+  async updateStockEntry(
+    id: string,
+    organizationId: string,
+    userId: string,
+    dto: UpdateStockEntryDto,
+  ): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // Check if entry exists and is in Draft status
+    const { data: entry, error: fetchError } = await supabase
+      .from('stock_entries')
+      .select('status, organization_id')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (fetchError) {
+      this.logger.error(`Error fetching stock entry for update: ${fetchError.message}`);
+      throw new BadRequestException(`Failed to fetch stock entry: ${fetchError.message}`);
+    }
+
+    if (!entry) {
+      throw new NotFoundException('Stock entry not found or access denied');
+    }
+
+    if (entry.status !== 'Draft') {
+      throw new BadRequestException('Only draft entries can be updated');
+    }
+
+    const { data, error } = await supabase
+      .from('stock_entries')
+      .update({
+        ...dto,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to update stock entry: ${error.message}`);
+      throw new BadRequestException(`Failed to update stock entry: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
    * Post a draft stock entry
    * This processes all stock movements and valuations
    */
-  async postStockEntry(stockEntryId: string, userId: string): Promise<any> {
+  async postStockEntry(stockEntryId: string, organizationId: string, userId: string): Promise<any> {
     const supabase = this.databaseService.getClient();
 
     return this.executeInTransaction(supabase, async (client) => {
@@ -96,6 +259,7 @@ export class StockEntriesService {
         .from('stock_entries')
         .select('*, stock_entry_items(*)')
         .eq('id', stockEntryId)
+        .eq('organization_id', organizationId)
         .single();
 
       if (entryError || !stockEntry) {
@@ -133,6 +297,104 @@ export class StockEntriesService {
 
       return { message: 'Stock entry posted successfully' };
     });
+  }
+
+  /**
+   * Cancel a stock entry
+   */
+  async cancelStockEntry(id: string, organizationId: string, userId: string): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('stock_entries')
+      .update({
+        status: 'Cancelled',
+        updated_at: new Date().toISOString(),
+        updated_by: userId,
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to cancel stock entry: ${error.message}`);
+      throw new BadRequestException(`Failed to cancel stock entry: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new NotFoundException('Stock entry not found or cannot be cancelled');
+    }
+
+    return data;
+  }
+
+  /**
+   * Delete a draft stock entry
+   */
+  async deleteStockEntry(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // RLS policy ensures only Draft entries can be deleted
+    const { error } = await supabase
+      .from('stock_entries')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      this.logger.error(`Failed to delete stock entry: ${error.message}`);
+      throw new BadRequestException(`Failed to delete stock entry: ${error.message}`);
+    }
+
+    return { message: 'Stock entry deleted successfully' };
+  }
+
+  /**
+   * Get stock movements with filters
+   */
+  async getStockMovements(organizationId: string, filters?: any): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    let query = supabase
+      .from('stock_movements')
+      .select(`
+        *,
+        item:items(id, item_code, item_name, default_unit),
+        warehouse:warehouses(id, name),
+        stock_entry:stock_entries(id, entry_number, entry_type)
+      `)
+      .eq('organization_id', organizationId)
+      .order('movement_date', { ascending: false });
+
+    // Apply filters
+    if (filters?.item_id) {
+      query = query.eq('item_id', filters.item_id);
+    }
+    if (filters?.warehouse_id) {
+      query = query.eq('warehouse_id', filters.warehouse_id);
+    }
+    if (filters?.movement_type) {
+      query = query.eq('movement_type', filters.movement_type);
+    }
+    if (filters?.from_date) {
+      query = query.gte('movement_date', filters.from_date);
+    }
+    if (filters?.to_date) {
+      query = query.lte('movement_date', filters.to_date);
+    }
+    if (filters?.stock_entry_id) {
+      query = query.eq('stock_entry_id', filters.stock_entry_id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch stock movements: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch stock movements: ${error.message}`);
+    }
+
+    return data;
   }
 
   /**
