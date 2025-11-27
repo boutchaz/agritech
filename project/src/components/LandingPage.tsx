@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import {
   MapPin,
   Users,
@@ -19,7 +20,10 @@ import {
   DollarSign,
   Building2,
   Clock,
+  BookOpen,
+  Calendar,
 } from 'lucide-react';
+import { blogsApi } from '../lib/api/blogs';
 import { SUBSCRIPTION_PLANS } from '../lib/polar';
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/hero-bg.avif';
@@ -38,6 +42,13 @@ import { cn } from '@/lib/utils';
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
+
+  // Fetch latest blog posts for the landing page
+  const { data: latestPosts } = useQuery({
+    queryKey: ['landing-blogs'],
+    queryFn: () => blogsApi.getBlogs({ limit: 3, sortBy: 'publishedAt', sortOrder: 'desc' }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   useEffect(() => {
     const pageTitle = t('landing.seo.title', {
@@ -271,6 +282,12 @@ const LandingPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               <LanguageSwitcher />
+              <Link
+                to="/blog"
+                className="hidden sm:inline text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors text-sm"
+              >
+                {t('landing.nav.blog', { defaultValue: 'Blog' })}
+              </Link>
               <Link
                 to="/login"
                 className="hidden sm:inline text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors text-sm"
@@ -597,6 +614,108 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Blog Section */}
+      {latestPosts?.data && latestPosts.data.length > 0 && (
+        <section
+          className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-800"
+          aria-labelledby="landing-blog-title"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10 sm:mb-12">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                    {t('landing.blog.label', { defaultValue: 'Blog' })}
+                  </span>
+                </div>
+                <h2
+                  id="landing-blog-title"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+                >
+                  {t('landing.blog.title', { defaultValue: 'Latest Insights' })}
+                </h2>
+                <p className="mt-2 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
+                  {t('landing.blog.subtitle', {
+                    defaultValue: 'Stay updated with the latest trends and best practices in agricultural technology.',
+                  })}
+                </p>
+              </div>
+              <Button asChild variant="outline" className="self-start sm:self-center">
+                <Link to="/blog">
+                  {t('landing.blog.viewAll', { defaultValue: 'View all articles' })}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {latestPosts.data.map((post) => {
+                const imageUrl = post.featured_image?.url
+                  ? post.featured_image.url.startsWith('http')
+                    ? post.featured_image.url
+                    : `${import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337'}${post.featured_image.url}`
+                  : null;
+                const formattedDate = post.publishedAt
+                  ? new Date(post.publishedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  : null;
+
+                return (
+                  <Card
+                    key={post.id}
+                    className="group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <Link to="/blog/$slug" params={{ slug: post.slug }} className="flex flex-col h-full">
+                      {imageUrl && (
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt={post.featured_image?.alternativeText || post.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          {post.blog_category && (
+                            <Badge className="absolute top-3 left-3 bg-green-600 text-white">
+                              {post.blog_category.name}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                          {post.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-1 pt-0">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="pt-0 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                          {formattedDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {formattedDate}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {post.reading_time} min
+                          </span>
+                        </div>
+                      </CardFooter>
+                    </Link>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* CTA Section */}
       <section className="bg-green-600 py-12 sm:py-16 lg:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -646,6 +765,7 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                 <li><a href="#features" className="hover:text-green-500 transition-colors">{t('landing.footer.features')}</a></li>
                 <li><a href="#pricing" className="hover:text-green-500 transition-colors">{t('landing.footer.pricing')}</a></li>
+                <li><Link to="/blog" className="hover:text-green-500 transition-colors">{t('landing.footer.blog', { defaultValue: 'Blog' })}</Link></li>
                 <li><Link to="/register" className="hover:text-green-500 transition-colors">{t('landing.footer.freeTrial')}</Link></li>
               </ul>
             </div>

@@ -30,6 +30,7 @@ import { OrganizationModulesModule } from './modules/organization-modules/organi
 import { StructuresModule } from './modules/structures/structures.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReceptionBatchesModule } from './modules/reception-batches/reception-batches.module';
+import { BlogsModule } from './modules/blogs/blogs.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { ReceptionBatchesModule } from './modules/reception-batches/reception-ba
     StructuresModule,
     DashboardModule,
     ReceptionBatchesModule,
+    BlogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
