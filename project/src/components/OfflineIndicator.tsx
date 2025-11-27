@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNetworkStatusContext } from './NetworkStatusProvider';
 import { useTranslation } from 'react-i18next';
 import { WifiOff, Wifi, WifiLow } from 'lucide-react';
@@ -17,6 +17,17 @@ interface OfflineIndicatorProps {
 export function OfflineIndicator({ className, showWhenOnline = false }: OfflineIndicatorProps) {
   const { isOnline, isSlowConnection, connectionType } = useNetworkStatusContext();
   const { t } = useTranslation();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Prevent hydration mismatch by only showing after client-side hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Don't render anything during SSR/hydration to avoid mismatch
+  if (!isHydrated) {
+    return null;
+  }
 
   // Only show the indicator when there's a problem or explicitly requested
   // Don't show when connection is good
