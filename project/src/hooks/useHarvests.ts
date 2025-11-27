@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { harvestsApi } from '../lib/api/harvests';
 import type {
   HarvestRecord,
-  HarvestSummary,
   HarvestFilters,
   CreateHarvestRequest,
   Delivery,
@@ -14,7 +14,6 @@ import type {
   DeliveryItem,
   DeliveryTracking,
   HarvestStatistics,
-  DeliveryStatistics,
 } from '../types/harvests';
 
 // =====================================================
@@ -25,70 +24,23 @@ export function useHarvests(organizationId: string, filters?: HarvestFilters) {
   return useQuery({
     queryKey: ['harvests', organizationId, filters],
     queryFn: async () => {
-      let query = supabase
-        .from('harvest_records')
-        .select('*')
-        .eq('organization_id', organizationId);
-
-      if (filters?.status) {
-        const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-        query = query.in('status', statuses);
-      }
-
-      if (filters?.farm_id) {
-        query = query.eq('farm_id', filters.farm_id);
-      }
-
-      if (filters?.parcel_id) {
-        query = query.eq('parcel_id', filters.parcel_id);
-      }
-
-      if (filters?.crop_id) {
-        query = query.eq('crop_id', filters.crop_id);
-      }
-
-      if (filters?.date_from) {
-        query = query.gte('harvest_date', filters.date_from);
-      }
-
-      if (filters?.date_to) {
-        query = query.lte('harvest_date', filters.date_to);
-      }
-
-      if (filters?.quality_grade) {
-        const grades = Array.isArray(filters.quality_grade) ? filters.quality_grade : [filters.quality_grade];
-        query = query.in('quality_grade', grades);
-      }
-
-      if (filters?.intended_for) {
-        query = query.eq('intended_for', filters.intended_for);
-      }
-
-      query = query.order('harvest_date', { ascending: false });
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return (data || []) as HarvestSummary[];
+      if (!organizationId) return [];
+      return harvestsApi.getAll(organizationId, filters);
     },
     enabled: !!organizationId,
   });
 }
 
-export function useHarvest(harvestId: string | null) {
+export function useHarvest(organizationId: string, harvestId: string | null) {
   return useQuery({
     queryKey: ['harvest', harvestId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('harvest_records')
-        .select('*')
-        .eq('id', harvestId!)
-        .single();
-
-      if (error) throw error;
-      return data as HarvestSummary;
+      if (!harvestId || !organizationId) {
+        return null;
+      }
+      return harvestsApi.getById(organizationId, harvestId);
     },
-    enabled: !!harvestId,
+    enabled: !!harvestId && !!organizationId,
   });
 }
 
@@ -173,13 +125,15 @@ export function useDelivery(deliveryId: string | null) {
   return useQuery({
     queryKey: ['delivery', deliveryId],
     queryFn: async () => {
+      if (!deliveryId) return null;
+
       const [deliveryResult, itemsResult, trackingResult] = await Promise.all([
-        supabase.from('deliveries').select('*').eq('id', deliveryId!).single(),
+        supabase.from('deliveries').select('*').eq('id', deliveryId).single(),
         supabase.from('delivery_items').select(`
           *,
           harvest:harvest_record_id(harvest_date, crop_id, parcel_id)
-        `).eq('delivery_id', deliveryId!),
-        supabase.from('delivery_tracking').select('*').eq('delivery_id', deliveryId!).order('recorded_at', { ascending: false }),
+        `).eq('delivery_id', deliveryId),
+        supabase.from('delivery_tracking').select('*').eq('delivery_id', deliveryId).order('recorded_at', { ascending: false }),
       ]);
 
       if (deliveryResult.error) throw deliveryResult.error;
@@ -198,6 +152,8 @@ export function useDeliveryItems(deliveryId: string | null) {
   return useQuery({
     queryKey: ['delivery-items', deliveryId],
     queryFn: async () => {
+      if (!deliveryId) return [];
+
       const { data, error } = await supabase
         .from('delivery_items')
         .select(`
@@ -208,7 +164,7 @@ export function useDeliveryItems(deliveryId: string | null) {
             parcel_id
           )
         `)
-        .eq('delivery_id', deliveryId!);
+        .eq('delivery_id', deliveryId);
 
       if (error) throw error;
       return (data || []) as DeliveryItem[];
@@ -221,10 +177,12 @@ export function useDeliveryTracking(deliveryId: string | null) {
   return useQuery({
     queryKey: ['delivery-tracking', deliveryId],
     queryFn: async () => {
+      if (!deliveryId) return [];
+
       const { data, error } = await supabase
         .from('delivery_tracking')
         .select('*')
-        .eq('delivery_id', deliveryId!)
+        .eq('delivery_id', deliveryId)
         .order('recorded_at', { ascending: false });
 
       if (error) throw error;
@@ -242,24 +200,12 @@ export function useCreateHarvest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (request: CreateHarvestRequest & { organization_id: string }) => {
-      const user = (await supabase.auth.getUser()).data.user;
-
-      const { data, error } = await supabase
-        .from('harvest_records')
-        .insert({
-          ...request,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as HarvestRecord;
+    mutationFn: async ({ organizationId, data }: { organizationId: string; data: CreateHarvestRequest }) => {
+      return harvestsApi.create(organizationId, data);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['harvests', data.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['harvest-statistics', data.organization_id] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['harvests', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['harvest-statistics', variables.organizationId] });
     },
   });
 }
@@ -268,20 +214,20 @@ export function useUpdateHarvest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ harvestId, updates }: { harvestId: string; updates: Partial<HarvestRecord> }) => {
-      const { data, error } = await supabase
-        .from('harvest_records')
-        .update(updates)
-        .eq('id', harvestId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as HarvestRecord;
+    mutationFn: async ({
+      harvestId,
+      organizationId,
+      updates
+    }: {
+      harvestId: string;
+      organizationId: string;
+      updates: Partial<HarvestRecord>
+    }) => {
+      return harvestsApi.update(organizationId, harvestId, updates);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['harvest', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['harvests', data.organization_id] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['harvest', variables.harvestId] });
+      queryClient.invalidateQueries({ queryKey: ['harvests', variables.organizationId] });
     },
   });
 }
@@ -290,27 +236,13 @@ export function useDeleteHarvest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (harvestId: string) => {
-      // Get harvest first to know organization_id
-      const { data: harvest } = await supabase
-        .from('harvest_records')
-        .select('organization_id')
-        .eq('id', harvestId)
-        .single();
-
-      const { error } = await supabase
-        .from('harvest_records')
-        .delete()
-        .eq('id', harvestId);
-
-      if (error) throw error;
-      return { harvestId, organizationId: harvest?.organization_id };
+    mutationFn: async ({ harvestId, organizationId }: { harvestId: string; organizationId: string }) => {
+      await harvestsApi.delete(organizationId, harvestId);
+      return { harvestId, organizationId };
     },
     onSuccess: (data) => {
-      if (data.organizationId) {
-        queryClient.invalidateQueries({ queryKey: ['harvests', data.organizationId] });
-        queryClient.invalidateQueries({ queryKey: ['harvest-statistics', data.organizationId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['harvests', data.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['harvest-statistics', data.organizationId] });
     },
   });
 }
