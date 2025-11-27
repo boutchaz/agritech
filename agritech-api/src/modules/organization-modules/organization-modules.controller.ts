@@ -6,7 +6,7 @@ import { UpdateModuleDto } from './dto/update-module.dto';
 
 @ApiTags('Organization Modules')
 @ApiBearerAuth()
-@Controller('api/v1/organizations/:organizationId/modules')
+@Controller('organizations/:organizationId/modules')
 @UseGuards(JwtAuthGuard)
 export class OrganizationModulesController {
   private readonly logger = new Logger(OrganizationModulesController.name);
