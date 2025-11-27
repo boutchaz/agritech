@@ -94,7 +94,9 @@ export class OrganizationModulesService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    const roleName = orgUser.role?.name;
+    // Role is returned as array by Supabase foreign key join
+    const role = Array.isArray(orgUser.role) ? orgUser.role[0] : orgUser.role;
+    const roleName = role?.name;
     if (roleName !== 'system_admin' && roleName !== 'organization_admin') {
       throw new ForbiddenException('You do not have permission to update modules');
     }
