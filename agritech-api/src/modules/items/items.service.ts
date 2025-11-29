@@ -219,7 +219,6 @@ export class ItemsService {
       .select(`
         *,
         item_group:item_groups(*),
-        variants:item_variants(*),
         unit_conversions:item_unit_conversions(*),
         supplier_details:item_supplier_details(
           *,
