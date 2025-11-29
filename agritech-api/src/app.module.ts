@@ -32,6 +32,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReceptionBatchesModule } from './modules/reception-batches/reception-batches.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
     SequencesModule,
     AccountsModule,
     SalesOrdersModule,
+    PurchaseOrdersModule,
     InvoicesModule,
     JournalEntriesModule,
     PaymentsModule,
