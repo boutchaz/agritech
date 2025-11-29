@@ -34,6 +34,7 @@ import { BlogsModule } from './modules/blogs/blogs.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { TaxesModule } from './modules/taxes/taxes.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TaxesModule } from './modules/taxes/taxes.module';
     SequencesModule,
     AccountsModule,
     TaxesModule,
+    QuotesModule,
     SalesOrdersModule,
     PurchaseOrdersModule,
     InvoicesModule,

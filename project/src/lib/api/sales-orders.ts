@@ -79,7 +79,21 @@ export const salesOrdersApi = {
    * Get all sales orders with optional filters
    */
   async getSalesOrders(filters?: SalesOrderFilters, organizationId?: string) {
-    const { data } = await apiClient.get(BASE_URL, {}, organizationId);
+    // Build query string from filters
+    const queryParams = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    
+    const url = queryParams.toString() 
+      ? `${BASE_URL}?${queryParams.toString()}`
+      : BASE_URL;
+    
+    const { data } = await apiClient.get(url, {}, organizationId);
     return data;
   },
 

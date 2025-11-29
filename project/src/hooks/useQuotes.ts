@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { calculateInvoiceTotals, type InvoiceItemInput } from '../lib/taxCalculations';
+import { quotesApi } from '../lib/api/quotes';
 
 export interface Quote {
   id: string;
@@ -75,18 +76,14 @@ export function useQuotes(status?: Quote['status']) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('quotes')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('quote_date', { ascending: false });
-
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await quotesApi.getAll(
+        {
+          status,
+          page: 1,
+          limit: 1000,
+        },
+        currentOrganization.id
+      );
       return data as Quote[];
     },
     enabled: !!currentOrganization?.id,
@@ -103,15 +100,9 @@ export function useQuote(quoteId: string | null) {
     queryKey: ['quote', quoteId],
     queryFn: async () => {
       if (!quoteId) throw new Error('Quote ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(`*, items:quote_items(*)`)
-        .eq('id', quoteId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await quotesApi.getOne(quoteId, currentOrganization.id);
       return data as QuoteWithItems;
     },
     enabled: !!quoteId && !!currentOrganization?.id,
@@ -225,28 +216,19 @@ export function useCreateQuote() {
  */
 export function useUpdateQuoteStatus() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ quoteId, status }: { quoteId: string; status: Quote['status'] }) => {
-      const updates: Partial<Quote> = { status };
-
-      if (status === 'sent') {
-        updates.sent_at = new Date().toISOString();
-        updates.sent_by = user?.id || null;
-      } else if (status === 'accepted') {
-        updates.accepted_at = new Date().toISOString();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('quotes')
-        .update(updates)
-        .eq('id', quoteId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await quotesApi.updateStatus(
+        quoteId,
+        { status },
+        currentOrganization.id
+      );
       return data as Quote;
     },
     onSuccess: () => {

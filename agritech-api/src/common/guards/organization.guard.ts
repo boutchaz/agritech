@@ -39,16 +39,34 @@ export class OrganizationGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    // Extract organizationId from request
-    const organizationId =
-      request.headers['x-organization-id'] ||
+    // Extract organizationId from request (check headers case-insensitively)
+    const findHeaderValue = (headers: Record<string, any>, name: string): string | null => {
+      const lowerName = name.toLowerCase();
+      const key = Object.keys(headers).find(k => k.toLowerCase() === lowerName);
+      return key ? (headers[key] as string) : null;
+    };
+
+    const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
+    
+    let organizationId =
+      headerOrgId ||
       request.query?.organizationId ||
       request.body?.organizationId;
 
-    if (!organizationId) {
+    // Validate that organizationId is a valid UUID (not "undefined", "null", empty string, etc.)
+    if (!organizationId || 
+        organizationId === 'undefined' || 
+        organizationId === 'null' || 
+        organizationId.trim() === '') {
       throw new BadRequestException(
         'Organization ID is required. Provide it via X-Organization-Id header, query param, or request body.',
       );
+    }
+
+    // Basic UUID format validation
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(organizationId)) {
+      throw new BadRequestException('Organization ID must be a valid UUID format');
     }
 
     // Check if user is a member of the organization
@@ -85,6 +103,16 @@ export class OrganizationGuard implements CanActivate {
 
     // Attach organization info to request for later use
     request.organizationId = organizationId;
+    
+    // Also attach to user object for convenience
+    if (!user.organizationId) {
+      user.organizationId = organizationId;
+    }
+    
+    // Also set userId for convenience (if not already set)
+    if (!user.userId && user.id) {
+      user.userId = user.id;
+    }
 
     return true;
   }

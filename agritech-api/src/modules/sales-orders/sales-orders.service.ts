@@ -107,6 +107,11 @@ export class SalesOrdersService {
    * Find all sales orders with filters
    */
   async findAll(filters: SalesOrderFiltersDto, organizationId: string) {
+    // Validate organizationId
+    if (!organizationId || organizationId === 'undefined' || organizationId === 'null') {
+      throw new BadRequestException('Valid organization ID is required');
+    }
+
     const supabaseClient = this.databaseService.getClient();
 
     try {

@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -53,10 +54,18 @@ export class SalesOrdersController {
     @Body() createSalesOrderDto: CreateSalesOrderDto,
     @Request() req,
   ) {
+    const organizationId = req.organizationId || req.user?.organizationId;
+    const userId = req.user?.userId || req.user?.id;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
     return this.salesOrdersService.create(
       createSalesOrderDto,
-      req.user.organizationId,
-      req.user.userId,
+      organizationId,
+      userId,
     );
   }
 
@@ -71,7 +80,12 @@ export class SalesOrdersController {
     @Query() filters: SalesOrderFiltersDto,
     @Request() req,
   ) {
-    return this.salesOrdersService.findAll(filters, req.user.organizationId);
+    // Get organizationId from req.organizationId (set by OrganizationGuard) or fallback to req.user.organizationId
+    const organizationId = req.organizationId || req.user?.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.salesOrdersService.findAll(filters, organizationId);
   }
 
   @Get(':id')
@@ -84,7 +98,11 @@ export class SalesOrdersController {
   @ApiResponse({ status: 404, description: 'Sales order not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findOne(@Param('id') id: string, @Request() req) {
-    return this.salesOrdersService.findOne(id, req.user.organizationId);
+    const organizationId = req.organizationId || req.user?.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.salesOrdersService.findOne(id, organizationId);
   }
 
   @Patch(':id')
@@ -102,10 +120,14 @@ export class SalesOrdersController {
     @Body() updateSalesOrderDto: UpdateSalesOrderDto,
     @Request() req,
   ) {
+    const organizationId = req.organizationId || req.user?.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
     return this.salesOrdersService.update(
       id,
       updateSalesOrderDto,
-      req.user.organizationId,
+      organizationId,
     );
   }
 
@@ -127,10 +149,14 @@ export class SalesOrdersController {
     @Body() updateStatusDto: UpdateStatusDto,
     @Request() req,
   ) {
+    const organizationId = req.organizationId || req.user?.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
     return this.salesOrdersService.updateStatus(
       id,
       updateStatusDto,
-      req.user.organizationId,
+      organizationId,
     );
   }
 
@@ -149,7 +175,11 @@ export class SalesOrdersController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async remove(@Param('id') id: string, @Request() req) {
-    return this.salesOrdersService.remove(id, req.user.organizationId);
+    const organizationId = req.organizationId || req.user?.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.salesOrdersService.remove(id, organizationId);
   }
 
   @Post(':id/convert-to-invoice')
@@ -170,11 +200,19 @@ export class SalesOrdersController {
     @Body() convertDto: ConvertToInvoiceDto,
     @Request() req,
   ) {
+    const organizationId = req.organizationId || req.user?.organizationId;
+    const userId = req.user?.userId || req.user?.id;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
     return this.salesOrdersService.convertToInvoice(
       id,
       convertDto,
-      req.user.organizationId,
-      req.user.userId,
+      organizationId,
+      userId,
     );
   }
 }
