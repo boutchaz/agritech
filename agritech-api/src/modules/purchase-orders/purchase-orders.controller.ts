@@ -27,6 +27,7 @@ import {
   UpdatePurchaseOrderDto,
   PurchaseOrderFiltersDto,
   UpdateStatusDto,
+  ConvertToBillDto,
 } from './dto';
 
 @ApiTags('purchase-orders')
@@ -163,12 +164,16 @@ export class PurchaseOrdersController {
     description: 'Cannot convert order to bill (invalid status)',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async convertToBill(@Param('id') id: string, @Request() req) {
-    // This will be implemented when we build the invoices module
-    // For now, return a placeholder
-    return {
-      message: 'Convert to bill endpoint - to be implemented in invoices module',
-      purchaseOrderId: id,
-    };
+  async convertToBill(
+    @Param('id') id: string,
+    @Body() convertDto: ConvertToBillDto,
+    @Request() req,
+  ) {
+    return this.purchaseOrdersService.convertToBill(
+      id,
+      convertDto,
+      req.user.organizationId,
+      req.user.userId,
+    );
   }
 }

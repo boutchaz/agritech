@@ -6,6 +6,7 @@ import {
   UpdatePurchaseOrderDto,
   PurchaseOrderFiltersDto,
   UpdateStatusDto,
+  ConvertToBillDto,
   PurchaseOrderStatus,
 } from './dto';
 
@@ -407,5 +408,164 @@ export class PurchaseOrdersService {
         `Invalid status transition from ${currentStatus} to ${newStatus}`,
       );
     }
+  }
+
+  /**
+   * Convert purchase order to bill (purchase invoice)
+   */
+  async convertToBill(
+    purchaseOrderId: string,
+    convertDto: { invoice_date?: string; due_date?: string },
+    organizationId: string,
+    userId: string,
+  ) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      // Fetch purchase order with items
+      const { data: purchaseOrder, error: fetchError } = await supabaseClient
+        .from('purchase_orders')
+        .select('*, items:purchase_order_items(*)')
+        .eq('id', purchaseOrderId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (fetchError || !purchaseOrder) {
+        throw new NotFoundException('Purchase order not found');
+      }
+
+      // Check if order can be billed
+      if (purchaseOrder.status === 'cancelled') {
+        throw new BadRequestException('Cannot convert cancelled order to bill');
+      }
+
+      // Calculate dates
+      const invoiceDate = convertDto.invoice_date || new Date().toISOString().split('T')[0];
+      const dueDate = convertDto.due_date || this.calculateDueDate(invoiceDate, 30);
+
+      // Calculate remaining unbilled items
+      const unbilledItems = purchaseOrder.items.filter(
+        (item: any) => item.quantity > (item.billed_quantity || 0)
+      );
+
+      if (unbilledItems.length === 0) {
+        throw new BadRequestException('All items in this order have already been billed');
+      }
+
+      // Prepare bill items with remaining quantities
+      const billItems = unbilledItems.map((item: any) => {
+        const remainingQty = item.quantity - (item.billed_quantity || 0);
+        const amount = remainingQty * item.unit_price;
+        const taxAmount = (amount * (item.tax_rate || 0)) / 100;
+
+        return {
+          item_name: item.item_name,
+          description: item.description || null,
+          quantity: remainingQty,
+          unit_price: item.unit_price,
+          amount: amount,
+          tax_id: item.tax_id || null,
+          tax_rate: item.tax_rate || 0,
+          tax_amount: taxAmount,
+          line_total: amount + taxAmount,
+          income_account_id: null,
+          expense_account_id: item.account_id,
+        };
+      });
+
+      // Calculate bill totals
+      const subtotal = billItems.reduce((sum, item) => sum + item.amount, 0);
+      const taxTotal = billItems.reduce((sum, item) => sum + item.tax_amount, 0);
+      const grandTotal = subtotal + taxTotal;
+
+      // Generate invoice number
+      const invoiceNumber = await this.sequenceService.getNextSequence(
+        'invoice',
+        organizationId,
+      );
+
+      // Create bill (purchase invoice)
+      const { data: bill, error: billError } = await supabaseClient
+        .from('invoices')
+        .insert({
+          organization_id: organizationId,
+          invoice_number: invoiceNumber,
+          invoice_type: 'purchase',
+          party_type: 'Supplier',
+          party_id: purchaseOrder.supplier_id,
+          party_name: purchaseOrder.supplier_name,
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          subtotal: subtotal,
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+          outstanding_amount: grandTotal,
+          currency_code: purchaseOrder.currency_code || 'MAD',
+          exchange_rate: purchaseOrder.exchange_rate || 1.0,
+          status: 'draft',
+          purchase_order_id: purchaseOrderId,
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (billError) {
+        throw new BadRequestException(`Failed to create bill: ${billError.message}`);
+      }
+
+      // Create bill items
+      const itemsToInsert = billItems.map((item) => ({
+        invoice_id: bill.id,
+        ...item,
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('invoice_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        // Rollback: delete the created bill
+        await supabaseClient.from('invoices').delete().eq('id', bill.id);
+        throw new BadRequestException(`Failed to create bill items: ${itemsError.message}`);
+      }
+
+      // Update purchase order billed amounts
+      const newBilledAmount = (purchaseOrder.billed_amount || 0) + grandTotal;
+      const newStatus =
+        newBilledAmount >= purchaseOrder.total_amount ? 'billed' : 'partially_billed';
+
+      await supabaseClient
+        .from('purchase_orders')
+        .update({
+          billed_amount: newBilledAmount,
+          outstanding_amount: purchaseOrder.total_amount - newBilledAmount,
+          status: newStatus,
+        })
+        .eq('id', purchaseOrderId);
+
+      // Update order items billed quantities
+      for (const item of unbilledItems) {
+        await supabaseClient
+          .from('purchase_order_items')
+          .update({
+            billed_quantity: item.quantity, // Mark as fully billed
+          })
+          .eq('id', item.id);
+      }
+
+      return bill;
+    } catch (error) {
+      this.logger.error('Error converting purchase order to bill:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate due date by adding days to invoice date
+   */
+  private calculateDueDate(invoiceDate: string, daysToAdd: number): string {
+    const date = new Date(invoiceDate);
+    date.setDate(date.getDate() + daysToAdd);
+    return date.toISOString().split('T')[0];
   }
 }

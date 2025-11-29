@@ -28,6 +28,7 @@ import {
   UpdateSalesOrderDto,
   SalesOrderFiltersDto,
   UpdateStatusDto,
+  ConvertToInvoiceDto,
 } from './dto';
 
 @ApiTags('sales-orders')
@@ -164,12 +165,16 @@ export class SalesOrdersController {
     description: 'Cannot convert order to invoice (invalid status)',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async convertToInvoice(@Param('id') id: string, @Request() req) {
-    // This will be implemented when we build the invoices module
-    // For now, return a placeholder
-    return {
-      message: 'Convert to invoice endpoint - to be implemented in invoices module',
-      salesOrderId: id,
-    };
+  async convertToInvoice(
+    @Param('id') id: string,
+    @Body() convertDto: ConvertToInvoiceDto,
+    @Request() req,
+  ) {
+    return this.salesOrdersService.convertToInvoice(
+      id,
+      convertDto,
+      req.user.organizationId,
+      req.user.userId,
+    );
   }
 }

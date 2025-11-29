@@ -6,6 +6,7 @@ import {
   UpdateSalesOrderDto,
   SalesOrderFiltersDto,
   UpdateStatusDto,
+  ConvertToInvoiceDto,
   SalesOrderStatus,
 } from './dto';
 
@@ -407,5 +408,164 @@ export class SalesOrdersService {
         `Invalid status transition from ${currentStatus} to ${newStatus}`,
       );
     }
+  }
+
+  /**
+   * Convert sales order to invoice
+   */
+  async convertToInvoice(
+    salesOrderId: string,
+    convertDto: { invoice_date?: string; due_date?: string },
+    organizationId: string,
+    userId: string,
+  ) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      // Fetch sales order with items
+      const { data: salesOrder, error: fetchError } = await supabaseClient
+        .from('sales_orders')
+        .select('*, items:sales_order_items(*)')
+        .eq('id', salesOrderId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (fetchError || !salesOrder) {
+        throw new NotFoundException('Sales order not found');
+      }
+
+      // Check if order can be invoiced
+      if (salesOrder.status === 'cancelled') {
+        throw new BadRequestException('Cannot convert cancelled order to invoice');
+      }
+
+      // Calculate dates
+      const invoiceDate = convertDto.invoice_date || new Date().toISOString().split('T')[0];
+      const dueDate = convertDto.due_date || this.calculateDueDate(invoiceDate, 30);
+
+      // Calculate remaining uninvoiced items
+      const uninvoicedItems = salesOrder.items.filter(
+        (item: any) => item.quantity > (item.invoiced_quantity || 0)
+      );
+
+      if (uninvoicedItems.length === 0) {
+        throw new BadRequestException('All items in this order have already been invoiced');
+      }
+
+      // Prepare invoice items with remaining quantities
+      const invoiceItems = uninvoicedItems.map((item: any) => {
+        const remainingQty = item.quantity - (item.invoiced_quantity || 0);
+        const amount = remainingQty * item.unit_price;
+        const taxAmount = (amount * (item.tax_rate || 0)) / 100;
+
+        return {
+          item_name: item.item_name,
+          description: item.description || null,
+          quantity: remainingQty,
+          unit_price: item.unit_price,
+          amount: amount,
+          tax_id: item.tax_id || null,
+          tax_rate: item.tax_rate || 0,
+          tax_amount: taxAmount,
+          line_total: amount + taxAmount,
+          income_account_id: item.account_id,
+          expense_account_id: null,
+        };
+      });
+
+      // Calculate invoice totals
+      const subtotal = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
+      const taxTotal = invoiceItems.reduce((sum, item) => sum + item.tax_amount, 0);
+      const grandTotal = subtotal + taxTotal;
+
+      // Generate invoice number
+      const invoiceNumber = await this.sequenceService.getNextSequence(
+        'invoice',
+        organizationId,
+      );
+
+      // Create invoice
+      const { data: invoice, error: invoiceError } = await supabaseClient
+        .from('invoices')
+        .insert({
+          organization_id: organizationId,
+          invoice_number: invoiceNumber,
+          invoice_type: 'sales',
+          party_type: 'Customer',
+          party_id: salesOrder.customer_id,
+          party_name: salesOrder.customer_name,
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          subtotal: subtotal,
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+          outstanding_amount: grandTotal,
+          currency_code: salesOrder.currency_code || 'MAD',
+          exchange_rate: salesOrder.exchange_rate || 1.0,
+          status: 'draft',
+          sales_order_id: salesOrderId,
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (invoiceError) {
+        throw new BadRequestException(`Failed to create invoice: ${invoiceError.message}`);
+      }
+
+      // Create invoice items
+      const itemsToInsert = invoiceItems.map((item) => ({
+        invoice_id: invoice.id,
+        ...item,
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('invoice_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        // Rollback: delete the created invoice
+        await supabaseClient.from('invoices').delete().eq('id', invoice.id);
+        throw new BadRequestException(`Failed to create invoice items: ${itemsError.message}`);
+      }
+
+      // Update sales order invoiced amounts
+      const newInvoicedAmount = (salesOrder.invoiced_amount || 0) + grandTotal;
+      const newStatus =
+        newInvoicedAmount >= salesOrder.total_amount ? 'invoiced' : 'partially_invoiced';
+
+      await supabaseClient
+        .from('sales_orders')
+        .update({
+          invoiced_amount: newInvoicedAmount,
+          outstanding_amount: salesOrder.total_amount - newInvoicedAmount,
+          status: newStatus,
+        })
+        .eq('id', salesOrderId);
+
+      // Update order items invoiced quantities
+      for (const item of uninvoicedItems) {
+        await supabaseClient
+          .from('sales_order_items')
+          .update({
+            invoiced_quantity: item.quantity, // Mark as fully invoiced
+          })
+          .eq('id', item.id);
+      }
+
+      return invoice;
+    } catch (error) {
+      this.logger.error('Error converting sales order to invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate due date by adding days to invoice date
+   */
+  private calculateDueDate(invoiceDate: string, daysToAdd: number): string {
+    const date = new Date(invoiceDate);
+    date.setDate(date.getDate() + daysToAdd);
+    return date.toISOString().split('T')[0];
   }
 }

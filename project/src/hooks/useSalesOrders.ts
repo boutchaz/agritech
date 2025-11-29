@@ -113,20 +113,22 @@ export function useSalesOrder(orderId: string | null) {
 
 /**
  * Hook to convert sales order to invoice
- * NOTE: Backend endpoint is currently a placeholder - full implementation in Phase 3 (Invoices module)
  */
 export function useConvertOrderToInvoice() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ orderId }: {
+    mutationFn: async ({ orderId, invoiceDate, dueDate }: {
       orderId: string;
-      invoiceDate?: string;  // Not used yet - will be implemented in Phase 3
-      dueDate?: string;      // Not used yet - will be implemented in Phase 3
+      invoiceDate?: string;
+      dueDate?: string;
     }) => {
-      // Call the API endpoint (currently returns placeholder message)
-      const response = await salesOrdersApi.convertToInvoice(orderId);
+      // Call the API endpoint with optional dates
+      const response = await salesOrdersApi.convertToInvoice(orderId, {
+        invoice_date: invoiceDate,
+        due_date: dueDate,
+      });
       return response;
     },
     onSuccess: () => {

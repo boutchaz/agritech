@@ -124,8 +124,8 @@ export const salesOrdersApi = {
   /**
    * Convert sales order to invoice
    */
-  async convertToInvoice(id: string) {
-    const { data } = await apiClient.post(`/sales-orders/${id}/convert-to-invoice`);
+  async convertToInvoice(id: string, params?: { invoice_date?: string; due_date?: string }) {
+    const { data } = await apiClient.post(`/sales-orders/${id}/convert-to-invoice`, params || {});
     return data;
   },
 };

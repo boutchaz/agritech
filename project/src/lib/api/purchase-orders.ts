@@ -118,8 +118,8 @@ export const purchaseOrdersApi = {
   /**
    * Convert purchase order to bill (purchase invoice)
    */
-  async convertToBill(id: string) {
-    const { data } = await apiClient.post(`/purchase-orders/${id}/convert-to-bill`);
+  async convertToBill(id: string, params?: { invoice_date?: string; due_date?: string }) {
+    const { data } = await apiClient.post(`/purchase-orders/${id}/convert-to-bill`, params || {});
     return data;
   },
 };
