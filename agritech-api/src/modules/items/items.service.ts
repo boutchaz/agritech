@@ -218,17 +218,7 @@ export class ItemsService {
       .from('items')
       .select(`
         *,
-        item_group:item_groups(*),
-        unit_conversions:item_unit_conversions(*),
-        supplier_details:item_supplier_details(
-          *,
-          supplier:suppliers(id, name)
-        ),
-        customer_details:item_customer_details(
-          *,
-          customer:customers(id, name)
-        ),
-        prices:item_prices(*)
+        item_group:item_groups(*)
       `)
       .eq('id', id)
       .eq('organization_id', organizationId)
