@@ -16,8 +16,9 @@ export enum ValuationMethod {
 }
 
 export class CreateItemDto {
-  @IsUUID()
-  organization_id: string;
+  // These will be set by the controller
+  organization_id?: string;
+  created_by?: string;
 
   @IsString()
   @IsOptional()
@@ -35,7 +36,20 @@ export class CreateItemDto {
   description?: string;
 
   @IsString()
-  default_unit: string;
+  @IsOptional()
+  default_unit?: string;
+
+  @IsString()
+  @IsOptional()
+  unit_of_measure?: string;
+
+  @IsNumber()
+  @IsOptional()
+  sales_rate?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  is_inventory_item?: boolean;
 
   @IsString()
   @IsOptional()
@@ -118,7 +132,4 @@ export class CreateItemDto {
   @IsNumber()
   @IsOptional()
   days_to_harvest?: number;
-
-  @IsUUID()
-  created_by: string;
 }

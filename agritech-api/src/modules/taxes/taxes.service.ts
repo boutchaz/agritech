@@ -20,7 +20,7 @@ export class TaxesService {
       search?: string;
     }
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('taxes')
@@ -57,7 +57,7 @@ export class TaxesService {
    * Get a single tax by ID
    */
   async findOne(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('taxes')
@@ -82,7 +82,7 @@ export class TaxesService {
    * Create a new tax
    */
   async create(dto: CreateTaxDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('taxes')
@@ -116,7 +116,7 @@ export class TaxesService {
     userId: string,
     dto: UpdateTaxDto
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const updateData: any = {
       updated_by: userId,
@@ -148,7 +148,7 @@ export class TaxesService {
    * Delete a tax
    */
   async delete(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Check if tax is used in invoice items
     const { data: invoiceItems } = await supabase
