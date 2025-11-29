@@ -79,6 +79,7 @@
     "subtitle": "Gestion complète de l'inventaire, des entrées et des entrepôts",
     "tabs": {
       "items": "Articles",
+      "groups": "Groupes d'Articles",
       "inventory": "Inventaire & Achats",
       "entries": "Entrées de Stock",
       "reception": "Lots de Réception",

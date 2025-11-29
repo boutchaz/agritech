@@ -79,6 +79,7 @@
     "subtitle": "Comprehensive inventory, entries, and warehouse management",
     "tabs": {
       "items": "Items",
+      "groups": "Item Groups",
       "inventory": "Inventory & Purchases",
       "entries": "Stock Entries",
       "reception": "Reception Batches",

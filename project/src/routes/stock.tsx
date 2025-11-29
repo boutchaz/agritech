@@ -43,6 +43,7 @@ const AppContent: React.FC = () => {
     () => {
       const tabItems = [
         { value: 'items', label: t('stock.tabs.items'), to: '/stock/items' },
+        { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
         { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory' },
         { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries' },
         { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
@@ -57,6 +58,7 @@ const AppContent: React.FC = () => {
   const activeTab = useMemo(() => {
     if (!location) return 'items';
     if (location.pathname.startsWith('/stock/items')) return 'items';
+    if (location.pathname.startsWith('/stock/groups')) return 'groups';
     if (location.pathname.startsWith('/stock/entries')) return 'entries';
     if (location.pathname.startsWith('/stock/reception')) return 'reception';
     if (location.pathname.startsWith('/stock/reports')) return 'reports';
