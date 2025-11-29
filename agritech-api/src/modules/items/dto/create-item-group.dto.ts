@@ -2,7 +2,8 @@ import { IsUUID, IsString, IsBoolean, IsNumber, IsOptional } from 'class-validat
 
 export class CreateItemGroupDto {
   @IsUUID()
-  organization_id: string;
+  @IsOptional()
+  organization_id?: string;
 
   @IsString()
   name: string;
@@ -28,7 +29,8 @@ export class CreateItemGroupDto {
   sort_order?: number;
 
   @IsUUID()
-  created_by: string;
+  @IsOptional()
+  created_by?: string;
 }
 
 export class UpdateItemGroupDto {
