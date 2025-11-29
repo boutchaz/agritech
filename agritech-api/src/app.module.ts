@@ -37,6 +37,8 @@ import { TaxesModule } from './modules/taxes/taxes.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
+import { OrganizationUsersModule } from './modules/organization-users/organization-users.module';
+import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-indices.module';
 
 @Module({
   imports: [
@@ -53,6 +55,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     UsersModule,
     OrganizationsModule,
     OrganizationModulesModule,
+    OrganizationUsersModule,
 
     // Business logic modules
     SequencesModule,
@@ -78,6 +81,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     SubscriptionsModule,
     FarmsModule,
     ParcelsModule,
+    SatelliteIndicesModule,
     StructuresModule,
     DashboardModule,
     ReceptionBatchesModule,
