@@ -21,7 +21,6 @@ import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analys
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReceptionBatchesRouteImport } from './routes/reception-batches'
-import { Route as QualityControlRouteImport } from './routes/quality-control'
 import { Route as ProfitabilityRouteImport } from './routes/profitability'
 import { Route as ProductionIntelligenceRouteImport } from './routes/production-intelligence'
 import { Route as ParcelsRouteImport } from './routes/parcels'
@@ -144,11 +143,6 @@ const RegisterRoute = RegisterRouteImport.update({
 const ReceptionBatchesRoute = ReceptionBatchesRouteImport.update({
   id: '/reception-batches',
   path: '/reception-batches',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QualityControlRoute = QualityControlRouteImport.update({
-  id: '/quality-control',
-  path: '/quality-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfitabilityRoute = ProfitabilityRouteImport.update({
@@ -498,7 +492,6 @@ export interface FileRoutesByFullPath {
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
-  '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -574,7 +567,6 @@ export interface FileRoutesByTo {
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
-  '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -648,7 +640,6 @@ export interface FileRoutesById {
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
-  '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
@@ -727,7 +718,6 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/production-intelligence'
     | '/profitability'
-    | '/quality-control'
     | '/reception-batches'
     | '/register'
     | '/reports'
@@ -803,7 +793,6 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/production-intelligence'
     | '/profitability'
-    | '/quality-control'
     | '/reception-batches'
     | '/register'
     | '/reports'
@@ -876,7 +865,6 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/production-intelligence'
     | '/profitability'
-    | '/quality-control'
     | '/reception-batches'
     | '/register'
     | '/reports'
@@ -955,7 +943,6 @@ export interface RootRouteChildren {
   ParcelsRoute: typeof ParcelsRouteWithChildren
   ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
   ProfitabilityRoute: typeof ProfitabilityRoute
-  QualityControlRoute: typeof QualityControlRoute
   ReceptionBatchesRoute: typeof ReceptionBatchesRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
@@ -1055,13 +1042,6 @@ declare module '@tanstack/react-router' {
       path: '/reception-batches'
       fullPath: '/reception-batches'
       preLoaderRoute: typeof ReceptionBatchesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/quality-control': {
-      id: '/quality-control'
-      path: '/quality-control'
-      fullPath: '/quality-control'
-      preLoaderRoute: typeof QualityControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profitability': {
@@ -1686,7 +1666,6 @@ const rootRouteChildren: RootRouteChildren = {
   ParcelsRoute: ParcelsRouteWithChildren,
   ProductionIntelligenceRoute: ProductionIntelligenceRoute,
   ProfitabilityRoute: ProfitabilityRoute,
-  QualityControlRoute: QualityControlRoute,
   ReceptionBatchesRoute: ReceptionBatchesRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,

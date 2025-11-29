@@ -1,0 +1,55 @@
+import { IsString, IsNumber, IsOptional, IsUUID, Min, IsInt } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateSalesOrderItemDto {
+  @ApiProperty({ description: 'Line number for ordering items', example: 1 })
+  @IsInt()
+  @Min(1)
+  line_number: number;
+
+  @ApiProperty({ description: 'Item name', example: 'Organic Olive Oil' })
+  @IsString()
+  item_name: string;
+
+  @ApiPropertyOptional({ description: 'Item description' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ description: 'Quantity', example: 100 })
+  @IsNumber()
+  @Min(0.001)
+  quantity: number;
+
+  @ApiPropertyOptional({ description: 'Unit of measure', example: 'kg', default: 'unit' })
+  @IsString()
+  @IsOptional()
+  unit_of_measure?: string;
+
+  @ApiProperty({ description: 'Unit price', example: 25.50 })
+  @IsNumber()
+  @Min(0)
+  unit_price: number;
+
+  @ApiPropertyOptional({ description: 'Discount percentage', example: 10 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  discount_percentage?: number;
+
+  @ApiPropertyOptional({ description: 'Tax rate', example: 20 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  tax_rate?: number;
+
+  @ApiPropertyOptional({ description: 'Item ID if from catalog', format: 'uuid' })
+  @IsUUID()
+  @IsOptional()
+  item_id?: string;
+
+  @ApiPropertyOptional({ description: 'Account ID for revenue', format: 'uuid' })
+  @IsUUID()
+  @IsOptional()
+  account_id?: string;
+}

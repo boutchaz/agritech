@@ -1,0 +1,411 @@
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { SupabaseService } from '../../common/supabase/supabase.service';
+import { SequenceService } from '../../common/sequence/sequence.service';
+import {
+  CreateSalesOrderDto,
+  UpdateSalesOrderDto,
+  SalesOrderFiltersDto,
+  UpdateStatusDto,
+  SalesOrderStatus,
+} from './dto';
+
+@Injectable()
+export class SalesOrdersService {
+  private readonly logger = new Logger(SalesOrdersService.name);
+
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly sequenceService: SequenceService,
+  ) {}
+
+  /**
+   * Create a new sales order with items
+   */
+  async create(
+    createSalesOrderDto: CreateSalesOrderDto,
+    organizationId: string,
+    userId: string,
+  ) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      // Generate order number if not provided
+      let orderNumber = createSalesOrderDto.order_number;
+      if (!orderNumber) {
+        orderNumber = await this.sequenceService.getNextSequence(
+          'sales_order',
+          organizationId,
+        );
+      }
+
+      // Extract items from DTO
+      const { items, ...orderData } = createSalesOrderDto;
+
+      // Calculate totals
+      const { subtotal, taxAmount, totalAmount } = this.calculateTotals(items);
+
+      // Create the sales order
+      const { data: salesOrder, error: orderError } = await supabaseClient
+        .from('sales_orders')
+        .insert({
+          ...orderData,
+          order_number: orderNumber,
+          organization_id: organizationId,
+          created_by: userId,
+          status: orderData.status || SalesOrderStatus.DRAFT,
+          subtotal,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+          stock_issued: orderData.stock_issued || false,
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        this.logger.error('Error creating sales order:', orderError);
+        throw new BadRequestException(`Failed to create sales order: ${orderError.message}`);
+      }
+
+      // Create sales order items
+      const orderItems = items.map((item, index) => ({
+        sales_order_id: salesOrder.id,
+        line_number: item.line_number || index + 1,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit_of_measure: item.unit_of_measure || 'unit',
+        unit_price: item.unit_price,
+        discount_percentage: item.discount_percentage || 0,
+        tax_rate: item.tax_rate || 0,
+        item_id: item.item_id,
+        account_id: item.account_id,
+        // Calculate line totals
+        amount: this.calculateLineAmount(item),
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('sales_order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        this.logger.error('Error creating sales order items:', itemsError);
+        // Rollback: delete the created order
+        await supabaseClient.from('sales_orders').delete().eq('id', salesOrder.id);
+        throw new BadRequestException(`Failed to create order items: ${itemsError.message}`);
+      }
+
+      // Fetch complete order with items
+      return this.findOne(salesOrder.id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in create sales order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find all sales orders with filters
+   */
+  async findAll(filters: SalesOrderFiltersDto, organizationId: string) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      let query = supabaseClient
+        .from('sales_orders')
+        .select(
+          `
+          *,
+          sales_order_items (*)
+        `,
+        )
+        .eq('organization_id', organizationId)
+        .order('order_date', { ascending: false });
+
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters.customer_id) {
+        query = query.eq('customer_id', filters.customer_id);
+      }
+
+      if (filters.customer_name) {
+        query = query.ilike('customer_name', `%${filters.customer_name}%`);
+      }
+
+      if (filters.order_number) {
+        query = query.ilike('order_number', `%${filters.order_number}%`);
+      }
+
+      if (filters.date_from) {
+        query = query.gte('order_date', filters.date_from);
+      }
+
+      if (filters.date_to) {
+        query = query.lte('order_date', filters.date_to);
+      }
+
+      if (filters.stock_issued !== undefined) {
+        const stockIssued = filters.stock_issued === 'true';
+        query = query.eq('stock_issued', stockIssued);
+      }
+
+      // Pagination
+      const page = filters.page || 1;
+      const limit = filters.limit || 20;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        this.logger.error('Error fetching sales orders:', error);
+        throw new BadRequestException(`Failed to fetch sales orders: ${error.message}`);
+      }
+
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages: Math.ceil((count || 0) / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error in findAll sales orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find one sales order by ID
+   */
+  async findOne(id: string, organizationId: string) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('sales_orders')
+        .select(
+          `
+          *,
+          sales_order_items (*)
+        `,
+        )
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (error || !data) {
+        throw new NotFoundException(`Sales order with ID ${id} not found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error('Error in findOne sales order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a sales order
+   */
+  async update(
+    id: string,
+    updateSalesOrderDto: UpdateSalesOrderDto,
+    organizationId: string,
+  ) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      // Check if order exists
+      await this.findOne(id, organizationId);
+
+      const { data, error } = await supabaseClient
+        .from('sales_orders')
+        .update({
+          ...updateSalesOrderDto,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error updating sales order:', error);
+        throw new BadRequestException(`Failed to update sales order: ${error.message}`);
+      }
+
+      return this.findOne(id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in update sales order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update sales order status
+   */
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateStatusDto,
+    organizationId: string,
+  ) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      // Check if order exists
+      const order = await this.findOne(id, organizationId);
+
+      // Validate status transition
+      this.validateStatusTransition(order.status, updateStatusDto.status);
+
+      const updateData: any = {
+        status: updateStatusDto.status,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Add status-specific updates
+      if (updateStatusDto.status === SalesOrderStatus.SHIPPED && !order.stock_issued) {
+        throw new BadRequestException('Cannot ship order: stock not issued');
+      }
+
+      if (updateStatusDto.notes) {
+        updateData.notes = order.notes
+          ? `${order.notes}\n\n[${updateStatusDto.status}] ${updateStatusDto.notes}`
+          : `[${updateStatusDto.status}] ${updateStatusDto.notes}`;
+      }
+
+      const { error } = await supabaseClient
+        .from('sales_orders')
+        .update(updateData)
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        this.logger.error('Error updating order status:', error);
+        throw new BadRequestException(`Failed to update status: ${error.message}`);
+      }
+
+      return this.findOne(id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in updateStatus:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a sales order (only if status is draft)
+   */
+  async remove(id: string, organizationId: string) {
+    const supabaseClient = this.supabase.getClient();
+
+    try {
+      const order = await this.findOne(id, organizationId);
+
+      if (order.status !== SalesOrderStatus.DRAFT) {
+        throw new BadRequestException(
+          'Only draft sales orders can be deleted. Cancel the order instead.',
+        );
+      }
+
+      const { error } = await supabaseClient
+        .from('sales_orders')
+        .delete()
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        this.logger.error('Error deleting sales order:', error);
+        throw new BadRequestException(`Failed to delete sales order: ${error.message}`);
+      }
+
+      return { message: 'Sales order deleted successfully' };
+    } catch (error) {
+      this.logger.error('Error in remove sales order:', error);
+      throw error;
+    }
+  }
+
+  // ==================== PRIVATE HELPER METHODS ====================
+
+  /**
+   * Calculate order totals from items
+   */
+  private calculateTotals(items: any[]): {
+    subtotal: number;
+    taxAmount: number;
+    totalAmount: number;
+  } {
+    let subtotal = 0;
+    let taxAmount = 0;
+
+    items.forEach((item) => {
+      const lineAmount = this.calculateLineAmount(item);
+      subtotal += lineAmount;
+
+      if (item.tax_rate) {
+        taxAmount += (lineAmount * item.tax_rate) / 100;
+      }
+    });
+
+    const totalAmount = subtotal + taxAmount;
+
+    return {
+      subtotal: Math.round(subtotal * 100) / 100,
+      taxAmount: Math.round(taxAmount * 100) / 100,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+    };
+  }
+
+  /**
+   * Calculate line item amount
+   */
+  private calculateLineAmount(item: any): number {
+    const baseAmount = item.quantity * item.unit_price;
+    const discount = item.discount_percentage
+      ? (baseAmount * item.discount_percentage) / 100
+      : 0;
+    return baseAmount - discount;
+  }
+
+  /**
+   * Validate status transition
+   */
+  private validateStatusTransition(currentStatus: string, newStatus: SalesOrderStatus): void {
+    const validTransitions: Record<string, SalesOrderStatus[]> = {
+      [SalesOrderStatus.DRAFT]: [
+        SalesOrderStatus.CONFIRMED,
+        SalesOrderStatus.CANCELLED,
+      ],
+      [SalesOrderStatus.CONFIRMED]: [
+        SalesOrderStatus.PROCESSING,
+        SalesOrderStatus.CANCELLED,
+      ],
+      [SalesOrderStatus.PROCESSING]: [
+        SalesOrderStatus.SHIPPED,
+        SalesOrderStatus.CANCELLED,
+      ],
+      [SalesOrderStatus.SHIPPED]: [
+        SalesOrderStatus.DELIVERED,
+      ],
+      [SalesOrderStatus.DELIVERED]: [
+        SalesOrderStatus.COMPLETED,
+      ],
+      [SalesOrderStatus.CANCELLED]: [],
+      [SalesOrderStatus.COMPLETED]: [],
+    };
+
+    const allowed = validTransitions[currentStatus] || [];
+
+    if (!allowed.includes(newStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from ${currentStatus} to ${newStatus}`,
+      );
+    }
+  }
+}

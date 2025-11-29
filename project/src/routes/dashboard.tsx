@@ -7,7 +7,7 @@ import SubscriptionBanner from '../components/SubscriptionBanner'
 import { Home, Building2, Search } from 'lucide-react'
 import type { Module, SensorData, DashboardSettings } from '../types'
 import { CommandPalette } from '../components/CommandPalette'
-import { useNavigate, createFileRoute, Link } from '@tanstack/react-router'
+import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import type { Action } from 'kbar'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
@@ -172,32 +172,6 @@ const AppContent: React.FC = () => {
     };
   }, [currentOrganization, siteOrigin, t]);
 
-  const featureHighlights = useMemo(() => [
-    {
-      id: 'farm-ops',
-      title: t('dashboard.keyFeatures.farmOps.title'),
-      description: t('dashboard.keyFeatures.farmOps.description'),
-      cta: { label: t('dashboard.keyFeatures.farmOps.cta'), to: '/parcels' }
-    },
-    {
-      id: 'task-execution',
-      title: t('dashboard.keyFeatures.taskExecution.title'),
-      description: t('dashboard.keyFeatures.taskExecution.description'),
-      cta: { label: t('dashboard.keyFeatures.taskExecution.cta'), to: '/tasks' }
-    },
-    {
-      id: 'financial-health',
-      title: t('dashboard.keyFeatures.financialHealth.title'),
-      description: t('dashboard.keyFeatures.financialHealth.description'),
-      cta: { label: t('dashboard.keyFeatures.financialHealth.cta'), to: '/accounting' }
-    },
-    {
-      id: 'lab-services',
-      title: t('dashboard.keyFeatures.labServices.title'),
-      description: t('dashboard.keyFeatures.labServices.description'),
-      cta: { label: t('dashboard.keyFeatures.labServices.cta'), to: '/analyses' }
-    },
-  ], [t, i18n.language]);
 
   const commandActions = useMemo<Action[]>(() => {
     const navigationActions: Action[] = [
@@ -323,43 +297,6 @@ const AppContent: React.FC = () => {
           </header>
 
           <div className="p-3 sm:p-4 lg:p-6 space-y-6">
-            {/* Feature Highlights */}
-            <div className="flex flex-col gap-6 rounded-xl bg-white dark:bg-gray-800 shadow-sm p-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {t('dashboard.keyFeatures.title')}
-                </h2>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  {t('dashboard.keyFeatures.subtitle')}
-                </p>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                {featureHighlights.map((feature) => (
-                  <article
-                    key={feature.id}
-                    className="flex h-full flex-col justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-5"
-                  >
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                        {feature.title}
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        {feature.description}
-                      </p>
-                    </div>
-                    <nav className="mt-4">
-                      <Link
-                        to={feature.cta.to}
-                        className="inline-flex items-center text-sm font-medium text-green-700 dark:text-green-300 hover:underline"
-                      >
-                        {feature.cta.label}
-                      </Link>
-                    </nav>
-                  </article>
-                ))}
-              </div>
-            </div>
-
             {/* Dashboard Widgets */}
             <div className="space-y-4">
               <div>

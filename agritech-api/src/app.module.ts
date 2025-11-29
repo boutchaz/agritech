@@ -31,6 +31,7 @@ import { StructuresModule } from './modules/structures/structures.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReceptionBatchesModule } from './modules/reception-batches/reception-batches.module';
 import { BlogsModule } from './modules/blogs/blogs.module';
+import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { BlogsModule } from './modules/blogs/blogs.module';
     // Business logic modules
     SequencesModule,
     AccountsModule,
+    SalesOrdersModule,
     InvoicesModule,
     JournalEntriesModule,
     PaymentsModule,
