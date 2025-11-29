@@ -56,3 +56,16 @@ export const useAccount = (accountId: string) => {
     enabled: !!accountId,
   });
 };
+
+export const useCreateAccount = () => {
+  const { currentOrganization, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (account: CreateAccountInput) =>
+      accountingApi.createAccount(account, currentOrganization!.id, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts', currentOrganization?.id] });
+    },
+  });
+};

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { Tax } from '../lib/taxCalculations';
@@ -76,4 +76,44 @@ export function useSalesTaxes() {
  */
 export function usePurchaseTaxes() {
   return useTaxes('purchase');
+}
+
+/**
+ * Hook to create a new tax
+ */
+export function useCreateTax() {
+  const { currentOrganization, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tax: {
+      tax_name: string;
+      tax_rate: number;
+      tax_type: 'sales' | 'purchase' | 'both';
+      is_active?: boolean;
+    }) => {
+      if (!currentOrganization?.id || !user?.id) {
+        throw new Error('No organization or user');
+      }
+
+      const { data, error } = await supabase
+        .from('taxes')
+        .insert({
+          organization_id: currentOrganization.id,
+          name: tax.tax_name,
+          rate: tax.tax_rate,
+          tax_type: tax.tax_type,
+          is_active: tax.is_active ?? true,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Tax;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxes', currentOrganization?.id] });
+    },
+  });
 }
