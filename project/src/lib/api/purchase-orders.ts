@@ -6,6 +6,8 @@
 
 import { apiClient } from '../api-client';
 
+const BASE_URL = '/api/v1/purchase-orders';
+
 export interface PurchaseOrderItem {
   line_number: number;
   item_name: string;
@@ -71,7 +73,7 @@ export const purchaseOrdersApi = {
    * Get all purchase orders with optional filters
    */
   async getPurchaseOrders(filters?: PurchaseOrderFilters) {
-    const { data } = await apiClient.get('/purchase-orders', { params: filters });
+    const { data } = await apiClient.get(BASE_URL, { params: filters });
     return data;
   },
 
@@ -79,7 +81,7 @@ export const purchaseOrdersApi = {
    * Get a single purchase order by ID
    */
   async getPurchaseOrder(id: string) {
-    const { data } = await apiClient.get(`/purchase-orders/${id}`);
+    const { data } = await apiClient.get(`${BASE_URL}/${id}`);
     return data;
   },
 
@@ -87,7 +89,7 @@ export const purchaseOrdersApi = {
    * Create a new purchase order
    */
   async createPurchaseOrder(input: CreatePurchaseOrderInput) {
-    const { data } = await apiClient.post('/purchase-orders', input);
+    const { data } = await apiClient.post(BASE_URL, input);
     return data;
   },
 
@@ -95,7 +97,7 @@ export const purchaseOrdersApi = {
    * Update an existing purchase order
    */
   async updatePurchaseOrder(id: string, input: UpdatePurchaseOrderInput) {
-    const { data } = await apiClient.patch(`/purchase-orders/${id}`, input);
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input);
     return data;
   },
 
@@ -103,7 +105,7 @@ export const purchaseOrdersApi = {
    * Update purchase order status
    */
   async updatePurchaseOrderStatus(id: string, input: UpdateStatusInput) {
-    const { data } = await apiClient.patch(`/purchase-orders/${id}/status`, input);
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input);
     return data;
   },
 
@@ -111,7 +113,7 @@ export const purchaseOrdersApi = {
    * Delete a purchase order (only drafts)
    */
   async deletePurchaseOrder(id: string) {
-    const { data } = await apiClient.delete(`/purchase-orders/${id}`);
+    const { data } = await apiClient.delete(`${BASE_URL}/${id}`);
     return data;
   },
 
@@ -119,7 +121,7 @@ export const purchaseOrdersApi = {
    * Convert purchase order to bill (purchase invoice)
    */
   async convertToBill(id: string, params?: { invoice_date?: string; due_date?: string }) {
-    const { data } = await apiClient.post(`/purchase-orders/${id}/convert-to-bill`, params || {});
+    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-bill`, params || {});
     return data;
   },
 };

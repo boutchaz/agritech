@@ -6,6 +6,8 @@
 
 import { apiClient } from '../api-client';
 
+const BASE_URL = '/api/v1/sales-orders';
+
 export interface SalesOrderItem {
   line_number: number;
   item_name: string;
@@ -77,7 +79,7 @@ export const salesOrdersApi = {
    * Get all sales orders with optional filters
    */
   async getSalesOrders(filters?: SalesOrderFilters) {
-    const { data } = await apiClient.get('/sales-orders', { params: filters });
+    const { data } = await apiClient.get(BASE_URL, { params: filters });
     return data;
   },
 
@@ -85,7 +87,7 @@ export const salesOrdersApi = {
    * Get a single sales order by ID
    */
   async getSalesOrder(id: string) {
-    const { data } = await apiClient.get(`/sales-orders/${id}`);
+    const { data } = await apiClient.get(`${BASE_URL}/${id}`);
     return data;
   },
 
@@ -93,7 +95,7 @@ export const salesOrdersApi = {
    * Create a new sales order
    */
   async createSalesOrder(input: CreateSalesOrderInput) {
-    const { data } = await apiClient.post('/sales-orders', input);
+    const { data } = await apiClient.post(BASE_URL, input);
     return data;
   },
 
@@ -101,7 +103,7 @@ export const salesOrdersApi = {
    * Update an existing sales order
    */
   async updateSalesOrder(id: string, input: UpdateSalesOrderInput) {
-    const { data } = await apiClient.patch(`/sales-orders/${id}`, input);
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input);
     return data;
   },
 
@@ -109,7 +111,7 @@ export const salesOrdersApi = {
    * Update sales order status
    */
   async updateSalesOrderStatus(id: string, input: UpdateStatusInput) {
-    const { data } = await apiClient.patch(`/sales-orders/${id}/status`, input);
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input);
     return data;
   },
 
@@ -117,7 +119,7 @@ export const salesOrdersApi = {
    * Delete a sales order (only drafts)
    */
   async deleteSalesOrder(id: string) {
-    const { data } = await apiClient.delete(`/sales-orders/${id}`);
+    const { data } = await apiClient.delete(`${BASE_URL}/${id}`);
     return data;
   },
 
@@ -125,7 +127,7 @@ export const salesOrdersApi = {
    * Convert sales order to invoice
    */
   async convertToInvoice(id: string, params?: { invoice_date?: string; due_date?: string }) {
-    const { data } = await apiClient.post(`/sales-orders/${id}/convert-to-invoice`, params || {});
+    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {});
     return data;
   },
 };
