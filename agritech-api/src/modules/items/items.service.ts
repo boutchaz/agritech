@@ -15,7 +15,7 @@ export class ItemsService {
   // =====================================================
 
   async findAllItemGroups(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('item_groups')
@@ -51,7 +51,7 @@ export class ItemsService {
   }
 
   async findOneItemGroup(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('item_groups')
@@ -73,7 +73,7 @@ export class ItemsService {
   }
 
   async createItemGroup(dto: CreateItemGroupDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('item_groups')
@@ -93,7 +93,7 @@ export class ItemsService {
   }
 
   async updateItemGroup(id: string, organizationId: string, userId: string, dto: UpdateItemGroupDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('item_groups')
@@ -115,7 +115,7 @@ export class ItemsService {
   }
 
   async deleteItemGroup(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Check if group has items
     const { data: items } = await supabase
@@ -158,7 +158,7 @@ export class ItemsService {
   // =====================================================
 
   async findAllItems(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('items')
@@ -212,7 +212,7 @@ export class ItemsService {
   }
 
   async findOneItem(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('items')
@@ -244,7 +244,7 @@ export class ItemsService {
   }
 
   async createItem(dto: CreateItemDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Generate item code if not provided
     let itemCode = dto.item_code;
@@ -285,7 +285,7 @@ export class ItemsService {
   }
 
   async updateItem(id: string, organizationId: string, userId: string, dto: UpdateItemDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('items')
@@ -307,7 +307,7 @@ export class ItemsService {
   }
 
   async deleteItem(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Check if item is used in stock entries
     const { data: stockEntries } = await supabase
@@ -350,7 +350,7 @@ export class ItemsService {
   // =====================================================
 
   async getItemsForSelection(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('items')
@@ -407,7 +407,7 @@ export class ItemsService {
       low_stock_only?: boolean;
     },
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // First, get warehouse IDs for the farm if filtering by farm
     let warehouseIds: string[] | null = null;
@@ -539,7 +539,7 @@ export class ItemsService {
    * Get item usage by farm/parcel
    */
   async getItemFarmUsage(organizationId: string, itemId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Query stock movements (OUT movements indicate usage)
     const { data: movements, error: movementsError } = await supabase
@@ -703,7 +703,7 @@ export class ItemsService {
       item_id?: string;
     },
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // First, get warehouse IDs for the farm if filtering by farm
     let warehouseIds: string[] | null = null;
