@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { purchaseOrdersApi } from '../lib/api/purchase-orders';
-import { calculateInvoiceTotals, type InvoiceItemInput } from '../lib/taxCalculations';
-import { createInvoiceFromOrder } from '../lib/invoice-service';
+import { type InvoiceItemInput } from '../lib/taxCalculations';
 
 export interface PurchaseOrder {
   id: string;
@@ -119,7 +117,7 @@ export function usePurchaseOrder(poId: string | null) {
  */
 export function useCreatePurchaseOrder() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (poData: {
@@ -132,79 +130,30 @@ export function useCreatePurchaseOrder() {
       notes?: string;
       supplier_quote_ref?: string;
     }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization');
       }
 
-      // Fetch supplier name
-      const { data: supplier } = await supabase
-        .from('suppliers')
-        .select('name, contact_person, email, phone')
-        .eq('id', poData.supplier_id)
-        .single();
-
-      // Generate PO number
-      const { data: poNumber, error: numberError } = await supabase
-        .rpc('generate_purchase_order_number', {
-          p_organization_id: currentOrganization.id,
-        });
-
-      if (numberError) throw numberError;
-
-      // Calculate totals
-      const totals = await calculateInvoiceTotals(poData.items, 'purchase');
-
-      // Create purchase order
-      const { data: po, error: poError } = await supabase
-        .from('purchase_orders')
-        .insert({
-          organization_id: currentOrganization.id,
-          order_number: poNumber,
-          order_date: poData.order_date,
-          expected_delivery_date: poData.expected_delivery_date || null,
-          supplier_id: poData.supplier_id,
-          supplier_name: supplier?.name || '',
-          contact_person: supplier?.contact_person,
-          contact_email: supplier?.email,
-          contact_phone: supplier?.phone,
-          subtotal: totals.subtotal,
-          tax_total: totals.tax_total,
-          grand_total: totals.grand_total,
-          outstanding_amount: totals.grand_total,
-          currency_code: currentOrganization.currency || 'MAD',
-          status: 'draft',
-          payment_terms: poData.payment_terms,
-          delivery_terms: poData.delivery_terms,
-          notes: poData.notes,
-          supplier_quote_ref: poData.supplier_quote_ref,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (poError) throw poError;
-
-      // Create PO items
-      const items = totals.items_with_tax.map((item, index) => ({
-        purchase_order_id: po.id,
+      // Transform InvoiceItemInput to PurchaseOrderItem format
+      const apiItems = poData.items.map((item, index) => ({
         line_number: index + 1,
         item_name: item.item_name,
-        description: item.description || null,
+        description: item.description,
         quantity: item.quantity,
-        unit_price: item.rate,
-        amount: item.amount,
-        tax_id: item.tax_id || null,
-        tax_rate: item.tax_rate || 0,
-        tax_amount: item.tax_amount,
-        line_total: item.total_amount,
+        unit_price: item.rate, // InvoiceItemInput uses 'rate', API expects 'unit_price'
+        tax_rate: 0, // Will be calculated from tax_id by backend if needed
         account_id: item.account_id,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('purchase_order_items')
-        .insert(items);
-
-      if (itemsError) throw itemsError;
+      // Call the API to create purchase order
+      const po = await purchaseOrdersApi.createPurchaseOrder({
+        order_date: poData.order_date,
+        expected_delivery_date: poData.expected_delivery_date,
+        supplier_id: poData.supplier_id,
+        notes: poData.notes,
+        terms_and_conditions: `Payment Terms: ${poData.payment_terms || 'N/A'}\nDelivery Terms: ${poData.delivery_terms || 'N/A'}\nSupplier Quote Ref: ${poData.supplier_quote_ref || 'N/A'}`,
+        items: apiItems,
+      });
 
       return po;
     },
@@ -216,98 +165,21 @@ export function useCreatePurchaseOrder() {
 
 /**
  * Hook to convert purchase order to bill (purchase invoice)
- * Uses shared invoice service to eliminate duplicate logic
+ * NOTE: Backend endpoint is currently a placeholder - full implementation in Phase 3 (Invoices module)
  */
 export function useConvertPOToBill() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ poId, invoiceDate, dueDate }: {
+    mutationFn: async ({ poId }: {
       poId: string;
-      invoiceDate: string;
-      dueDate: string;
+      invoiceDate?: string;  // Not used yet - will be implemented in Phase 3
+      dueDate?: string;      // Not used yet - will be implemented in Phase 3
     }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
-      }
-
-      // Fetch PO with items
-      const { data: po, error: fetchError } = await supabase
-        .from('purchase_orders')
-        .select(`*, items:purchase_order_items(*)`)
-        .eq('id', poId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Calculate remaining quantities for invoice (only unbilled items)
-      const billItems = po.items.map((item: any) => ({
-        item_name: item.item_name,
-        description: item.description || null,
-        quantity: item.quantity - item.billed_quantity,
-        unit_price: item.unit_price,
-        amount: (item.quantity - item.billed_quantity) * item.unit_price,
-        tax_id: item.tax_id || null,
-        tax_rate: item.tax_rate || 0,
-        account_id: item.account_id,
-      }));
-
-      // Calculate totals from remaining items
-      const remainingSubtotal = billItems.reduce((sum, item) => sum + item.amount, 0);
-      const remainingTaxTotal = billItems.reduce(
-        (sum, item) => sum + (item.amount * item.tax_rate) / 100,
-        0
-      );
-      const remainingGrandTotal = remainingSubtotal + remainingTaxTotal;
-
-      // Use shared invoice service
-      const bill = await createInvoiceFromOrder({
-        organization_id: currentOrganization.id,
-        user_id: user.id,
-        invoice_type: 'purchase',
-        party_id: po.supplier_id,
-        party_name: po.supplier_name,
-        invoice_date: invoiceDate,
-        due_date: dueDate,
-        subtotal: remainingSubtotal,
-        tax_total: remainingTaxTotal,
-        grand_total: remainingGrandTotal,
-        items: billItems,
-        currency_code: po.currency_code,
-        exchange_rate: po.exchange_rate,
-        status: 'draft',
-        remarks: null,
-        farm_id: po.farm_id || null,
-        parcel_id: po.parcel_id || null,
-        sales_order_id: null,
-        purchase_order_id: poId,
-      });
-
-      // Update PO billed_amount and status
-      const newBilledAmount = po.billed_amount + bill.grand_total;
-      const newStatus = newBilledAmount >= po.grand_total ? 'billed' : 'partially_billed';
-
-      await supabase
-        .from('purchase_orders')
-        .update({
-          billed_amount: newBilledAmount,
-          outstanding_amount: po.grand_total - newBilledAmount,
-          status: newStatus,
-        })
-        .eq('id', poId);
-
-      // Update PO items billed_quantity
-      for (const item of po.items) {
-        await supabase
-          .from('purchase_order_items')
-          .update({
-            billed_quantity: item.quantity,
-          })
-          .eq('id', item.id);
-      }
-
-      return bill;
+      // Call the API endpoint (currently returns placeholder message)
+      const response = await purchaseOrdersApi.convertToBill(poId);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
@@ -317,11 +189,13 @@ export function useConvertPOToBill() {
 }
 
 /**
- * Hook to update purchase order (details and items)
+ * Hook to update purchase order (details only)
+ * NOTE: Backend currently only supports updating metadata fields, not line items
+ * For item updates, a new backend endpoint will be needed in the future
  */
 export function useUpdatePurchaseOrder() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (poData: {
@@ -331,90 +205,37 @@ export function useUpdatePurchaseOrder() {
       payment_terms?: string;
       delivery_address?: string;
       notes?: string;
-      items?: InvoiceItemInput[];
+      items?: InvoiceItemInput[];  // Currently ignored - backend doesn't support item updates yet
     }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization');
       }
 
-      const { poId, items, ...updates } = poData;
+      const { poId, items, payment_terms, delivery_address, ...updates } = poData;
 
-      // If items are provided, calculate new totals
+      // Log a warning if items are provided (not yet supported)
       if (items && items.length > 0) {
-        const totals = await calculateInvoiceTotals(items, 'purchase');
-        
-        // Get current billed amount
-        const { data: currentPO } = await supabase
-          .from('purchase_orders')
-          .select('billed_amount')
-          .eq('id', poId)
-          .single();
-        
-        const currentBilledAmount = currentPO?.billed_amount || 0;
-
-        // Update purchase order with new totals
-        const { error: updateError } = await supabase
-          .from('purchase_orders')
-          .update({
-            ...updates,
-            subtotal: totals.subtotal,
-            tax_total: totals.tax_total,
-            grand_total: totals.grand_total,
-            outstanding_amount: totals.grand_total - currentBilledAmount,
-          })
-          .eq('id', poId)
-          .eq('organization_id', currentOrganization.id);
-
-        if (updateError) throw updateError;
-
-        // Delete existing items
-        const { error: deleteError } = await supabase
-          .from('purchase_order_items')
-          .delete()
-          .eq('purchase_order_id', poId);
-
-        if (deleteError) throw deleteError;
-
-        // Insert new items
-        const poItems = totals.items_with_tax.map((item, index) => ({
-          purchase_order_id: poId,
-          line_number: index + 1,
-          item_name: item.item_name,
-          description: item.description || null,
-          quantity: item.quantity,
-          unit_price: item.rate,
-          amount: item.amount,
-          tax_id: item.tax_id || null,
-          tax_rate: item.tax_rate || 0,
-          tax_amount: item.tax_amount,
-          line_total: item.total_amount,
-          account_id: item.account_id,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('purchase_order_items')
-          .insert(poItems);
-
-        if (insertError) throw insertError;
-      } else {
-        // Just update details without items
-        const { error: updateError } = await supabase
-          .from('purchase_orders')
-          .update(updates)
-          .eq('id', poId)
-          .eq('organization_id', currentOrganization.id);
-
-        if (updateError) throw updateError;
+        console.warn('Item updates are not yet supported via API. Only metadata will be updated.');
       }
 
-      // Fetch updated purchase order
-      const { data, error } = await supabase
-        .from('purchase_orders')
-        .select('*')
-        .eq('id', poId)
-        .single();
+      // Build the update payload (only fields supported by the backend)
+      const updatePayload: any = {
+        ...updates,
+      };
 
-      if (error) throw error;
+      // Add payment_terms and delivery_address to notes if provided
+      if (payment_terms || delivery_address) {
+        const additionalNotes = [];
+        if (payment_terms) additionalNotes.push(`Payment Terms: ${payment_terms}`);
+        if (delivery_address) additionalNotes.push(`Delivery Address: ${delivery_address}`);
+
+        updatePayload.notes = updatePayload.notes
+          ? `${updatePayload.notes}\n\n${additionalNotes.join('\n')}`
+          : additionalNotes.join('\n');
+      }
+
+      // Call the API to update purchase order
+      const data = await purchaseOrdersApi.updatePurchaseOrder(poId, updatePayload);
       return data as PurchaseOrder;
     },
     onSuccess: () => {

@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { salesOrdersApi } from '../lib/api/sales-orders';
-import { createInvoiceFromOrder } from '../lib/invoice-service';
 
 export interface SalesOrder {
   id: string;
@@ -115,98 +113,21 @@ export function useSalesOrder(orderId: string | null) {
 
 /**
  * Hook to convert sales order to invoice
- * Uses shared invoice service to eliminate duplicate logic
+ * NOTE: Backend endpoint is currently a placeholder - full implementation in Phase 3 (Invoices module)
  */
 export function useConvertOrderToInvoice() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ orderId, invoiceDate, dueDate }: {
+    mutationFn: async ({ orderId }: {
       orderId: string;
-      invoiceDate: string;
-      dueDate: string;
+      invoiceDate?: string;  // Not used yet - will be implemented in Phase 3
+      dueDate?: string;      // Not used yet - will be implemented in Phase 3
     }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
-      }
-
-      // Fetch sales order with items
-      const { data: order, error: fetchError } = await supabase
-        .from('sales_orders')
-        .select(`*, items:sales_order_items(*)`)
-        .eq('id', orderId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Calculate remaining quantities for invoice (only uninvoiced items)
-      const invoiceItems = order.items.map((item: any) => ({
-        item_name: item.item_name,
-        description: item.description || null,
-        quantity: item.quantity - item.invoiced_quantity, // Only remaining quantity
-        unit_price: item.unit_price,
-        amount: (item.quantity - item.invoiced_quantity) * item.unit_price,
-        tax_id: item.tax_id || null,
-        tax_rate: item.tax_rate || 0,
-        account_id: item.account_id,
-      }));
-
-      // Calculate totals from remaining items
-      const remainingSubtotal = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
-      const remainingTaxTotal = invoiceItems.reduce(
-        (sum, item) => sum + (item.amount * item.tax_rate) / 100,
-        0
-      );
-      const remainingGrandTotal = remainingSubtotal + remainingTaxTotal;
-
-      // Use shared invoice service
-      const invoice = await createInvoiceFromOrder({
-        organization_id: currentOrganization.id,
-        user_id: user.id,
-        invoice_type: 'sales',
-        party_id: order.customer_id,
-        party_name: order.customer_name,
-        invoice_date: invoiceDate,
-        due_date: dueDate,
-        subtotal: remainingSubtotal,
-        tax_total: remainingTaxTotal,
-        grand_total: remainingGrandTotal,
-        items: invoiceItems,
-        currency_code: order.currency_code,
-        exchange_rate: order.exchange_rate,
-        status: 'draft',
-        remarks: null,
-        farm_id: order.farm_id || null,
-        parcel_id: order.parcel_id || null,
-        sales_order_id: orderId,
-        purchase_order_id: null,
-      });
-
-      // Update order invoiced_amount and status
-      const newInvoicedAmount = order.invoiced_amount + invoice.grand_total;
-      const newStatus = newInvoicedAmount >= order.grand_total ? 'invoiced' : 'partially_invoiced';
-
-      await supabase
-        .from('sales_orders')
-        .update({
-          invoiced_amount: newInvoicedAmount,
-          outstanding_amount: order.grand_total - newInvoicedAmount,
-          status: newStatus,
-        })
-        .eq('id', orderId);
-
-      // Update order items invoiced_quantity
-      for (const item of order.items) {
-        await supabase
-          .from('sales_order_items')
-          .update({
-            invoiced_quantity: item.quantity, // Mark as fully invoiced
-          })
-          .eq('id', item.id);
-      }
-
-      return invoice;
+      // Call the API endpoint (currently returns placeholder message)
+      const response = await salesOrdersApi.convertToInvoice(orderId);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales_orders', currentOrganization?.id] });
