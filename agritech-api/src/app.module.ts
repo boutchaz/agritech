@@ -39,6 +39,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { OrganizationUsersModule } from './modules/organization-users/organization-users.module';
 import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-indices.module';
+import { WorkUnitsModule } from './modules/work-units/work-units.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-in
     HarvestsModule,
     TasksModule,
     WorkersModule,
+    WorkUnitsModule,
     StockEntriesModule,
     ItemsModule,
     WarehousesModule,
