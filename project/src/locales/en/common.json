@@ -68,7 +68,11 @@
     "elevage": "Livestock",
     "alerts": "Alerts",
     "suppliers": "Suppliers",
-    "warehouses": "Warehouses"
+    "warehouses": "Warehouses",
+    "harvestReception": "Harvest & Reception",
+    "harvests": "Harvests",
+    "receptionBatches": "Reception Batches",
+    "qualityControl": "Quality Control"
   },
   "stock": {
     "title": "Stock Management",

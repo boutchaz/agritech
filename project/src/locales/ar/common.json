@@ -68,7 +68,11 @@
     "elevage": "تربية المواشي",
     "alerts": "التنبيهات",
     "suppliers": "الموردون",
-    "warehouses": "المستودعات"
+    "warehouses": "المستودعات",
+    "harvestReception": "الحصاد والاستلام",
+    "harvests": "الحصاد",
+    "receptionBatches": "دفعات الاستلام",
+    "qualityControl": "مراقبة الجودة"
   },
   "stock": {
     "title": "إدارة المخزون",

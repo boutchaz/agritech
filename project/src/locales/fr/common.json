@@ -68,7 +68,11 @@
     "elevage": "Élevage",
     "alerts": "Alertes",
     "suppliers": "Fournisseurs",
-    "warehouses": "Entrepôts"
+    "warehouses": "Entrepôts",
+    "harvestReception": "Récolte & Réception",
+    "harvests": "Récoltes",
+    "receptionBatches": "Lots de Réception",
+    "qualityControl": "Contrôle Qualité"
   },
   "stock": {
     "title": "Gestion des Stocks",

@@ -21,6 +21,8 @@ export type Subject =
   | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport'
   // Work units (piece-work payment)
   | 'WorkUnit' | 'PieceWork'
+  // Harvest & Reception subjects
+  | 'Harvest' | 'ReceptionBatch' | 'QualityControl'
   | 'all';
 
 // Define ability type
@@ -105,6 +107,11 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     // Work Units & Piece-Work - Full access for organization admins
     can('manage', 'WorkUnit'); // Can manage work units (Arbre, Caisse, Kg, Litre, etc.)
     can('manage', 'PieceWork'); // Can manage piece-work records
+
+    // Harvest & Reception - Full access for organization admins
+    can('manage', 'Harvest');
+    can('manage', 'ReceptionBatch');
+    can('manage', 'QualityControl');
   }
 
   // Farm Manager - Manage assigned farms
@@ -146,6 +153,11 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     // Work Units & Piece-Work - Farm managers can record piece-work but not manage units
     can('read', 'WorkUnit'); // Can view work units
     can('manage', 'PieceWork'); // Can manage piece-work records for their farm
+
+    // Harvest & Reception - Farm managers have full access
+    can('manage', 'Harvest');
+    can('manage', 'ReceptionBatch');
+    can('manage', 'QualityControl');
   }
 
   // Farm Worker - Basic operations
@@ -178,6 +190,13 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     // Work Units & Piece-Work - Farm workers can view their own piece-work
     can('read', 'WorkUnit'); // Can view work units
     can('read', 'PieceWork'); // Can view piece-work records (their own)
+
+    // Harvest & Reception - Farm workers can view and create
+    can('read', 'Harvest');
+    can('create', 'Harvest');
+    can('read', 'ReceptionBatch');
+    can('create', 'ReceptionBatch');
+    can('read', 'QualityControl');
   }
 
   // Day Laborer - Very limited access (only tasks and profile)
@@ -218,6 +237,11 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     // Work Units & Piece-Work - Viewers can only read
     can('read', 'WorkUnit'); // Can view work units
     can('read', 'PieceWork'); // Can view piece-work records
+
+    // Harvest & Reception - Viewers can only read
+    can('read', 'Harvest');
+    can('read', 'ReceptionBatch');
+    can('read', 'QualityControl');
   }
 
   // ============================================

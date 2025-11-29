@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List, Warehouse } from 'lucide-react';
+import { Home, Trees as Tree, Fish, Leaf, AlertCircle, Settings, Sun, Moon, Sprout, Bird, Bug, Droplets, Flower2, Beef, Sheet as Sheep, Egg, Map, Package, Building2, Users, Wallet, FileSpreadsheet, Network, Menu, X, CheckSquare, ChevronDown, ChevronRight, Receipt, CreditCard, BookOpen, UserCheck, FileEdit, ShoppingCart, PackageSearch, List, Warehouse, Wheat, ClipboardCheck, Scale } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -34,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showAgricultureModules, setShowAgricultureModules] = useState(false);
   const [showElevageModules, setShowElevageModules] = useState(false);
   const [showPersonnel, setShowPersonnel] = useState(true);
+  const [showHarvestReception, setShowHarvestReception] = useState(true);
   const [showAccountingBilling, setShowAccountingBilling] = useState(true);
   const [showSalesProcess, setShowSalesProcess] = useState(true);
   const [showFinancialRecords, setShowFinancialRecords] = useState(true);
@@ -335,6 +336,57 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
+          {/* Harvest & Reception Process Section */}
+          <Separator className="my-3" />
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-between px-3 h-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-transparent",
+                isRTL && "flex-row-reverse text-right"
+              )}
+              onClick={() => setShowHarvestReception(!showHarvestReception)}
+            >
+              <span className={isRTL ? "text-right" : ""}>{t('nav.harvestReception')}</span>
+              {showHarvestReception ? <ChevronDown className="h-3 w-3 flex-shrink-0" /> : <ChevronRight className="h-3 w-3 flex-shrink-0" />}
+            </Button>
+            {showHarvestReception && (
+              <>
+                <ProtectedNavItem action="read" subject="Harvest">
+                  <Button
+                    variant="ghost"
+                    className={getButtonClassName(currentPath === '/harvests')}
+                    onClick={(e) => handleNavigation('/harvests', e)}
+                  >
+                    {renderIcon(Wheat)}
+                    {renderText(t('nav.harvests'))}
+                  </Button>
+                </ProtectedNavItem>
+
+                <ProtectedNavItem action="read" subject="ReceptionBatch">
+                  <Button
+                    variant="ghost"
+                    className={getButtonClassName(currentPath === '/reception-batches')}
+                    onClick={(e) => handleNavigation('/reception-batches', e)}
+                  >
+                    {renderIcon(ClipboardCheck)}
+                    {renderText(t('nav.receptionBatches'))}
+                  </Button>
+                </ProtectedNavItem>
+
+                <ProtectedNavItem action="read" subject="ReceptionBatch">
+                  <Button
+                    variant="ghost"
+                    className={getButtonClassName(currentPath === '/quality-control')}
+                    onClick={(e) => handleNavigation('/quality-control', e)}
+                  >
+                    {renderIcon(Scale)}
+                    {renderText(t('nav.qualityControl'))}
+                  </Button>
+                </ProtectedNavItem>
+              </>
+            )}
+          </div>
 
           {/* Accounting & Billing Section */}
           <ProtectedNavItem action="read" subject="Invoice">
