@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import type { Tax } from '../lib/taxCalculations';
+import { taxesApi } from '../lib/api/taxes';
+import type { CreateTaxInput } from '../lib/api/taxes';
 
 /**
  * Hook to fetch all active taxes for the current organization
@@ -16,22 +16,10 @@ export function useTaxes(invoiceType?: 'sales' | 'purchase') {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('taxes')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      // Filter by invoice type if specified
-      if (invoiceType) {
-        query = query.or(`tax_type.eq.${invoiceType},tax_type.eq.both`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as Tax[];
+      return taxesApi.getAll({
+        tax_type: invoiceType,
+        is_active: true,
+      }, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -50,15 +38,11 @@ export function useTax(taxId: string | null) {
         throw new Error('Tax ID is required');
       }
 
-      const { data, error } = await supabase
-        .from('taxes')
-        .select('*')
-        .eq('id', taxId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as Tax;
+      return taxesApi.getOne(taxId, currentOrganization.id);
     },
     enabled: !!taxId && !!currentOrganization?.id,
   });
@@ -82,35 +66,16 @@ export function usePurchaseTaxes() {
  * Hook to create a new tax
  */
 export function useCreateTax() {
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (tax: {
-      tax_name: string;
-      tax_rate: number;
-      tax_type: 'sales' | 'purchase' | 'both';
-      is_active?: boolean;
-    }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+    mutationFn: async (tax: CreateTaxInput) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('taxes')
-        .insert({
-          organization_id: currentOrganization.id,
-          name: tax.tax_name,
-          rate: tax.tax_rate,
-          tax_type: tax.tax_type,
-          is_active: tax.is_active ?? true,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Tax;
+      return taxesApi.create(tax, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['taxes', currentOrganization?.id] });

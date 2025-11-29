@@ -33,6 +33,7 @@ import { ReceptionBatchesModule } from './modules/reception-batches/reception-ba
 import { BlogsModule } from './modules/blogs/blogs.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { TaxesModule } from './modules/taxes/taxes.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
     // Business logic modules
     SequencesModule,
     AccountsModule,
+    TaxesModule,
     SalesOrdersModule,
     PurchaseOrdersModule,
     InvoicesModule,
