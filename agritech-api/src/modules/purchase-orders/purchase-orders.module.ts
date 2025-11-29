@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PurchaseOrdersService } from './purchase-orders.service';
-import { SupabaseModule } from '../../common/supabase/supabase.module';
-import { SequenceModule } from '../../common/sequence/sequence.module';
+import { DatabaseModule } from '../database/database.module';
+import { SequencesModule } from '../sequences/sequences.module';
 
 @Module({
-  imports: [SupabaseModule, SequenceModule],
+  imports: [DatabaseModule, SequencesModule],
   controllers: [PurchaseOrdersController],
   providers: [PurchaseOrdersService],
   exports: [PurchaseOrdersService],

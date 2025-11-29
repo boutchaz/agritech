@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { SupabaseService } from '../../common/supabase/supabase.service';
-import { SequenceService } from '../../common/sequence/sequence.service';
+import { DatabaseService } from '../database/database.service';
+import { SequencesService } from '../sequences/sequences.service';
 import {
   CreateSalesOrderDto,
   UpdateSalesOrderDto,
@@ -15,8 +15,8 @@ export class SalesOrdersService {
   private readonly logger = new Logger(SalesOrdersService.name);
 
   constructor(
-    private readonly supabase: SupabaseService,
-    private readonly sequenceService: SequenceService,
+    private readonly databaseService: DatabaseService,
+    private readonly sequencesService: SequencesService,
   ) {}
 
   /**
@@ -27,15 +27,15 @@ export class SalesOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       // Generate order number if not provided
       let orderNumber = createSalesOrderDto.order_number;
       if (!orderNumber) {
-        orderNumber = await this.sequenceService.getNextSequence(
-          'sales_order',
+        orderNumber = await this.sequencesService.getNextSequence(
           organizationId,
+          'sales_order' as any,
         );
       }
 
@@ -107,7 +107,7 @@ export class SalesOrdersService {
    * Find all sales orders with filters
    */
   async findAll(filters: SalesOrderFiltersDto, organizationId: string) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       let query = supabaseClient
@@ -185,7 +185,7 @@ export class SalesOrdersService {
    * Find one sales order by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -219,7 +219,7 @@ export class SalesOrdersService {
     updateSalesOrderDto: UpdateSalesOrderDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       // Check if order exists
@@ -256,7 +256,7 @@ export class SalesOrdersService {
     updateStatusDto: UpdateStatusDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       // Check if order exists
@@ -303,7 +303,7 @@ export class SalesOrdersService {
    * Delete a sales order (only if status is draft)
    */
   async remove(id: string, organizationId: string) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       const order = await this.findOne(id, organizationId);
@@ -419,7 +419,7 @@ export class SalesOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.supabase.getClient();
+    const supabaseClient = this.databaseService.getClient();
 
     try {
       // Fetch sales order with items
@@ -479,9 +479,9 @@ export class SalesOrdersService {
       const grandTotal = subtotal + taxTotal;
 
       // Generate invoice number
-      const invoiceNumber = await this.sequenceService.getNextSequence(
-        'invoice',
+      const invoiceNumber = await this.sequencesService.getNextSequence(
         organizationId,
+        'invoice' as any,
       );
 
       // Create invoice
