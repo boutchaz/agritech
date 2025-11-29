@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
@@ -18,7 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
-import { InvoiceFiltersDto, UpdateInvoiceStatusDto } from './dto';
+import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -60,6 +61,19 @@ export class InvoicesController {
   async findOne(@Req() req, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
     return this.invoicesService.findOne(id, organizationId);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new invoice' })
+  @ApiResponse({
+    status: 201,
+    description: 'Invoice created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  async create(@Req() req, @Body() dto: CreateInvoiceDto) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.invoicesService.create(dto, organizationId, userId);
   }
 
   @Patch(':id/status')
