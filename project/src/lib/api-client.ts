@@ -35,8 +35,8 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
     'Authorization': `Bearer ${session.access_token}`,
   };
 
-  // Add organization ID header if available
-  if (orgId) {
+  // Add organization ID header if available and valid (not "undefined" string)
+  if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
     headers['X-Organization-Id'] = orgId;
   }
 
