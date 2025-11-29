@@ -1,27 +1,20 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskFiltersDto } from './dto/task-filters.dto';
 import { AssignTaskDto } from './dto/assign-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
 import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const client = createClient(supabaseUrl, supabaseKey);
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class TasksService {
+  constructor(private readonly databaseService: DatabaseService) {}
   /**
    * Verify user has access to the organization
    */
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
+    const client = this.databaseService.getAdminClient();
     const { data: orgUser } = await client
       .from('organization_users')
       .select('organization_id')
@@ -40,6 +33,7 @@ export class TasksService {
    */
   async findAll(userId: string, organizationId: string, filters?: TaskFiltersDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     let query = client
       .from('tasks')
@@ -114,6 +108,7 @@ export class TasksService {
    */
   async findOne(userId: string, organizationId: string, taskId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     const { data: task, error } = await client
       .from('tasks')
@@ -150,6 +145,7 @@ export class TasksService {
    */
   async create(userId: string, organizationId: string, createTaskDto: CreateTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     const taskData = {
       ...createTaskDto,
@@ -189,6 +185,7 @@ export class TasksService {
    */
   async update(userId: string, organizationId: string, taskId: string, updateTaskDto: UpdateTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization
     const { data: existingTask } = await client
@@ -233,6 +230,7 @@ export class TasksService {
    */
   async remove(userId: string, organizationId: string, taskId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization
     const { data: existingTask } = await client
@@ -263,6 +261,7 @@ export class TasksService {
    */
   async assign(userId: string, organizationId: string, taskId: string, assignTaskDto: AssignTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization
     const { data: existingTask } = await client
@@ -310,6 +309,7 @@ export class TasksService {
    */
   async complete(userId: string, organizationId: string, taskId: string, completeTaskDto: CompleteTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization
     const { data: existingTask } = await client
@@ -369,6 +369,7 @@ export class TasksService {
     completeDto: CompleteHarvestTaskDto,
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization and is a harvest task
     const { data: existingTask } = await client
@@ -470,6 +471,7 @@ export class TasksService {
    */
   async getStatistics(userId: string, organizationId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
 
     const { data: tasks, error } = await client
       .from('tasks')

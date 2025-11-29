@@ -1,21 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { UpdateHarvestDto } from './dto/update-harvest.dto';
 import { HarvestFiltersDto } from './dto/harvest-filters.dto';
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const client = createClient(supabaseUrl, supabaseKey);
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class HarvestsService {
+  constructor(private readonly databaseService: DatabaseService) {}
+
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
+    const client = this.databaseService.getAdminClient();
     const { data: orgUser } = await client
       .from('organization_users')
       .select('organization_id')
@@ -32,6 +26,7 @@ export class HarvestsService {
   async findAll(userId: string, organizationId: string, filters?: HarvestFiltersDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('harvest_records')
       .select('*')
@@ -65,6 +60,7 @@ export class HarvestsService {
   async findOne(userId: string, organizationId: string, harvestId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('harvest_records')
       .select('*')
@@ -81,6 +77,7 @@ export class HarvestsService {
   async create(userId: string, organizationId: string, createHarvestDto: CreateHarvestDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('harvest_records')
       .insert({
@@ -99,6 +96,7 @@ export class HarvestsService {
   async update(userId: string, organizationId: string, harvestId: string, updateHarvestDto: UpdateHarvestDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data: existing } = await client
       .from('harvest_records')
       .select('id')
@@ -122,6 +120,7 @@ export class HarvestsService {
   async remove(userId: string, organizationId: string, harvestId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data: existing } = await client
       .from('harvest_records')
       .select('id')
