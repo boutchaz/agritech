@@ -63,6 +63,7 @@ import { Route as StockReportsRouteImport } from './routes/stock/reports'
 import { Route as StockReceptionRouteImport } from './routes/stock/reception'
 import { Route as StockItemsRouteImport } from './routes/stock/items'
 import { Route as StockInventoryRouteImport } from './routes/stock/inventory'
+import { Route as StockGroupsRouteImport } from './routes/stock/groups'
 import { Route as StockEntriesRouteImport } from './routes/stock/entries'
 import { Route as SettingsWorkUnitsRouteImport } from './routes/settings.work-units'
 import { Route as SettingsUsersRouteImport } from './routes/settings.users'
@@ -355,6 +356,11 @@ const StockInventoryRoute = StockInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => StockRoute,
 } as any)
+const StockGroupsRoute = StockGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => StockRoute,
+} as any)
 const StockEntriesRoute = StockEntriesRouteImport.update({
   id: '/entries',
   path: '/entries',
@@ -524,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
+  '/stock/groups': typeof StockGroupsRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
@@ -596,6 +603,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
+  '/stock/groups': typeof StockGroupsRoute
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
   '/stock/reports': typeof StockReportsRoute
@@ -674,6 +682,7 @@ export interface FileRoutesById {
   '/settings/users': typeof SettingsUsersRoute
   '/settings/work-units': typeof SettingsWorkUnitsRoute
   '/stock/entries': typeof StockEntriesRoute
+  '/stock/groups': typeof StockGroupsRoute
   '/stock/inventory': typeof StockInventoryRouteWithChildren
   '/stock/items': typeof StockItemsRoute
   '/stock/reception': typeof StockReceptionRoute
@@ -753,6 +762,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/stock/entries'
+    | '/stock/groups'
     | '/stock/inventory'
     | '/stock/items'
     | '/stock/reception'
@@ -825,6 +835,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/stock/entries'
+    | '/stock/groups'
     | '/stock/items'
     | '/stock/reception'
     | '/stock/reports'
@@ -902,6 +913,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/stock/entries'
+    | '/stock/groups'
     | '/stock/inventory'
     | '/stock/items'
     | '/stock/reception'
@@ -1351,6 +1363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StockInventoryRouteImport
       parentRoute: typeof StockRoute
     }
+    '/stock/groups': {
+      id: '/stock/groups'
+      path: '/groups'
+      fullPath: '/stock/groups'
+      preLoaderRoute: typeof StockGroupsRouteImport
+      parentRoute: typeof StockRoute
+    }
     '/stock/entries': {
       id: '/stock/entries'
       path: '/entries'
@@ -1611,6 +1630,7 @@ const StockInventoryRouteWithChildren = StockInventoryRoute._addFileChildren(
 
 interface StockRouteChildren {
   StockEntriesRoute: typeof StockEntriesRoute
+  StockGroupsRoute: typeof StockGroupsRoute
   StockInventoryRoute: typeof StockInventoryRouteWithChildren
   StockItemsRoute: typeof StockItemsRoute
   StockReceptionRoute: typeof StockReceptionRoute
@@ -1622,6 +1642,7 @@ interface StockRouteChildren {
 
 const StockRouteChildren: StockRouteChildren = {
   StockEntriesRoute: StockEntriesRoute,
+  StockGroupsRoute: StockGroupsRoute,
   StockInventoryRoute: StockInventoryRouteWithChildren,
   StockItemsRoute: StockItemsRoute,
   StockReceptionRoute: StockReceptionRoute,

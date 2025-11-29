@@ -1,23 +1,16 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const client = createClient(supabaseUrl, supabaseKey);
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class WorkersService {
+  constructor(private readonly databaseService: DatabaseService) {}
   /**
    * Verify user has access to the organization
    */
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
+    const client = this.databaseService.getAdminClient();
     const { data: orgUser } = await client
       .from('organization_users')
       .select('organization_id')
@@ -37,6 +30,7 @@ export class WorkersService {
   async findAll(userId: string, organizationId: string, farmId?: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('workers')
       .select(`
@@ -74,6 +68,7 @@ export class WorkersService {
   async findActive(userId: string, organizationId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data: workers, error } = await client
       .from('workers')
       .select(`
@@ -106,6 +101,7 @@ export class WorkersService {
   async findOne(userId: string, organizationId: string, workerId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data: worker, error } = await client
       .from('workers')
       .select(`
@@ -142,6 +138,7 @@ export class WorkersService {
   async create(userId: string, organizationId: string, createWorkerDto: CreateWorkerDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Sanitize data: convert empty strings to null
     const sanitizedData = {
       ...createWorkerDto,
@@ -200,6 +197,7 @@ export class WorkersService {
   async update(userId: string, organizationId: string, workerId: string, updateWorkerDto: UpdateWorkerDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify worker belongs to organization
     const { data: existingWorker } = await client
       .from('workers')
@@ -268,6 +266,7 @@ export class WorkersService {
   async deactivate(userId: string, organizationId: string, workerId: string, endDate?: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify worker belongs to organization
     const { data: existingWorker } = await client
       .from('workers')
@@ -315,6 +314,7 @@ export class WorkersService {
   async remove(userId: string, organizationId: string, workerId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify worker belongs to organization
     const { data: existingWorker } = await client
       .from('workers')
@@ -345,6 +345,7 @@ export class WorkersService {
   async getStats(userId: string, organizationId: string, workerId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Get worker
     const { data: worker } = await client
       .from('workers')

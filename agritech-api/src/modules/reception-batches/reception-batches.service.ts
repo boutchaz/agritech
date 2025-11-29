@@ -1,22 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
 import { CreateReceptionBatchDto } from './dto/create-reception-batch.dto';
 import { UpdateQualityControlDto } from './dto/update-quality-control.dto';
 import { MakeReceptionDecisionDto } from './dto/make-reception-decision.dto';
 import { ProcessReceptionPaymentDto } from './dto/process-reception-payment.dto';
 import { ReceptionBatchFiltersDto } from './dto/reception-batch-filters.dto';
-
-const client = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class ReceptionBatchesService {
+  constructor(private readonly databaseService: DatabaseService) {}
   private async verifyOrganizationAccess(
     userId: string,
     organizationId: string,
   ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('organization_members')
       .select('id')
@@ -30,6 +27,7 @@ export class ReceptionBatchesService {
   }
 
   private async generateBatchCode(organizationId: string): Promise<string> {
+    const client = this.databaseService.getAdminClient();
     const { count } = await client
       .from('reception_batches')
       .select('*', { count: 'exact', head: true })
@@ -50,6 +48,7 @@ export class ReceptionBatchesService {
 
     const batchCode = await this.generateBatchCode(organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('reception_batches')
       .insert({
@@ -79,6 +78,7 @@ export class ReceptionBatchesService {
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify batch exists and belongs to organization
     const { data: batch } = await client
       .from('reception_batches')
@@ -128,6 +128,7 @@ export class ReceptionBatchesService {
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify batch exists and is quality checked
     const { data: batch } = await client
       .from('reception_batches')
@@ -182,6 +183,7 @@ export class ReceptionBatchesService {
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     // Verify batch exists and has decision
     const { data: batch } = await client
       .from('reception_batches')
@@ -364,6 +366,7 @@ export class ReceptionBatchesService {
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('reception_batches')
       .select(`
@@ -428,6 +431,7 @@ export class ReceptionBatchesService {
   async findOne(userId: string, organizationId: string, batchId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('reception_batches')
       .select(`
@@ -455,6 +459,7 @@ export class ReceptionBatchesService {
   async cancel(userId: string, organizationId: string, batchId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
+    const client = this.databaseService.getAdminClient();
     const { data: batch } = await client
       .from('reception_batches')
       .select('status')

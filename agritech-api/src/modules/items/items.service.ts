@@ -8,7 +8,7 @@ import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.
 export class ItemsService {
   private readonly logger = new Logger(ItemsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService) { }
 
   // =====================================================
   // ITEM GROUPS
@@ -694,96 +694,121 @@ export class ItemsService {
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
-    // First, get warehouse IDs for the farm if filtering by farm
-    let warehouseIds: string[] | null = null;
-    if (filters?.farm_id) {
-      const { data: warehouses, error: whError } = await supabase
-        .from('warehouses')
-        .select('id')
+    try {
+      // First, get warehouse IDs for the farm if filtering by farm
+      let warehouseIds: string[] | null = null;
+      if (filters?.farm_id) {
+        const { data: warehouses, error: whError } = await supabase
+          .from('warehouses')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('farm_id', filters.farm_id)
+          .eq('is_active', true);
+
+        if (whError) {
+          this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
+          throw new BadRequestException(`Failed to fetch warehouses: ${whError.message}`);
+        }
+
+        warehouseIds = warehouses?.map((w) => w.id) || [];
+        if (warehouseIds.length === 0) {
+          return {}; // No warehouses for this farm
+        }
+      }
+
+      // Query stock valuation with explicit column selection to avoid schema cache issues
+      let query = supabase
+        .from('stock_valuation')
+        .select(`
+          item_id,
+          remaining_quantity,
+          total_cost,
+          warehouse_id
+        `)
         .eq('organization_id', organizationId)
-        .eq('farm_id', filters.farm_id)
-        .eq('is_active', true);
+        .gt('remaining_quantity', 0);
 
-      if (whError) {
-        this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
-        throw new BadRequestException(`Failed to fetch warehouses: ${whError.message}`);
+      if (warehouseIds) {
+        query = query.in('warehouse_id', warehouseIds);
       }
 
-      warehouseIds = warehouses?.map((w) => w.id) || [];
-      if (warehouseIds.length === 0) {
-        return {}; // No warehouses for this farm
-      }
-    }
-
-    let query = supabase
-      .from('stock_valuation')
-      .select(`
-        item_id,
-        remaining_quantity,
-        total_cost,
-        warehouse_id,
-        warehouse:warehouses!inner(
-          id,
-          name,
-          farm_id,
-          farm:farms(id, name)
-        ),
-        item:items!inner(
-          id,
-          item_code,
-          item_name,
-          default_unit
-        )
-      `)
-      .eq('organization_id', organizationId)
-      .gt('remaining_quantity', 0);
-
-    if (warehouseIds) {
-      query = query.in('warehouse_id', warehouseIds);
-    }
-
-    if (filters?.item_id) {
-      query = query.eq('item_id', filters.item_id);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      this.logger.error(`Failed to fetch stock levels: ${error.message}`);
-      throw new BadRequestException(`Failed to fetch stock levels: ${error.message}`);
-    }
-
-    // Aggregate by item_id with farm context
-    const aggregated = (data || []).reduce((acc: any, val: any) => {
-      const itemId = val.item_id;
-      if (!acc[itemId]) {
-        acc[itemId] = {
-          total_quantity: 0,
-          total_value: 0,
-          is_low_stock: false,
-          warehouses: [],
-        };
-      }
-      const quantity = parseFloat(val.remaining_quantity || 0);
-      const value = parseFloat(val.total_cost || 0);
-      acc[itemId].total_quantity += quantity;
-      acc[itemId].total_value += value;
-
-      // Add warehouse info
-      if (val.warehouse) {
-        acc[itemId].warehouses.push({
-          warehouse_id: val.warehouse.id,
-          warehouse_name: val.warehouse.name,
-          farm_id: val.warehouse.farm_id,
-          farm_name: val.warehouse.farm?.name || null,
-          quantity,
-          value,
-        });
+      if (filters?.item_id) {
+        query = query.eq('item_id', filters.item_id);
       }
 
-      return acc;
-    }, {});
+      const { data: stockData, error: stockError } = await query;
 
-    return aggregated;
+      if (stockError) {
+        this.logger.error(`Failed to fetch stock levels: ${stockError.message}`);
+        throw new BadRequestException(`Failed to fetch stock levels: ${stockError.message}`);
+      }
+
+      if (!stockData || stockData.length === 0) {
+        return {};
+      }
+
+      // Get unique warehouse and item IDs
+      const uniqueWarehouseIds = [...new Set(stockData.map(s => s.warehouse_id))];
+      const uniqueItemIds = [...new Set(stockData.map(s => s.item_id))];
+
+      // Fetch warehouse details separately
+      const { data: warehouses } = await supabase
+        .from('warehouses')
+        .select('id, name, farm_id, farm:farms(id, name)')
+        .in('id', uniqueWarehouseIds);
+
+      // Fetch item details separately
+      const { data: items } = await supabase
+        .from('items')
+        .select('id, item_code, item_name, default_unit')
+        .in('id', uniqueItemIds);
+
+      // Create lookup maps
+      const warehouseMap = new Map(warehouses?.map(w => [w.id, w]) || []);
+      const itemMap = new Map(items?.map(i => [i.id, i]) || []);
+
+      // Aggregate by item_id with farm context
+      const aggregated = stockData.reduce((acc: any, val: any) => {
+        const itemId = val.item_id;
+        if (!acc[itemId]) {
+          const item = itemMap.get(itemId);
+          acc[itemId] = {
+            item_id: itemId,
+            item_code: item?.item_code || null,
+            item_name: item?.item_name || 'Unknown Item',
+            default_unit: item?.default_unit || null,
+            total_quantity: 0,
+            total_value: 0,
+            warehouses: [],
+          };
+        }
+
+        const quantity = parseFloat(val.remaining_quantity || 0);
+        const value = parseFloat(val.total_cost || 0);
+        acc[itemId].total_quantity += quantity;
+        acc[itemId].total_value += value;
+
+        // Add warehouse info
+        const warehouse = warehouseMap.get(val.warehouse_id);
+        if (warehouse) {
+          acc[itemId].warehouses.push({
+            warehouse_id: warehouse.id,
+            warehouse_name: warehouse.name,
+            farm_id: warehouse.farm_id,
+            farm_name: (warehouse as any).farm?.name || null,
+            quantity,
+            value,
+          });
+        }
+
+        return acc;
+      }, {});
+
+      return aggregated;
+    } catch (error) {
+      this.logger.error('Error in getStockLevels:', error);
+      throw error;
+    }
   }
+
 }

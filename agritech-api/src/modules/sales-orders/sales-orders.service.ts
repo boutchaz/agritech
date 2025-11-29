@@ -17,7 +17,7 @@ export class SalesOrdersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
-  ) {}
+  ) { }
 
   /**
    * Create a new sales order with items
@@ -575,20 +575,6 @@ export class SalesOrdersService {
         throw new BadRequestException(`Failed to create invoice items: ${itemsError.message}`);
       }
 
-      // Update sales order invoiced amounts
-      const newInvoicedAmount = (salesOrder.invoiced_amount || 0) + grandTotal;
-      const newStatus =
-        newInvoicedAmount >= salesOrder.total_amount ? 'invoiced' : 'partially_invoiced';
-
-      await supabaseClient
-        .from('sales_orders')
-        .update({
-          invoiced_amount: newInvoicedAmount,
-          outstanding_amount: salesOrder.total_amount - newInvoicedAmount,
-          status: newStatus,
-        })
-        .eq('id', salesOrderId);
-
       // Update order items invoiced quantities
       for (const item of uninvoicedItems) {
         await supabaseClient
@@ -599,7 +585,14 @@ export class SalesOrdersService {
           .eq('id', item.id);
       }
 
+      // Note: Sales order status and amounts are now automatically updated by database triggers
+      // The trigger 'update_sales_order_after_invoice' handles:
+      // - invoiced_amount calculation
+      // - outstanding_amount calculation  
+      // - status transition (partially_invoiced / invoiced)
+
       return invoice;
+
     } catch (error) {
       this.logger.error('Error converting sales order to invoice:', error);
       throw error;
