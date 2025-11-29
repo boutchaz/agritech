@@ -85,7 +85,7 @@ export function useSalesOrders(status?: SalesOrder['status']) {
         status: status,
         page: 1,
         limit: 1000, // TODO: Add pagination support
-      });
+      }, currentOrganization.id);
 
       return response.data as SalesOrder[];
     },
@@ -103,8 +103,9 @@ export function useSalesOrder(orderId: string | null) {
     queryKey: ['sales_order', orderId],
     queryFn: async () => {
       if (!orderId) throw new Error('Order ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const data = await salesOrdersApi.getSalesOrder(orderId);
+      const data = await salesOrdersApi.getSalesOrder(orderId, currentOrganization.id);
       return data as SalesOrderWithItems;
     },
     enabled: !!orderId && !!currentOrganization?.id,

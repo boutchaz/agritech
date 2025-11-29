@@ -86,7 +86,7 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
         status: status,
         page: 1,
         limit: 1000, // TODO: Add pagination support
-      });
+      }, currentOrganization.id);
 
       return (response.data || []) as PurchaseOrderWithItems[];
     },
@@ -104,8 +104,9 @@ export function usePurchaseOrder(poId: string | null) {
     queryKey: ['purchase_order', poId],
     queryFn: async () => {
       if (!poId) throw new Error('Purchase Order ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const data = await purchaseOrdersApi.getPurchaseOrder(poId);
+      const data = await purchaseOrdersApi.getPurchaseOrder(poId, currentOrganization.id);
       return data as PurchaseOrderWithItems;
     },
     enabled: !!poId && !!currentOrganization?.id,

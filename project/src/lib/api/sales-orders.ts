@@ -78,56 +78,56 @@ export const salesOrdersApi = {
   /**
    * Get all sales orders with optional filters
    */
-  async getSalesOrders(filters?: SalesOrderFilters) {
-    const { data } = await apiClient.get(BASE_URL, { params: filters });
+  async getSalesOrders(filters?: SalesOrderFilters, organizationId?: string) {
+    const { data } = await apiClient.get(BASE_URL, {}, organizationId);
     return data;
   },
 
   /**
    * Get a single sales order by ID
    */
-  async getSalesOrder(id: string) {
-    const { data } = await apiClient.get(`${BASE_URL}/${id}`);
+  async getSalesOrder(id: string, organizationId?: string) {
+    const { data } = await apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
     return data;
   },
 
   /**
    * Create a new sales order
    */
-  async createSalesOrder(input: CreateSalesOrderInput) {
-    const { data } = await apiClient.post(BASE_URL, input);
+  async createSalesOrder(input: CreateSalesOrderInput, organizationId?: string) {
+    const { data } = await apiClient.post(BASE_URL, input, {}, organizationId);
     return data;
   },
 
   /**
    * Update an existing sales order
    */
-  async updateSalesOrder(id: string, input: UpdateSalesOrderInput) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input);
+  async updateSalesOrder(id: string, input: UpdateSalesOrderInput, organizationId?: string) {
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
     return data;
   },
 
   /**
    * Update sales order status
    */
-  async updateSalesOrderStatus(id: string, input: UpdateStatusInput) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input);
+  async updateSalesOrderStatus(id: string, input: UpdateStatusInput, organizationId?: string) {
+    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input, {}, organizationId);
     return data;
   },
 
   /**
    * Delete a sales order (only drafts)
    */
-  async deleteSalesOrder(id: string) {
-    const { data } = await apiClient.delete(`${BASE_URL}/${id}`);
+  async deleteSalesOrder(id: string, organizationId?: string) {
+    const { data} = await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
     return data;
   },
 
   /**
    * Convert sales order to invoice
    */
-  async convertToInvoice(id: string, params?: { invoice_date?: string; due_date?: string }) {
-    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {});
+  async convertToInvoice(id: string, params?: { invoice_date?: string; due_date?: string }, organizationId?: string) {
+    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {}, {}, organizationId);
     return data;
   },
 };
