@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
+import { invoicesApi } from '../lib/api/invoices';
 
 export interface Invoice {
   id: string;
@@ -63,13 +64,7 @@ export function useInvoices() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('invoice_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await invoicesApi.getAll({}, currentOrganization.id);
       return data as Invoice[];
     },
     enabled: !!currentOrganization?.id,
@@ -89,14 +84,7 @@ export function useInvoicesByType(type: 'sales' | 'purchase') {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('invoice_type', type)
-        .order('invoice_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await invoicesApi.getAll({ invoice_type: type }, currentOrganization.id);
       return data as Invoice[];
     },
     enabled: !!currentOrganization?.id,
@@ -115,18 +103,11 @@ export function useInvoice(invoiceId: string | null) {
       if (!invoiceId) {
         throw new Error('Invoice ID is required');
       }
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          items:invoice_items(*)
-        `)
-        .eq('id', invoiceId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await invoicesApi.getOne(invoiceId, currentOrganization.id);
       return data as InvoiceWithItems;
     },
     enabled: !!invoiceId && !!currentOrganization?.id,
@@ -146,14 +127,7 @@ export function useInvoicesByStatus(status: Invoice['status']) {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('status', status)
-        .order('invoice_date', { ascending: false});
-
-      if (error) throw error;
+      const data = await invoicesApi.getAll({ status }, currentOrganization.id);
       return data as Invoice[];
     },
     enabled: !!currentOrganization?.id,
@@ -307,14 +281,16 @@ export function useUpdateInvoiceStatus() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: { invoice_id: string; status: Invoice['status'] }) => {
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: data.status })
-        .eq('id', data.invoice_id)
-        .eq('organization_id', currentOrganization?.id || '');
+    mutationFn: async (data: { invoice_id: string; status: Invoice['status']; remarks?: string }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      await invoicesApi.updateStatus(
+        data.invoice_id,
+        { status: data.status, remarks: data.remarks },
+        currentOrganization.id
+      );
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
@@ -332,14 +308,11 @@ export function useDeleteInvoice() {
 
   return useMutation({
     mutationFn: async (invoiceId: string) => {
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoiceId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .eq('status', 'draft'); // Only allow deleting drafts
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      await invoicesApi.delete(invoiceId, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
