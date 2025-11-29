@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { salesOrdersApi } from '../lib/api/sales-orders';
 import { createInvoiceFromOrder } from '../lib/invoice-service';
 
 export interface SalesOrder {
@@ -82,19 +83,13 @@ export function useSalesOrders(status?: SalesOrder['status']) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('sales_orders')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('order_date', { ascending: false });
+      const response = await salesOrdersApi.getSalesOrders({
+        status: status,
+        page: 1,
+        limit: 1000, // TODO: Add pagination support
+      });
 
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as SalesOrder[];
+      return response.data as SalesOrder[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -111,14 +106,7 @@ export function useSalesOrder(orderId: string | null) {
     queryFn: async () => {
       if (!orderId) throw new Error('Order ID is required');
 
-      const { data, error } = await supabase
-        .from('sales_orders')
-        .select(`*, items:sales_order_items(*)`)
-        .eq('id', orderId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await salesOrdersApi.getSalesOrder(orderId);
       return data as SalesOrderWithItems;
     },
     enabled: !!orderId && !!currentOrganization?.id,
@@ -235,16 +223,12 @@ export function useUpdateSalesOrderStatus() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: SalesOrder['status'] }) => {
-      const { data, error } = await supabase
-        .from('sales_orders')
-        .update({ status })
-        .eq('id', orderId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .select()
-        .single();
-
-      if (error) throw error;
+    mutationFn: async ({ orderId, status, notes }: {
+      orderId: string;
+      status: SalesOrder['status'];
+      notes?: string;
+    }) => {
+      const data = await salesOrdersApi.updateSalesOrderStatus(orderId, { status, notes });
       return data as SalesOrder;
     },
     onSuccess: () => {

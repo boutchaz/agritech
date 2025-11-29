@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { purchaseOrdersApi } from '../lib/api/purchase-orders';
 import { calculateInvoiceTotals, type InvoiceItemInput } from '../lib/taxCalculations';
 import { createInvoiceFromOrder } from '../lib/invoice-service';
 
@@ -83,19 +84,13 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('purchase_orders')
-        .select('*, items:purchase_order_items(*)')
-        .eq('organization_id', currentOrganization.id)
-        .order('order_date', { ascending: false });
+      const response = await purchaseOrdersApi.getPurchaseOrders({
+        status: status,
+        page: 1,
+        limit: 1000, // TODO: Add pagination support
+      });
 
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as PurchaseOrderWithItems[];
+      return (response.data || []) as PurchaseOrderWithItems[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -112,14 +107,7 @@ export function usePurchaseOrder(poId: string | null) {
     queryFn: async () => {
       if (!poId) throw new Error('Purchase Order ID is required');
 
-      const { data, error } = await supabase
-        .from('purchase_orders')
-        .select(`*, items:purchase_order_items(*)`)
-        .eq('id', poId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await purchaseOrdersApi.getPurchaseOrder(poId);
       return data as PurchaseOrderWithItems;
     },
     enabled: !!poId && !!currentOrganization?.id,
@@ -440,28 +428,15 @@ export function useUpdatePurchaseOrder() {
  */
 export function useUpdatePurchaseOrderStatus() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ poId, status }: { poId: string; status: PurchaseOrder['status'] }) => {
-      const updates: Partial<PurchaseOrder> = { status };
-
-      if (status === 'submitted') {
-        updates.submitted_at = new Date().toISOString();
-        updates.submitted_by = user?.id || null;
-      } else if (status === 'confirmed') {
-        updates.confirmed_at = new Date().toISOString();
-      }
-
-      const { data, error } = await supabase
-        .from('purchase_orders')
-        .update(updates)
-        .eq('id', poId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .select()
-        .single();
-
-      if (error) throw error;
+    mutationFn: async ({ poId, status, notes }: {
+      poId: string;
+      status: PurchaseOrder['status'];
+      notes?: string;
+    }) => {
+      const data = await purchaseOrdersApi.updatePurchaseOrderStatus(poId, { status, notes });
       return data as PurchaseOrder;
     },
     onSuccess: () => {
