@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
+import ModernPageHeader from '../components/ModernPageHeader';
 import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
+import { Building2, ClipboardCheck } from 'lucide-react';
 import type { Module } from '../types';
 import type { ReceptionBatch } from '@/types/reception';
 
@@ -59,10 +61,21 @@ function ReceptionBatchesPage() {
       />
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <ReceptionBatchList
-          onCreateClick={() => setShowCreateForm(true)}
-          onViewClick={handleViewBatch}
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: ClipboardCheck, label: 'Lots de Réception', isActive: true }
+          ]}
+          title="Gestion des Lots de Réception"
+          subtitle="Traçabilité de la réception et contrôle qualité des récoltes"
         />
+
+        <div className="p-6">
+          <ReceptionBatchList
+            onCreateClick={() => setShowCreateForm(true)}
+            onViewClick={handleViewBatch}
+          />
+        </div>
 
         <ReceptionBatchForm
           open={showCreateForm}
