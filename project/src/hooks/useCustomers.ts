@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { customersApi } from '../lib/api/customers';
 
 export interface Customer {
   id: string;
@@ -44,14 +44,10 @@ export function useCustomers() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+      const data = await customersApi.getAll(
+        { is_active: true },
+        currentOrganization.id
+      );
       return data as Customer[];
     },
     enabled: !!currentOrganization?.id,
@@ -70,15 +66,11 @@ export function useCustomer(customerId: string | null) {
       if (!customerId) {
         throw new Error('Customer ID is required');
       }
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await customersApi.getOne(customerId, currentOrganization.id);
       return data as Customer;
     },
     enabled: !!customerId && !!currentOrganization?.id,
@@ -90,7 +82,7 @@ export function useCustomer(customerId: string | null) {
  */
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (customerData: Omit<Customer, 'id' | 'organization_id' | 'created_at' | 'updated_at' | 'created_by'>) => {
@@ -98,17 +90,7 @@ export function useCreateCustomer() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('customers')
-        .insert({
-          ...customerData,
-          organization_id: currentOrganization.id,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await customersApi.create(customerData, currentOrganization.id);
       return data as Customer;
     },
     onSuccess: () => {
@@ -126,15 +108,11 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: async ({ id, ...customerData }: Partial<Customer> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('customers')
-        .update(customerData)
-        .eq('id', id)
-        .eq('organization_id', currentOrganization?.id || '')
-        .select()
-        .single();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      const data = await customersApi.update(id, customerData, currentOrganization.id);
       return data as Customer;
     },
     onSuccess: (_, variables) => {
@@ -153,14 +131,11 @@ export function useDeleteCustomer() {
 
   return useMutation({
     mutationFn: async (customerId: string) => {
-      // Soft delete by setting is_active to false
-      const { error } = await supabase
-        .from('customers')
-        .update({ is_active: false })
-        .eq('id', customerId)
-        .eq('organization_id', currentOrganization?.id || '');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      await customersApi.delete(customerId, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers', currentOrganization?.id] });

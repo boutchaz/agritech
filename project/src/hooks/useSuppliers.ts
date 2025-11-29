@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { suppliersApi } from '../lib/api/suppliers';
 
 export interface Supplier {
   id: string;
@@ -35,14 +35,10 @@ export function useSuppliers() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+      const data = await suppliersApi.getAll(
+        { is_active: true },
+        currentOrganization.id
+      );
       return data as Supplier[];
     },
     enabled: !!currentOrganization?.id,
@@ -61,17 +57,79 @@ export function useSupplier(supplierId: string | null) {
       if (!supplierId) {
         throw new Error('Supplier ID is required');
       }
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('id', supplierId)
-        .eq('organization_id', currentOrganization?.id || '')
-        .single();
-
-      if (error) throw error;
+      const data = await suppliersApi.getOne(supplierId, currentOrganization.id);
       return data as Supplier;
     },
     enabled: !!supplierId && !!currentOrganization?.id,
+  });
+}
+
+/**
+ * Hook to create a new supplier
+ */
+export function useCreateSupplier() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (supplierData: Omit<Supplier, 'id' | 'organization_id' | 'created_at' | 'updated_at'>) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const data = await suppliersApi.create(supplierData, currentOrganization.id);
+      return data as Supplier;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to update a supplier
+ */
+export function useUpdateSupplier() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, ...supplierData }: Partial<Supplier> & { id: string }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const data = await suppliersApi.update(id, supplierData, currentOrganization.id);
+      return data as Supplier;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['supplier', variables.id] });
+    },
+  });
+}
+
+/**
+ * Hook to delete/deactivate a supplier
+ */
+export function useDeleteSupplier() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (supplierId: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      await suppliersApi.delete(supplierId, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers', currentOrganization?.id] });
+    },
   });
 }

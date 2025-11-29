@@ -81,13 +81,33 @@ export function useSalesOrders(status?: SalesOrder['status']) {
         throw new Error('No organization selected');
       }
 
-      const response = await salesOrdersApi.getSalesOrders({
-        status: status,
-        page: 1,
-        limit: 1000, // TODO: Add pagination support
-      }, currentOrganization.id);
+      try {
+        const response = await salesOrdersApi.getSalesOrders({
+          status: status,
+          page: 1,
+          limit: 1000, // TODO: Add pagination support
+        }, currentOrganization.id);
 
-      return response.data as SalesOrder[];
+        // Response structure: { data: SalesOrder[], pagination: {...} }
+        if (!response) {
+          console.error('Sales orders API returned null/undefined response');
+          return [];
+        }
+
+        if (!response.data) {
+          console.error('Sales orders API response missing data property:', response);
+          // If response is an array directly (fallback), return it
+          if (Array.isArray(response)) {
+            return response as SalesOrder[];
+          }
+          return [];
+        }
+
+        return Array.isArray(response.data) ? response.data : [];
+      } catch (error) {
+        console.error('Error fetching sales orders:', error);
+        throw error;
+      }
     },
     enabled: !!currentOrganization?.id,
   });

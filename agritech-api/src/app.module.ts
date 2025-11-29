@@ -35,6 +35,8 @@ import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { TaxesModule } from './modules/taxes/taxes.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { SuppliersModule } from './modules/suppliers/suppliers.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { QuotesModule } from './modules/quotes/quotes.module';
     SequencesModule,
     AccountsModule,
     TaxesModule,
+    CustomersModule,
+    SuppliersModule,
     QuotesModule,
     SalesOrdersModule,
     PurchaseOrdersModule,

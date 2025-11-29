@@ -93,8 +93,9 @@ export const salesOrdersApi = {
       ? `${BASE_URL}?${queryParams.toString()}`
       : BASE_URL;
     
-    const { data } = await apiClient.get(url, {}, organizationId);
-    return data;
+    // The API returns { data: [...], pagination: {...} }
+    const response = await apiClient.get<{ data: unknown[], pagination: unknown }>(url, {}, organizationId);
+    return response;
   },
 
   /**

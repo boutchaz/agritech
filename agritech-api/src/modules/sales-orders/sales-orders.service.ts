@@ -162,21 +162,62 @@ export class SalesOrdersService {
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
+      // Get count separately (Supabase doesn't return count with range queries automatically)
+      const countQuery = supabaseClient
+        .from('sales_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      // Apply same filters to count query
+      if (filters.status) {
+        countQuery.eq('status', filters.status);
+      }
+      if (filters.customer_id) {
+        countQuery.eq('customer_id', filters.customer_id);
+      }
+      if (filters.customer_name) {
+        countQuery.ilike('customer_name', `%${filters.customer_name}%`);
+      }
+      if (filters.order_number) {
+        countQuery.ilike('order_number', `%${filters.order_number}%`);
+      }
+      if (filters.date_from) {
+        countQuery.gte('order_date', filters.date_from);
+      }
+      if (filters.date_to) {
+        countQuery.lte('order_date', filters.date_to);
+      }
+      if (filters.stock_issued !== undefined) {
+        const stockIssued = filters.stock_issued === 'true';
+        countQuery.eq('stock_issued', stockIssued);
+      }
+
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      // Execute both queries in parallel
+      const [dataResult, countResult] = await Promise.all([
+        query,
+        countQuery,
+      ]);
+
+      const { data, error } = dataResult;
+      const { count, error: countError } = countResult;
 
       if (error) {
         this.logger.error('Error fetching sales orders:', error);
         throw new BadRequestException(`Failed to fetch sales orders: ${error.message}`);
       }
 
+      if (countError) {
+        this.logger.warn('Error fetching sales orders count:', countError);
+      }
+
       return {
-        data,
+        data: data || [],
         pagination: {
           page,
           limit,
-          total: count,
+          total: count || 0,
           totalPages: Math.ceil((count || 0) / limit),
         },
       };
