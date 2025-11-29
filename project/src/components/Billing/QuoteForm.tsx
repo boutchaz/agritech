@@ -22,13 +22,17 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle } from 'lucide-react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/config';
+import { QuickCreateCustomer } from './QuickCreateCustomer';
+import { QuickCreateItem } from './QuickCreateItem';
+import { QuickCreateAccount } from './QuickCreateAccount';
+import { QuickCreateTax } from './QuickCreateTax';
 
 interface QuoteFormProps {
   open: boolean;
@@ -51,6 +55,11 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   const isRTL = i18n.language === 'ar';
 
   const [totals, setTotals] = useState<any>(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showTaxModal, setShowTaxModal] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
 
   const revenueAccounts = accounts.filter((acc) => acc.account_type === 'Revenue' && !acc.is_group);
 
@@ -88,6 +97,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
         path: ['valid_until'],
       }
     );
+
+  type QuoteFormData = z.infer<typeof quoteSchema>;
 
   const {
     register,
@@ -195,7 +206,19 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
           {/* Header Information */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="customer_id">{t('quotes.form.customer')} *</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="customer_id">{t('quotes.form.customer')} *</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
+                  onClick={() => setShowCustomerModal(true)}
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  Add New
+                </Button>
+              </div>
               <NativeSelect id="customer_id" {...register('customer_id')}>
                 <option value="">{t('quotes.form.selectCustomer')}</option>
                 {customers.map((customer) => (
@@ -298,6 +321,21 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <SelectValue placeholder={t('quotes.form.selectItem')} />
                               </SelectTrigger>
                               <SelectContent>
+                                <div className="sticky top-0 bg-white border-b pb-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => {
+                                      setCurrentItemIndex(index);
+                                      setShowItemModal(true);
+                                    }}
+                                  >
+                                    <PackagePlus className="h-4 w-4 mr-2" />
+                                    Add New Item
+                                  </Button>
+                                </div>
                                 {itemsLoading ? (
                                   <SelectItem value="_loading" disabled>
                                     {t('quotes.form.loadingItems')}
@@ -349,24 +387,54 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
-                              <option value="">{t('quotes.form.selectAccount')}</option>
-                              {revenueAccounts.map((acc) => (
-                                <option key={acc.id} value={acc.id}>
-                                  {acc.name}
-                                </option>
-                              ))}
-                            </NativeSelect>
+                            <div className="flex gap-1">
+                              <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
+                                <option value="">{t('quotes.form.selectAccount')}</option>
+                                {revenueAccounts.map((acc) => (
+                                  <option key={acc.id} value={acc.id}>
+                                    {acc.name}
+                                  </option>
+                                ))}
+                              </NativeSelect>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="px-2"
+                                title="Add new account"
+                                onClick={() => {
+                                  setCurrentItemIndex(index);
+                                  setShowAccountModal(true);
+                                }}
+                              >
+                                <FolderPlus className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            </div>
                           </td>
                           <td className="py-2 px-3">
-                            <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
-                              <option value="">{t('quotes.form.noTax')}</option>
-                              {taxes.map((tax) => (
-                                <option key={tax.id} value={tax.id}>
-                                  {tax.name} ({tax.rate}%)
-                                </option>
-                              ))}
-                            </NativeSelect>
+                            <div className="flex gap-1">
+                              <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
+                                <option value="">{t('quotes.form.noTax')}</option>
+                                {taxes.map((tax) => (
+                                  <option key={tax.id} value={tax.id}>
+                                    {tax.name} ({tax.rate}%)
+                                  </option>
+                                ))}
+                              </NativeSelect>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="px-2"
+                                title="Add new tax"
+                                onClick={() => {
+                                  setCurrentItemIndex(index);
+                                  setShowTaxModal(true);
+                                }}
+                              >
+                                <PercentCircle className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            </div>
                           </td>
                           <td className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
                             {amount.toFixed(2)}
@@ -461,6 +529,56 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
           </div>
         </form>
       </DialogContent>
+
+      {/* Quick Create Modals */}
+      <QuickCreateCustomer
+        open={showCustomerModal}
+        onOpenChange={setShowCustomerModal}
+        onSuccess={(customerId) => {
+          setValue('customer_id', customerId);
+          setShowCustomerModal(false);
+        }}
+      />
+
+      <QuickCreateItem
+        open={showItemModal}
+        onOpenChange={setShowItemModal}
+        type="sales"
+        onSuccess={(itemId, itemName) => {
+          if (currentItemIndex !== null) {
+            setValue(`items.${currentItemIndex}.item_id`, itemId);
+            setValue(`items.${currentItemIndex}.item_name`, itemName);
+          }
+          setShowItemModal(false);
+          setCurrentItemIndex(null);
+        }}
+      />
+
+      <QuickCreateAccount
+        open={showAccountModal}
+        onOpenChange={setShowAccountModal}
+        accountType="Revenue"
+        onSuccess={(accountId) => {
+          if (currentItemIndex !== null) {
+            setValue(`items.${currentItemIndex}.account_id`, accountId);
+          }
+          setShowAccountModal(false);
+          setCurrentItemIndex(null);
+        }}
+      />
+
+      <QuickCreateTax
+        open={showTaxModal}
+        onOpenChange={setShowTaxModal}
+        taxType="sales"
+        onSuccess={(taxId) => {
+          if (currentItemIndex !== null) {
+            setValue(`items.${currentItemIndex}.tax_id`, taxId);
+          }
+          setShowTaxModal(false);
+          setCurrentItemIndex(null);
+        }}
+      />
     </Dialog>
   );
 };
