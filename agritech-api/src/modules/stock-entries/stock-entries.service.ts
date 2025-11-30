@@ -14,7 +14,7 @@ export class StockEntriesService {
    * Get all stock entries with optional filters
    */
   async findAll(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('stock_entries')
@@ -64,7 +64,7 @@ export class StockEntriesService {
    * Get a single stock entry with items
    */
   async findOne(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('stock_entries')
@@ -98,7 +98,7 @@ export class StockEntriesService {
    * This replaces the database trigger: process_stock_entry_posting()
    */
   async createStockEntry(dto: CreateStockEntryDto): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Validation
     this.validateStockEntry(dto);
@@ -203,7 +203,7 @@ export class StockEntriesService {
     userId: string,
     dto: UpdateStockEntryDto,
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Check if entry exists and is in Draft status
     const { data: entry, error: fetchError } = await supabase
@@ -251,7 +251,7 @@ export class StockEntriesService {
    * This processes all stock movements and valuations
    */
   async postStockEntry(stockEntryId: string, organizationId: string, userId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     return this.executeInTransaction(supabase, async (client) => {
       // 1. Get stock entry with items
@@ -303,7 +303,7 @@ export class StockEntriesService {
    * Cancel a stock entry
    */
   async cancelStockEntry(id: string, organizationId: string, userId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     const { data, error } = await supabase
       .from('stock_entries')
@@ -333,7 +333,7 @@ export class StockEntriesService {
    * Delete a draft stock entry
    */
   async deleteStockEntry(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // RLS policy ensures only Draft entries can be deleted
     const { error } = await supabase
@@ -354,7 +354,7 @@ export class StockEntriesService {
    * Get stock movements with filters
    */
   async getStockMovements(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     let query = supabase
       .from('stock_movements')
