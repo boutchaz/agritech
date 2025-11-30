@@ -70,6 +70,8 @@ async function bootstrap() {
       'x-organization-id',
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers',
+      'Cache-Control',
+      'Pragma',
     ],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     preflightContinue: false,
