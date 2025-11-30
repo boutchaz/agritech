@@ -104,9 +104,6 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     setIsMobileMenuOpen(false);
   };
 
-  // Get current page name for mobile header
-  const currentPage = menuItems.find(item => isActive(item.path));
-
   return (
     <div className="flex h-full relative">
       {/* Mobile Menu Button - Fixed and always visible on mobile */}
@@ -211,36 +208,8 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto w-full">
-        {/* Mobile breadcrumb/current page indicator */}
-        <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              {currentPage?.icon && <currentPage.icon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />}
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                  {currentPage?.name || t('settings.title')}
-                </h2>
-                {currentPage?.description && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {currentPage.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex-shrink-0"
-              aria-label="Open settings menu"
-            >
-              <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </button>
-          </div>
-        </div>
-        {/* Add padding bottom on mobile to prevent content being hidden by floating button */}
-        <div className="pb-20 md:pb-0">
-          {children}
-        </div>
+      <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
+        {children}
       </div>
     </div>
   );
