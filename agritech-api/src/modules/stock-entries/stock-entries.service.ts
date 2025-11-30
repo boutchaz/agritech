@@ -101,24 +101,22 @@ export class StockEntriesService {
     // Validation
     this.validateStockEntry(dto);
 
-    // Generate entry number if not provided (outside transaction, uses Supabase RPC)
-    let entryNumber = dto.entry_number;
-    if (!entryNumber) {
-      const supabase = this.databaseService.getAdminClient();
-      const { data: generatedNumber, error: numberError } = await supabase.rpc('generate_stock_entry_number', {
-        p_organization_id: dto.organization_id,
-      });
-
-      if (numberError) {
-        this.logger.error(`Failed to generate entry number: ${numberError.message}`);
-        throw new BadRequestException(`Failed to generate entry number: ${numberError.message}`);
-      }
-
-      entryNumber = generatedNumber as string;
-    }
-
-    // Use PostgreSQL transaction for atomicity
+    // Use PostgreSQL transaction for atomicity (including entry number generation)
     return this.executeInPgTransaction(async (client) => {
+      // Generate entry number inside transaction if not provided
+      let entryNumber = dto.entry_number;
+      if (!entryNumber) {
+        const numberResult = await client.query(
+          `SELECT generate_stock_entry_number($1) as entry_number`,
+          [dto.organization_id]
+        );
+
+        if (!numberResult.rows[0]?.entry_number) {
+          throw new BadRequestException('Failed to generate entry number');
+        }
+
+        entryNumber = numberResult.rows[0].entry_number;
+      }
       // 1. Create stock entry
       const entryResult = await client.query(
         `INSERT INTO stock_entries (
@@ -212,47 +210,78 @@ export class StockEntriesService {
     userId: string,
     dto: UpdateStockEntryDto,
   ): Promise<any> {
-    const supabase = this.databaseService.getAdminClient();
+    return this.executeInPgTransaction(async (client) => {
+      // Check if entry exists and is in Draft status
+      const entryResult = await client.query(
+        `SELECT id, status, organization_id
+         FROM stock_entries
+         WHERE id = $1 AND organization_id = $2`,
+        [id, organizationId],
+      );
 
-    // Check if entry exists and is in Draft status
-    const { data: entry, error: fetchError } = await supabase
-      .from('stock_entries')
-      .select('status, organization_id')
-      .eq('id', id)
-      .eq('organization_id', organizationId)
-      .maybeSingle();
+      if (entryResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found or access denied');
+      }
 
-    if (fetchError) {
-      this.logger.error(`Error fetching stock entry for update: ${fetchError.message}`);
-      throw new BadRequestException(`Failed to fetch stock entry: ${fetchError.message}`);
-    }
+      const entry = entryResult.rows[0];
 
-    if (!entry) {
-      throw new NotFoundException('Stock entry not found or access denied');
-    }
+      if (entry.status !== 'Draft') {
+        throw new BadRequestException('Only draft entries can be updated');
+      }
 
-    if (entry.status !== 'Draft') {
-      throw new BadRequestException('Only draft entries can be updated');
-    }
+      // Build dynamic update query based on provided fields
+      const updateFields: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
 
-    const { data, error } = await supabase
-      .from('stock_entries')
-      .update({
-        ...dto,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('organization_id', organizationId)
-      .select()
-      .maybeSingle();
+      // Add each field from dto if provided
+      const allowedFields = [
+        'entry_type',
+        'entry_date',
+        'from_warehouse_id',
+        'to_warehouse_id',
+        'reference_type',
+        'reference_id',
+        'reference_number',
+        'purpose',
+        'notes',
+      ];
 
-    if (error) {
-      this.logger.error(`Failed to update stock entry: ${error.message}`);
-      throw new BadRequestException(`Failed to update stock entry: ${error.message}`);
-    }
+      for (const field of allowedFields) {
+        if (dto[field] !== undefined) {
+          updateFields.push(`${field} = $${paramIndex++}`);
+          values.push(dto[field]);
+        }
+      }
 
-    return data;
+      // Always update updated_by and updated_at
+      updateFields.push(`updated_by = $${paramIndex++}`);
+      values.push(userId);
+      updateFields.push(`updated_at = $${paramIndex++}`);
+      values.push(new Date());
+
+      // Add WHERE clause parameters
+      values.push(id);
+      values.push(organizationId);
+
+      if (updateFields.length === 0) {
+        return entry; // Nothing to update
+      }
+
+      const updateResult = await client.query(
+        `UPDATE stock_entries
+         SET ${updateFields.join(', ')}
+         WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++}
+         RETURNING *`,
+        values,
+      );
+
+      if (updateResult.rows.length === 0) {
+        throw new BadRequestException('Failed to update stock entry');
+      }
+
+      return updateResult.rows[0];
+    });
   }
 
   /**
@@ -341,51 +370,60 @@ export class StockEntriesService {
    * Cancel a stock entry
    */
   async cancelStockEntry(id: string, organizationId: string, userId: string): Promise<any> {
-    const supabase = this.databaseService.getAdminClient();
+    return this.executeInPgTransaction(async (client) => {
+      // Update status to Cancelled
+      const result = await client.query(
+        `UPDATE stock_entries
+         SET status = $1, updated_at = $2, updated_by = $3
+         WHERE id = $4 AND organization_id = $5
+         RETURNING *`,
+        ['Cancelled', new Date(), userId, id, organizationId],
+      );
 
-    const { data, error } = await supabase
-      .from('stock_entries')
-      .update({
-        status: 'Cancelled',
-        updated_at: new Date().toISOString(),
-        updated_by: userId,
-      })
-      .eq('id', id)
-      .eq('organization_id', organizationId)
-      .select()
-      .maybeSingle();
+      if (result.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found or cannot be cancelled');
+      }
 
-    if (error) {
-      this.logger.error(`Failed to cancel stock entry: ${error.message}`);
-      throw new BadRequestException(`Failed to cancel stock entry: ${error.message}`);
-    }
-
-    if (!data) {
-      throw new NotFoundException('Stock entry not found or cannot be cancelled');
-    }
-
-    return data;
+      return result.rows[0];
+    });
   }
 
   /**
    * Delete a draft stock entry
    */
   async deleteStockEntry(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getAdminClient();
+    return this.executeInPgTransaction(async (client) => {
+      // Verify entry exists and is in Draft status before deleting
+      const checkResult = await client.query(
+        `SELECT id, status FROM stock_entries
+         WHERE id = $1 AND organization_id = $2`,
+        [id, organizationId],
+      );
 
-    // RLS policy ensures only Draft entries can be deleted
-    const { error } = await supabase
-      .from('stock_entries')
-      .delete()
-      .eq('id', id)
-      .eq('organization_id', organizationId);
+      if (checkResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found');
+      }
 
-    if (error) {
-      this.logger.error(`Failed to delete stock entry: ${error.message}`);
-      throw new BadRequestException(`Failed to delete stock entry: ${error.message}`);
-    }
+      const entry = checkResult.rows[0];
+      if (entry.status !== 'Draft') {
+        throw new BadRequestException('Only draft entries can be deleted');
+      }
 
-    return { message: 'Stock entry deleted successfully' };
+      // Delete associated items first (foreign key constraint)
+      await client.query(
+        `DELETE FROM stock_entry_items WHERE stock_entry_id = $1`,
+        [id],
+      );
+
+      // Delete the entry
+      await client.query(
+        `DELETE FROM stock_entries
+         WHERE id = $1 AND organization_id = $2`,
+        [id, organizationId],
+      );
+
+      return { message: 'Stock entry deleted successfully' };
+    });
   }
 
   /**
@@ -882,39 +920,20 @@ export class StockEntriesService {
         // Dr. Inventory Variance Expense (+${totalCost})
         // Cr. Inventory Asset (-${totalCost})
       } catch (error) {
-        // If we can't consume valuation (insufficient stock), log and allow zero-cost adjustment
+        // Critical: valuation out of sync with movements
+        // Do NOT allow zero-cost adjustments as they hide the drift
         this.logger.error(
           `Cannot consume valuation for negative variance: ${error.message}. ` +
-          `This indicates valuation is already out of sync with movements.`,
+          `This indicates valuation is already out of sync with movements. ` +
+          `Stock reconciliation cannot proceed until valuation data is corrected.`,
         );
 
-        // Create zero-cost OUT movement as a fallback
-        await client.query(
-          `INSERT INTO stock_movements (
-            organization_id, item_id, warehouse_id, movement_type, movement_date,
-            quantity, unit, balance_quantity, cost_per_unit, total_cost,
-            stock_entry_id, stock_entry_item_id, batch_number, serial_number
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-          [
-            stockEntry.organization_id,
-            item.item_id,
-            warehouseId,
-            'OUT',
-            stockEntry.entry_date,
-            -absVariance,
-            item.unit,
-            -absVariance,
-            0,
-            0,
-            stockEntry.id,
-            item.id,
-            item.batch_number || null,
-            item.serial_number || null,
-          ],
-        );
-
-        this.logger.warn(
-          `Negative variance processed with ZERO cost due to valuation insufficiency`,
+        throw new BadRequestException(
+          `Cannot process reconciliation: Insufficient valuation to consume ${absVariance} units. ` +
+          `This indicates stock valuation is out of sync. ` +
+          `Available movements suggest stock exists, but no valuation batches are available to consume. ` +
+          `Please contact system administrator to reconcile stock_movements and stock_valuation tables. ` +
+          `Original error: ${error.message}`,
         );
       }
     }
