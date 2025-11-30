@@ -19,7 +19,7 @@ export class QuotesService {
     organizationId: string,
     filters?: QuoteFiltersDto
   ): Promise<any> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     let query = supabaseClient
       .from('quotes')
@@ -74,7 +74,7 @@ export class QuotesService {
    * Get a single quote by ID with items
    */
   async findOne(id: string, organizationId: string): Promise<any> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     const { data, error } = await supabaseClient
       .from('quotes')
@@ -106,7 +106,7 @@ export class QuotesService {
     organizationId: string,
     userId: string,
   ): Promise<any> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Generate quote number
@@ -230,7 +230,7 @@ export class QuotesService {
     userId: string,
     dto: UpdateQuoteStatusDto
   ): Promise<any> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     const updateData: any = {
       status: dto.status,
@@ -271,7 +271,7 @@ export class QuotesService {
    * Delete a quote (only drafts)
    */
   async delete(id: string, organizationId: string): Promise<any> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     // Check quote status - only drafts can be deleted
     const { data: quote } = await supabaseClient
