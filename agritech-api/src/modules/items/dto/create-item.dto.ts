@@ -85,6 +85,10 @@ export class CreateItemDto {
 
   @IsNumber()
   @IsOptional()
+  minimum_stock_level?: number;
+
+  @IsNumber()
+  @IsOptional()
   reorder_level?: number;
 
   @IsNumber()

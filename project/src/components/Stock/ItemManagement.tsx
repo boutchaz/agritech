@@ -329,13 +329,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 
     try {
       // Transform formData to match backend DTO
-      const { organization_id: _organization_id, maintain_stock: _maintain_stock, minimum_stock_level, ...restData } = formData;
-
-      const apiPayload = {
-        ...restData,
-        // Map minimum_stock_level to reorder_level for the backend
-        ...(minimum_stock_level !== undefined && { reorder_level: minimum_stock_level }),
-      };
+      // Remove fields that backend doesn't accept
+      const { organization_id: _organization_id, maintain_stock: _maintain_stock, ...apiPayload } = formData;
 
       if (item) {
         await updateItem.mutateAsync({ itemId: item.id, input: apiPayload });
