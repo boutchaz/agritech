@@ -1,12 +1,14 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Pool, PoolClient } from 'pg';
 
 @Injectable()
-export class DatabaseService implements OnModuleInit {
+export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private supabase: SupabaseClient;
   private adminClient: SupabaseClient;
+  private pgPool: Pool | null = null;
 
   constructor(private configService: ConfigService) {}
 
@@ -39,7 +41,33 @@ export class DatabaseService implements OnModuleInit {
       });
     }
 
+    // Initialize PostgreSQL connection pool
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
+    if (databaseUrl) {
+      this.pgPool = new Pool({
+        connectionString: databaseUrl,
+        max: 10, // Maximum number of clients in the pool
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      });
+
+      this.pgPool.on('error', (err) => {
+        this.logger.error('Unexpected error on idle PostgreSQL client', err);
+      });
+
+      this.logger.log('PostgreSQL connection pool initialized');
+    } else {
+      this.logger.warn('DATABASE_URL not configured, PostgreSQL pool not initialized');
+    }
+
     this.logger.log('Database connections initialized');
+  }
+
+  async onModuleDestroy() {
+    if (this.pgPool) {
+      await this.pgPool.end();
+      this.logger.log('PostgreSQL connection pool closed');
+    }
   }
 
   /**
@@ -83,6 +111,17 @@ export class DatabaseService implements OnModuleInit {
   }
 
   /**
+   * Get PostgreSQL connection pool
+   * Use for operations requiring true ACID transactions
+   */
+  getPgPool(): Pool {
+    if (!this.pgPool) {
+      throw new Error('PostgreSQL pool not initialized. Check DATABASE_URL configuration.');
+    }
+    return this.pgPool;
+  }
+
+  /**
    * Execute a raw SQL query (admin only)
    * Use for complex queries that can't be easily expressed with Supabase client
    */
@@ -100,6 +139,41 @@ export class DatabaseService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Raw query failed: ${error.message}`, error.stack);
       return { data: null, error };
+    }
+  }
+
+  /**
+   * Execute operations within a PostgreSQL transaction
+   * Provides true ACID transaction guarantees with BEGIN/COMMIT/ROLLBACK
+   *
+   * @example
+   * await databaseService.executeInPgTransaction(async (client) => {
+   *   await client.query('INSERT INTO stock_entries ...');
+   *   await client.query('INSERT INTO stock_entry_items ...');
+   * });
+   */
+  async executeInPgTransaction<T>(
+    operation: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const pool = this.getPgPool();
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      this.logger.debug('Transaction started');
+
+      const result = await operation(client);
+
+      await client.query('COMMIT');
+      this.logger.debug('Transaction committed');
+
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      this.logger.error('Transaction rolled back due to error:', error.message);
+      throw error;
+    } finally {
+      client.release();
     }
   }
 }
