@@ -254,14 +254,24 @@ export class ItemsService {
       itemCode = generatedCode as string;
     }
 
+    // Prepare item data with explicit defaults for boolean fields
+    const itemData = {
+      ...dto,
+      item_code: itemCode,
+      stock_uom: dto.stock_uom || dto.default_unit,
+      updated_by: dto.created_by,
+      // Ensure boolean fields have proper defaults
+      is_active: dto.is_active ?? true,
+      is_sales_item: dto.is_sales_item ?? false,
+      is_purchase_item: dto.is_purchase_item ?? false,
+      is_stock_item: dto.is_stock_item ?? true,
+    };
+
+    this.logger.debug(`Creating item with data: ${JSON.stringify(itemData)}`);
+
     const { data, error } = await supabase
       .from('items')
-      .insert({
-        ...dto,
-        item_code: itemCode,
-        stock_uom: dto.stock_uom || dto.default_unit,
-        updated_by: dto.created_by,
-      })
+      .insert(itemData)
       .select()
       .single();
 
@@ -269,6 +279,8 @@ export class ItemsService {
       this.logger.error(`Failed to create item: ${error.message}`);
       throw new BadRequestException(`Failed to create item: ${error.message}`);
     }
+
+    this.logger.debug(`Created item: ${JSON.stringify(data)}`);
 
     return data;
   }
