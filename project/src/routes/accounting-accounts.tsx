@@ -48,6 +48,11 @@ const AccountsContent = () => {
             <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
+        {/* TEST BANNER - Remove after deployment verification */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 text-center font-bold text-lg">
+          ✨ DEPLOYMENT TEST - v2.0 - Dec 1, 2024 00:30 UTC ✨
+        </div>
+
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
