@@ -1,6 +1,8 @@
 import {
     Controller,
     Get,
+    Put,
+    Body,
     Query,
     Param,
     UseGuards,
@@ -46,5 +48,38 @@ export class DashboardController {
             throw new BadRequestException('Organization ID is required');
         }
         return this.dashboardService.getWidgetData(orgId, type);
+    }
+
+    @Get('settings')
+    @CheckPolicies((ability) => ability.can(Action.Read, 'Dashboard'))
+    async getDashboardSettings(
+        @Request() req,
+        @Query('organization_id') organizationId: string,
+    ) {
+        const userId = req.user?.sub || req.user?.userId;
+        const orgId = organizationId || req.organizationId || req.user?.organizationId;
+
+        if (!userId || !orgId) {
+            throw new BadRequestException('User ID and Organization ID are required');
+        }
+
+        return this.dashboardService.getDashboardSettings(userId, orgId);
+    }
+
+    @Put('settings')
+    @CheckPolicies((ability) => ability.can(Action.Update, 'Dashboard'))
+    async upsertDashboardSettings(
+        @Request() req,
+        @Body() settings: any,
+        @Query('organization_id') organizationId?: string,
+    ) {
+        const userId = req.user?.sub || req.user?.userId;
+        const orgId = organizationId || req.organizationId || req.user?.organizationId;
+
+        if (!userId || !orgId) {
+            throw new BadRequestException('User ID and Organization ID are required');
+        }
+
+        return this.dashboardService.upsertDashboardSettings(userId, orgId, settings);
     }
 }

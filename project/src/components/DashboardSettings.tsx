@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutGrid, Save, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { dashboardSettingsApi } from '../lib/api/dashboard-settings';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
 import { FormField } from './ui/FormField';
@@ -38,16 +38,7 @@ const DashboardSettings: React.FC = () => {
     queryFn: async () => {
       if (!user || !currentOrganization) return null;
 
-      const { data, error } = await supabase
-        .from('dashboard_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('organization_id', currentOrganization.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      const data = await dashboardSettingsApi.getSettings(currentOrganization.id);
 
       if (data) {
         const fetchedSettings = {
@@ -78,8 +69,6 @@ const DashboardSettings: React.FC = () => {
       }
 
       const dbSettings = {
-        user_id: user.id,
-        organization_id: currentOrganization.id,
         show_soil_data: settingsToSave.showSoilData,
         show_climate_data: settingsToSave.showClimateData,
         show_irrigation_data: settingsToSave.showIrrigationData,
@@ -91,13 +80,7 @@ const DashboardSettings: React.FC = () => {
         layout: settingsToSave.layout
       };
 
-      const { error } = await supabase
-        .from('dashboard_settings')
-        .upsert(dbSettings, {
-          onConflict: 'user_id,organization_id'
-        });
-
-      if (error) throw error;
+      await dashboardSettingsApi.upsertSettings(currentOrganization.id, dbSettings);
 
       return settingsToSave;
     },

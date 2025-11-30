@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { FarmsService } from '../farms/farms.service';
-import { ParcelsService } from '../parcels/parcels.service';
+import { DatabaseService } from '../database/database.service';
 
 export interface DashboardSummary {
     parcels: {
@@ -39,28 +37,13 @@ export interface WidgetData {
 
 @Injectable()
 export class DashboardService {
-    private readonly supabaseAdmin: SupabaseClient;
-
     constructor(
         private readonly configService: ConfigService,
-        private readonly farmsService: FarmsService,
-        private readonly parcelsService: ParcelsService,
-    ) {
-        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-        const supabaseServiceKey = this.configService.get<string>(
-            'SUPABASE_SERVICE_ROLE_KEY',
-        );
+        private readonly databaseService: DatabaseService,
+    ) {}
 
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error('Missing Supabase configuration');
-        }
-
-        this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-            },
-        });
+    private get supabaseAdmin() {
+        return this.databaseService.getAdminClient();
     }
 
     async getDashboardSummary(
@@ -288,5 +271,45 @@ export class DashboardService {
             default:
                 throw new Error(`Unknown widget type: ${widgetType}`);
         }
+    }
+
+    async getDashboardSettings(userId: string, organizationId: string) {
+        const { data, error } = await this.supabaseAdmin
+            .from('dashboard_settings')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('organization_id', organizationId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            throw error;
+        }
+
+        return data;
+    }
+
+    async upsertDashboardSettings(
+        userId: string,
+        organizationId: string,
+        settings: any,
+    ) {
+        const { data, error } = await this.supabaseAdmin
+            .from('dashboard_settings')
+            .upsert(
+                {
+                    user_id: userId,
+                    organization_id: organizationId,
+                    ...settings,
+                },
+                {
+                    onConflict: 'user_id,organization_id',
+                },
+            )
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return data;
     }
 }
