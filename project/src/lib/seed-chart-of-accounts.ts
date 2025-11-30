@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { apiClient } from './api-client-axios';
 
 export type SupportedCountry = 'MAR' | 'FRA' | 'USA' | 'GBR' | 'DEU';
 export type SupportedCurrency = 'MAD' | 'EUR' | 'USD' | 'GBP';
@@ -63,7 +64,7 @@ export function isCountrySupported(countryCode: string): countryCode is Supporte
 export async function seedChartOfAccounts(
   organizationId: string,
   countryCode: SupportedCountry,
-  currency?: SupportedCurrency
+  _currency?: SupportedCurrency
 ): Promise<SeedResult> {
   try {
     // Validate country support
@@ -75,6 +76,31 @@ export async function seedChartOfAccounts(
       };
     }
 
+    // For Morocco, use the new NestJS API endpoint
+    if (countryCode === 'MAR') {
+      try {
+        const response = await apiClient.post<{
+          accounts_created: number;
+          success: boolean;
+          message: string;
+        }>('/api/v1/accounts/seed-moroccan-chart');
+
+        return {
+          accountsCreated: response.data.accounts_created,
+          success: response.data.success,
+          message: response.data.message,
+        };
+      } catch (error) {
+        console.error('Error seeding Moroccan chart of accounts:', error);
+        return {
+          accountsCreated: 0,
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+
+    // For other countries, fall back to Supabase RPC (legacy)
     // Get the appropriate seeding function
     const seedFunction = SEED_FUNCTIONS[countryCode];
 
@@ -113,22 +139,12 @@ export async function seedChartOfAccounts(
 /**
  * Check if an organization already has accounts
  */
-export async function hasExistingAccounts(organizationId: string): Promise<boolean> {
+export async function hasExistingAccounts(_organizationId: string): Promise<boolean> {
   try {
-    const { count, error } = await supabase
-      .from('accounts')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', organizationId)
-      .limit(1);
-
-    if (error) {
-      console.error('Error checking for existing accounts:', error);
-      return false;
-    }
-
-    return (count || 0) > 0;
+    const response = await apiClient.get('/api/v1/accounts');
+    return response.data.length > 0;
   } catch (error) {
-    console.error('Error in hasExistingAccounts:', error);
+    console.error('Error checking for existing accounts:', error);
     return false;
   }
 }
