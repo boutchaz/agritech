@@ -314,7 +314,11 @@ export class StockEntriesService {
         throw new BadRequestException('Cannot post a cancelled stock entry');
       }
 
-      // 2. Update status to Posted
+      // 2. Re-validate before posting (TECHNICAL_DEBT.md Issue #6)
+      // Drafts could be hours/days old with stale data
+      await this.revalidateBeforePosting(client, stockEntry, entryItems);
+
+      // 3. Update status to Posted
       await client.query(
         `UPDATE stock_entries
          SET status = $1, posted_at = $2
@@ -322,7 +326,7 @@ export class StockEntriesService {
         [StockEntryStatus.POSTED, new Date(), stockEntryId],
       );
 
-      // 3. Process stock movements
+      // 4. Process stock movements
       await this.processStockMovementsPg(
         client,
         stockEntry,
@@ -1157,6 +1161,7 @@ export class StockEntriesService {
 
   /**
    * Validate stock entry data
+   * Implements validation from TECHNICAL_DEBT.md Issue #5
    */
   private validateStockEntry(dto: CreateStockEntryDto): void {
     // Validate warehouse requirements based on entry type
@@ -1181,6 +1186,12 @@ export class StockEntriesService {
           throw new BadRequestException('Source and target warehouses must be different');
         }
         break;
+
+      case StockEntryType.STOCK_RECONCILIATION:
+        if (!dto.to_warehouse_id && !dto.from_warehouse_id) {
+          throw new BadRequestException('Stock Reconciliation requires a warehouse');
+        }
+        break;
     }
 
     // Validate items
@@ -1188,9 +1199,60 @@ export class StockEntriesService {
       throw new BadRequestException('Stock entry must have at least one item');
     }
 
-    for (const item of dto.items) {
+    // Validate each item
+    for (let i = 0; i < dto.items.length; i++) {
+      const item = dto.items[i];
+      const itemNumber = i + 1;
+
+      // Basic quantity validation
       if (item.quantity <= 0) {
-        throw new BadRequestException('Item quantity must be greater than zero');
+        throw new BadRequestException(`Item #${itemNumber}: Quantity must be greater than zero`);
+      }
+
+      // Issue #5: Validate item-level warehouses match entry-level warehouses
+      switch (dto.entry_type) {
+        case StockEntryType.MATERIAL_RECEIPT:
+          if (item.target_warehouse_id && item.target_warehouse_id !== dto.to_warehouse_id) {
+            throw new BadRequestException(
+              `Item #${itemNumber}: target_warehouse_id (${item.target_warehouse_id}) ` +
+              `must match entry to_warehouse_id (${dto.to_warehouse_id})`
+            );
+          }
+          break;
+
+        case StockEntryType.MATERIAL_ISSUE:
+          if (item.source_warehouse_id && item.source_warehouse_id !== dto.from_warehouse_id) {
+            throw new BadRequestException(
+              `Item #${itemNumber}: source_warehouse_id (${item.source_warehouse_id}) ` +
+              `must match entry from_warehouse_id (${dto.from_warehouse_id})`
+            );
+          }
+          break;
+
+        case StockEntryType.STOCK_TRANSFER:
+          if (item.source_warehouse_id && item.source_warehouse_id !== dto.from_warehouse_id) {
+            throw new BadRequestException(
+              `Item #${itemNumber}: source_warehouse_id (${item.source_warehouse_id}) ` +
+              `must match entry from_warehouse_id (${dto.from_warehouse_id})`
+            );
+          }
+          if (item.target_warehouse_id && item.target_warehouse_id !== dto.to_warehouse_id) {
+            throw new BadRequestException(
+              `Item #${itemNumber}: target_warehouse_id (${item.target_warehouse_id}) ` +
+              `must match entry to_warehouse_id (${dto.to_warehouse_id})`
+            );
+          }
+          break;
+
+        case StockEntryType.STOCK_RECONCILIATION:
+          // For reconciliation, system_quantity and physical_quantity are required
+          if (item.system_quantity === null || item.system_quantity === undefined) {
+            throw new BadRequestException(`Item #${itemNumber}: system_quantity is required for reconciliation`);
+          }
+          if (item.physical_quantity === null || item.physical_quantity === undefined) {
+            throw new BadRequestException(`Item #${itemNumber}: physical_quantity is required for reconciliation`);
+          }
+          break;
       }
     }
   }
@@ -1252,6 +1314,121 @@ export class StockEntriesService {
         `Insufficient stock: available ${currentBalance}, required ${requiredQuantity}`,
       );
     }
+  }
+
+  /**
+   * Re-validate stock entry before posting
+   * Implements TECHNICAL_DEBT.md Issue #6
+   * Prevents posting drafts with stale data (items/warehouses deleted, insufficient stock, etc.)
+   */
+  private async revalidateBeforePosting(
+    client: PoolClient,
+    stockEntry: any,
+    items: any[],
+  ): Promise<void> {
+    const entryType = stockEntry.entry_type as StockEntryType;
+
+    // 1. Validate items still exist and are active
+    for (const item of items) {
+      const itemResult = await client.query(
+        `SELECT id, item_name, is_active FROM items
+         WHERE id = $1 AND organization_id = $2`,
+        [item.item_id, stockEntry.organization_id],
+      );
+
+      if (itemResult.rows.length === 0) {
+        throw new BadRequestException(
+          `Item ${item.item_id} no longer exists. Please remove it from the draft.`,
+        );
+      }
+
+      const dbItem = itemResult.rows[0];
+      if (!dbItem.is_active) {
+        this.logger.warn(
+          `Posting draft with inactive item ${item.item_id} (${dbItem.item_name})`,
+        );
+        // Don't block, just warn - organization may want to process existing drafts
+      }
+    }
+
+    // 2. Validate warehouses still exist and are active
+    const warehouseIds = [stockEntry.from_warehouse_id, stockEntry.to_warehouse_id].filter(Boolean);
+    for (const warehouseId of warehouseIds) {
+      const whResult = await client.query(
+        `SELECT id, name, is_active FROM warehouses
+         WHERE id = $1 AND organization_id = $2`,
+        [warehouseId, stockEntry.organization_id],
+      );
+
+      if (whResult.rows.length === 0) {
+        throw new BadRequestException(
+          `Warehouse ${warehouseId} no longer exists. Cannot post this entry.`,
+        );
+      }
+
+      const warehouse = whResult.rows[0];
+      if (!warehouse.is_active) {
+        throw new BadRequestException(
+          `Warehouse "${warehouse.name}" is inactive. Cannot post to inactive warehouse.`,
+        );
+      }
+    }
+
+    // 3. Re-validate stock availability for issues and transfers
+    if (
+      entryType === StockEntryType.MATERIAL_ISSUE ||
+      entryType === StockEntryType.STOCK_TRANSFER
+    ) {
+      const sourceWarehouse = stockEntry.from_warehouse_id;
+      if (!sourceWarehouse) {
+        throw new BadRequestException('Source warehouse is required for this entry type');
+      }
+
+      for (const item of items) {
+        await this.validateStockAvailabilityPg(
+          client,
+          stockEntry.organization_id,
+          item.item_id,
+          sourceWarehouse,
+          item.quantity,
+        );
+      }
+
+      this.logger.log(
+        `Re-validated stock availability for ${items.length} items in draft ${stockEntry.entry_number}`,
+      );
+    }
+
+    // 4. Check for significant cost changes (warn only, don't block)
+    if (entryType === StockEntryType.MATERIAL_RECEIPT && items.some((i) => i.cost_per_unit)) {
+      for (const item of items) {
+        if (!item.cost_per_unit) continue;
+
+        // Get recent average cost
+        const avgResult = await client.query(
+          `SELECT AVG(cost_per_unit) as avg_cost
+           FROM stock_valuation
+           WHERE organization_id = $1 AND item_id = $2
+           AND created_at >= NOW() - INTERVAL '30 days'
+           AND cost_per_unit > 0`,
+          [stockEntry.organization_id, item.item_id],
+        );
+
+        const avgCost = parseFloat(avgResult.rows[0]?.avg_cost || '0');
+        if (avgCost > 0) {
+          const variance = Math.abs((item.cost_per_unit - avgCost) / avgCost);
+          if (variance > 0.5) {
+            // More than 50% variance
+            this.logger.warn(
+              `Large cost variance for item ${item.item_id}: ` +
+                `draft cost ${item.cost_per_unit}, recent avg ${avgCost.toFixed(2)} (${(variance * 100).toFixed(1)}% diff)`,
+            );
+          }
+        }
+      }
+    }
+
+    this.logger.log(`Draft entry ${stockEntry.entry_number} re-validated successfully before posting`);
   }
 
   /**
