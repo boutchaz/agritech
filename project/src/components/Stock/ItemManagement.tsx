@@ -328,14 +328,20 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     }
 
     try {
+      // Transform formData to match backend DTO
+      const { organization_id: _organization_id, maintain_stock: _maintain_stock, minimum_stock_level, ...restData } = formData;
+
+      const apiPayload = {
+        ...restData,
+        // Map minimum_stock_level to reorder_level for the backend
+        ...(minimum_stock_level !== undefined && { reorder_level: minimum_stock_level }),
+      };
+
       if (item) {
-        await updateItem.mutateAsync({ itemId: item.id, input: formData });
+        await updateItem.mutateAsync({ itemId: item.id, input: apiPayload });
         toast.success(t('items.itemUpdated'));
       } else {
-        await createItem.mutateAsync({
-          ...formData,
-          organization_id: currentOrganization.id,
-        } as CreateItemInput);
+        await createItem.mutateAsync(apiPayload as CreateItemInput);
         toast.success(t('items.itemCreated'));
       }
       onOpenChange(false);
