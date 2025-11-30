@@ -22,6 +22,29 @@ export class AccountsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   /**
+   * Get all accounts for an organization
+   */
+  async findAll(organizationId: string, isActive?: boolean): Promise<any[]> {
+    const pool = this.databaseService.getPgPool();
+
+    let query = `
+      SELECT * FROM accounts
+      WHERE organization_id = $1
+    `;
+    const params: any[] = [organizationId];
+
+    if (isActive !== undefined) {
+      query += ` AND is_active = $2`;
+      params.push(isActive);
+    }
+
+    query += ` ORDER BY code ASC`;
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  }
+
+  /**
    * Seed Moroccan Chart of Accounts for an organization
    */
   async seedMoroccanChartOfAccounts(organizationId: string): Promise<{

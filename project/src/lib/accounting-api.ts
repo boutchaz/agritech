@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { apiClient } from './api-client-axios';
 import type { Database } from '@/types/database.types';
 import type {
   CreateAccountInput,
@@ -52,16 +53,11 @@ export const accountingApi = {
   // ACCOUNTS (Chart of Accounts)
   // =====================================================
 
-  async getAccounts(organizationId: string) {
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .order('code');
-
-    if (error) throw error;
-    return data as Account[];
+  async getAccounts(_organizationId: string) {
+    const response = await apiClient.get<Account[]>('/api/v1/accounts', {
+      params: { is_active: 'true' }
+    });
+    return response.data;
   },
 
   async getAccount(accountId: string) {
