@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
-import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -243,7 +242,6 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     is_sales_item: item?.is_sales_item ?? true,
     is_purchase_item: item?.is_purchase_item ?? true,
     is_stock_item: item?.is_stock_item ?? true,
-    maintain_stock: item?.maintain_stock ?? true,
     minimum_stock_level: item?.minimum_stock_level || undefined,
   });
 
@@ -268,7 +266,6 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: item.is_sales_item ?? true,
         is_purchase_item: item.is_purchase_item ?? true,
         is_stock_item: item.is_stock_item ?? true,
-        maintain_stock: item.maintain_stock ?? true,
       });
     } else {
       // Create mode: reset to defaults
@@ -286,7 +283,6 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: true,
         is_purchase_item: true,
         is_stock_item: true,
-        maintain_stock: true,
       });
     }
   }, [item, currentOrganization?.id, firstItemGroupId]);
@@ -330,7 +326,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     try {
       // Transform formData to match backend DTO
       // Remove fields that backend doesn't accept
-      const { organization_id: _organization_id, maintain_stock: _maintain_stock, ...apiPayload } = formData;
+      const { organization_id: _organization_id, ...apiPayload } = formData;
 
       if (item) {
         await updateItem.mutateAsync({ itemId: item.id, input: apiPayload });
@@ -687,12 +683,6 @@ export default function ItemManagement() {
   
   const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
   const { data: farms = [] } = useFarms(currentOrganization?.id);
-  // Note: farmStockLevels is used for filtering, keeping it for future use
-  useFarmStockLevels({
-    farm_id: selectedFarm !== 'all' ? selectedFarm : undefined,
-    low_stock_only: lowStockOnly,
-  });
-  
   const deleteItem = useDeleteItem();
   const [showForm, setShowForm] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -754,10 +744,10 @@ export default function ItemManagement() {
       filtered = filtered.filter((item) => itemIdsWithStock.has(item.id));
     }
 
-    // Filter by low stock
+    // Filter by low stock - mirror the same logic as the badge display
     if (lowStockOnly) {
-      const lowStockItemIds = new Set(
-        Object.entries(stockLevels as Record<string, {
+      filtered = filtered.filter((item) => {
+        const stockLevel = (stockLevels as Record<string, {
           total_quantity: number;
           total_value: number;
           is_low_stock?: boolean;
@@ -769,11 +759,13 @@ export default function ItemManagement() {
             quantity: number;
             value: number;
           }>;
-        }>)
-          .filter(([_, stock]) => stock.is_low_stock)
-          .map(([itemId]) => itemId)
-      );
-      filtered = filtered.filter((item) => lowStockItemIds.has(item.id));
+        }>)[item.id];
+
+        // Use the same condition as the badge: server-side flag OR below minimum threshold
+        return stockLevel?.is_low_stock ||
+          (item.minimum_stock_level && stockLevel &&
+           stockLevel.total_quantity < item.minimum_stock_level);
+      });
     }
 
     return filtered;
@@ -823,7 +815,7 @@ export default function ItemManagement() {
       </div>
 
       {/* Low Stock Alerts Section */}
-      {!selectedFarm && !lowStockOnly && (
+      {selectedFarm === 'all' && !lowStockOnly && (
         <LowStockAlerts maxItems={5} showActions={true} />
       )}
 
