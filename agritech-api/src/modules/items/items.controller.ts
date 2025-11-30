@@ -154,10 +154,10 @@ export class ItemsController {
     const organizationId = req.headers['x-organization-id'];
     return this.itemsService.findAllItems(organizationId, {
       item_group_id: itemGroupId,
-      is_active: isActive === 'true',
-      is_sales_item: isSalesItem === 'true',
-      is_purchase_item: isPurchaseItem === 'true',
-      is_stock_item: isStockItem === 'true',
+      is_active: isActive !== undefined ? isActive === 'true' : undefined,
+      is_sales_item: isSalesItem !== undefined ? isSalesItem === 'true' : undefined,
+      is_purchase_item: isPurchaseItem !== undefined ? isPurchaseItem === 'true' : undefined,
+      is_stock_item: isStockItem !== undefined ? isStockItem === 'true' : undefined,
       crop_type: cropType,
       variety,
       search,
