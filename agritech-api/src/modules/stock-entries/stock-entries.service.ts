@@ -710,15 +710,22 @@ export class StockEntriesService {
     supabase: SupabaseClient,
     operation: (client: SupabaseClient) => Promise<T>,
   ): Promise<T> {
-    // For now, execute directly. In production, you might want to:
-    // 1. Use Supabase Edge Functions with transactions
-    // 2. Use a PostgreSQL client directly (pg library) for true transactions
-    // 3. Implement compensation/rollback logic
+    // CRITICAL LIMITATION: Supabase JS client doesn't support true transactions.
+    // This is a known limitation. For true ACID transactions, we would need to:
+    // 1. Use PostgreSQL stored procedures (RPC) that wrap operations in BEGIN/COMMIT/ROLLBACK
+    // 2. Use a direct PostgreSQL client (pg library) with transaction support
+    // 3. Implement saga pattern with compensation logic
+    //
+    // Current implementation: Execute operations directly without transaction isolation.
+    // Risk: Partial writes if operation fails mid-way (e.g., entry created but items fail).
+    // TODO: Migrate critical multi-step operations to PostgreSQL functions for atomicity.
 
     try {
       return await operation(supabase);
     } catch (error) {
-      this.logger.error(`Transaction failed: ${error.message}`, error.stack);
+      this.logger.error(`Operation failed (no transaction rollback): ${error.message}`, error.stack);
+      // In a real transaction, this would trigger ROLLBACK
+      // Currently, partial writes may have already been committed
       throw error;
     }
   }
