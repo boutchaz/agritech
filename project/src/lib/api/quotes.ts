@@ -18,6 +18,26 @@ export interface UpdateQuoteStatusInput {
   remarks?: string;
 }
 
+export interface CreateQuoteInput {
+  customer_id: string;
+  quote_date: string;
+  valid_until: string;
+  items: Array<{
+    item_id?: string;
+    item_name: string;
+    description?: string;
+    quantity: number;
+    rate: number;
+    account_id: string;
+    tax_id?: string | null;
+  }>;
+  payment_terms?: string;
+  delivery_terms?: string;
+  terms_and_conditions?: string;
+  notes?: string;
+  reference_number?: string;
+}
+
 export const quotesApi = {
   /**
    * Get all quotes with optional filters
@@ -31,6 +51,13 @@ export const quotesApi = {
    */
   async getOne(id: string, organizationId?: string) {
     return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  /**
+   * Create a new quote
+   */
+  async create(data: CreateQuoteInput, organizationId?: string) {
+    return apiClient.post(BASE_URL, data, {}, organizationId);
   },
 
   /**

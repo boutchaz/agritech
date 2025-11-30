@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { calculateInvoiceTotals, type InvoiceItemInput } from '../lib/taxCalculations';
+import { type InvoiceItemInput } from '../lib/taxCalculations';
 import { quotesApi } from '../lib/api/quotes';
 
 export interface Quote {
@@ -114,7 +114,7 @@ export function useQuote(quoteId: string | null) {
  */
 export function useCreateQuote() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization, _user } = useAuth();
 
   return useMutation({
     mutationFn: async (quoteData: {
@@ -128,82 +128,35 @@ export function useCreateQuote() {
       notes?: string;
       reference_number?: string;
     }) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
       }
 
-      // Fetch customer name
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('name, contact_person, email, phone')
-        .eq('id', quoteData.customer_id)
-        .single();
-
-      // Generate quote number
-      const { data: quoteNumber, error: numberError } = await supabase
-        .rpc('generate_quote_number', {
-          p_organization_id: currentOrganization.id,
-        });
-
-      if (numberError) throw numberError;
-
-      // Calculate totals
-      const totals = await calculateInvoiceTotals(quoteData.items, 'sales');
-
-      // Create quote
-      const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
-        .insert({
-          organization_id: currentOrganization.id,
-          quote_number: quoteNumber,
+      // Use the NestJS API to create the quote
+      const data = await quotesApi.create(
+        {
+          customer_id: quoteData.customer_id,
           quote_date: quoteData.quote_date,
           valid_until: quoteData.valid_until,
-          customer_id: quoteData.customer_id,
-          customer_name: customer?.name || '',
-          contact_person: customer?.contact_person,
-          contact_email: customer?.email,
-          contact_phone: customer?.phone,
-          subtotal: totals.subtotal,
-          tax_total: totals.tax_total,
-          grand_total: totals.grand_total,
-          currency_code: currentOrganization.currency || 'MAD',
-          status: 'draft',
+          items: quoteData.items.map(item => ({
+            item_id: item.item_id,
+            item_name: item.item_name,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            account_id: item.account_id,
+            tax_id: item.tax_id || null,
+          })),
           payment_terms: quoteData.payment_terms,
           delivery_terms: quoteData.delivery_terms,
           terms_and_conditions: quoteData.terms_and_conditions,
           notes: quoteData.notes,
           reference_number: quoteData.reference_number,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+        },
+        currentOrganization.id
+      );
 
-      if (quoteError) throw quoteError;
-
-      // Create quote items
-      const items = totals.items_with_tax.map((item, index) => ({
-        quote_id: quote.id,
-        line_number: index + 1,
-        item_id: item.item_id || null,
-        item_name: item.item_name,
-        description: item.description || null,
-        quantity: item.quantity,
-        unit_price: item.rate,
-        amount: item.amount,
-        tax_id: item.tax_id || null,
-        tax_rate: item.tax_rate || 0,
-        tax_amount: item.tax_amount,
-        line_total: item.total_amount,
-        account_id: item.account_id,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('quote_items')
-        .insert(items);
-
-      if (itemsError) throw itemsError;
-
-      return quote;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
