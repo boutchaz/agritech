@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
+import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,7 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -48,7 +49,7 @@ const AppContent: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
+  const [statusFilter, _setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
 
@@ -195,22 +196,26 @@ const AppContent: React.FC = () => {
   if (isLoading) {
     return (
       <div className={cn("flex min-h-screen", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-            ]}
-            title={t('quotes.pageTitle')}
-            subtitle={t('quotes.pageSubtitle')}
+        <div className="hidden md:block">
+          <Sidebar
+            modules={modules.filter(m => m.active)}
+            activeModule={activeModule}
+            onModuleChange={setActiveModule}
+            isDarkMode={isDarkMode}
+            onThemeToggle={toggleTheme}
           />
+        </div>
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
+              ]}
+              title={t('quotes.pageTitle')}
+              subtitle={t('quotes.pageSubtitle')}
+            />
+          </div>
           <div className="p-6 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
           </div>
@@ -233,46 +238,74 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={cn(`flex min-h-screen ${isDarkMode ? 'dark' : ''}`, isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-          ]}
-          title={t('quotes.title')}
-          subtitle={t('quotes.subtitle')}
+      {/* Hide sidebar on mobile */}
+      <div className="hidden md:block">
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
         />
+      </div>
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+        {/* Mobile Navigation Bar */}
+        <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => navigate({ to: '/' })}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          </button>
+          <h1 className="text-base font-semibold text-gray-900 dark:text-white flex-1 truncate">
+            {t('quotes.pageTitle')}
+          </h1>
+          <button
+            onClick={() => navigate({ to: '/' })}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Go to home"
+          >
+            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          </button>
+        </div>
 
-        <div className="p-6 space-y-6">
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
+            ]}
+            title={t('quotes.title')}
+            subtitle={t('quotes.subtitle')}
+          />
+        </div>
+
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
           {/* Header Actions */}
-          <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('quotes.allQuotes')}</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('quotes.allQuotes')}</h2>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                 {t('quotes.description')}
               </p>
             </div>
-            <div className={cn("flex gap-2", isRTL && "flex-row-reverse")}>
-              <Button variant="outline">
+            <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+              <Button variant="outline" className="flex-1 sm:flex-none">
                 <Filter className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                {t('quotes.actions.filter')}
+                <span className="hidden sm:inline">{t('quotes.actions.filter')}</span>
               </Button>
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                {t('quotes.actions.newQuote')}
+              <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
+                <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
+                <span className="hidden sm:inline">{t('quotes.actions.newQuote')}</span>
+                <span className="sm:hidden">New</span>
               </Button>
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -337,8 +370,8 @@ const AppContent: React.FC = () => {
             </Card>
           </div>
 
-          {/* Quote List */}
-          <Card>
+          {/* Quote List - Desktop Table View */}
+          <Card className="hidden md:block">
             <CardHeader>
               <CardTitle>{t('quotes.allQuotes')}</CardTitle>
               <CardDescription>
@@ -507,6 +540,162 @@ const AppContent: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Quote List - Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {quotes.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {t('quotes.empty.message')}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              quotes.map((quote) => (
+                <Card key={quote.id} className="overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header: Quote Number, Customer & Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 dark:text-white truncate">
+                            {quote.quote_number}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {quote.customer_name}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={cn(`${getStatusColor(quote.status)} flex items-center gap-1 flex-shrink-0`, isRTL && "flex-row-reverse")}>
+                        {getStatusIcon(quote.status)}
+                        <span className="text-xs">{getStatusLabel(quote.status)}</span>
+                      </Badge>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">{t('quotes.table.date')}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {format(new Date(quote.quote_date), 'P', { locale: getLocale() })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">{t('quotes.table.validUntil')}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {format(new Date(quote.valid_until), 'P', { locale: getLocale() })}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">{t('quotes.table.amount')}</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">
+                          {quote.currency_code} {Number(quote.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedQuote(quote);
+                          setDetailDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDownloadPDF(quote)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        PDF
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditQuote(quote)}
+                        disabled={quote.status === 'converted' || quote.status === 'cancelled'}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isRTL ? "start" : "end"} className={cn("w-48", isRTL && "text-right")}>
+                          <DropdownMenuLabel>{t('quotes.actions.changeStatus')}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {quote.status === 'draft' && (
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedQuote(quote);
+                              setDetailDialogOpen(true);
+                            }}>
+                              <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                              {t('quotes.actions.sendToCustomer')}
+                            </DropdownMenuItem>
+                          )}
+                          {quote.status === 'sent' && (
+                            <>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedQuote(quote);
+                                setDetailDialogOpen(true);
+                              }}>
+                                <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                {t('quotes.actions.markAccepted')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedQuote(quote);
+                                setDetailDialogOpen(true);
+                              }}>
+                                <XCircle className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                {t('quotes.actions.markRejected')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {quote.status === 'accepted' && (
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedQuote(quote);
+                              setDetailDialogOpen(true);
+                            }}>
+                              <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                              {t('quotes.actions.convertToOrder')}
+                            </DropdownMenuItem>
+                          )}
+                          {quote.status !== 'cancelled' && quote.status !== 'converted' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedQuote(quote);
+                                  setDetailDialogOpen(true);
+                                }}
+                                className="text-red-600 dark:text-red-400"
+                              >
+                                <XCircle className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                {t('quotes.actions.cancelQuote')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Create Quote Dialog */}
