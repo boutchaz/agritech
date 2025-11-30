@@ -167,7 +167,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups();
+  const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups({ is_active: true });
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
   const [showGroupForm, setShowGroupForm] = useState(false);
