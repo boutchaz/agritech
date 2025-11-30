@@ -43,6 +43,7 @@ import { WorkUnitsModule } from './modules/work-units/work-units.module';
 import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
+import { PaymentRecordsModule } from './modules/payment-records/payment-records.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { DeliveriesModule } from './modules/deliveries/deliveries.module';
     TasksModule,
     WorkersModule,
     WorkUnitsModule,
+    PaymentRecordsModule,
     StockEntriesModule,
     ItemsModule,
     WarehousesModule,
