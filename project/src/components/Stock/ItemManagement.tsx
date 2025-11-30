@@ -300,9 +300,11 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   }, [itemGroups, item]);
 
   const handleGroupCreated = async () => {
+    // Wait a brief moment for the cache to be invalidated, then refetch
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const { data: updatedGroups } = await refetchGroups();
     if (updatedGroups && updatedGroups.length > 0) {
-      // Select the most recently created group (last in array)
+      // Select the most recently created group (last in array based on created_at or sort order)
       const latestGroup = updatedGroups[updatedGroups.length - 1];
       setFormData((prev) => ({ ...prev, item_group_id: latestGroup.id }));
     }
