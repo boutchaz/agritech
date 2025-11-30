@@ -19,14 +19,6 @@ const OrganizationSwitcher: React.FC = () => {
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
-
-  // Debug: Log profile and user data
-  React.useEffect(() => {
-    if (isOpen) {
-      console.log('OrganizationSwitcher - Profile:', profile);
-      console.log('OrganizationSwitcher - User:', user);
-    }
-  }, [isOpen, profile, user]);
   const [showFarms, setShowFarms] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<'left' | 'right'>('left');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -231,7 +223,7 @@ const OrganizationSwitcher: React.FC = () => {
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
-                {farms.map((farm) => (
+                {farms && farms.map((farm) => (
                   <button
                     key={farm.id}
                     onClick={() => handleFarmSelect(farm)}
@@ -255,7 +247,7 @@ const OrganizationSwitcher: React.FC = () => {
                 ))}
               </div>
 
-              {farms.length === 0 && (
+              {(!farms || farms.length === 0) && (
                 <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   <Building className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p>Aucune ferme trouvée</p>
