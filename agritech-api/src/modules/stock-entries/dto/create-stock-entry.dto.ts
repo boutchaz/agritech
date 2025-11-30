@@ -14,6 +14,12 @@ export enum StockEntryStatus {
   CANCELLED = 'Cancelled',
 }
 
+export enum ValuationMethod {
+  FIFO = 'FIFO',
+  LIFO = 'LIFO',
+  MOVING_AVERAGE = 'Moving Average',
+}
+
 export class StockEntryItemDto {
   @IsUUID()
   item_id: string;
@@ -64,6 +70,10 @@ export class StockEntryItemDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsEnum(ValuationMethod)
+  @IsOptional()
+  valuation_method?: ValuationMethod;
 }
 
 export class CreateStockEntryDto {
