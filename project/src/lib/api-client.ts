@@ -33,6 +33,8 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${session.access_token}`,
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
   };
 
   // Add organization ID header if available and valid (not "undefined" string)
