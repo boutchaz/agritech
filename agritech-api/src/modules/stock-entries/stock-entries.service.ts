@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { CreateStockEntryDto, StockEntryType, StockEntryStatus, ValuationMethod } from './dto/create-stock-entry.dto';
@@ -436,39 +435,6 @@ export class StockEntriesService {
     return data;
   }
 
-  /**
-   * Process stock movements based on entry type
-   * This is the core business logic previously in the trigger
-   */
-  private async processStockMovements(
-    client: SupabaseClient,
-    stockEntry: any,
-    items: any[],
-    entryType: StockEntryType,
-  ): Promise<void> {
-    for (const item of items) {
-      switch (entryType) {
-        case StockEntryType.MATERIAL_RECEIPT:
-          await this.processMaterialReceipt(client, stockEntry, item);
-          break;
-
-        case StockEntryType.MATERIAL_ISSUE:
-          await this.processMaterialIssue(client, stockEntry, item);
-          break;
-
-        case StockEntryType.STOCK_TRANSFER:
-          await this.processStockTransfer(client, stockEntry, item);
-          break;
-
-        case StockEntryType.STOCK_RECONCILIATION:
-          await this.processStockReconciliation(client, stockEntry, item);
-          break;
-
-        default:
-          this.logger.warn(`Unknown entry type: ${entryType}`);
-      }
-    }
-  }
 
   /**
    * Process stock movements based on entry type (PostgreSQL version)
@@ -504,65 +470,6 @@ export class StockEntriesService {
     }
   }
 
-  /**
-   * Process Material Receipt: Add stock to warehouse
-   */
-  private async processMaterialReceipt(
-    client: SupabaseClient,
-    stockEntry: any,
-    item: any,
-  ): Promise<void> {
-    if (!stockEntry.to_warehouse_id) {
-      throw new BadRequestException('Material Receipt requires a target warehouse');
-    }
-
-    // Create stock movement (IN)
-    const { error: movementError } = await client
-      .from('stock_movements')
-      .insert({
-        organization_id: stockEntry.organization_id,
-        item_id: item.item_id,
-        warehouse_id: stockEntry.to_warehouse_id,
-        movement_type: 'IN',
-        movement_date: stockEntry.entry_date,
-        quantity: item.quantity,
-        unit: item.unit,
-        balance_quantity: item.quantity,
-        cost_per_unit: item.cost_per_unit || 0,
-        total_cost: item.quantity * (item.cost_per_unit || 0),
-        stock_entry_id: stockEntry.id,
-        stock_entry_item_id: item.id,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-      });
-
-    if (movementError) {
-      this.logger.error(`Failed to create stock movement: ${movementError.message}`);
-      throw new BadRequestException(`Failed to create stock movement: ${movementError.message}`);
-    }
-
-    // Create stock valuation
-    const { error: valuationError } = await client
-      .from('stock_valuation')
-      .insert({
-        organization_id: stockEntry.organization_id,
-        item_id: item.item_id,
-        warehouse_id: stockEntry.to_warehouse_id,
-        quantity: item.quantity,
-        cost_per_unit: item.cost_per_unit || 0,
-        stock_entry_id: stockEntry.id,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-        remaining_quantity: item.quantity,
-      });
-
-    if (valuationError) {
-      this.logger.error(`Failed to create stock valuation: ${valuationError.message}`);
-      throw new BadRequestException(`Failed to create stock valuation: ${valuationError.message}`);
-    }
-
-    this.logger.log(`Material receipt processed: ${item.quantity} ${item.unit} of item ${item.item_id}`);
-  }
 
   /**
    * Process Material Receipt: Add stock to warehouse (PostgreSQL version)
@@ -626,57 +533,6 @@ export class StockEntriesService {
     this.logger.log(`Material receipt processed: ${item.quantity} ${item.unit} of item ${item.item_id}`);
   }
 
-  /**
-   * Process Material Issue: Remove stock from warehouse
-   */
-  private async processMaterialIssue(
-    client: SupabaseClient,
-    stockEntry: any,
-    item: any,
-  ): Promise<void> {
-    if (!stockEntry.from_warehouse_id) {
-      throw new BadRequestException('Material Issue requires a source warehouse');
-    }
-
-    // Check available stock
-    await this.validateStockAvailability(
-      client,
-      stockEntry.organization_id,
-      item.item_id,
-      stockEntry.from_warehouse_id,
-      item.quantity,
-    );
-
-    // Create stock movement (OUT)
-    const { error: movementError } = await client
-      .from('stock_movements')
-      .insert({
-        organization_id: stockEntry.organization_id,
-        item_id: item.item_id,
-        warehouse_id: stockEntry.from_warehouse_id,
-        movement_type: 'OUT',
-        movement_date: stockEntry.entry_date,
-        quantity: -item.quantity,
-        unit: item.unit,
-        balance_quantity: -item.quantity,
-        cost_per_unit: item.cost_per_unit || 0,
-        total_cost: -item.quantity * (item.cost_per_unit || 0),
-        stock_entry_id: stockEntry.id,
-        stock_entry_item_id: item.id,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-      });
-
-    if (movementError) {
-      this.logger.error(`Failed to create stock movement: ${movementError.message}`);
-      throw new BadRequestException(`Failed to create stock movement: ${movementError.message}`);
-    }
-
-    // TODO: Implement FIFO/LIFO consumption from stock_valuation
-    this.logger.warn('Stock valuation consumption (FIFO/LIFO) not yet implemented');
-
-    this.logger.log(`Material issue processed: ${item.quantity} ${item.unit} of item ${item.item_id}`);
-  }
 
   /**
    * Process Material Issue: Remove stock from warehouse (PostgreSQL version with valuation consumption)
@@ -743,81 +599,6 @@ export class StockEntriesService {
     );
   }
 
-  /**
-   * Process Stock Transfer: Move stock between warehouses
-   */
-  private async processStockTransfer(
-    client: SupabaseClient,
-    stockEntry: any,
-    item: any,
-  ): Promise<void> {
-    if (!stockEntry.from_warehouse_id || !stockEntry.to_warehouse_id) {
-      throw new BadRequestException('Stock Transfer requires both source and target warehouses');
-    }
-
-    if (stockEntry.from_warehouse_id === stockEntry.to_warehouse_id) {
-      throw new BadRequestException('Source and target warehouses must be different');
-    }
-
-    // Check available stock
-    await this.validateStockAvailability(
-      client,
-      stockEntry.organization_id,
-      item.item_id,
-      stockEntry.from_warehouse_id,
-      item.quantity,
-    );
-
-    // Create OUT movement from source
-    const { error: outError } = await client
-      .from('stock_movements')
-      .insert({
-        organization_id: stockEntry.organization_id,
-        item_id: item.item_id,
-        warehouse_id: stockEntry.from_warehouse_id,
-        movement_type: 'TRANSFER',
-        movement_date: stockEntry.entry_date,
-        quantity: -item.quantity,
-        unit: item.unit,
-        balance_quantity: -item.quantity,
-        cost_per_unit: item.cost_per_unit || 0,
-        total_cost: -item.quantity * (item.cost_per_unit || 0),
-        stock_entry_id: stockEntry.id,
-        stock_entry_item_id: item.id,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-      });
-
-    if (outError) {
-      throw new BadRequestException(`Failed to create OUT movement: ${outError.message}`);
-    }
-
-    // Create IN movement to target
-    const { error: inError } = await client
-      .from('stock_movements')
-      .insert({
-        organization_id: stockEntry.organization_id,
-        item_id: item.item_id,
-        warehouse_id: stockEntry.to_warehouse_id,
-        movement_type: 'TRANSFER',
-        movement_date: stockEntry.entry_date,
-        quantity: item.quantity,
-        unit: item.unit,
-        balance_quantity: item.quantity,
-        cost_per_unit: item.cost_per_unit || 0,
-        total_cost: item.quantity * (item.cost_per_unit || 0),
-        stock_entry_id: stockEntry.id,
-        stock_entry_item_id: item.id,
-        batch_number: item.batch_number,
-        serial_number: item.serial_number,
-      });
-
-    if (inError) {
-      throw new BadRequestException(`Failed to create IN movement: ${inError.message}`);
-    }
-
-    this.logger.log(`Stock transfer processed: ${item.quantity} ${item.unit} of item ${item.item_id}`);
-  }
 
   /**
    * Process Stock Transfer: Move stock between warehouses (PostgreSQL version with valuation)
@@ -932,21 +713,6 @@ export class StockEntriesService {
     );
   }
 
-  /**
-   * Process Stock Reconciliation
-   */
-  private async processStockReconciliation(
-    client: SupabaseClient,
-    stockEntry: any,
-    item: any,
-  ): Promise<void> {
-    // Implementation for reconciliation
-    this.logger.warn('Stock reconciliation processing not yet implemented');
-  }
-
-  /**
-   * Process Stock Reconciliation (PostgreSQL version)
-   */
   /**
    * Process Stock Reconciliation: Adjust inventory to match physical count
    * Implements variance tracking and GL integration as per TECHNICAL_DEBT.md Issue #3
@@ -1257,36 +1023,6 @@ export class StockEntriesService {
     }
   }
 
-  /**
-   * Check if sufficient stock is available for issue/transfer
-   */
-  private async validateStockAvailability(
-    client: SupabaseClient,
-    organizationId: string,
-    itemId: string,
-    warehouseId: string,
-    requiredQuantity: number,
-  ): Promise<void> {
-    // Get current stock balance
-    const { data: movements, error } = await client
-      .from('stock_movements')
-      .select('quantity')
-      .eq('organization_id', organizationId)
-      .eq('item_id', itemId)
-      .eq('warehouse_id', warehouseId);
-
-    if (error) {
-      throw new BadRequestException(`Failed to check stock availability: ${error.message}`);
-    }
-
-    const currentBalance = movements?.reduce((sum, m) => sum + (m.quantity || 0), 0) || 0;
-
-    if (currentBalance < requiredQuantity) {
-      throw new BadRequestException(
-        `Insufficient stock: available ${currentBalance}, required ${requiredQuantity}`,
-      );
-    }
-  }
 
   /**
    * Check if sufficient stock is available for issue/transfer (PostgreSQL version with locking)
@@ -1521,31 +1257,4 @@ export class StockEntriesService {
     }
   }
 
-  /**
-   * Execute operations in a database transaction (legacy Supabase version)
-   * @deprecated Use executeInPgTransaction for true ACID transactions
-   */
-  private async executeInTransaction<T>(
-    supabase: SupabaseClient,
-    operation: (client: SupabaseClient) => Promise<T>,
-  ): Promise<T> {
-    // CRITICAL LIMITATION: Supabase JS client doesn't support true transactions.
-    // This is a known limitation. For true ACID transactions, we would need to:
-    // 1. Use PostgreSQL stored procedures (RPC) that wrap operations in BEGIN/COMMIT/ROLLBACK
-    // 2. Use a direct PostgreSQL client (pg library) with transaction support
-    // 3. Implement saga pattern with compensation logic
-    //
-    // Current implementation: Execute operations directly without transaction isolation.
-    // Risk: Partial writes if operation fails mid-way (e.g., entry created but items fail).
-    // TODO: Migrate critical multi-step operations to PostgreSQL functions for atomicity.
-
-    try {
-      return await operation(supabase);
-    } catch (error) {
-      this.logger.error(`Operation failed (no transaction rollback): ${error.message}`, error.stack);
-      // In a real transaction, this would trigger ROLLBACK
-      // Currently, partial writes may have already been committed
-      throw error;
-    }
-  }
 }
