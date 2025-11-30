@@ -1,28 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
-
-interface Parcel {
-  id: string;
-  name: string;
-  boundary: number[][];
-  farm_id: string;
-  crop_id?: string;
-  soil_type: string | null;
-  area: number | null;
-  calculated_area?: number | null;
-  perimeter?: number | null;
-  planting_density: number | null;
-  irrigation_type: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { parcelsApi, type Parcel, type CreateParcelDto, type UpdateParcelDto } from '../lib/api/parcels';
+import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export function useParcels(farmId: string | null) {
+  const { currentOrganization } = useAuth();
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +12,7 @@ export function useParcels(farmId: string | null) {
   useEffect(() => {
     // Invalidate any pending requests
     requestIdRef.current++;
-    if (farmId) {
+    if (farmId && currentOrganization?.id) {
       setLoading(true);
       setError(null);
       fetchParcels();
@@ -45,27 +26,22 @@ export function useParcels(farmId: string | null) {
       // Bump the request id so any in-flight resolves are ignored
       requestIdRef.current++;
     };
-  }, [farmId]);
+  }, [farmId, currentOrganization?.id]);
 
   const fetchParcels = async () => {
-    if (!farmId) return;
+    if (!farmId || !currentOrganization?.id) return;
     const myRequestId = ++requestIdRef.current;
 
     try {
-      // Validate UUID format (v1-5). If it doesn't match, skip strict validation rather than failing.
-      const uuidV1toV5 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidV1toV5.test(farmId)) {
-        console.warn('Non-standard farm ID format; proceeding without strict UUID validation');
-      }
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('*')
-        .eq('farm_id', farmId);
+      const data = await parcelsApi.getAll(
+        {
+          organization_id: currentOrganization.id,
+          farm_id: farmId,
+        },
+        currentOrganization.id
+      );
 
       if (requestIdRef.current !== myRequestId) return; // stale result
-
-      if (error) throw error;
 
       setParcels(data || []);
     } catch (err) {
@@ -95,34 +71,17 @@ export function useParcels(farmId: string | null) {
     } = {}
   ) => {
     if (!farmId) throw new Error('No farm ID provided');
+    if (!currentOrganization?.id) throw new Error('No organization selected');
 
     try {
-      // Build parcel data object with only defined fields
-      const parcelData: any = {
+      const parcelData: CreateParcelDto = {
         name,
         boundary,
-        farm_id: farmId
+        farm_id: farmId,
+        ...details,
       };
 
-      // Only add fields that are defined
-      if (details.soil_type !== undefined) parcelData.soil_type = details.soil_type;
-      if (details.area !== undefined) parcelData.area = details.area;
-      if (details.calculated_area !== undefined) parcelData.calculated_area = details.calculated_area;
-      if (details.perimeter !== undefined) parcelData.perimeter = details.perimeter;
-      if (details.planting_density !== undefined) parcelData.planting_density = details.planting_density;
-      if (details.irrigation_type !== undefined) parcelData.irrigation_type = details.irrigation_type;
-      if (details.crop_id !== undefined) parcelData.crop_id = details.crop_id;
-      if (details.variety !== undefined) parcelData.variety = details.variety;
-      if (details.planting_date !== undefined) parcelData.planting_date = details.planting_date;
-      if (details.planting_type !== undefined) parcelData.planting_type = details.planting_type;
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .insert(parcelData)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await parcelsApi.create(parcelData, currentOrganization.id);
 
       setParcels(prev => [...prev, data]);
       return data;
@@ -134,17 +93,12 @@ export function useParcels(farmId: string | null) {
 
   const updateParcel = async (
     id: string,
-    updates: Partial<Omit<Parcel, 'id' | 'created_at' | 'updated_at'>>
+    updates: UpdateParcelDto
   ) => {
-    try {
-      const { data, error } = await supabase
-        .from('parcels')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      if (error) throw error;
+    try {
+      const data = await parcelsApi.update(id, updates, currentOrganization.id);
 
       setParcels(prev => prev.map(p => p.id === id ? data : p));
       return data;
@@ -155,13 +109,11 @@ export function useParcels(farmId: string | null) {
   };
 
   const deleteParcel = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('parcels')
-        .delete()
-        .eq('id', id);
+    if (!farmId) throw new Error('No farm ID provided');
+    if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      if (error) throw error;
+    try {
+      await parcelsApi.delete(id, farmId, currentOrganization.id);
 
       setParcels(prev => prev.filter(p => p.id !== id));
     } catch (err) {

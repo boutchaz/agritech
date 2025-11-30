@@ -41,6 +41,7 @@ import { OrganizationUsersModule } from './modules/organization-users/organizati
 import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-indices.module';
 import { WorkUnitsModule } from './modules/work-units/work-units.module';
 import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module
     OrganizationsModule,
     OrganizationModulesModule,
     OrganizationUsersModule,
+    RolesModule,
 
     // Business logic modules
     SequencesModule,

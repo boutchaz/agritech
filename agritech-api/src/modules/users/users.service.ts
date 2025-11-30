@@ -96,4 +96,81 @@ export class UsersService {
 
         return data;
     }
+
+    /**
+     * Get all organizations that a user belongs to
+     * Includes role information from organization_users join
+     */
+    async getUserOrganizations(userId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        const { data, error } = await client
+            .from('organization_users')
+            .select(`
+                organization_id,
+                role_id,
+                is_active,
+                role:roles!organization_users_role_id_fkey (
+                    id,
+                    name,
+                    display_name,
+                    level
+                ),
+                organizations:organization_id (
+                    id,
+                    name,
+                    slug,
+                    description,
+                    address,
+                    city,
+                    state,
+                    postal_code,
+                    country,
+                    phone,
+                    email,
+                    website,
+                    tax_id,
+                    currency_code,
+                    timezone,
+                    logo_url,
+                    is_active
+                )
+            `)
+            .eq('user_id', userId)
+            .eq('is_active', true);
+
+        if (error) {
+            this.logger.error(`Failed to fetch user organizations: ${error.message}`);
+            throw new BadRequestException(`Failed to fetch user organizations: ${error.message}`);
+        }
+
+        // Transform the data to flatten the structure
+        return (data || []).map((ou: any) => {
+            const org = ou.organizations;
+            const roleData = ou.role;
+
+            return {
+                id: ou.organization_id,
+                name: org?.name || 'Unknown',
+                slug: org?.slug || org?.name || 'unknown',
+                description: org?.description || null,
+                address: org?.address || null,
+                city: org?.city || null,
+                state: org?.state || null,
+                postal_code: org?.postal_code || null,
+                country: org?.country || null,
+                phone: org?.phone || null,
+                email: org?.email || null,
+                website: org?.website || null,
+                tax_id: org?.tax_id || null,
+                logo_url: org?.logo_url || null,
+                currency_code: org?.currency_code || 'MAD',
+                timezone: org?.timezone || 'Africa/Casablanca',
+                is_active: org?.is_active ?? ou.is_active,
+                role: roleData?.name || 'viewer',
+                role_display_name: roleData?.display_name || 'Viewer',
+                role_level: roleData?.level || 6,
+            };
+        });
+    }
 }

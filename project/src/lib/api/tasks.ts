@@ -129,4 +129,73 @@ export const tasksApi = {
   async getStatistics(organizationId: string): Promise<TaskStatistics> {
     return apiClient.get<TaskStatistics>(`/api/v1/organizations/${organizationId}/tasks/statistics`);
   },
+
+  // =====================================================
+  // TASK CATEGORIES
+  // =====================================================
+
+  /**
+   * Get all task categories for an organization
+   */
+  async getCategories(organizationId: string): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/v1/organizations/${organizationId}/tasks/categories/all`);
+  },
+
+  /**
+   * Create a new task category
+   */
+  async createCategory(organizationId: string, data: any): Promise<any> {
+    return apiClient.post<any>(`/api/v1/organizations/${organizationId}/tasks/categories`, data);
+  },
+
+  // =====================================================
+  // TASK COMMENTS
+  // =====================================================
+
+  /**
+   * Get all comments for a task
+   */
+  async getComments(organizationId: string, taskId: string): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/v1/organizations/${organizationId}/tasks/${taskId}/comments`);
+  },
+
+  /**
+   * Add a comment to a task
+   */
+  async addComment(organizationId: string, taskId: string, data: { comment: string; worker_id?: string }): Promise<any> {
+    return apiClient.post<any>(`/api/v1/organizations/${organizationId}/tasks/${taskId}/comments`, data);
+  },
+
+  // =====================================================
+  // TASK TIME LOGS
+  // =====================================================
+
+  /**
+   * Get all time logs for a task
+   */
+  async getTimeLogs(organizationId: string, taskId: string): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/v1/organizations/${organizationId}/tasks/${taskId}/time-logs`);
+  },
+
+  /**
+   * Clock in to a task (start time tracking)
+   */
+  async clockIn(organizationId: string, taskId: string, data: {
+    worker_id: string;
+    location_lat?: number;
+    location_lng?: number;
+    notes?: string;
+  }): Promise<any> {
+    return apiClient.post<any>(`/api/v1/organizations/${organizationId}/tasks/${taskId}/clock-in`, data);
+  },
+
+  /**
+   * Clock out from a task (end time tracking)
+   */
+  async clockOut(organizationId: string, timeLogId: string, data: {
+    break_duration?: number;
+    notes?: string;
+  }): Promise<any> {
+    return apiClient.patch<any>(`/api/v1/organizations/${organizationId}/tasks/time-logs/${timeLogId}/clock-out`, data);
+  },
 };

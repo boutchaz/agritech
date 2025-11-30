@@ -276,18 +276,16 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       }
 
       // Get role details from roles table using role_id
-      const { data: roleDetails, error: roleError } = await authSupabase
-        .from('roles')
-        .select('id, name, display_name, level')
-        .eq('id', orgUser.role_id)
-        .maybeSingle();
+      let roleDetails = null;
+      try {
+        const { rolesApi } = await import('../lib/api/roles');
+        roleDetails = await rolesApi.getOne(orgUser.role_id);
+      } catch (error) {
+        console.warn('⚠️ Role lookup failed', error);
+      }
 
-      if (roleError || !roleDetails) {
-        if (roleError) {
-          console.warn('⚠️ Role lookup failed', roleError);
-        } else {
-          console.warn('⚠️ Role not found for role_id', orgUser.role_id);
-        }
+      if (!roleDetails) {
+        console.warn('⚠️ Role not found for role_id', orgUser.role_id);
 
         // Fallback to a default viewer role if role lookup fails
         setUserRole({

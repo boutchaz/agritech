@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase'; // Only for auth in Edge Function calls
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { Database } from '../types/database.types';
 import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
+import { paymentsApi, type Payment as ApiPayment } from '../lib/api/payments';
 
 type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
 type AccountingPaymentInsert = Database['public']['Tables']['accounting_payments']['Insert'];
@@ -50,13 +51,7 @@ export function useAccountingPayments() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('accounting_payments')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('payment_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await paymentsApi.getAll({}, currentOrganization.id);
       return data as Payment[];
     },
     enabled: !!currentOrganization?.id,
@@ -65,6 +60,7 @@ export function useAccountingPayments() {
 
 /**
  * Hook to fetch payments by type
+ * Note: Maps 'received' -> 'receive' and 'paid' -> 'pay' for API compatibility
  */
 export function usePaymentsByType(type: 'received' | 'paid') {
   const { currentOrganization } = useAuth();
@@ -76,14 +72,12 @@ export function usePaymentsByType(type: 'received' | 'paid') {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('accounting_payments')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('payment_type', type)
-        .order('payment_date', { ascending: false });
-
-      if (error) throw error;
+      // Map frontend terminology to API terminology
+      const apiType = type === 'received' ? 'receive' : 'pay';
+      const data = await paymentsApi.getAll(
+        { payment_type: apiType as 'receive' | 'pay' },
+        currentOrganization.id
+      );
       return data as Payment[];
     },
     enabled: !!currentOrganization?.id,
@@ -116,10 +110,12 @@ export function usePaymentStats() {
 
 /**
  * Hook to create a new payment
+ * Note: Maps 'received' -> 'receive' and 'paid' -> 'pay' for API compatibility
+ * Payment number generation is handled by the backend via SequencesService
  */
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, user } = useAuth();
 
   return useMutation({
     mutationFn: async (input: CreatePaymentInput) => {
@@ -127,65 +123,37 @@ export function useCreatePayment() {
         throw new Error('No organization selected');
       }
 
-      const { data: user } = await supabase.auth.getUser();
+      // Map frontend terminology to API terminology
+      const apiType = input.payment_type === 'received' ? 'receive' : 'pay';
 
-      // Generate payment number
-      const { data: lastPayment } = await supabase
-        .from('accounting_payments')
-        .select('payment_number')
-        .eq('organization_id', currentOrganization.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      // Map party_type to match API expectations
+      const partyType = input.party_type?.toLowerCase() as 'customer' | 'supplier' | undefined;
 
-      let nextNumber = 1;
-      if (lastPayment?.payment_number) {
-        const match = lastPayment.payment_number.match(/PAY-(\d+)/);
-        if (match) {
-          nextNumber = parseInt(match[1]) + 1;
-        }
-      }
-
-      const payment_number = `PAY-${String(nextNumber).padStart(5, '0')}`;
-
-      const { data, error } = await supabase
-        .from('accounting_payments')
-        .insert({
-          organization_id: currentOrganization.id,
-          payment_number,
-          payment_type: input.payment_type,
-          party_type: input.party_type || null,
-          party_id: input.party_id || null,
-          party_name: input.party_name,
-          payment_date: input.payment_date,
-          amount: input.amount,
-          payment_method: input.payment_method,
-          bank_account_id: input.bank_account_id || null,
-          reference_number: input.reference_number || null,
-          status: input.status || 'draft',
-          remarks: input.remarks || null,
-          currency_code: input.currency_code || currentOrganization.currency || 'MAD',
-          exchange_rate: input.exchange_rate || 1,
-          created_by: user.user?.id || null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await paymentsApi.create({
+        payment_date: input.payment_date,
+        payment_type: apiType as 'receive' | 'pay',
+        party_type: partyType || 'customer', // Default to customer if not specified
+        party_id: input.party_id,
+        party_name: input.party_name,
+        amount: input.amount,
+        payment_method: input.payment_method,
+        reference_number: input.reference_number || undefined,
+        notes: input.remarks || undefined,
+      }, currentOrganization.id);
 
       // Sync to ledger (create journal entry for double-entry bookkeeping)
       try {
-        const ledgerResult = await syncPaymentToLedger(data, user.user?.id || '');
+        const ledgerResult = await syncPaymentToLedger(data as any, user?.id || '');
 
         if (ledgerResult.success && ledgerResult.journalEntryId) {
           // Link the journal entry to the payment
           await linkJournalEntry('accounting_payments', data.id, ledgerResult.journalEntryId);
-          console.log(`✓ Payment ${payment_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
+          console.log(`✓ Payment ${data.payment_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
         } else {
-          console.warn(`⚠ Payment ${payment_number} created but ledger sync failed: ${ledgerResult.error}`);
+          console.warn(`⚠ Payment ${data.payment_number} created but ledger sync failed: ${ledgerResult.error}`);
         }
       } catch (ledgerError) {
-        console.error(`Failed to sync payment ${payment_number} to ledger:`, ledgerError);
+        console.error(`Failed to sync payment ${data.payment_number} to ledger:`, ledgerError);
         // Don't throw - payment is already created, ledger sync is supplementary
       }
 
@@ -199,28 +167,36 @@ export function useCreatePayment() {
 }
 
 /**
- * Hook to update a payment
+ * Hook to update a payment status
+ * @deprecated Use useSubmitPayment for status updates. General payment updates are not supported via API for financial integrity.
+ * For now, this hook only supports status updates via the API.
  */
 export function useUpdatePayment() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Payment> & { id: string }) => {
+    mutationFn: async ({ id, status, ...updates }: Partial<Payment> & { id: string }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('accounting_payments')
-        .update(updates)
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .single();
+      // Only status updates are supported via API
+      if (status) {
+        const data = await paymentsApi.updateStatus(
+          id,
+          { status: status as 'draft' | 'submitted' | 'reconciled' | 'cancelled' },
+          currentOrganization.id
+        );
+        return data as Payment;
+      }
 
-      if (error) throw error;
-      return data as Payment;
+      // Log warning if attempting to update other fields
+      if (Object.keys(updates).length > 0) {
+        console.warn('⚠️ General payment field updates are not supported via API. Only status updates are allowed for financial integrity.');
+      }
+
+      throw new Error('Only status updates are supported. Use useSubmitPayment() for status changes.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
@@ -229,7 +205,7 @@ export function useUpdatePayment() {
 }
 
 /**
- * Hook to delete a payment
+ * Hook to delete a payment (only drafts without allocations)
  */
 export function useDeletePayment() {
   const queryClient = useQueryClient();
@@ -241,13 +217,7 @@ export function useDeletePayment() {
         throw new Error('No organization selected');
       }
 
-      const { error } = await supabase
-        .from('accounting_payments')
-        .delete()
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await paymentsApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
@@ -268,15 +238,11 @@ export function useSubmitPayment() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('accounting_payments')
-        .update({ status: 'submitted' })
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await paymentsApi.updateStatus(
+        id,
+        { status: 'submitted' },
+        currentOrganization.id
+      );
       return data as Payment;
     },
     onSuccess: () => {

@@ -134,4 +134,93 @@ export class TasksController {
   ) {
     return this.tasksService.remove(req.user.id, organizationId, taskId);
   }
+
+  // =====================================================
+  // TASK CATEGORIES
+  // =====================================================
+
+  @Get('categories/all')
+  @ApiOperation({ summary: 'Get all task categories for an organization' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  async getTaskCategories(
+    @Param('organizationId') organizationId: string,
+  ) {
+    return this.tasksService.getCategories(organizationId);
+  }
+
+  @Post('categories')
+  @ApiOperation({ summary: 'Create a new task category' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  async createTaskCategory(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Body() createCategoryDto: any,
+  ) {
+    return this.tasksService.createCategory(req.user.id, organizationId, createCategoryDto);
+  }
+
+  // =====================================================
+  // TASK COMMENTS
+  // =====================================================
+
+  @Get(':taskId/comments')
+  @ApiOperation({ summary: 'Get all comments for a task' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async getTaskComments(
+    @Param('taskId') taskId: string,
+  ) {
+    return this.tasksService.getComments(taskId);
+  }
+
+  @Post(':taskId/comments')
+  @ApiOperation({ summary: 'Add a comment to a task' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async addTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Body() createCommentDto: any,
+  ) {
+    return this.tasksService.addComment(req.user.id, taskId, createCommentDto);
+  }
+
+  // =====================================================
+  // TASK TIME LOGS
+  // =====================================================
+
+  @Get(':taskId/time-logs')
+  @ApiOperation({ summary: 'Get all time logs for a task' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async getTaskTimeLogs(
+    @Param('taskId') taskId: string,
+  ) {
+    return this.tasksService.getTimeLogs(taskId);
+  }
+
+  @Post(':taskId/clock-in')
+  @ApiOperation({ summary: 'Clock in to a task (start time tracking)' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async clockIn(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('taskId') taskId: string,
+    @Body() clockInDto: any,
+  ) {
+    return this.tasksService.clockIn(req.user.id, organizationId, taskId, clockInDto);
+  }
+
+  @Patch('time-logs/:timeLogId/clock-out')
+  @ApiOperation({ summary: 'Clock out from a task (end time tracking)' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'timeLogId', description: 'Time Log ID' })
+  async clockOut(
+    @Request() req,
+    @Param('timeLogId') timeLogId: string,
+    @Body() clockOutDto: any,
+  ) {
+    return this.tasksService.clockOut(req.user.id, timeLogId, clockOutDto);
+  }
 }

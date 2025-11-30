@@ -496,4 +496,208 @@ export class TasksService {
       total_cost: tasks?.reduce((sum, t) => sum + (t.actual_cost || 0), 0) || 0,
     };
   }
+
+  // =====================================================
+  // TASK CATEGORIES
+  // =====================================================
+
+  /**
+   * Get all task categories for an organization
+   */
+  async getCategories(organizationId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_categories')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      throw new Error(`Failed to fetch task categories: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Create a new task category
+   */
+  async createCategory(userId: string, organizationId: string, categoryData: any) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_categories')
+      .insert({
+        ...categoryData,
+        organization_id: organizationId,
+        created_by: userId,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to create task category: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  // =====================================================
+  // TASK COMMENTS
+  // =====================================================
+
+  /**
+   * Get all comments for a task
+   */
+  async getComments(taskId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_comments')
+      .select(`
+        *,
+        user:user_profiles!user_id(id, full_name, email),
+        worker:workers!worker_id(first_name, last_name)
+      `)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch task comments: ${error.message}`);
+    }
+
+    return (data || []).map(comment => ({
+      ...comment,
+      user_name: comment.user?.full_name || comment.user?.email,
+      worker_name: comment.worker
+        ? `${comment.worker.first_name} ${comment.worker.last_name}`
+        : undefined,
+    }));
+  }
+
+  /**
+   * Add a comment to a task
+   */
+  async addComment(userId: string, taskId: string, commentData: any) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_comments')
+      .insert({
+        task_id: taskId,
+        user_id: userId,
+        comment: commentData.comment,
+        worker_id: commentData.worker_id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to add comment: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  // =====================================================
+  // TASK TIME LOGS
+  // =====================================================
+
+  /**
+   * Get all time logs for a task
+   */
+  async getTimeLogs(taskId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_time_logs')
+      .select(`
+        *,
+        worker:workers!worker_id(first_name, last_name)
+      `)
+      .eq('task_id', taskId)
+      .order('start_time', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch task time logs: ${error.message}`);
+    }
+
+    return (data || []).map(log => ({
+      ...log,
+      worker_name: log.worker
+        ? `${log.worker.first_name} ${log.worker.last_name}`
+        : undefined,
+    }));
+  }
+
+  /**
+   * Clock in to a task (start time tracking)
+   */
+  async clockIn(userId: string, organizationId: string, taskId: string, clockInData: any) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Create time log
+    const { data: timeLog, error: timeLogError } = await client
+      .from('task_time_logs')
+      .insert({
+        task_id: taskId,
+        worker_id: clockInData.worker_id,
+        start_time: new Date().toISOString(),
+        location_lat: clockInData.location_lat || null,
+        location_lng: clockInData.location_lng || null,
+        notes: clockInData.notes || null,
+      })
+      .select()
+      .single();
+
+    if (timeLogError) {
+      throw new BadRequestException(`Failed to clock in: ${timeLogError.message}`);
+    }
+
+    // Update task status to in_progress if not already
+    const { data: task, error: taskError } = await client
+      .from('tasks')
+      .update({
+        status: 'in_progress',
+        actual_start: new Date().toISOString(),
+      })
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (taskError) {
+      throw new BadRequestException(`Failed to update task status: ${taskError.message}`);
+    }
+
+    return { timeLog, task };
+  }
+
+  /**
+   * Clock out from a task (end time tracking)
+   */
+  async clockOut(userId: string, timeLogId: string, clockOutData: any) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_time_logs')
+      .update({
+        end_time: new Date().toISOString(),
+        break_duration: clockOutData.break_duration || 0,
+        notes: clockOutData.notes || null,
+      })
+      .eq('id', timeLogId)
+      .select('*, task:tasks!task_id(id, organization_id)')
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to clock out: ${error.message}`);
+    }
+
+    return data;
+  }
 }

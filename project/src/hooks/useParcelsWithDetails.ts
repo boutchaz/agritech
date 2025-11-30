@@ -64,16 +64,15 @@ export function useParcelsWithDetails() {
         console.warn('Farm IDs:', farmIds);
 
         // Step 2: Get all parcels for these farms
-        const { data: parcels, error: parcelsError } = await supabase
-          .from('parcels')
-          .select('id, name, farm_id')
-          .in('farm_id', farmIds)
-          .order('name');
+        const { parcelsApi } = await import('@/lib/api/parcels');
 
-        if (parcelsError) {
-          console.error('Error fetching parcels:', parcelsError);
-          return [];
-        }
+        // Fetch parcels for each farm and combine
+        const parcelPromises = farmIds.map(farmId =>
+          parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id)
+        );
+
+        const parcelResults = await Promise.all(parcelPromises);
+        const parcels = parcelResults.flat().sort((a, b) => a.name.localeCompare(b.name));
 
         console.warn('Found parcels:', parcels?.length || 0);
 
@@ -128,40 +127,54 @@ export function useParcelsWithDetails() {
  * Fetch parcels for a specific farm with details
  */
 export function useFarmParcelsWithDetails(farmId: string | undefined) {
+  const { currentOrganization } = useAuth();
+
   return useQuery({
     queryKey: ['parcels-with-details', 'farm', farmId],
     queryFn: async () => {
       if (!farmId) throw new Error('Farm ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { data, error } = await supabase
-        .from('parcels')
-        .select(`
-          id,
-          name,
-          farm_id,
-          crop_id,
-          soil_type,
-          area,
-          irrigation_type,
-          created_at,
-          updated_at,
-          farm:farms(
-            id,
-            name
-          ),
-          crop:crops(
-            id,
-            name,
-            variety
-          )
-        `)
-        .eq('farm_id', farmId)
-        .order('name');
+      const { parcelsApi } = await import('@/lib/api/parcels');
 
-      if (error) throw error;
-      return data as ParcelWithDetails[];
+      // Get parcels from API (without joins for now)
+      const parcels = await parcelsApi.getAll(
+        { farm_id: farmId, organization_id: currentOrganization.id },
+        currentOrganization.id
+      );
+
+      // For now, we'll fetch farm and crop details separately
+      // TODO: Enhance backend to return joined data
+      const { data: farms } = await supabase
+        .from('farms')
+        .select('id, name')
+        .eq('id', farmId)
+        .single();
+
+      const cropIds = parcels
+        .map(p => p.crop_id)
+        .filter(Boolean) as string[];
+
+      let cropsMap = new Map();
+      if (cropIds.length > 0) {
+        const { data: crops } = await supabase
+          .from('crops')
+          .select('id, name, variety')
+          .in('id', cropIds);
+
+        if (crops) {
+          cropsMap = new Map(crops.map(c => [c.id, c]));
+        }
+      }
+
+      // Combine data
+      return parcels.map(parcel => ({
+        ...parcel,
+        farm: farms || undefined,
+        crop: parcel.crop_id ? cropsMap.get(parcel.crop_id) : undefined,
+      })) as ParcelWithDetails[];
     },
-    enabled: !!farmId,
+    enabled: !!farmId && !!currentOrganization?.id,
     staleTime: 60000,
   });
 }

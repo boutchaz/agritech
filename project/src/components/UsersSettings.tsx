@@ -114,13 +114,8 @@ const UsersSettings: React.FC = () => {
   // Fetch available roles
   const fetchRoles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('roles')
-        .select('*')
-        .eq('is_active', true)
-        .order('level', { ascending: true });
-
-      if (error) throw error;
+      const { rolesApi } = await import('../lib/api/roles');
+      const data = await rolesApi.getAll();
       setRoles(data || []);
     } catch (err) {
       console.error('Error fetching roles:', err);

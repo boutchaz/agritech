@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { tasksApi } from '../lib/api/tasks';
+import { useAuth } from '../components/MultiTenantAuthProvider';
 import type {
   TaskFilters,
   CreateTaskRequest,
@@ -43,75 +44,36 @@ export function useTaskCategories(organizationId: string) {
   return useQuery({
     queryKey: ['task-categories', organizationId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return (data || []) as TaskCategory[];
+      if (!organizationId) return [];
+      return tasksApi.getCategories(organizationId);
     },
     enabled: !!organizationId,
   });
 }
 
 export function useTaskComments(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+
   return useQuery({
     queryKey: ['task-comments', taskId],
     queryFn: async () => {
-      if (!taskId) return [];
-
-      const { data, error } = await supabase
-        .from('task_comments')
-        .select(`
-          *,
-          user:auth.users!user_id(email),
-          worker:workers!worker_id(first_name, last_name)
-        `)
-        .eq('task_id', taskId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map(comment => ({
-        ...comment,
-        user_name: comment.user?.email,
-        worker_name: comment.worker
-          ? `${comment.worker.first_name} ${comment.worker.last_name}`
-          : undefined,
-      })) as TaskComment[];
+      if (!taskId || !currentOrganization) return [];
+      return tasksApi.getComments(currentOrganization.id, taskId);
     },
-    enabled: !!taskId,
+    enabled: !!taskId && !!currentOrganization,
   });
 }
 
 export function useTaskTimeLogs(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+
   return useQuery({
     queryKey: ['task-time-logs', taskId],
     queryFn: async () => {
-      if (!taskId) return [];
-
-      const { data, error } = await supabase
-        .from('task_time_logs')
-        .select(`
-          *,
-          worker:workers!worker_id(first_name, last_name)
-        `)
-        .eq('task_id', taskId)
-        .order('start_time', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map(log => ({
-        ...log,
-        worker_name: log.worker
-          ? `${log.worker.first_name} ${log.worker.last_name}`
-          : undefined,
-      })) as TaskTimeLog[];
+      if (!taskId || !currentOrganization) return [];
+      return tasksApi.getTimeLogs(currentOrganization.id, taskId);
     },
-    enabled: !!taskId,
+    enabled: !!taskId && !!currentOrganization,
   });
 }
 
@@ -210,72 +172,49 @@ export function useAssignTask() {
 
 export function useClockIn() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (request: ClockInRequest) => {
-      // Create time log
-      const { data: timeLog, error: timeLogError } = await supabase
-        .from('task_time_logs')
-        .insert({
-          task_id: request.task_id,
-          worker_id: request.worker_id,
-          start_time: new Date().toISOString(),
-          location_lat: request.location_lat,
-          location_lng: request.location_lng,
-          notes: request.notes,
-        })
-        .select()
-        .single();
+      if (!currentOrganization) {
+        throw new Error('No organization selected');
+      }
 
-      if (timeLogError) throw timeLogError;
-
-      // Update task status to in_progress
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
-        .update({ 
-          status: 'in_progress',
-          actual_start: new Date().toISOString(),
-        })
-        .eq('id', request.task_id)
-        .select()
-        .single();
-
-      if (taskError) throw taskError;
-
-      return { timeLog, task };
+      return tasksApi.clockIn(currentOrganization.id, request.task_id, {
+        worker_id: request.worker_id,
+        location_lat: request.location_lat,
+        location_lng: request.location_lng,
+        notes: request.notes,
+      });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task.id] });
       queryClient.invalidateQueries({ queryKey: ['task-time-logs', data.task.id] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.task.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', currentOrganization?.id] });
     },
   });
 }
 
 export function useClockOut() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (request: ClockOutRequest) => {
-      const { data, error } = await supabase
-        .from('task_time_logs')
-        .update({
-          end_time: new Date().toISOString(),
-          break_duration: request.break_duration || 0,
-          notes: request.notes,
-        })
-        .eq('id', request.time_log_id)
-        .select('*, task:tasks!task_id(id, organization_id)')
-        .single();
+      if (!currentOrganization) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data;
+      return tasksApi.clockOut(currentOrganization.id, request.time_log_id, {
+        break_duration: request.break_duration,
+        notes: request.notes,
+      });
     },
     onSuccess: (data) => {
       if (data.task) {
-        queryClient.invalidateQueries({ queryKey: ['task', data.task.id] });
+        queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task.id] });
         queryClient.invalidateQueries({ queryKey: ['task-time-logs', data.task.id] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', data.task.organization_id] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', currentOrganization?.id] });
       }
     },
   });
@@ -283,21 +222,22 @@ export function useClockOut() {
 
 export function useAddTaskComment() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (comment: Omit<TaskComment, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('task_comments')
-        .insert(comment)
-        .select()
-        .single();
+      if (!currentOrganization) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as TaskComment;
+      return tasksApi.addComment(currentOrganization.id, comment.task_id, {
+        comment: comment.comment,
+        worker_id: comment.worker_id,
+      });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['task-comments', data.task_id] });
-      queryClient.invalidateQueries({ queryKey: ['task', data.task_id] });
+      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task_id] });
     },
   });
 }
@@ -335,20 +275,18 @@ export function useCompleteTask() {
 
 export function useCreateTaskCategory() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (category: Omit<TaskCategory, 'id' | 'created_at' | 'updated_at' | 'is_active'>) => {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .insert(category)
-        .select()
-        .single();
+      if (!currentOrganization) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as TaskCategory;
+      return tasksApi.createCategory(currentOrganization.id, category);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task-categories', data.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['task-categories', currentOrganization?.id] });
     },
   });
 }

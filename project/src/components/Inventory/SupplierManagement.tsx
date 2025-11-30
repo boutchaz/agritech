@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSuppliers } from '@/hooks/useSuppliers';
+import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '@/hooks/useSuppliers';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Trash2, Pencil, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/hooks/useSuppliers';
 
 interface SupplierFormData {
@@ -46,6 +45,9 @@ export default function SupplierManagement() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { data: suppliers = [], isLoading, error, refetch } = useSuppliers();
+  const createSupplier = useCreateSupplier();
+  const updateSupplier = useUpdateSupplier();
+  const deleteSupplier = useDeleteSupplier();
   const [showForm, setShowForm] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -120,17 +122,10 @@ export default function SupplierManagement() {
 
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('suppliers')
-        .update({ is_active: false })
-        .eq('id', supplierToDelete.id);
-
-      if (error) throw error;
-
+      await deleteSupplier.mutateAsync(supplierToDelete.id);
       toast.success(t('suppliers.deleted'));
       setShowDeleteDialog(false);
       setSupplierToDelete(null);
-      refetch();
     } catch (error: any) {
       toast.error(`Failed to delete supplier: ${error.message}`);
     } finally {
@@ -155,33 +150,22 @@ export default function SupplierManagement() {
     try {
       if (selectedSupplier) {
         // Update existing supplier
-        const { error } = await supabase
-          .from('suppliers')
-          .update({
-            ...formData,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', selectedSupplier.id);
-
-        if (error) throw error;
+        await updateSupplier.mutateAsync({
+          id: selectedSupplier.id,
+          ...formData,
+        });
         toast.success(t('suppliers.updated'));
       } else {
         // Create new supplier
-        const { error } = await supabase
-          .from('suppliers')
-          .insert({
-            ...formData,
-            organization_id: currentOrganization.id,
-            is_active: true,
-          });
-
-        if (error) throw error;
+        await createSupplier.mutateAsync({
+          ...formData,
+          is_active: true,
+        });
         toast.success(t('suppliers.created'));
       }
 
       setShowForm(false);
       resetForm();
-      refetch();
     } catch (error: any) {
       toast.error(`Failed to ${selectedSupplier ? 'update' : 'create'} supplier: ${error.message}`);
     } finally {

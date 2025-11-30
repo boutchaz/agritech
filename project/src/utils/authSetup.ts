@@ -95,14 +95,11 @@ export async function setupNewUser({
 
     // 4. Link user to organization as organization_admin
     // Get the organization_admin role_id from the roles table
-    const { data: orgAdminRole, error: roleError } = await authSupabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'organization_admin')
-      .single();
+    const { rolesApi } = await import('../lib/api/roles');
+    const orgAdminRole = await rolesApi.getByName('organization_admin');
 
-    if (roleError || !orgAdminRole) {
-      console.error('❌ Error fetching organization_admin role:', roleError);
+    if (!orgAdminRole) {
+      console.error('❌ Error fetching organization_admin role');
       throw new Error('Failed to fetch organization_admin role');
     }
 

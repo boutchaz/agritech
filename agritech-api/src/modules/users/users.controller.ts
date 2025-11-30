@@ -28,4 +28,12 @@ export class UsersController {
     async updateProfile(@Request() req, @Body() updateDto: UpdateUserProfileDto) {
         return this.usersService.updateProfile(req.user.id, updateDto);
     }
+
+    @Get('me/organizations')
+    @ApiOperation({ summary: 'Get all organizations that the current user belongs to' })
+    @ApiResponse({ status: 200, description: 'User organizations retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getUserOrganizations(@Request() req) {
+        return this.usersService.getUserOrganizations(req.user.id);
+    }
 }
