@@ -126,9 +126,9 @@ const UpcomingTasksWidget: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-4 h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Calendar className="h-5 w-5 text-green-600" />
           {t('dashboard.widgets.tasks.title')}
@@ -143,7 +143,7 @@ const UpcomingTasksWidget: React.FC = () => {
       </div>
 
       {/* Mini Calendar */}
-      <div className="mb-4">
+      <div>
         <MiniCalendar
           value={selectedDate}
           onValueChange={(date) => date && setSelectedDate(date)}
@@ -168,7 +168,7 @@ const UpcomingTasksWidget: React.FC = () => {
       </div>
 
       {/* Tasks for selected date */}
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1 min-h-0">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {format(selectedDate, 'EEEE d MMMM yyyy', { locale: getLocale() })}
         </h4>
@@ -179,7 +179,7 @@ const UpcomingTasksWidget: React.FC = () => {
             <p className="text-sm">{t('dashboard.widgets.tasks.noTasks')}</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-[260px] lg:max-h-[320px] overflow-y-auto pr-1">
             {tasksForSelectedDate.map((task) => {
               const priority = getPriorityBadge(task.priority);
               return (

@@ -105,9 +105,13 @@ const AppContent: React.FC = () => {
         <div className="p-6">
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList>
+            <TabsList className="w-full justify-start overflow-x-auto sm:overflow-visible whitespace-nowrap rounded-lg">
               {tabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value}>
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="flex-shrink-0"
+                >
                   {tab.label}
                 </TabsTrigger>
               ))}

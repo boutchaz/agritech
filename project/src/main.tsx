@@ -6,6 +6,7 @@ import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
 import './i18n/config'
 import './index.css'
+import { registerSW } from 'virtual:pwa-register'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -45,6 +46,15 @@ async function init() {
   const { data: { session } } = await authSupabase.auth.getSession()
   routerContext.auth.user = session?.user || null
   routerContext.auth.isLoading = false
+
+  // Register service worker for PWA (only in supported browsers)
+  registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl, registration) {
+      // Auto update when a new service worker is found
+      registration?.update()
+    },
+  })
 
   // Subscribe to auth changes
   authSupabase.auth.onAuthStateChange((_event, session) => {

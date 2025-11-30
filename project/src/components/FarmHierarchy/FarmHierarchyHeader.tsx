@@ -57,24 +57,24 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   return (
     <div className="space-y-6">
       {/* Page Title & Quick Stats */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="w-full lg:w-auto">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate max-w-full">
                 {t('nav.farmHierarchy')}
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-full">
                 {organizationName}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(selectedFarmId && onExportFarm) && (
             <button
               onClick={() => onExportFarm(selectedFarmId)}

@@ -33,10 +33,10 @@ const PageHeader: React.FC<PageHeaderProps> = ({ breadcrumbs, actions }) => {
 
   return (
     <div className="p-3 sm:p-4 pl-16 lg:pl-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-      <div className="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto">
+      <div className="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto pb-1">
         {/* Breadcrumb Navigation */}
         <Breadcrumb>
-          <BreadcrumbList>
+          <BreadcrumbList className="flex-nowrap">
             {breadcrumbs.map((item, index) => {
               const Icon = item.icon;
               const isLast = index === breadcrumbs.length - 1;
@@ -57,8 +57,8 @@ const PageHeader: React.FC<PageHeaderProps> = ({ breadcrumbs, actions }) => {
                         }`}
                       >
                         {Icon && <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                        <span className={`text-xs sm:text-sm ${
-                          index === 0 ? 'truncate max-w-[80px] sm:max-w-[120px] lg:max-w-none' : ''
+                        <span className={`text-xs sm:text-sm truncate ${
+                          index === 0 ? 'max-w-[120px] sm:max-w-[160px] lg:max-w-none' : 'max-w-[140px]'
                         }`}>
                           {item.label}
                         </span>

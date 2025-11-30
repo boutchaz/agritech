@@ -138,7 +138,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Helper function to render text with RTL support
   const renderText = (text: string) => {
-    return <span className={isRTL ? "text-right w-full" : ""}>{text}</span>;
+    return (
+      <span
+        className={cn(
+          "flex-1 truncate",
+          isRTL ? "text-right" : "text-left"
+        )}
+      >
+        {text}
+      </span>
+    );
   };
 
   return (

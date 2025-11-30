@@ -196,7 +196,13 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-w-6xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <DialogContent
+        className={cn(
+          "w-[95vw] sm:w-auto max-w-6xl max-h-[90vh] overflow-y-auto p-4 sm:p-6",
+          isRTL && "text-right"
+        )}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
         <DialogHeader>
           <DialogTitle>{quote ? t('quotes.form.edit') : t('quotes.form.create')}</DialogTitle>
           <DialogDescription>{quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}</DialogDescription>
@@ -204,7 +210,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Header Information */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="customer_id">{t('quotes.form.customer')} *</Label>
@@ -282,7 +288,164 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
               </Button>
             </div>
 
-            <div className="border rounded-lg overflow-hidden">
+            {/* Mobile-friendly stacked items */}
+            <div className="space-y-3 md:hidden">
+              {fields.map((field, index) => {
+                const item = watchItems[index];
+                const amount = (Number(item?.quantity) || 0) * (Number(item?.rate) || 0);
+                return (
+                  <div key={field.id} className="rounded-lg border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('quotes.form.item')} #{index + 1}
+                      </span>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Select
+                        value={watch(`items.${index}.item_id`) || ''}
+                        onValueChange={(itemId) => {
+                          const selectedItem = items.find(item => item.id === itemId);
+                          if (selectedItem) {
+                            setValue(`items.${index}.item_id`, itemId);
+                            setValue(`items.${index}.item_name`, selectedItem.item_name);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={t('quotes.form.selectItem')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="sticky top-0 bg-white border-b pb-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setCurrentItemIndex(index);
+                                setShowItemModal(true);
+                              }}
+                            >
+                              <PackagePlus className="h-4 w-4 mr-2" />
+                              Add New Item
+                            </Button>
+                          </div>
+                          {itemsLoading ? (
+                            <SelectItem value="_loading" disabled>
+                              {t('quotes.form.loadingItems')}
+                            </SelectItem>
+                          ) : items.length === 0 ? (
+                            <SelectItem value="_none" disabled>
+                              {t('quotes.form.noItems')}
+                            </SelectItem>
+                          ) : (
+                            items.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.item_code} - {item.item_name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="hidden"
+                        {...register(`items.${index}.item_id`)}
+                      />
+                      <input
+                        type="hidden"
+                        {...register(`items.${index}.item_name`)}
+                      />
+                      <Input
+                        {...register(`items.${index}.description`)}
+                        placeholder={t('quotes.form.description')}
+                        className="w-full"
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...register(`items.${index}.quantity`)}
+                          placeholder={t('quotes.form.quantity')}
+                          className="w-full"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...register(`items.${index}.rate`)}
+                          placeholder={t('quotes.form.rate')}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
+                            <option value="">{t('quotes.form.selectAccount')}</option>
+                            {revenueAccounts.map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.name}
+                              </option>
+                            ))}
+                          </NativeSelect>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="px-2"
+                            title="Add new account"
+                            onClick={() => {
+                              setCurrentItemIndex(index);
+                              setShowAccountModal(true);
+                            }}
+                          >
+                            <FolderPlus className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
+                            <option value="">{t('quotes.form.noTax')}</option>
+                            {taxes.map((tax) => (
+                              <option key={tax.id} value={tax.id}>
+                                {tax.name} ({tax.rate}%)
+                              </option>
+                            ))}
+                          </NativeSelect>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="px-2"
+                            title="Add new tax"
+                            onClick={() => {
+                              setCurrentItemIndex(index);
+                              setShowTaxModal(true);
+                            }}
+                          >
+                            <PercentCircle className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm font-semibold">
+                        {t('quotes.form.amount')}: {amount.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="border rounded-lg overflow-hidden hidden md:block">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
@@ -477,7 +640,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
           )}
 
           {/* Terms & Conditions */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="payment_terms">{t('quotes.form.paymentTerms')}</Label>
               <Input

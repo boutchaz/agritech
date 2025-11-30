@@ -70,7 +70,7 @@ function ReceptionBatchesPage() {
           subtitle="Traçabilité de la réception et contrôle qualité des récoltes"
         />
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <ReceptionBatchList
             onCreateClick={() => setShowCreateForm(true)}
             onViewClick={handleViewBatch}

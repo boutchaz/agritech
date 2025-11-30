@@ -154,10 +154,10 @@ function HarvestsPage() {
           searchPlaceholder="Rechercher par culture, parcelle, ferme..."
           onSearch={setSearchQuery}
           actions={
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
               >
                 <Filter className="h-4 w-4" />
                 Filtres
@@ -166,7 +166,7 @@ function HarvestsPage() {
               <button
                 onClick={exportToCSV}
                 disabled={harvests.length === 0}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               >
                 <Download className="h-4 w-4" />
                 Exporter
@@ -174,7 +174,7 @@ function HarvestsPage() {
 
               <button
                 onClick={handleAddHarvest}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 Nouvelle Récolte
@@ -183,7 +183,7 @@ function HarvestsPage() {
           }
         />
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Statistics */}
           {statistics && <HarvestStatistics statistics={statistics} />}
 

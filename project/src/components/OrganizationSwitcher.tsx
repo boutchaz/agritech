@@ -103,30 +103,30 @@ const OrganizationSwitcher: React.FC = () => {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
-        <div className="flex items-center space-x-2">
-          <Building className="h-5 w-5 text-gray-500" />
-          <div className="text-left">
-            <div className="font-medium text-gray-900 dark:text-white text-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <Building className="h-5 w-5 text-gray-500 flex-shrink-0" />
+          <div className="text-left min-w-0">
+            <div className="font-medium text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[160px] sm:max-w-[220px]">
               {currentOrganization.name}
             </div>
             {currentFarm && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
                 {currentFarm.name}
               </div>
             )}
           </div>
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className={`absolute top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 ${
+        <div className={`absolute top-full mt-2 w-full sm:w-80 min-w-[260px] max-w-[calc(100vw-0.75rem)] sm:max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 ${
           dropdownPosition === 'right' ? 'right-0' : 'left-0'
         }`}>
           {/* User Info */}
@@ -155,7 +155,7 @@ const OrganizationSwitcher: React.FC = () => {
             // Organization List
             <>
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Organisations
                 </div>
               </div>
@@ -164,16 +164,16 @@ const OrganizationSwitcher: React.FC = () => {
                   <button
                     key={org.id}
                     onClick={() => handleOrganizationSelect(org)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                       <Building className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white text-sm truncate max-w-[180px]">
                           {org.name}
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleColor(org.role)}`}>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium max-w-[150px] truncate ${getRoleColor(org.role)}`}>
                             {getRoleLabel(org.role)}
                           </span>
                         </div>
@@ -189,14 +189,14 @@ const OrganizationSwitcher: React.FC = () => {
               {/* Actions */}
               <div className="border-t border-gray-200 dark:border-gray-700">
                 <button
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
                   onClick={handleOrganizationSettings}
                 >
                   <Settings className="h-4 w-4 text-gray-400" />
                   <span className="text-gray-700 dark:text-gray-300">Paramètres de l'organisation</span>
                 </button>
                 <button
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
                   onClick={handleTeamManagement}
                 >
                   <Users className="h-4 w-4 text-gray-400" />
@@ -204,7 +204,7 @@ const OrganizationSwitcher: React.FC = () => {
                 </button>
                 <button
                   onClick={signOut}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-red-600"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm text-red-600"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Se déconnecter</span>
