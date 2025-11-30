@@ -7,14 +7,10 @@ import type {
   HarvestRecord,
   HarvestFilters,
   CreateHarvestRequest,
-  Delivery,
-  DeliverySummary,
   DeliveryFilters,
   CreateDeliveryRequest,
   UpdateDeliveryStatusRequest,
   CompleteDeliveryRequest,
-  DeliveryItem,
-  DeliveryTracking,
   HarvestStatistics,
 } from '../types/harvests';
 
@@ -182,7 +178,7 @@ export function useCreateDelivery() {
       }
       return deliveriesApi.create(currentOrganization.id, request);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveries', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['harvests', currentOrganization?.id] });
     },
