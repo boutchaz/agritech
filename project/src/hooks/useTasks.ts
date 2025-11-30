@@ -8,7 +8,6 @@ import type {
   UpdateTaskRequest,
   TaskCategory,
   TaskComment,
-  TaskTimeLog,
   ClockInRequest,
   ClockOutRequest,
   WorkerAvailability,
@@ -285,7 +284,7 @@ export function useCreateTaskCategory() {
 
       return tasksApi.createCategory(currentOrganization.id, category);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-categories', currentOrganization?.id] });
     },
   });

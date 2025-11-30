@@ -3,13 +3,11 @@ import { supabase } from '../lib/supabase'; // Only for auth in Edge Function ca
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { Database } from '../types/database.types';
 import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
-import { paymentsApi, type Payment as ApiPayment } from '../lib/api/payments';
+import { paymentsApi } from '../lib/api/payments';
 
 type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
-type AccountingPaymentInsert = Database['public']['Tables']['accounting_payments']['Insert'];
-type AccountingPaymentUpdate = Database['public']['Tables']['accounting_payments']['Update'];
 
-export interface Payment extends AccountingPayment {}
+export type Payment = AccountingPayment;
 
 export interface PaymentAllocation {
   id: string;
@@ -143,6 +141,7 @@ export function useCreatePayment() {
 
       // Sync to ledger (create journal entry for double-entry bookkeeping)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ledgerResult = await syncPaymentToLedger(data as any, user?.id || '');
 
         if (ledgerResult.success && ledgerResult.journalEntryId) {

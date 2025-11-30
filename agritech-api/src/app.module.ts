@@ -42,6 +42,7 @@ import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-in
 import { WorkUnitsModule } from './modules/work-units/work-units.module';
 import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { RolesModule } from './modules/roles/roles.module';
     FinancialReportsModule,
     ProductionIntelligenceModule,
     HarvestsModule,
+    DeliveriesModule,
     TasksModule,
     WorkersModule,
     WorkUnitsModule,
