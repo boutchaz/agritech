@@ -67,8 +67,10 @@ export class StockEntryItemDto {
 }
 
 export class CreateStockEntryDto {
+  // Will be set by the controller from request headers
   @IsUUID()
-  organization_id: string;
+  @IsOptional()
+  organization_id?: string;
 
   @IsEnum(StockEntryType)
   entry_type: StockEntryType;
@@ -118,6 +120,8 @@ export class CreateStockEntryDto {
   @Type(() => StockEntryItemDto)
   items: StockEntryItemDto[];
 
+  // Will be set by the controller from req.user.sub
   @IsUUID()
-  created_by: string;
+  @IsOptional()
+  created_by?: string;
 }
