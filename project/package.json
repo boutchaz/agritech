@@ -67,6 +67,7 @@
     "@tanstack/router-devtools": "^1.131.42",
     "@tanstack/router-plugin": "^1.131.49",
     "@types/leaflet": "^1.9.20",
+    "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
