@@ -28,7 +28,40 @@ export const farmsApi = {
       params.append('organization_id', filters.organization_id);
     }
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
+
+    try {
+      // API returns { success: boolean, farms: FarmDto[], total: number }
+      const response = await apiClient.get<{ success: boolean; farms: any[]; total: number } | Farm[]>(url, {}, organizationId);
+
+      // Check if response is wrapped in success object
+      if (response && typeof response === 'object' && 'success' in response) {
+        const wrappedResponse = response as { success: boolean; farms: any[]; total: number };
+        if (wrappedResponse.success && Array.isArray(wrappedResponse.farms)) {
+          // Transform API response format to expected frontend format
+          return wrappedResponse.farms.map((farm) => ({
+            id: farm.farm_id,
+            name: farm.farm_name,
+            location: farm.farm_location || '',
+            size: farm.farm_size || 0,
+            size_unit: 'hectares',
+            manager_name: farm.manager_name || '',
+            organization_id: filters?.organization_id || organizationId || '',
+            created_at: farm.created_at,
+            updated_at: farm.updated_at,
+          }));
+        }
+      }
+
+      // Fallback: if response is already an array (backward compatibility)
+      if (Array.isArray(response)) {
+        return response;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching farms:', error);
+      return [];
+    }
   },
 
   /**

@@ -238,7 +238,7 @@ const OrganizationSwitcher: React.FC = () => {
                           {farm.name}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {farm.location} • {farm.size} ha
+                          {farm.location ? `${farm.location} • ` : ''}{farm.size ? `${farm.size} ha` : ''}
                         </div>
                         <div className="text-xs text-gray-400 truncate">
                           Gestionnaire: {farm.manager_name}

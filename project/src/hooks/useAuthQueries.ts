@@ -104,9 +104,14 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
 
-      // Use NestJS API instead of direct Supabase call
-      const data = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
-      return data || [];
+      try {
+        // Use NestJS API instead of direct Supabase call
+        const data = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('Error fetching farms:', error);
+        return [];
+      }
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
