@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
+import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
+  const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
@@ -215,14 +216,35 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      {/* Hide sidebar on mobile */}
+      <div className="hidden md:block">
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
+        />
+      </div>
+      <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
+        {/* Mobile navigation bar */}
+        <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => navigate({ to: '/' })}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            aria-label="Back to dashboard"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          </button>
+          <button
+            onClick={() => navigate({ to: '/' })}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ml-auto"
+            aria-label="Go to home"
+          >
+            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          </button>
+        </div>
+
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -232,29 +254,29 @@ const AppContent: React.FC = () => {
           subtitle="Manage supplier purchase orders and goods receipt"
         />
 
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Purchase Orders</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">All Purchase Orders</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Create and track purchase orders from suppliers
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                {/* <Filter className="mr-2 h-4 w-4" /> */}
+            <div className="flex gap-2 flex-shrink-0">
+              <Button variant="outline" className="hidden sm:flex">
                 Filter
               </Button>
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Purchase Order
+              <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Purchase Order</span>
+                <span className="sm:hidden">New PO</span>
               </Button>
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -341,14 +363,15 @@ const AppContent: React.FC = () => {
 
           {/* Order List */}
           <Card>
-            <CardHeader>
-              <CardTitle>All Purchase Orders</CardTitle>
-              <CardDescription>
+            <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
+              <CardTitle className="text-lg sm:text-xl">All Purchase Orders</CardTitle>
+              <CardDescription className="text-sm">
                 View and manage your purchase orders
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
+            <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -496,6 +519,148 @@ const AppContent: React.FC = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {orders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No purchase orders found. Create your first purchase order to get started.
+                  </div>
+                ) : (
+                  orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Package className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 dark:text-white truncate">
+                              {order.order_number}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                              {order.supplier_name}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={`${getStatusColor(order.status)} flex items-center gap-1 text-xs flex-shrink-0`}>
+                          {getStatusIcon(order.status)}
+                          {order.status}
+                        </Badge>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Order Date</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {order.order_date ? new Date(order.order_date).toLocaleDateString('fr-FR') : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Expected Date</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR') : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {order.currency_code} {Number(order.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Billed</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {order.currency_code} {Number(order.billed_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setDetailDialogOpen(true);
+                          }}
+                          className="flex-1"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(order)}
+                          disabled={order.status === 'draft'}
+                          className="flex-1"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          PDF
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {order.status === 'draft' && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setDetailDialogOpen(true);
+                              }}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Submit for Approval
+                              </DropdownMenuItem>
+                            )}
+                            {order.status === 'submitted' && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setDetailDialogOpen(true);
+                              }}>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Confirm Order
+                              </DropdownMenuItem>
+                            )}
+                            {['confirmed', 'partially_received'].includes(order.status) && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setDetailDialogOpen(true);
+                              }}>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Mark as Received
+                              </DropdownMenuItem>
+                            )}
+                            {order.status !== 'cancelled' && order.status !== 'billed' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedOrder(order);
+                                    setDetailDialogOpen(true);
+                                  }}
+                                  className="text-red-600 dark:text-red-400"
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel Order
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
