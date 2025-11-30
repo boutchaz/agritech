@@ -177,8 +177,9 @@ export function useCreateItemGroup() {
       return itemsApi.createGroup(input, currentOrganization.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['item-groups', currentOrganization?.id] });
-      queryClient.invalidateQueries({ queryKey: ['item-group-tree', currentOrganization?.id] });
+      // Use partial match to invalidate all item-groups queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['item-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
     },
   });
 }
@@ -199,9 +200,10 @@ export function useUpdateItemGroup() {
       return itemsApi.updateGroup(groupId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['item-groups', currentOrganization?.id] });
+      // Use partial match to invalidate all item-groups queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       queryClient.invalidateQueries({ queryKey: ['item-group', variables.groupId] });
-      queryClient.invalidateQueries({ queryKey: ['item-group-tree', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
     },
   });
 }
@@ -222,8 +224,9 @@ export function useDeleteItemGroup() {
       return itemsApi.deleteGroup(groupId, currentOrganization.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['item-groups', currentOrganization?.id] });
-      queryClient.invalidateQueries({ queryKey: ['item-group-tree', currentOrganization?.id] });
+      // Use partial match to invalidate all item-groups queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['item-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
     },
   });
 }

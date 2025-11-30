@@ -104,8 +104,8 @@ export default function ItemGroupsManagement() {
     try {
       if (editingGroup) {
         await updateItemGroup.mutateAsync({
-          id: editingGroup.id,
-          data: {
+          groupId: editingGroup.id,
+          input: {
             name: formData.name.trim(),
             code: formData.code.trim() || undefined,
             description: formData.description.trim() || undefined,
