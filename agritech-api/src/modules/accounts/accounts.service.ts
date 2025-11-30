@@ -25,23 +25,27 @@ export class AccountsService {
    * Get all accounts for an organization
    */
   async findAll(organizationId: string, isActive?: boolean): Promise<any[]> {
-    const pool = this.databaseService.getPgPool();
+    const supabase = this.databaseService.getAdminClient();
 
-    let query = `
-      SELECT * FROM accounts
-      WHERE organization_id = $1
-    `;
-    const params: any[] = [organizationId];
+    let query = supabase
+      .from('accounts')
+      .select('*')
+      .eq('organization_id', organizationId);
 
     if (isActive !== undefined) {
-      query += ` AND is_active = $2`;
-      params.push(isActive);
+      query = query.eq('is_active', isActive);
     }
 
-    query += ` ORDER BY code ASC`;
+    query = query.order('code', { ascending: true });
 
-    const result = await pool.query(query, params);
-    return result.rows;
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch accounts: ${error.message}`, error);
+      throw error;
+    }
+
+    return data || [];
   }
 
   /**
