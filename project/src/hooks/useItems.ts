@@ -251,8 +251,9 @@ export function useCreateItem() {
       return itemsApi.create(input, currentOrganization.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', currentOrganization?.id] });
-      queryClient.invalidateQueries({ queryKey: ['item-selection', currentOrganization?.id] });
+      // Use partial match to invalidate all items queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['item-selection'] });
     },
   });
 }
@@ -273,9 +274,10 @@ export function useUpdateItem() {
       return itemsApi.update(itemId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items', currentOrganization?.id] });
+      // Use partial match to invalidate all items queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['item', variables.itemId] });
-      queryClient.invalidateQueries({ queryKey: ['item-selection', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['item-selection'] });
     },
   });
 }
@@ -296,8 +298,9 @@ export function useDeleteItem() {
       return itemsApi.delete(itemId, currentOrganization.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items', currentOrganization?.id] });
-      queryClient.invalidateQueries({ queryKey: ['item-selection', currentOrganization?.id] });
+      // Use partial match to invalidate all items queries regardless of filters
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['item-selection'] });
     },
   });
 }
