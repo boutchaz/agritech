@@ -36,6 +36,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Increase the maximum file size limit for precaching to 5 MB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(gstatic|googleapis)\.com\/.*/i,
