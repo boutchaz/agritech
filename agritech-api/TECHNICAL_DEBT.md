@@ -481,11 +481,17 @@ Plus unit conversion logic.
 - Low stock alerts never rendered due to guard condition bug
 - Unused `useFarmStockLevels` hook imported but not needed
 
-**Status:** FIXED in commit 9e40304
-- ✅ Low stock filter now mirrors badge logic exactly
-- ✅ `maintain_stock` removed from form state entirely
-- ✅ Low stock alerts visibility guard corrected (`selectedFarm === 'all'`)
+**Status:** FIXED and VERIFIED in commit 9e40304
+- ✅ Low stock filter now mirrors badge logic exactly (lines 747-767, 922-924)
+  - Filter: `is_low_stock || (minimum_stock_level && total_quantity < minimum_stock_level)`
+  - Badge: `is_low_stock || (minimum_stock_level && total_quantity < minimum_stock_level)`
+- ✅ `maintain_stock` field never existed in form state (verified lines 233-286)
+  - Only `organization_id` is stripped before API submission (line 329)
+- ✅ Low stock alerts visibility guard correct: `selectedFarm === 'all'` (line 818)
 - ✅ Unused hook removed
+
+**Verification Date:** 2025-11-30
+**Verified By:** Code inspection of current implementation
 
 ---
 
