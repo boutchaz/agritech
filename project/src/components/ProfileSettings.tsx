@@ -184,18 +184,18 @@ const ProfileSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <User className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <User className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {t('profile.title')}
           </h2>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -240,7 +240,7 @@ const ProfileSettings: React.FC = () => {
               />
             </FormField>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label={t('profile.fields.firstName')} htmlFor="first_name">
                 <Input
                   id="first_name"
@@ -275,7 +275,7 @@ const ProfileSettings: React.FC = () => {
               htmlFor="role"
               helper={currentOrganization ? t('profile.fields.roleHelper', { orgName: currentOrganization.name }) : t('profile.fields.roleHelperOrg')}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Input
                   id="role"
                   type="text"
@@ -283,7 +283,7 @@ const ProfileSettings: React.FC = () => {
                   disabled
                   className="flex-1"
                 />
-                <span className={`px-3 py-2 rounded-md text-sm font-medium ${
+                <span className={`px-3 py-2 rounded-md text-sm font-medium text-center whitespace-nowrap ${
                   userRole?.role_name === 'organization_admin'
                     ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200'
                     : userRole?.role_name === 'farm_manager'
@@ -354,18 +354,20 @@ const ProfileSettings: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('profile.fields.profilePhoto')}
               </label>
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="h-8 w-8 text-gray-400" />
                 </div>
-                <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <Camera className="h-4 w-4" />
-                  <span>{t('profile.changePhoto')}</span>
-                </button>
+                <div className="flex flex-col items-center sm:items-start gap-2 w-full sm:w-auto">
+                  <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <Camera className="h-4 w-4" />
+                    <span>{t('profile.changePhoto')}</span>
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
+                    {t('profile.photoFormats')}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('profile.photoFormats')}
-              </p>
             </div>
           </div>
         </div>
@@ -378,7 +380,7 @@ const ProfileSettings: React.FC = () => {
           </h3>
 
           {!showPasswordChange ? (
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white">{t('profile.password.title')}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -387,7 +389,7 @@ const ProfileSettings: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowPasswordChange(true)}
-                className="px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 border border-green-600 dark:border-green-400 rounded-lg"
               >
                 {t('profile.password.change')}
               </button>
@@ -472,7 +474,7 @@ const ProfileSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4">
                 <button
                   onClick={() => {
                     setShowPasswordChange(false);
@@ -483,14 +485,14 @@ const ProfileSettings: React.FC = () => {
                     });
                     setError(null);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg order-2 sm:order-1"
                 >
                   {t('profile.cancel')}
                 </button>
                 <button
                   onClick={handlePasswordChange}
                   disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                 >
                   {changingPassword ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

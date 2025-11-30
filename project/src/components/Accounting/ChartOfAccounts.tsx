@@ -233,6 +233,21 @@ export const ChartOfAccounts: React.FC = () => {
     }
   };
 
+  const flattenedAccounts = useMemo(() => {
+    const result: Array<{ account: Account; level: number }> = [];
+
+    const walk = (accs: Account[], level: number) => {
+      accs.forEach((acc) => {
+        result.push({ account: acc, level });
+        const children = accountHierarchy.childMap.get(acc.id) || [];
+        walk(children, level + 1);
+      });
+    };
+
+    walk(accountHierarchy.rootAccounts, 0);
+    return result;
+  }, [accountHierarchy]);
+
   const renderAccountRow = (account: Account, level: number = 0) => {
     const children = accountHierarchy.childMap.get(account.id) || [];
     const isExpanded = expandedGroups.has(account.id);
@@ -321,68 +336,74 @@ export const ChartOfAccounts: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Chart of Accounts
+        <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Building2 className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">Chart of Accounts</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-1 text-sm">
                 Manage your accounting chart of accounts hierarchy
               </CardDescription>
             </div>
-            <Button onClick={handleCreateAccount}>
+            <Button onClick={handleCreateAccount} className="w-full sm:w-auto justify-center flex-shrink-0">
               <Plus className="h-4 w-4 mr-2" />
               New Account
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 mb-6">
+            {/* Search Bar - Full width on mobile */}
+            <div className="w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search accounts by code or name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
-            <Select value={filterType} onValueChange={(val) => setFilterType(val as AccountType | 'all')}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Asset">Assets</SelectItem>
-                <SelectItem value="Liability">Liabilities</SelectItem>
-                <SelectItem value="Equity">Equity</SelectItem>
-                <SelectItem value="Revenue">Revenue</SelectItem>
-                <SelectItem value="Expense">Expenses</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="showInactive"
-                checked={showInactive}
-                onCheckedChange={(checked) => setShowInactive(checked as boolean)}
-              />
-              <Label htmlFor="showInactive" className="text-sm cursor-pointer">
-                Show Inactive
-              </Label>
+
+            {/* Type Filter and Show Inactive */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <Select value={filterType} onValueChange={(val) => setFilterType(val as AccountType | 'all')}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <Filter className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Asset">Assets</SelectItem>
+                  <SelectItem value="Liability">Liabilities</SelectItem>
+                  <SelectItem value="Equity">Equity</SelectItem>
+                  <SelectItem value="Revenue">Revenue</SelectItem>
+                  <SelectItem value="Expense">Expenses</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2 px-1">
+                <Checkbox
+                  id="showInactive"
+                  checked={showInactive}
+                  onCheckedChange={(checked) => setShowInactive(checked as boolean)}
+                />
+                <Label htmlFor="showInactive" className="text-sm cursor-pointer whitespace-nowrap">
+                  Show Inactive
+                </Label>
+              </div>
             </div>
           </div>
 
-          {/* Accounts Table */}
-          <div className="border rounded-lg">
-            <Table>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden md:block border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Code</TableHead>
@@ -404,24 +425,26 @@ export const ChartOfAccounts: React.FC = () => {
                             <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                               No Chart of Accounts Found
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md px-4">
                               Get started quickly by seeding a standard chart of accounts for Morocco (Plan Comptable Marocain),
                               or create accounts manually.
                             </p>
                           </div>
-                          <div className="flex gap-3">
+                          <div className="flex flex-col sm:flex-row gap-3 px-4">
                             <Button
                               onClick={handleSeedChartOfAccounts}
                               disabled={isSeeding}
                               size="lg"
+                              className="w-full sm:w-auto"
                             >
                               <DatabaseIcon className="h-4 w-4 mr-2" />
-                              {isSeeding ? 'Seeding Accounts...' : 'Seed Chart of Accounts (150+ accounts)'}
+                              {isSeeding ? 'Seeding...' : 'Seed Chart'}
                             </Button>
                             <Button
                               onClick={handleCreateAccount}
                               variant="outline"
                               size="lg"
+                              className="w-full sm:w-auto"
                             >
                               <Plus className="h-4 w-4 mr-2" />
                               Create Manually
@@ -441,24 +464,127 @@ export const ChartOfAccounts: React.FC = () => {
               </TableBody>
             </Table>
           </div>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {accounts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 space-y-4">
+                <DatabaseIcon className="h-16 w-16 text-gray-300" />
+                <div className="space-y-2 text-center">
+                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    No Chart of Accounts Found
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Get started by seeding a standard chart of accounts or create accounts manually.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3 w-full">
+                  <Button
+                    onClick={handleSeedChartOfAccounts}
+                    disabled={isSeeding}
+                    size="lg"
+                    className="w-full"
+                  >
+                    <DatabaseIcon className="h-4 w-4 mr-2" />
+                    {isSeeding ? 'Seeding Accounts...' : 'Seed Chart of Accounts'}
+                  </Button>
+                  <Button
+                    onClick={handleCreateAccount}
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Manually
+                  </Button>
+                </div>
+              </div>
+            ) : flattenedAccounts.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">
+                <p>No accounts match your search criteria.</p>
+              </div>
+            ) : (
+              flattenedAccounts.map(({ account, level }) => (
+                <div
+                  key={account.id}
+                  className="border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm"
+                  style={{
+                    marginLeft: `${level * 16}px`,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-lg">
+                          {accountTypeIcons[account.account_type as AccountType]}
+                        </span>
+                        <Badge className={accountTypeColors[account.account_type as AccountType] + ' text-xs'}>
+                          {account.account_type}
+                        </Badge>
+                        <Badge className={account.is_active ? 'bg-green-100 text-green-800 text-xs' : 'bg-gray-100 text-gray-800 text-xs'}>
+                          {account.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="font-bold text-base text-gray-900 dark:text-gray-100">
+                          {account.code}
+                        </p>
+                        <p className="font-medium text-sm text-gray-700 dark:text-gray-300">
+                          {account.name}
+                        </p>
+                      </div>
+                      {account.account_subtype && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {account.account_subtype}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>Level {level + 1}</span>
+                        <span>•</span>
+                        <span>{account.currency_code || currentOrganization?.currency || 'MAD'}</span>
+                        <span>•</span>
+                        <Badge variant="outline" className="text-xs">
+                          {account.is_group ? 'Group' : 'Ledger'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditAccount(account)} className="h-8 w-8 p-0">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                        onClick={() => handleDeleteAccount(account)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
               {editingAccount ? 'Edit Account' : 'Create New Account'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               {editingAccount
                 ? 'Update the account details below'
                 : 'Add a new account to your chart of accounts'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="code">Account Code *</Label>
                 <Input
@@ -481,7 +607,7 @@ export const ChartOfAccounts: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="account_type">Account Type *</Label>
                 <Select
@@ -511,7 +637,7 @@ export const ChartOfAccounts: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="parent_id">Parent Account</Label>
                 <Select
@@ -569,50 +695,62 @@ export const ChartOfAccounts: React.FC = () => {
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-start gap-2">
                 <Checkbox
                   id="is_group"
                   checked={formData.is_group}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, is_group: checked as boolean })
                   }
+                  className="mt-0.5"
                 />
-                <Label htmlFor="is_group" className="cursor-pointer">
+                <Label htmlFor="is_group" className="cursor-pointer text-sm leading-relaxed">
                   Group Account (can contain child accounts)
                 </Label>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <Checkbox
                   id="is_active"
                   checked={formData.is_active}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, is_active: checked as boolean })
                   }
+                  className="mt-0.5"
                 />
-                <Label htmlFor="is_active" className="cursor-pointer">
+                <Label htmlFor="is_active" className="cursor-pointer text-sm leading-relaxed">
                   Active
                 </Label>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <Checkbox
                   id="allow_cost_center"
                   checked={formData.allow_cost_center}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, allow_cost_center: checked as boolean })
                   }
+                  className="mt-0.5"
                 />
-                <Label htmlFor="allow_cost_center" className="cursor-pointer">
+                <Label htmlFor="allow_cost_center" className="cursor-pointer text-sm leading-relaxed">
                   Allow Cost Center Tracking
                 </Label>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createAccount.isPending || updateAccount.isPending}>
+              <Button
+                type="submit"
+                disabled={createAccount.isPending || updateAccount.isPending}
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
                 {editingAccount ? 'Update Account' : 'Create Account'}
               </Button>
             </DialogFooter>
@@ -622,22 +760,27 @@ export const ChartOfAccounts: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Delete Account</DialogTitle>
+            <DialogDescription className="text-sm">
               Are you sure you want to delete the account "{deletingAccount?.name}"? This action cannot
               be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={deleteAccount.isPending}
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               Delete Account
             </Button>
