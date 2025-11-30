@@ -4,7 +4,6 @@ import type {
   PaymentSummary,
   PaymentFilters,
   CreatePaymentRecordRequest,
-  ApprovePaymentRequest,
   ProcessPaymentRequest,
   PaymentAdvance,
   RequestAdvanceRequest,

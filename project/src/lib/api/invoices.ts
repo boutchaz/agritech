@@ -1,6 +1,13 @@
 import { apiClient } from '../api-client';
+import type { Database } from '@/types/database.types';
 
-const BASE_URL = '/api/v1/invoices';
+type Tables = Database['public']['Tables'];
+type Invoice = Tables['invoices']['Row'];
+type InvoiceItem = Tables['invoice_items']['Row'];
+
+export interface InvoiceWithItems extends Invoice {
+  invoice_items: InvoiceItem[];
+}
 
 export interface InvoiceFilters {
   invoice_type?: 'sales' | 'purchase';
@@ -10,41 +17,37 @@ export interface InvoiceFilters {
   invoice_number?: string;
   date_from?: string;
   date_to?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface UpdateInvoiceStatusInput {
-  status: 'draft' | 'submitted' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
-  remarks?: string;
+  farm_id?: string;
+  parcel_id?: string;
 }
 
 export const invoicesApi = {
-  /**
-   * Get all invoices with optional filters
-   */
-  async getAll(filters?: InvoiceFilters, organizationId?: string) {
-    return apiClient.get(BASE_URL, {}, organizationId);
+  async getAll(organizationId: string, filters?: InvoiceFilters): Promise<InvoiceWithItems[]> {
+    const params = new URLSearchParams();
+    if (filters?.invoice_type) params.append('invoice_type', filters.invoice_type);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.party_id) params.append('party_id', filters.party_id);
+    if (filters?.party_name) params.append('party_name', filters.party_name);
+    if (filters?.invoice_number) params.append('invoice_number', filters.invoice_number);
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    const queryString = params.toString();
+    return apiClient.get<InvoiceWithItems[]>(`/api/v1/invoices${queryString ? `?${queryString}` : ''}`);
   },
 
-  /**
-   * Get a single invoice by ID with items
-   */
-  async getOne(id: string, organizationId?: string) {
-    return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
+  async getById(invoiceId: string): Promise<InvoiceWithItems> {
+    return apiClient.get<InvoiceWithItems>(`/api/v1/invoices/${invoiceId}`);
   },
 
-  /**
-   * Update invoice status
-   */
-  async updateStatus(id: string, data: UpdateInvoiceStatusInput, organizationId?: string) {
-    return apiClient.patch(`${BASE_URL}/${id}/status`, data, {}, organizationId);
+  async create(invoice: any): Promise<InvoiceWithItems> {
+    return apiClient.post<InvoiceWithItems>(`/api/v1/invoices`, invoice);
   },
 
-  /**
-   * Delete an invoice (only drafts)
-   */
-  async delete(id: string, organizationId?: string) {
-    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
+  async updateStatus(invoiceId: string, status: string): Promise<Invoice> {
+    return apiClient.patch<Invoice>(`/api/v1/invoices/${invoiceId}/status`, { status });
+  },
+
+  async delete(invoiceId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/invoices/${invoiceId}`);
   },
 };

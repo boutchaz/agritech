@@ -6,8 +6,8 @@
  */
 
 import { supabase } from './supabase';
-import { apiClient } from './api-client-axios';
 import { paymentsApi } from './api/payments';
+import { accountsApi } from './api/accounts';
 import type { Database } from '@/types/database.types';
 import type {
   CreateAccountInput,
@@ -54,59 +54,25 @@ export const accountingApi = {
   // ACCOUNTS (Chart of Accounts)
   // =====================================================
 
-  async getAccounts(_organizationId: string) {
-    const response = await apiClient.get<Account[]>('/api/v1/accounts', {
-      params: { is_active: 'true' }
-    });
-    return response.data;
+  async getAccounts(organizationId: string) {
+    return accountsApi.getAll(organizationId);
   },
 
   async getAccount(accountId: string) {
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', accountId)
-      .single();
-
-    if (error) throw error;
-    return data as Account;
+    return accountsApi.getById(accountId);
   },
 
-  async createAccount(account: CreateAccountInput, organizationId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('accounts')
-      .insert({
-        ...account,
-        organization_id: organizationId,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as Account;
+  async createAccount(account: CreateAccountInput, _organizationId: string, _userId: string) {
+    return accountsApi.create(account);
   },
 
   async updateAccount(accountUpdate: UpdateAccountInput) {
     const { id, ...updates } = accountUpdate;
-    const { data, error } = await supabase
-      .from('accounts')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as Account;
+    return accountsApi.update(id, updates);
   },
 
   async deleteAccount(accountId: string) {
-    const { error } = await supabase
-      .from('accounts')
-      .delete()
-      .eq('id', accountId);
-
-    if (error) throw error;
+    await accountsApi.delete(accountId);
   },
 
   // =====================================================

@@ -49,6 +49,99 @@ export class AccountsService {
   }
 
   /**
+   * Get a single account by ID
+   */
+  async findOne(accountId: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', accountId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to fetch account: ${error.message}`, error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new BadRequestException('Account not found');
+    }
+
+    return data;
+  }
+
+  /**
+   * Create a new account
+   */
+  async create(accountData: any, organizationId: string, userId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert({
+        ...accountData,
+        organization_id: organizationId,
+        created_by: userId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create account: ${error.message}`, error);
+      throw new BadRequestException(`Failed to create account: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Update an existing account
+   */
+  async update(accountId: string, updates: any, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .update(updates)
+      .eq('id', accountId)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to update account: ${error.message}`, error);
+      throw new BadRequestException(`Failed to update account: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new BadRequestException('Account not found');
+    }
+
+    return data;
+  }
+
+  /**
+   * Delete an account
+   */
+  async delete(accountId: string, organizationId: string): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      this.logger.error(`Failed to delete account: ${error.message}`, error);
+      throw new BadRequestException(`Failed to delete account: ${error.message}`);
+    }
+  }
+
+  /**
    * Seed Moroccan Chart of Accounts for an organization
    */
   async seedMoroccanChartOfAccounts(organizationId: string): Promise<{

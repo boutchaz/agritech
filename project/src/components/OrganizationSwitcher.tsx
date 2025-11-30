@@ -7,7 +7,7 @@ const OrganizationSwitcher: React.FC = () => {
   const {
     organizations,
     currentOrganization,
-    farms,
+    farms: farmsData,
     currentFarm,
     setCurrentOrganization,
     setCurrentFarm,
@@ -15,6 +15,9 @@ const OrganizationSwitcher: React.FC = () => {
     profile,
     user
   } = useAuth();
+
+  // Ensure farms is always an array
+  const farms = Array.isArray(farmsData) ? farmsData : [];
 
   const navigate = useNavigate();
 
@@ -223,37 +226,37 @@ const OrganizationSwitcher: React.FC = () => {
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
-                {farms && farms.map((farm) => (
-                  <button
-                    key={farm.id}
-                    onClick={() => handleFarmSelect(farm)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {farm.name}
+                {Array.isArray(farms) && farms.length > 0 ? (
+                  farms.map((farm) => (
+                    <button
+                      key={farm.id}
+                      onClick={() => handleFarmSelect(farm)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {farm.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {farm.location} • {farm.size} ha
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">
+                          Gestionnaire: {farm.manager_name}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {farm.location} • {farm.size} ha
-                      </div>
-                      <div className="text-xs text-gray-400 truncate">
-                        Gestionnaire: {farm.manager_name}
-                      </div>
-                    </div>
-                    {currentFarm?.id === farm.id && (
-                      <Check className="h-4 w-4 text-green-600" />
-                    )}
-                  </button>
-                ))}
+                      {currentFarm?.id === farm.id && (
+                        <Check className="h-4 w-4 text-green-600" />
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <Building className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p>Aucune ferme trouvée</p>
+                    <p className="text-xs">Créez votre première ferme</p>
+                  </div>
+                )}
               </div>
-
-              {(!farms || farms.length === 0) && (
-                <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                  <Building className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p>Aucune ferme trouvée</p>
-                  <p className="text-xs">Créez votre première ferme</p>
-                </div>
-              )}
             </>
           )}
         </div>
