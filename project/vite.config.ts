@@ -46,6 +46,13 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
 
+        // Clean old caches on activation
+        cleanupOutdatedCaches: true,
+
+        // Force navigation requests to go through service worker
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/],
+
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(gstatic|googleapis)\.com\/.*/i,
