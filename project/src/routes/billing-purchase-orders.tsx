@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical, ArrowLeft, Home } from 'lucide-react';
+import { MobileNavBar } from '../components/MobileNavBar';
+import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +38,6 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
-  const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
@@ -227,34 +227,22 @@ const AppContent: React.FC = () => {
         />
       </div>
       <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
-        {/* Mobile navigation bar */}
-        <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ml-auto"
-            aria-label="Go to home"
-          >
-            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+        {/* Mobile Navigation Bar */}
+        <MobileNavBar title="Purchase Orders" />
+
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Package, label: 'Purchase Orders', isActive: true }
+            ]}
+            title="Purchase Orders"
+            subtitle="Manage supplier purchase orders and goods receipt"
+          />
         </div>
 
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Package, label: 'Purchase Orders', isActive: true }
-          ]}
-          title="Purchase Orders"
-          subtitle="Manage supplier purchase orders and goods receipt"
-        />
-
-        <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 md:space-y-6">
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">

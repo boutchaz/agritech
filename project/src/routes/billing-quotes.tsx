@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, ArrowLeft, Home } from 'lucide-react';
+import { MobileNavBar } from '../components/MobileNavBar';
+import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,6 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -250,25 +250,7 @@ const AppContent: React.FC = () => {
       </div>
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
         {/* Mobile Navigation Bar */}
-        <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <h1 className="text-base font-semibold text-gray-900 dark:text-white flex-1 truncate">
-            {t('quotes.pageTitle')}
-          </h1>
-          <button
-            onClick={() => navigate({ to: '/' })}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Go to home"
-          >
-            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
-        </div>
+        <MobileNavBar title={t('quotes.pageTitle')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
