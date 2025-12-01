@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
+import { MobileNavBar } from '../components/MobileNavBar';
 import { Package, Plus, Filter, Download, Building2 } from 'lucide-react';
 import { useHarvests, useHarvestStatistics, useDeleteHarvest } from '../hooks/useHarvests';
 import { useFarms } from '../hooks/useParcelsQuery';
@@ -134,26 +135,34 @@ function HarvestsPage() {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
+      {/* Hide sidebar on mobile */}
+      <div className="hidden md:block">
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
+        />
+      </div>
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Package, label: 'Récoltes', isActive: true }
-          ]}
-          title="Gestion des Récoltes"
-          subtitle={`${filteredHarvests.length} récolte${filteredHarvests.length !== 1 ? 's' : ''} enregistrée${filteredHarvests.length !== 1 ? 's' : ''}`}
-          showSearch={true}
-          searchPlaceholder="Rechercher par culture, parcelle, ferme..."
-          onSearch={setSearchQuery}
-          actions={
+        {/* Mobile Navigation Bar */}
+        <MobileNavBar title="Gestion des Récoltes" />
+
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Package, label: 'Récoltes', isActive: true }
+            ]}
+            title="Gestion des Récoltes"
+            subtitle={`${filteredHarvests.length} récolte${filteredHarvests.length !== 1 ? 's' : ''} enregistrée${filteredHarvests.length !== 1 ? 's' : ''}`}
+            showSearch={true}
+            searchPlaceholder="Rechercher par culture, parcelle, ferme..."
+            onSearch={setSearchQuery}
+            actions={
             <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -181,9 +190,10 @@ function HarvestsPage() {
               </button>
             </div>
           }
-        />
+          />
+        </div>
 
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
           {/* Statistics */}
           {statistics && <HarvestStatistics statistics={statistics} />}
 

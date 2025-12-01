@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
+import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Module } from '../types';
@@ -85,24 +86,33 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Package, label: t('stock.title'), isActive: true }
-          ]}
-          title={t('stock.title')}
-          subtitle={t('stock.subtitle')}
+      {/* Hide sidebar on mobile */}
+      <div className="hidden md:block">
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
         />
+      </div>
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        {/* Mobile Navigation Bar */}
+        <MobileNavBar title={t('stock.title')} />
 
-        <div className="p-6">
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Package, label: t('stock.title'), isActive: true }
+            ]}
+            title={t('stock.title')}
+            subtitle={t('stock.subtitle')}
+          />
+        </div>
+
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="w-full justify-start overflow-x-auto sm:overflow-visible whitespace-nowrap rounded-lg">
