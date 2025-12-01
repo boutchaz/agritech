@@ -47,13 +47,43 @@ async function init() {
   routerContext.auth.user = session?.user || null
   routerContext.auth.isLoading = false
 
-  // Register service worker for PWA (only in supported browsers)
-  registerSW({
+  // Enhanced service worker registration with update detection
+  const updateSW = registerSW({
     immediate: true,
     onRegisteredSW(_swUrl, registration) {
-      // Auto update when a new service worker is found
+      // Check for updates immediately
       registration?.update()
+
+      // Check for updates periodically (every hour)
+      setInterval(() => {
+        registration?.update()
+      }, 60 * 60 * 1000) // 1 hour
     },
+    onNeedRefresh() {
+      // New service worker is available and waiting
+      // Auto-reload to apply update
+      if (confirm('A new version is available. Reload to update?')) {
+        updateSW(true) // Force reload
+      }
+    },
+    onOfflineReady() {
+      // App is ready to work offline - no action needed
+    },
+    onRegisterError(error) {
+      console.error('Service Worker registration error:', error)
+    },
+  })
+
+  // Check for updates when page becomes visible (user returns to tab)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      updateSW()
+    }
+  })
+
+  // Check for updates on focus (user returns to window)
+  window.addEventListener('focus', () => {
+    updateSW()
   })
 
   // Subscribe to auth changes
