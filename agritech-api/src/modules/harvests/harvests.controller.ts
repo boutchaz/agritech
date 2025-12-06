@@ -16,6 +16,7 @@ import { HarvestsService } from './harvests.service';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { UpdateHarvestDto } from './dto/update-harvest.dto';
 import { HarvestFiltersDto } from './dto/harvest-filters.dto';
+import { SellHarvestDto } from './dto/sell-harvest.dto';
 
 @ApiTags('harvests')
 @ApiBearerAuth()
@@ -69,6 +70,22 @@ export class HarvestsController {
     @Body() updateHarvestDto: UpdateHarvestDto,
   ) {
     return this.harvestsService.update(req.user.id, organizationId, harvestId, updateHarvestDto);
+  }
+
+  @Post(':harvestId/sell')
+  @ApiOperation({
+    summary: 'Sell a harvest and create journal entry',
+    description: 'Marks harvest as sold and creates a double-entry journal entry for the revenue. Payment terms determine if Cash (debit) or Accounts Receivable (debit) is used.',
+  })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'harvestId', description: 'Harvest ID to sell' })
+  async sellHarvest(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('harvestId') harvestId: string,
+    @Body() sellHarvestDto: SellHarvestDto,
+  ) {
+    return this.harvestsService.sellHarvest(req.user.id, organizationId, harvestId, sellHarvestDto);
   }
 
   @Delete(':harvestId')

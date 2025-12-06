@@ -58,7 +58,7 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
-    // Create journal entry
+    // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
       .insert({
@@ -69,9 +69,9 @@ export class AccountingAutomationService {
         description: description || `Cost entry: ${costType}`,
         reference_id: costId,
         reference_type: 'cost',
-        total_debit: amount,
-        total_credit: amount,
-        status: JournalEntryStatus.POSTED,
+        total_debit: 0, // Will be updated by trigger
+        total_credit: 0, // Will be updated by trigger
+        status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
       })
       .select()
@@ -100,13 +100,36 @@ export class AccountingAutomationService {
       },
     ];
 
+    // Validate double-entry before inserting
+    const totalDebit = items.reduce((sum, item) => sum + item.debit, 0);
+    const totalCredit = items.reduce((sum, item) => sum + item.credit, 0);
+
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      throw new BadRequestException(
+        `Cost journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
+
     const { error: itemsError } = await supabase
       .from('journal_items')
       .insert(items);
 
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
+      // Rollback journal entry
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
+    }
+
+    // Post the journal entry now that items are inserted and validated
+    const { error: postError } = await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED })
+      .eq('id', journalEntry.id);
+
+    if (postError) {
+      this.logger.error(`Failed to post journal entry: ${postError.message}`);
+      throw new BadRequestException(`Failed to post journal entry: ${postError.message}`);
     }
 
     this.logger.log(`Journal entry created for cost ${costId}: ${entryNumber}`);
@@ -162,7 +185,7 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
-    // Create journal entry
+    // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
       .insert({
@@ -173,9 +196,9 @@ export class AccountingAutomationService {
         description: description || `Revenue entry: ${revenueType}`,
         reference_id: revenueId,
         reference_type: 'revenue',
-        total_debit: amount,
-        total_credit: amount,
-        status: JournalEntryStatus.POSTED,
+        total_debit: 0, // Will be updated by trigger
+        total_credit: 0, // Will be updated by trigger
+        status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
       })
       .select()
@@ -204,13 +227,36 @@ export class AccountingAutomationService {
       },
     ];
 
+    // Validate double-entry before inserting
+    const totalDebit = items.reduce((sum, item) => sum + item.debit, 0);
+    const totalCredit = items.reduce((sum, item) => sum + item.credit, 0);
+
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      throw new BadRequestException(
+        `Revenue journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
+
     const { error: itemsError } = await supabase
       .from('journal_items')
       .insert(items);
 
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
+      // Rollback journal entry
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
+    }
+
+    // Post the journal entry now that items are inserted and validated
+    const { error: postError } = await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED })
+      .eq('id', journalEntry.id);
+
+    if (postError) {
+      this.logger.error(`Failed to post journal entry: ${postError.message}`);
+      throw new BadRequestException(`Failed to post journal entry: ${postError.message}`);
     }
 
     this.logger.log(`Journal entry created for revenue ${revenueId}: ${entryNumber}`);

@@ -22,7 +22,7 @@ export interface InvoiceFilters {
 }
 
 export const invoicesApi = {
-  async getAll(organizationId: string, filters?: InvoiceFilters): Promise<InvoiceWithItems[]> {
+  async getAll(filters: InvoiceFilters, organizationId: string): Promise<InvoiceWithItems[]> {
     const params = new URLSearchParams();
     if (filters?.invoice_type) params.append('invoice_type', filters.invoice_type);
     if (filters?.status) params.append('status', filters.status);
@@ -32,22 +32,38 @@ export const invoicesApi = {
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
     const queryString = params.toString();
-    return apiClient.get<InvoiceWithItems[]>(`/api/v1/invoices${queryString ? `?${queryString}` : ''}`);
+    return apiClient.get<InvoiceWithItems[]>(`/invoices${queryString ? `?${queryString}` : ''}`);
   },
 
-  async getById(invoiceId: string): Promise<InvoiceWithItems> {
-    return apiClient.get<InvoiceWithItems>(`/api/v1/invoices/${invoiceId}`);
+  async getOne(invoiceId: string, organizationId: string): Promise<InvoiceWithItems> {
+    return apiClient.get<InvoiceWithItems>(`/invoices/${invoiceId}`);
   },
 
-  async create(invoice: any): Promise<InvoiceWithItems> {
-    return apiClient.post<InvoiceWithItems>(`/api/v1/invoices`, invoice);
+  async create(invoice: any, organizationId: string): Promise<InvoiceWithItems> {
+    return apiClient.post<InvoiceWithItems>(`/invoices`, invoice);
   },
 
-  async updateStatus(invoiceId: string, status: string): Promise<Invoice> {
-    return apiClient.patch<Invoice>(`/api/v1/invoices/${invoiceId}/status`, { status });
+  async updateStatus(
+    invoiceId: string,
+    data: { status: string; remarks?: string },
+    organizationId: string
+  ): Promise<Invoice> {
+    return apiClient.patch<Invoice>(`/invoices/${invoiceId}/status`, data);
   },
 
-  async delete(invoiceId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/invoices/${invoiceId}`);
+  /**
+   * Post an invoice (creates journal entry)
+   * Replaces Supabase Edge Function call
+   */
+  async postInvoice(
+    invoiceId: string,
+    postingDate: string,
+    organizationId: string
+  ): Promise<{ success: boolean; message: string; data: { invoice_id: string; journal_entry_id: string } }> {
+    return apiClient.post(`/invoices/${invoiceId}/post`, { posting_date: postingDate });
+  },
+
+  async delete(invoiceId: string, organizationId: string): Promise<void> {
+    await apiClient.delete(`/invoices/${invoiceId}`);
   },
 };

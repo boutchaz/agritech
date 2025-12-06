@@ -22,44 +22,48 @@ export class UsersService {
 
     /**
      * Create or update user profile
-     * Migrated from create_user_profile SQL function
+     * Uses SECURITY DEFINER RPC function to bypass RLS policies
+     * Function: create_or_update_user_profile (defined in schema migration)
      */
     async createProfile(dto: CreateUserProfileDto) {
         const client = this.databaseService.getAdminClient();
 
-        const fullName = dto.fullName ||
-            (dto.firstName && dto.lastName ? `${dto.firstName} ${dto.lastName}` : dto.email.split('@')[0]);
+        try {
+            // Call the SECURITY DEFINER function via RPC which bypasses RLS
+            // Function handles full_name calculation if not provided
+            const { data, error } = await client.rpc('create_or_update_user_profile', {
+                p_user_id: dto.userId,
+                p_email: dto.email,
+                p_full_name: dto.fullName || null,
+                p_first_name: dto.firstName || null,
+                p_last_name: dto.lastName || null,
+                p_phone: dto.phone || null,
+                p_language: dto.language || 'fr',
+                p_timezone: dto.timezone || 'Africa/Casablanca',
+                p_onboarding_completed: dto.onboardingCompleted ?? false,
+                p_password_set: dto.passwordSet ?? true,
+                p_avatar_url: null,
+            });
 
-        const profileData = {
-            id: dto.userId,
-            email: dto.email,
-            full_name: fullName,
-            first_name: dto.firstName,
-            last_name: dto.lastName,
-            phone: dto.phone,
-            language: dto.language || 'fr',
-            timezone: dto.timezone || 'Africa/Casablanca',
-            onboarding_completed: dto.onboardingCompleted || false,
-            password_set: dto.passwordSet ?? true,
-            updated_at: new Date().toISOString(),
-        };
+            if (error) {
+                this.logger.error(`Failed to create user profile via RPC: ${error.message}`, error);
+                throw new InternalServerErrorException(`Failed to create user profile: ${error.message}`);
+            }
 
-        // Verify user exists in auth.users (optional, as foreign key would fail, but good for error msg)
-        // Note: We can't easily query auth.users directly with service role in all setups, 
-        // but the insert into user_profiles will fail with FK violation if not.
+            if (!data) {
+                throw new InternalServerErrorException('Failed to create user profile: no data returned');
+            }
 
-        const { data, error } = await client
-            .from('user_profiles')
-            .upsert(profileData)
-            .select()
-            .single();
-
-        if (error) {
-            this.logger.error(`Failed to create user profile: ${error.message}`);
-            throw new InternalServerErrorException('Failed to create user profile');
+            return data;
+        } catch (error) {
+            // If error is already an InternalServerErrorException, re-throw it
+            if (error instanceof InternalServerErrorException) {
+                throw error;
+            }
+            
+            this.logger.error(`Failed to create user profile: ${error.message}`, error.stack);
+            throw new InternalServerErrorException(`Failed to create user profile: ${error.message}`);
         }
-
-        return data;
     }
 
     async findOne(id: string) {

@@ -7,6 +7,7 @@ import {
     UpdatePaymentStatusDto,
     PaymentType
 } from './dto';
+import { buildPaymentLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
 export class PaymentsService {
@@ -162,40 +163,192 @@ export class PaymentsService {
                 throw new BadRequestException(`Failed to allocate payment: ${allocError.message}`);
             }
 
-            // Update payment status to submitted
-            const { error: updateError } = await supabaseClient
-                .from('accounting_payments')
-                .update({
-                    status: 'submitted',
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', paymentId);
+            // Update invoices outstanding amounts and status
+            const now = new Date().toISOString();
+            for (const allocation of dto.allocations) {
+                const invoice = invoices.find(inv => inv.id === allocation.invoice_id);
+                if (!invoice) continue;
 
-            if (updateError) {
-                this.logger.error('Error updating payment status:', updateError);
-                throw new BadRequestException(`Failed to update payment status: ${updateError.message}`);
+                const remaining = Number(invoice.outstanding_amount) - allocation.amount;
+                const newStatus = remaining <= 0.01 ? 'paid' : 'partially_paid';
+
+                const { error: invoiceUpdateError } = await supabaseClient
+                    .from('invoices')
+                    .update({
+                        outstanding_amount: Math.max(0, remaining),
+                        paid_amount: Number(invoice.outstanding_amount) - remaining,
+                        status: newStatus,
+                        updated_at: now,
+                    })
+                    .eq('id', allocation.invoice_id);
+
+                if (invoiceUpdateError) {
+                    throw new BadRequestException(
+                        `Failed to update invoice ${allocation.invoice_id}: ${invoiceUpdateError.message}`
+                    );
+                }
             }
 
-            // Note: Invoice amounts and status are automatically updated by database trigger
-            // The trigger 'update_invoice_after_payment' handles:
-            // - paid_amount calculation
-            // - outstanding_amount calculation
-            // - status transition (partially_paid / paid)
+            // Get required GL accounts
+            const LEDGER_CODES = ['1110', '1200', '2110'];
+            const { data: ledgerAccounts, error: ledgerError } = await supabaseClient
+                .from('accounts')
+                .select('id, code')
+                .eq('organization_id', organizationId)
+                .in('code', LEDGER_CODES);
 
-            // Fetch updated payment with allocations
-            const { data: updatedPayment } = await supabaseClient
-                .from('accounting_payments')
-                .select(`
-          *,
-          allocations:payment_allocations(
-            *,
-            invoice:invoices(id, invoice_number, grand_total, paid_amount, outstanding_amount, status)
-          )
-        `)
-                .eq('id', paymentId)
+            if (ledgerError) {
+                throw new BadRequestException(`Failed to load ledger accounts: ${ledgerError.message}`);
+            }
+
+            const ledgerMap = new Map<string, string>(
+                (ledgerAccounts ?? []).map((acc) => [acc.code, acc.id])
+            );
+
+            // Determine cash account (use bank account's GL account if specified)
+            let cashLedgerAccountId = ledgerMap.get('1110') ?? '';
+            if (payment.bank_account_id) {
+                const { data: bankAccount, error: bankError } = await supabaseClient
+                    .from('bank_accounts')
+                    .select('gl_account_id')
+                    .eq('id', payment.bank_account_id)
+                    .eq('organization_id', organizationId)
+                    .single();
+
+                if (bankAccount?.gl_account_id) {
+                    cashLedgerAccountId = bankAccount.gl_account_id;
+                }
+            }
+
+            // Generate journal entry number
+            const { data: entryNumber, error: entryNumError } = await supabaseClient
+                .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
+
+            if (entryNumError) {
+                throw new BadRequestException(`Failed to generate journal entry number: ${entryNumError.message}`);
+            }
+
+            // Create journal entry header
+            const { data: journalEntry, error: journalError } = await supabaseClient
+                .from('journal_entries')
+                .insert({
+                    organization_id: organizationId,
+                    entry_number: entryNumber,
+                    entry_date: payment.payment_date,
+                    posting_date: payment.payment_date,
+                    reference_type: 'Payment',
+                    reference_number: payment.payment_number,
+                    remarks: `Payment ${payment.payment_type === 'receive' ? 'received from' : 'made to'} ${payment.party_name}`,
+                    created_by: userId,
+                    status: 'draft',
+                })
+                .select()
                 .single();
 
-            return updatedPayment;
+            if (journalError || !journalEntry) {
+                throw new BadRequestException(`Failed to create journal entry: ${journalError?.message}`);
+            }
+
+            try {
+                // Build journal lines using ledger helper
+                const journalLines = buildPaymentLedgerLines(
+                    {
+                        id: payment.id,
+                        payment_number: payment.payment_number,
+                        payment_type: payment.payment_type,
+                        payment_method: payment.payment_method,
+                        payment_date: payment.payment_date,
+                        amount: totalAllocated,
+                        party_name: payment.party_name,
+                        bank_account_id: payment.bank_account_id,
+                    },
+                    journalEntry.id,
+                    {
+                        cashAccountId: cashLedgerAccountId,
+                        accountsReceivableId: ledgerMap.get('1200') ?? '',
+                        accountsPayableId: ledgerMap.get('2110') ?? '',
+                    }
+                );
+
+                // Validate double-entry principle
+                const totalDebit = journalLines.reduce((sum, line) => sum + line.debit, 0);
+                const totalCredit = journalLines.reduce((sum, line) => sum + line.credit, 0);
+
+                if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+                    await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+                    throw new BadRequestException(
+                        `Payment journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`
+                    );
+                }
+
+                // Insert journal items
+                const { error: insertLinesError } = await supabaseClient
+                    .from('journal_items')
+                    .insert(journalLines);
+
+                if (insertLinesError) {
+                    await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+                    throw new BadRequestException(`Failed to create payment journal lines: ${insertLinesError.message}`);
+                }
+
+                // Post journal entry
+                const { error: postJournalError } = await supabaseClient
+                    .from('journal_entries')
+                    .update({
+                        status: 'posted',
+                        posted_by: userId,
+                        posted_at: now,
+                    })
+                    .eq('id', journalEntry.id);
+
+                if (postJournalError) {
+                    throw new BadRequestException(`Failed to post payment journal entry: ${postJournalError.message}`);
+                }
+
+                // Update payment status to submitted and link journal entry
+                const { error: updateError } = await supabaseClient
+                    .from('accounting_payments')
+                    .update({
+                        status: 'submitted',
+                        journal_entry_id: journalEntry.id,
+                        updated_at: now,
+                    })
+                    .eq('id', paymentId);
+
+                if (updateError) {
+                    this.logger.error('Error updating payment status:', updateError);
+                    throw new BadRequestException(`Failed to update payment status: ${updateError.message}`);
+                }
+
+                this.logger.log(`Payment ${payment.payment_number} allocated with journal entry ${entryNumber}`);
+
+                // Fetch updated payment with allocations
+                const { data: updatedPayment } = await supabaseClient
+                    .from('accounting_payments')
+                    .select(`
+                        *,
+                        allocations:payment_allocations(
+                            *,
+                            invoice:invoices(id, invoice_number, grand_total, paid_amount, outstanding_amount, status)
+                        )
+                    `)
+                    .eq('id', paymentId)
+                    .single();
+
+                return {
+                    success: true,
+                    message: 'Payment allocated successfully',
+                    data: {
+                        payment: updatedPayment,
+                        journal_entry_id: journalEntry.id,
+                        allocated_amount: totalAllocated,
+                    },
+                };
+            } catch (error) {
+                // Rollback: delete journal entry if anything fails
+                await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+                throw error;
+            }
         } catch (error) {
             this.logger.error('Error in allocatePayment:', error);
             throw error;

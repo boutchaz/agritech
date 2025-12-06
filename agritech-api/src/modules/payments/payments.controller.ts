@@ -49,14 +49,17 @@ export class PaymentsController {
     }
 
     @Post(':id/allocate')
-    @ApiOperation({ summary: 'Allocate payment to invoices' })
+    @ApiOperation({
+        summary: 'Allocate payment to invoices (creates journal entry)',
+        description: 'Allocates a payment to one or more invoices and creates corresponding double-entry journal entry. Replaces the allocate-payment Edge Function.',
+    })
     @ApiParam({ name: 'id', description: 'Payment UUID' })
     @ApiResponse({
         status: 200,
-        description: 'Payment allocated successfully',
+        description: 'Payment allocated successfully with journal entry created',
     })
     @ApiResponse({ status: 404, description: 'Payment not found' })
-    @ApiResponse({ status: 400, description: 'Invalid allocation' })
+    @ApiResponse({ status: 400, description: 'Invalid allocation or missing GL accounts' })
     async allocatePayment(
         @Param('id') id: string,
         @Body() allocatePaymentDto: AllocatePaymentDto,

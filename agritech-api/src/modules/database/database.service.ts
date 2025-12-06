@@ -46,13 +46,28 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     if (databaseUrl) {
       this.pgPool = new Pool({
         connectionString: databaseUrl,
-        max: 10, // Maximum number of clients in the pool
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
+        max: 20, // Maximum number of clients in the pool
+        min: 2, // Minimum number of clients
+        idleTimeoutMillis: 30000, // Close idle clients after 30s
+        connectionTimeoutMillis: 10000, // Increased from 2s to 10s
+        // Add these for better reliability
+        keepAlive: true,
+        keepAliveInitialDelayMillis: 10000,
+        allowExitOnIdle: false, // Keep pool alive
+        statement_timeout: 60000, // 60s statement timeout
       });
 
       this.pgPool.on('error', (err) => {
         this.logger.error('Unexpected error on idle PostgreSQL client', err);
+        // Don't crash the app, just log
+      });
+
+      this.pgPool.on('connect', () => {
+        this.logger.debug('New PostgreSQL client connected to pool');
+      });
+
+      this.pgPool.on('remove', () => {
+        this.logger.debug('PostgreSQL client removed from pool');
       });
 
       this.logger.log('PostgreSQL connection pool initialized');

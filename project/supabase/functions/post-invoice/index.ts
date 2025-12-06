@@ -158,6 +158,18 @@ serve(async (req) => {
       }
     );
 
+    // Calculate totals for double-entry validation
+    const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
+    const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0);
+
+    // Validate double-entry principle before inserting
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      await serviceClient.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw new Error(
+        `Journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`
+      );
+    }
+
     const { error: insertLinesError } = await serviceClient
       .from('journal_items')
       .insert(lines);
@@ -166,6 +178,9 @@ serve(async (req) => {
       await serviceClient.from('journal_entries').delete().eq('id', journalEntry.id);
       throw new Error(`Failed to create journal lines: ${insertLinesError.message}`);
     }
+
+    // Note: The database trigger will automatically update total_debit and total_credit
+    // in the journal_entries table and validate the constraint
 
     const now = new Date().toISOString();
 

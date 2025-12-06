@@ -228,6 +228,7 @@ export function useCreateInvoice() {
 
 /**
  * Hook to post an invoice (creates journal entry)
+ * Updated to use NestJS API instead of Supabase Edge Function
  */
 export function usePostInvoice() {
   const queryClient = useQueryClient();
@@ -239,30 +240,11 @@ export function usePostInvoice() {
         throw new Error('No organization selected');
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-invoice`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-            'x-organization-id': currentOrganization.id,
-          },
-          body: JSON.stringify(data),
-        }
+      return await invoicesApi.postInvoice(
+        data.invoice_id,
+        data.posting_date,
+        currentOrganization.id
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to post invoice');
-      }
-
-      return response.json();
     },
     onSuccess: (_, variables) => {
       // Invalidate invoices and the specific invoice

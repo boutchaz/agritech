@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskFiltersDto } from './dto/task-filters.dto';
@@ -6,10 +6,16 @@ import { AssignTaskDto } from './dto/assign-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
 import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 import { DatabaseService } from '../database/database.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(TasksService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly accountingAutomationService: AccountingAutomationService,
+  ) {}
   /**
    * Verify user has access to the organization
    */
@@ -306,15 +312,16 @@ export class TasksService {
 
   /**
    * Complete a task
+   * Creates journal entry if actual_cost is provided
    */
   async complete(userId: string, organizationId: string, taskId: string, completeTaskDto: CompleteTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    // Verify task belongs to organization
+    // Verify task belongs to organization and get full details
     const { data: existingTask } = await client
       .from('tasks')
-      .select('id')
+      .select('id, title, task_type, actual_cost')
       .eq('id', taskId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -325,7 +332,7 @@ export class TasksService {
 
     const now = new Date().toISOString();
 
-    const { data: task, error } = await client
+    const { data: task, error} = await client
       .from('tasks')
       .update({
         status: 'completed',
@@ -347,6 +354,44 @@ export class TasksService {
 
     if (error) {
       throw new Error(`Failed to complete task: ${error.message}`);
+    }
+
+    // Create journal entry if actual_cost is provided and > 0
+    const actualCost = completeTaskDto.actual_cost ?? 0;
+    if (actualCost > 0 && task.task_type) {
+      try {
+        this.logger.log(
+          `Creating journal entry for task ${task.title} with cost ${actualCost} (type: ${task.task_type})`
+        );
+
+        await this.accountingAutomationService.createJournalEntryFromCost(
+          organizationId,
+          taskId,
+          task.task_type, // Use task_type as cost_type for account mapping
+          actualCost,
+          new Date(now),
+          completeTaskDto.notes || `Cost for completed task: ${task.title}`,
+          userId,
+        );
+
+        this.logger.log(`Journal entry created successfully for task ${taskId}`);
+      } catch (journalError) {
+        // Log the error but don't fail the task completion
+        // The task is already completed, journal entry is supplementary
+        this.logger.error(
+          `Failed to create journal entry for task ${taskId}: ${journalError.message}`,
+          journalError.stack
+        );
+        this.logger.warn(
+          `Task ${taskId} completed but journal entry creation failed. ` +
+          `Please create manual journal entry for cost: ${actualCost}`
+        );
+      }
+    } else if (actualCost > 0 && !task.task_type) {
+      this.logger.warn(
+        `Task ${taskId} has cost but no task_type specified. ` +
+        `Cannot create journal entry without task_type for account mapping.`
+      );
     }
 
     return {

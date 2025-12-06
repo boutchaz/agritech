@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto } from './dto';
+import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
 export class InvoicesService {
@@ -228,6 +229,211 @@ export class InvoicesService {
     if (error) {
       this.logger.error(`Failed to update invoice status: ${error.message}`);
       throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Post invoice (create journal entry)
+   * Replaces Supabase Edge Function: post-invoice
+   */
+  async postInvoice(
+    invoiceId: string,
+    organizationId: string,
+    userId: string,
+    postingDate: string,
+  ): Promise<any> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    // Fetch invoice with items
+    const { data: invoice, error: invoiceError } = await supabaseClient
+      .from('invoices')
+      .select(`
+        *,
+        items:invoice_items(
+          id,
+          item_name,
+          description,
+          amount,
+          tax_amount,
+          income_account_id,
+          expense_account_id,
+          cost_center_id
+        )
+      `)
+      .eq('id', invoiceId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (invoiceError || !invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    if (invoice.status !== 'draft') {
+      throw new BadRequestException('Only draft invoices can be posted');
+    }
+
+    // Get required GL accounts based on invoice type
+    const SALES_ACCOUNT_CODES = ['1200', '2150']; // AR, Taxes Payable
+    const PURCHASE_ACCOUNT_CODES = ['2110', '1400']; // AP, Prepaid taxes
+    const requiredCodes =
+      invoice.invoice_type === 'sales' ? SALES_ACCOUNT_CODES : PURCHASE_ACCOUNT_CODES;
+
+    const { data: accountRows, error: accountsError } = await supabaseClient
+      .from('accounts')
+      .select('id, code')
+      .eq('organization_id', organizationId)
+      .in('code', requiredCodes);
+
+    if (accountsError) {
+      throw new BadRequestException(`Failed to load ledger accounts: ${accountsError.message}`);
+    }
+
+    const codeToAccountId = new Map<string, string>(
+      (accountRows ?? []).map((row) => [row.code, row.id]),
+    );
+
+    // Generate journal entry number
+    const entryNumber = await this.generateJournalEntryNumber(supabaseClient, organizationId);
+
+    // Create journal entry header
+    const { data: journalEntry, error: journalError } = await supabaseClient
+      .from('journal_entries')
+      .insert({
+        organization_id: organizationId,
+        entry_number: entryNumber,
+        entry_date: postingDate,
+        posting_date: postingDate,
+        reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
+        reference_number: invoice.invoice_number,
+        remarks: `Journal entry for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
+        created_by: userId,
+        status: 'draft',
+      })
+      .select()
+      .single();
+
+    if (journalError || !journalEntry) {
+      throw new BadRequestException(`Failed to create journal entry: ${journalError?.message}`);
+    }
+
+    try {
+      // Build journal lines
+      const lines = buildInvoiceLedgerLines(
+        {
+          id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          invoice_type: invoice.invoice_type,
+          grand_total: Number(invoice.grand_total),
+          tax_total: Number(invoice.tax_total ?? 0),
+          party_name: invoice.party_name,
+          items: (invoice.items || []).map((item: any) => ({
+            id: item.id,
+            item_name: item.item_name,
+            description: item.description,
+            amount: Number(item.amount),
+            tax_amount: Number(item.tax_amount ?? 0),
+            income_account_id: item.income_account_id,
+            expense_account_id: item.expense_account_id,
+            cost_center_id: item.cost_center_id,
+          })),
+        },
+        journalEntry.id,
+        {
+          receivableAccountId: codeToAccountId.get('1200') ?? '',
+          payableAccountId: codeToAccountId.get('2110') ?? '',
+          taxPayableAccountId: codeToAccountId.get('2150'),
+          taxReceivableAccountId: codeToAccountId.get('1400'),
+        },
+      );
+
+      // Calculate totals for double-entry validation
+      const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
+      const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0);
+
+      // Validate double-entry principle before inserting
+      if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+        await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+        throw new BadRequestException(
+          `Journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+        );
+      }
+
+      // Insert journal items
+      const { error: insertLinesError } = await supabaseClient
+        .from('journal_items')
+        .insert(lines);
+
+      if (insertLinesError) {
+        await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+        throw new BadRequestException(`Failed to create journal lines: ${insertLinesError.message}`);
+      }
+
+      // Note: The database trigger will automatically update total_debit and total_credit
+      // in the journal_entries table and validate the constraint
+
+      const now = new Date().toISOString();
+
+      // Update invoice status
+      const { error: invoiceUpdateError } = await supabaseClient
+        .from('invoices')
+        .update({
+          status: 'submitted',
+          journal_entry_id: journalEntry.id,
+          updated_at: now,
+        })
+        .eq('id', invoiceId)
+        .eq('organization_id', organizationId);
+
+      if (invoiceUpdateError) {
+        throw new BadRequestException(`Failed to update invoice status: ${invoiceUpdateError.message}`);
+      }
+
+      // Post journal entry
+      const { error: postJournalError } = await supabaseClient
+        .from('journal_entries')
+        .update({
+          status: 'posted',
+          posted_by: userId,
+          posted_at: now,
+        })
+        .eq('id', journalEntry.id);
+
+      if (postJournalError) {
+        throw new BadRequestException(`Failed to post journal entry: ${postJournalError.message}`);
+      }
+
+      this.logger.log(`Invoice ${invoice.invoice_number} posted with journal entry ${entryNumber}`);
+
+      return {
+        success: true,
+        message: 'Invoice posted successfully',
+        data: {
+          invoice_id: invoiceId,
+          journal_entry_id: journalEntry.id,
+        },
+      };
+    } catch (error) {
+      // Rollback: delete journal entry if anything fails
+      await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate journal entry number
+   */
+  private async generateJournalEntryNumber(
+    supabaseClient: any,
+    organizationId: string,
+  ): Promise<string> {
+    const { data, error} = await supabaseClient
+      .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
+
+    if (error) {
+      this.logger.error(`Failed to generate journal entry number: ${error.message}`);
+      throw new BadRequestException(`Failed to generate journal entry number: ${error.message}`);
     }
 
     return data;

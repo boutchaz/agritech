@@ -251,7 +251,8 @@ export function useSubmitPayment() {
 }
 
 /**
- * Hook to allocate payment using Edge Function
+ * Hook to allocate payment to invoices
+ * Updated to use NestJS API instead of Supabase Edge Function
  */
 export function useAllocatePayment() {
   const queryClient = useQueryClient();
@@ -266,30 +267,17 @@ export function useAllocatePayment() {
         throw new Error('No organization selected');
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
+      // Map allocated_amount to amount for API compatibility
+      const allocations = data.allocations.map(alloc => ({
+        invoice_id: alloc.invoice_id,
+        amount: alloc.allocated_amount,
+      }));
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/allocate-payment`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-            'x-organization-id': currentOrganization.id,
-          },
-          body: JSON.stringify(data),
-        }
+      return await paymentsApi.allocate(
+        data.payment_id,
+        { allocations },
+        currentOrganization.id
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to allocate payment');
-      }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });

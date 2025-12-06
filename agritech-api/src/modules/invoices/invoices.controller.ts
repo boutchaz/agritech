@@ -76,6 +76,27 @@ export class InvoicesController {
     return this.invoicesService.create(dto, organizationId, userId);
   }
 
+  @Post(':id/post')
+  @ApiOperation({
+    summary: 'Post an invoice (creates journal entry)',
+    description: 'Submits a draft invoice and creates corresponding double-entry journal entry. Replaces the post-invoice Edge Function.',
+  })
+  @ApiParam({ name: 'id', description: 'Invoice ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoice posted successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid invoice or missing accounts' })
+  async postInvoice(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: { posting_date: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.invoicesService.postInvoice(id, organizationId, userId, dto.posting_date);
+  }
+
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update invoice status' })
   @ApiParam({ name: 'id', description: 'Invoice ID' })

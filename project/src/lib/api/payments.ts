@@ -36,8 +36,18 @@ export interface CreatePaymentDto {
 export interface AllocatePaymentDto {
   allocations: Array<{
     invoice_id: string;
-    allocated_amount: number;
+    amount: number;
   }>;
+}
+
+export interface AllocatePaymentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    payment: Payment;
+    journal_entry_id: string;
+    allocated_amount: number;
+  };
 }
 
 export interface UpdatePaymentStatusDto {
@@ -82,9 +92,10 @@ export const paymentsApi = {
   },
 
   /**
-   * Allocate payment to invoices
+   * Allocate payment to invoices (creates journal entry)
+   * Replaces Supabase Edge Function call
    */
-  async allocate(id: string, data: AllocatePaymentDto, organizationId?: string): Promise<Payment> {
+  async allocate(id: string, data: AllocatePaymentDto, organizationId?: string): Promise<AllocatePaymentResponse> {
     return apiClient.post(`${BASE_URL}/${id}/allocate`, data, organizationId);
   },
 

@@ -1,7 +1,4 @@
 -- =====================================================
--- BASE SCHEMA (Tables, Types, Indexes)
--- =====================================================
--- =====================================================
 -- COMPREHENSIVE SCHEMA - All Tables Required by Frontend
 -- =====================================================
 -- This file contains the complete database schema including:
@@ -1172,12 +1169,6 @@ CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_dat
 CREATE INDEX IF NOT EXISTS idx_journal_entries_status ON journal_entries(status);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_reference ON journal_entries(reference_type, reference_id);
 
--- Application-level constraint: Ensure journal entries are balanced
--- Added when business logic moved to NestJS (2025-11-22)
-ALTER TABLE journal_entries DROP CONSTRAINT IF EXISTS journal_entry_balanced;
-ALTER TABLE journal_entries ADD CONSTRAINT journal_entry_balanced
-  CHECK (ABS(total_debit - total_credit) < 0.01);
-
 -- Journal Items
 CREATE TABLE IF NOT EXISTS journal_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1505,13 +1496,9 @@ GRANT EXECUTE ON FUNCTION seed_default_work_units(UUID) TO service_role;
 
 COMMENT ON FUNCTION seed_default_work_units IS 'Seeds default work units for an organization. Returns the number of units inserted.';
 
--- =====================================================
--- DEPRECATED: get_farm_hierarchy_tree
--- =====================================================
--- This RPC function has been migrated to NestJS API: GET /api/v1/farms
--- Reason: Complex recursive CTE logic is easier to maintain in TypeScript
--- Kept as stub for backward compatibility during migration period
--- =====================================================
+-- Get farm hierarchy tree for an organization
+-- Updated to handle NULL org_uuid and ensure proper column aliases match RETURNS TABLE
+-- Uses SECURITY DEFINER to bypass RLS when querying farms and parcels
 CREATE OR REPLACE FUNCTION get_farm_hierarchy_tree(
   org_uuid UUID,
   root_farm_id UUID DEFAULT NULL
@@ -1533,20 +1520,51 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- DEPRECATED: Use NestJS API endpoint GET /api/v1/farms instead
-  -- This function is kept for backward compatibility only
-  RAISE NOTICE 'get_farm_hierarchy_tree is deprecated. Use NestJS API: GET /api/v1/farms?organization_id=%', org_uuid;
+  -- Return empty result if org_uuid is NULL
+  IF org_uuid IS NULL THEN
+    RETURN;
+  END IF;
 
-  -- Return empty result set with correct schema
-  RETURN;
+  -- SECURITY DEFINER bypasses RLS, so we can directly query farms and parcels
+  RETURN QUERY
+  WITH RECURSIVE farm_tree AS (
+    -- Base case: root farms or specific farm
+    SELECT
+      f.id,
+      f.name,
+      NULL::UUID as parent_farm_id,
+      'main'::TEXT as farm_type,
+      f.size,
+      COALESCE(f.manager_name, 'N/A') as manager,
+      f.is_active,
+      1 as level
+    FROM public.farms f
+    WHERE f.organization_id = org_uuid
+      AND (root_farm_id IS NULL OR f.id = root_farm_id)
+  )
+  SELECT
+    ft.id::UUID as farm_id,
+    ft.name::TEXT as farm_name,
+    ft.parent_farm_id::UUID,
+    ft.farm_type::TEXT,
+    ft.size::NUMERIC as farm_size,
+    ft.manager::TEXT as manager_name,
+    ft.is_active::BOOLEAN,
+    ft.level::INTEGER as hierarchy_level,
+    COUNT(DISTINCT p.id)::BIGINT as parcel_count,
+    0::BIGINT as subparcel_count
+  FROM farm_tree ft
+  LEFT JOIN public.parcels p ON p.farm_id = ft.id
+  GROUP BY ft.id, ft.name, ft.parent_farm_id, ft.farm_type, ft.size, ft.manager, ft.is_active, ft.level
+  ORDER BY ft.level, ft.name;
 END;
 $$;
 
--- Grant execute permission (kept for compatibility)
+-- Grant execute permission
 GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_farm_hierarchy_tree(UUID, UUID) TO service_role;
 
-COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'DEPRECATED: Migrated to NestJS API GET /api/v1/farms';
+COMMENT ON FUNCTION get_farm_hierarchy_tree IS 'Returns hierarchical farm tree for an organization with parcel counts';
 
 -- =====================================================
 -- SUBSCRIPTION VALIDATION FUNCTION
@@ -1710,132 +1728,6 @@ CREATE TRIGGER trg_purchase_orders_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-
--- =====================================================
--- 20. ROLES & PERMISSIONS TABLES
--- =====================================================
-
--- Roles
-CREATE TABLE IF NOT EXISTS roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  level INTEGER NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (name IN ('system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
-);
-
--- Permissions
-CREATE TABLE IF NOT EXISTS permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  resource TEXT NOT NULL,
-  action TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (action IN ('create', 'read', 'update', 'delete', 'manage'))
-);
-
--- Role Permissions
-CREATE TABLE IF NOT EXISTS role_permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
-CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
-
--- Role Templates
-CREATE TABLE IF NOT EXISTS role_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  is_system_template BOOLEAN DEFAULT false,
-  permissions JSONB DEFAULT '{}',
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_templates_org ON role_templates(organization_id);
-
--- Role Assignments Audit
-CREATE TABLE IF NOT EXISTS role_assignments_audit (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  old_role_id UUID REFERENCES roles(id),
-  new_role_id UUID NOT NULL REFERENCES roles(id),
-  assigned_by UUID REFERENCES auth.users(id),
-  reason TEXT,
-  effective_date TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_user ON role_assignments_audit(user_id);
-CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_org ON role_assignments_audit(organization_id);
-
--- Permission Groups
-CREATE TABLE IF NOT EXISTS permission_groups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  display_name TEXT NOT NULL,
-  description TEXT,
-  permissions TEXT[] NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Farm Management Roles
-CREATE TABLE IF NOT EXISTS farm_management_roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role_id UUID REFERENCES roles(id),
-  role TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
-CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
-
--- Add role_id column and foreign key constraint from organization_users to roles
--- This is added here after roles table is created to avoid dependency issues
-DO $$
-BEGIN
-  -- Add the role_id column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role_id'
-  ) THEN
-    ALTER TABLE organization_users ADD COLUMN role_id UUID;
-  END IF;
-
-  -- Add the foreign key constraint if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_id_fkey'
-  ) THEN
-    ALTER TABLE organization_users
-    ADD CONSTRAINT organization_users_role_id_fkey
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
-  END IF;
-END $$;
-
--- Add index for the role_id column
-CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
-
 -- =====================================================
 -- 10. RLS POLICIES
 -- =====================================================
@@ -1869,137 +1761,6 @@ AS $$
         AND is_active = true
     )
   END;
-$$;
-
--- Function to create user profile (bypasses RLS for service role operations)
--- This function uses SECURITY DEFINER to run with elevated privileges and bypass RLS
--- Used by backend services during user signup
-CREATE OR REPLACE FUNCTION create_user_profile(
-  p_user_id UUID,
-  p_email TEXT,
-  p_full_name TEXT DEFAULT NULL,
-  p_first_name TEXT DEFAULT NULL,
-  p_last_name TEXT DEFAULT NULL,
-  p_phone TEXT DEFAULT NULL,
-  p_language TEXT DEFAULT 'fr',
-  p_timezone TEXT DEFAULT 'Africa/Casablanca',
-  p_onboarding_completed BOOLEAN DEFAULT false,
-  p_password_set BOOLEAN DEFAULT true
-)
-RETURNS user_profiles
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_profile user_profiles;
-BEGIN
-  -- Verify that the user exists in auth.users
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id) THEN
-    RAISE EXCEPTION 'User does not exist in auth.users';
-  END IF;
-
-  -- Insert or update user profile
-  INSERT INTO user_profiles (
-    id,
-    email,
-    full_name,
-    first_name,
-    last_name,
-    phone,
-    language,
-    timezone,
-    onboarding_completed,
-    password_set
-  )
-  VALUES (
-    p_user_id,
-    p_email,
-    COALESCE(p_full_name, COALESCE(p_first_name || ' ' || p_last_name, split_part(p_email, '@', 1))),
-    p_first_name,
-    p_last_name,
-    p_phone,
-    p_language,
-    p_timezone,
-    p_onboarding_completed,
-    p_password_set
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
-    first_name = COALESCE(EXCLUDED.first_name, user_profiles.first_name),
-    last_name = COALESCE(EXCLUDED.last_name, user_profiles.last_name),
-    phone = COALESCE(EXCLUDED.phone, user_profiles.phone),
-    language = COALESCE(EXCLUDED.language, user_profiles.language),
-    timezone = COALESCE(EXCLUDED.timezone, user_profiles.timezone),
-    onboarding_completed = EXCLUDED.onboarding_completed,
-    password_set = EXCLUDED.password_set,
-    updated_at = NOW()
-  RETURNING * INTO v_profile;
-
-  RETURN v_profile;
-END;
-$$;
-
--- Function to create organization (bypasses RLS for service role operations)
--- This function uses SECURITY DEFINER to run with elevated privileges and bypass RLS
--- Used by backend services during user signup
-CREATE OR REPLACE FUNCTION create_organization(
-  p_name TEXT,
-  p_slug TEXT DEFAULT NULL,
-  p_description TEXT DEFAULT NULL,
-  p_currency_code TEXT DEFAULT 'MAD',
-  p_timezone TEXT DEFAULT 'Africa/Casablanca',
-  p_is_active BOOLEAN DEFAULT true
-)
-RETURNS organizations
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_organization organizations;
-  v_slug TEXT;
-BEGIN
-  -- Generate slug if not provided
-  v_slug := COALESCE(p_slug, lower(regexp_replace(p_name, '[^a-zA-Z0-9]+', '-', 'g')));
-  
-  -- Remove leading/trailing hyphens
-  v_slug := trim(both '-' from v_slug);
-  
-  -- Ensure slug is not empty
-  IF v_slug = '' THEN
-    v_slug := 'organization-' || substr(md5(random()::text), 1, 8);
-  END IF;
-
-  -- Insert organization
-  INSERT INTO organizations (
-    name,
-    slug,
-    description,
-    currency_code,
-    timezone,
-    is_active
-  )
-  VALUES (
-    p_name,
-    v_slug,
-    p_description,
-    p_currency_code,
-    p_timezone,
-    p_is_active
-  )
-  ON CONFLICT (slug) DO UPDATE SET
-    name = EXCLUDED.name,
-    description = COALESCE(EXCLUDED.description, organizations.description),
-    currency_code = COALESCE(EXCLUDED.currency_code, organizations.currency_code),
-    timezone = COALESCE(EXCLUDED.timezone, organizations.timezone),
-    is_active = EXCLUDED.is_active,
-    updated_at = NOW()
-  RETURNING * INTO v_organization;
-
-  RETURN v_organization;
-END;
 $$;
 
 -- Enable RLS on all tables
@@ -2118,69 +1879,7 @@ CREATE POLICY "org_delete_suppliers" ON suppliers
     is_organization_member(organization_id)
   );
 
--- Subscriptions Policies
--- Use DO block to ensure policies are dropped before creating them
-DO $$
-BEGIN
-  -- Drop all existing subscription policies
-  DROP POLICY IF EXISTS "users_view_org_subscription" ON subscriptions;
-  DROP POLICY IF EXISTS "admins_manage_subscription" ON subscriptions;
-  DROP POLICY IF EXISTS "org_read_subscriptions" ON subscriptions;
-  DROP POLICY IF EXISTS "org_insert_subscriptions" ON subscriptions;
-  DROP POLICY IF EXISTS "org_update_subscriptions" ON subscriptions;
-  DROP POLICY IF EXISTS "org_delete_subscriptions" ON subscriptions;
-END $$;
-
--- Allow users to view subscriptions for organizations they belong to
-CREATE POLICY "org_read_subscriptions" ON subscriptions
-  FOR SELECT USING (
-    is_organization_member(organization_id)
-  );
-
--- Allow organization admins to insert subscriptions
-CREATE POLICY "org_insert_subscriptions" ON subscriptions
-  FOR INSERT WITH CHECK (
-    is_organization_member(organization_id) AND
-    EXISTS (
-      SELECT 1
-      FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.organization_id = subscriptions.organization_id
-        AND r.name IN ('system_admin', 'organization_admin')
-        AND ou.is_active = true
-    )
-  );
-
--- Allow organization admins to update subscriptions
-CREATE POLICY "org_update_subscriptions" ON subscriptions
-  FOR UPDATE USING (
-    is_organization_member(organization_id) AND
-    EXISTS (
-      SELECT 1
-      FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.organization_id = subscriptions.organization_id
-        AND r.name IN ('system_admin', 'organization_admin')
-        AND ou.is_active = true
-    )
-  );
-
--- Allow organization admins to delete subscriptions
-CREATE POLICY "org_delete_subscriptions" ON subscriptions
-  FOR DELETE USING (
-    is_organization_member(organization_id) AND
-    EXISTS (
-      SELECT 1
-      FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.organization_id = subscriptions.organization_id
-        AND r.name IN ('system_admin', 'organization_admin')
-        AND ou.is_active = true
-    )
-  );
+-- Subscriptions Policies (moved to after roles table creation - see line ~4077)
 
 -- Quotes Policies
 DROP POLICY IF EXISTS "org_read_quotes" ON quotes;
@@ -3186,6 +2885,7 @@ CREATE TABLE IF NOT EXISTS items (
   default_cost_center_id UUID REFERENCES cost_centers(id),
   default_warehouse_id UUID REFERENCES warehouses(id),
   standard_rate NUMERIC,
+  minimum_stock_level NUMERIC DEFAULT 0,
   last_purchase_rate NUMERIC,
   last_sales_rate NUMERIC,
   weight_per_unit NUMERIC,
@@ -3366,17 +3066,6 @@ CREATE INDEX IF NOT EXISTS idx_stock_entries_org ON stock_entries(organization_i
 CREATE INDEX IF NOT EXISTS idx_stock_entries_type ON stock_entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_status ON stock_entries(status);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_date ON stock_entries(entry_date DESC);
-
--- Application-level constraint: Ensure stock entry has the correct warehouse based on entry type
--- Added when business logic moved to NestJS (2025-11-22)
-ALTER TABLE stock_entries DROP CONSTRAINT IF EXISTS stock_entry_warehouse_validation;
-ALTER TABLE stock_entries ADD CONSTRAINT stock_entry_warehouse_validation
-  CHECK (
-    (entry_type = 'Material Receipt' AND to_warehouse_id IS NOT NULL) OR
-    (entry_type = 'Material Issue' AND from_warehouse_id IS NOT NULL) OR
-    (entry_type = 'Stock Transfer' AND from_warehouse_id IS NOT NULL AND to_warehouse_id IS NOT NULL AND from_warehouse_id != to_warehouse_id) OR
-    (entry_type = 'Stock Reconciliation')
-  );
 
 -- Stock Entry Items
 CREATE TABLE IF NOT EXISTS stock_entry_items (
@@ -4200,6 +3889,199 @@ CREATE TABLE IF NOT EXISTS utilities (
 CREATE INDEX IF NOT EXISTS idx_utilities_farm ON utilities(farm_id);
 CREATE INDEX IF NOT EXISTS idx_utilities_parcel ON utilities(parcel_id);
 
+-- =====================================================
+-- 20. ROLES & PERMISSIONS TABLES
+-- =====================================================
+
+-- Roles
+CREATE TABLE IF NOT EXISTS roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  level INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (name IN ('system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
+);
+
+-- Permissions
+CREATE TABLE IF NOT EXISTS permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  resource TEXT NOT NULL,
+  action TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (action IN ('create', 'read', 'update', 'delete', 'manage'))
+);
+
+-- Role Permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
+
+-- Role Templates
+CREATE TABLE IF NOT EXISTS role_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  is_system_template BOOLEAN DEFAULT false,
+  permissions JSONB DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_templates_org ON role_templates(organization_id);
+
+-- Role Assignments Audit
+CREATE TABLE IF NOT EXISTS role_assignments_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  old_role_id UUID REFERENCES roles(id),
+  new_role_id UUID NOT NULL REFERENCES roles(id),
+  assigned_by UUID REFERENCES auth.users(id),
+  reason TEXT,
+  effective_date TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_user ON role_assignments_audit(user_id);
+CREATE INDEX IF NOT EXISTS idx_role_assignments_audit_org ON role_assignments_audit(organization_id);
+
+-- Permission Groups
+CREATE TABLE IF NOT EXISTS permission_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT,
+  permissions TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Farm Management Roles
+CREATE TABLE IF NOT EXISTS farm_management_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id UUID REFERENCES roles(id),
+  role TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
+
+-- Add role_id column and foreign key constraint from organization_users to roles
+-- This is added here after roles table is created to avoid dependency issues
+DO $$
+BEGIN
+  -- Add the role_id column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role_id'
+  ) THEN
+    ALTER TABLE organization_users ADD COLUMN role_id UUID;
+  END IF;
+
+  -- Add the foreign key constraint if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_id_fkey'
+  ) THEN
+    ALTER TABLE organization_users
+    ADD CONSTRAINT organization_users_role_id_fkey
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Add index for the role_id column
+CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
+
+-- =====================================================
+-- SUBSCRIPTIONS RLS POLICIES
+-- =====================================================
+-- Note: These policies are placed here (after roles table creation and role_id addition)
+-- because they reference the roles table in their JOIN clauses
+
+-- Use DO block to ensure policies are dropped before creating them
+DO $$
+BEGIN
+  -- Drop all existing subscription policies
+  DROP POLICY IF EXISTS "users_view_org_subscription" ON subscriptions;
+  DROP POLICY IF EXISTS "admins_manage_subscription" ON subscriptions;
+  DROP POLICY IF EXISTS "org_read_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_insert_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_update_subscriptions" ON subscriptions;
+  DROP POLICY IF EXISTS "org_delete_subscriptions" ON subscriptions;
+END $$;
+
+-- Allow users to view subscriptions for organizations they belong to
+CREATE POLICY "org_read_subscriptions" ON subscriptions
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+-- Allow organization admins to insert subscriptions
+CREATE POLICY "org_insert_subscriptions" ON subscriptions
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND r.name IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
+    )
+  );
+
+-- Allow organization admins to update subscriptions
+CREATE POLICY "org_update_subscriptions" ON subscriptions
+  FOR UPDATE USING (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND r.name IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
+    )
+  );
+
+-- Allow organization admins to delete subscriptions
+CREATE POLICY "org_delete_subscriptions" ON subscriptions
+  FOR DELETE USING (
+    is_organization_member(organization_id) AND
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = subscriptions.organization_id
+        AND r.name IN ('system_admin', 'organization_admin')
+        AND ou.is_active = true
+    )
+  );
 
 -- =====================================================
 -- 21. AUDIT & LOGGING TABLES
@@ -4801,10 +4683,537 @@ BEGIN
   -- Farm Worker: read most resources, create/update parcels
   INSERT INTO role_permissions (role_id, permission_id)
   SELECT v_farm_worker_id, id FROM permissions
+  WHERE (resource IN ('farms', 'parcels', 'stock', 'users') AND action = 'read')
+     OR (resource = 'parcels' AND action IN ('create', 'update'));
+
+  -- Day Laborer: very limited, read-only on tasks
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_day_laborer_id, id FROM permissions
+  WHERE resource = 'reports' AND action = 'read';
+
+  -- Viewer: read-only access
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT v_viewer_id, id FROM permissions
+  WHERE action = 'read';
+
+END $$;
+
+-- Populate role_id for existing users based on their role text
+-- This maps the text role to the actual roles table
+DO $$
+BEGIN
+  -- Only run if the role column still exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    -- Update organization_users with role_id based on role text
+    UPDATE organization_users ou
+    SET role_id = r.id
+    FROM roles r
+    WHERE ou.role = r.name
+    AND ou.role_id IS NULL;
+  END IF;
+END $$;
+
+-- Add first_name and last_name columns to user_profiles if they don't exist
+DO $$
+BEGIN
+  -- Add first_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'first_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
+  END IF;
+
+  -- Add last_name column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'user_profiles'
+    AND column_name = 'last_name'
+  ) THEN
+    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
+  END IF;
+
+  -- Populate first_name and last_name from full_name if they are empty
+  UPDATE user_profiles
+  SET
+    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
+    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
+  WHERE full_name IS NOT NULL
+  AND (first_name IS NULL OR last_name IS NULL);
+END $$;
+
+-- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
+DO $$
+DECLARE
+  default_viewer_role_id UUID;
+BEGIN
+  -- Get the viewer role ID as a fallback
+  SELECT id INTO default_viewer_role_id FROM roles WHERE name = 'viewer';
+
+  -- Set default viewer role for any users with NULL role_id
+  IF default_viewer_role_id IS NOT NULL THEN
+    UPDATE organization_users
+    SET role_id = default_viewer_role_id
+    WHERE role_id IS NULL;
+  END IF;
+
+  -- First, ensure role_id is NOT NULL (it should be populated by now)
+  -- If any row still has NULL role_id, this will fail and alert us
+  IF EXISTS (SELECT 1 FROM organization_users WHERE role_id IS NULL) THEN
+    RAISE EXCEPTION 'Cannot drop role column: some users still have NULL role_id even after applying default viewer role.';
+  END IF;
+
+  -- Drop the foreign key constraint on role VARCHAR if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_fkey'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_fkey;
+  END IF;
+
+  -- Drop the CHECK constraint on role if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'organization_users_role_check'
+  ) THEN
+    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_check;
+  END IF;
+
+  -- Make role_id NOT NULL now that we've confirmed it's populated
+  ALTER TABLE organization_users ALTER COLUMN role_id SET NOT NULL;
+
+  -- Drop the role VARCHAR column
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'organization_users'
+    AND column_name = 'role'
+  ) THEN
+    ALTER TABLE organization_users DROP COLUMN role;
+  END IF;
+END $$;
+
+-- Fix the stock entry posting trigger to use SECURITY DEFINER to bypass RLS
+DROP FUNCTION IF EXISTS process_stock_entry_posting() CASCADE;
+
+CREATE OR REPLACE FUNCTION process_stock_entry_posting()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  entry_item RECORD;
+  movement_type TEXT;
+BEGIN
+  -- Only process when status changes to 'Posted'
+  IF NEW.status = 'Posted' AND (OLD.status IS NULL OR OLD.status != 'Posted') THEN
+
+    -- Set posted timestamp
+    NEW.posted_at = NOW();
+
+    -- Determine movement type based on entry type
+    CASE NEW.entry_type
+      WHEN 'Material Receipt' THEN
+        movement_type := 'IN';
+      WHEN 'Material Issue' THEN
+        movement_type := 'OUT';
+      WHEN 'Stock Transfer' THEN
+        movement_type := 'TRANSFER';
+      WHEN 'Stock Reconciliation' THEN
+        movement_type := 'RECONCILIATION';
+      ELSE
+        movement_type := 'OTHER';
+    END CASE;
+
+    -- Create stock movements for each item
+    FOR entry_item IN
+      SELECT * FROM stock_entry_items WHERE stock_entry_id = NEW.id
+    LOOP
+      -- For Material Receipt: add to target warehouse
+      IF NEW.entry_type = 'Material Receipt' AND NEW.to_warehouse_id IS NOT NULL THEN
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          'IN',
+          NEW.entry_date,
+          entry_item.quantity,
+          entry_item.unit,
+          entry_item.quantity,
+          entry_item.cost_per_unit,
+          entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- Add to stock valuation
+        INSERT INTO stock_valuation (
+          organization_id,
+          item_id,
+          warehouse_id,
+          quantity,
+          cost_per_unit,
+          stock_entry_id,
+          batch_number,
+          serial_number,
+          remaining_quantity
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          entry_item.quantity,
+          COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.batch_number,
+          entry_item.serial_number,
+          entry_item.quantity
+        );
+      END IF;
+
+      -- For Material Issue: remove from source warehouse
+      IF NEW.entry_type = 'Material Issue' AND NEW.from_warehouse_id IS NOT NULL THEN
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.from_warehouse_id,
+          'OUT',
+          NEW.entry_date,
+          -entry_item.quantity,
+          entry_item.unit,
+          -entry_item.quantity,
+          entry_item.cost_per_unit,
+          -entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- TODO: Consume from stock valuation (FIFO/LIFO logic)
+      END IF;
+
+      -- For Stock Transfer: OUT from source, IN to target
+      IF NEW.entry_type = 'Stock Transfer' AND NEW.from_warehouse_id IS NOT NULL AND NEW.to_warehouse_id IS NOT NULL THEN
+        -- OUT from source
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.from_warehouse_id,
+          'TRANSFER',
+          NEW.entry_date,
+          -entry_item.quantity,
+          entry_item.unit,
+          -entry_item.quantity,
+          entry_item.cost_per_unit,
+          -entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+
+        -- IN to target
+        INSERT INTO stock_movements (
+          organization_id,
+          item_id,
+          warehouse_id,
+          movement_type,
+          movement_date,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          stock_entry_id,
+          stock_entry_item_id,
+          batch_number,
+          serial_number
+        ) VALUES (
+          NEW.organization_id,
+          entry_item.item_id,
+          NEW.to_warehouse_id,
+          'TRANSFER',
+          NEW.entry_date,
+          entry_item.quantity,
+          entry_item.unit,
+          entry_item.quantity,
+          entry_item.cost_per_unit,
+          entry_item.quantity * COALESCE(entry_item.cost_per_unit, 0),
+          NEW.id,
+          entry_item.id,
+          entry_item.batch_number,
+          entry_item.serial_number
+        );
+      END IF;
+
+    END LOOP;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Recreate trigger
+DROP TRIGGER IF EXISTS stock_entry_posting_trigger ON stock_entries;
+
+CREATE TRIGGER stock_entry_posting_trigger
+  BEFORE UPDATE ON stock_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION process_stock_entry_posting();
+
+-- Add comment
+COMMENT ON FUNCTION process_stock_entry_posting() IS
+  'Automatically creates stock movements and updates inventory when a stock entry is posted. Uses SECURITY DEFINER to bypass RLS.';
 
 -- =====================================================
--- RLS POLICIES
+-- DATA SEEDING & FIXES
 -- =====================================================
+-- This section ensures user profiles and organizations exist for existing auth users
+
+-- Create user profiles for all auth users that don't have one
+DO $$
+DECLARE
+    v_user RECORD;
+BEGIN
+    FOR v_user IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
+        INSERT INTO user_profiles (
+            id,
+            email,
+            full_name,
+            language,
+            timezone,
+            onboarding_completed,
+            password_set
+        )
+        VALUES (
+            v_user.id,
+            v_user.email,
+            COALESCE(
+                NULLIF(TRIM(COALESCE(v_user.raw_user_meta_data->>'full_name', '')), ''),
+                COALESCE(v_user.raw_user_meta_data->>'first_name', '') || ' ' || COALESCE(v_user.raw_user_meta_data->>'last_name', ''),
+                split_part(v_user.email, '@', 1)
+            ),
+            'fr',
+            'Africa/Casablanca',
+            true,
+            true
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            onboarding_completed = true,
+            password_set = true,
+            updated_at = NOW();
+    END LOOP;
+    
+    RAISE NOTICE '✅ User profiles synced for all auth users';
+END $$;
+
+-- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_exists boolean;
+BEGIN
+    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
+    
+    IF NOT v_org_exists THEN
+        INSERT INTO organizations (
+            id,
+            name,
+            slug,
+            email,
+            currency_code,
+            timezone,
+            is_active
+        )
+        VALUES (
+            v_org_id,
+            'AgriTech Organization',
+            'agritech-org',
+            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
+            'MAD',
+            'Africa/Casablanca',
+            true
+        );
+        RAISE NOTICE '✅ Created organization: AgriTech Organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already exists';
+    END IF;
+END $$;
+
+-- Link all auth users to the default organization as admins if they don't have an organization
+DO $$
+DECLARE
+    v_user RECORD;
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_org_admin_role_id UUID;
+    v_linked_count integer := 0;
+BEGIN
+    -- Get the organization_admin role_id
+    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
+    
+    IF v_org_admin_role_id IS NULL THEN
+        RAISE EXCEPTION 'organization_admin role not found';
+    END IF;
+    
+    FOR v_user IN 
+        SELECT u.id 
+        FROM auth.users u
+        WHERE NOT EXISTS (
+            SELECT 1 FROM organization_users ou 
+            WHERE ou.user_id = u.id AND ou.is_active = true
+        )
+    LOOP
+        INSERT INTO organization_users (
+            user_id,
+            organization_id,
+            role_id,
+            is_active
+        )
+        VALUES (
+            v_user.id,
+            v_org_id,
+            v_org_admin_role_id,
+            true
+        )
+        ON CONFLICT (user_id, organization_id) 
+        DO UPDATE SET 
+            is_active = true,
+            role_id = v_org_admin_role_id,
+            updated_at = NOW();
+        
+        v_linked_count := v_linked_count + 1;
+    END LOOP;
+    
+    IF v_linked_count > 0 THEN
+        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
+    ELSE
+        RAISE NOTICE 'ℹ️  All users already linked to organizations';
+    END IF;
+END $$;
+
+-- Create a trial subscription for the organization if it doesn't have one
+DO $$
+DECLARE
+    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
+    v_sub_exists boolean;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 FROM subscriptions 
+        WHERE organization_id = v_org_id 
+        AND status IN ('trialing', 'active')
+    ) INTO v_sub_exists;
+    
+    IF NOT v_sub_exists THEN
+        INSERT INTO subscriptions (
+            organization_id,
+            status,
+            plan_id,
+            current_period_start,
+            current_period_end,
+            cancel_at_period_end
+        )
+        VALUES (
+            v_org_id,
+            'trialing',
+            'basic',
+            NOW(),
+            NOW() + INTERVAL '30 days',
+            false
+        )
+        ON CONFLICT DO NOTHING;
+        
+        RAISE NOTICE '✅ Created trial subscription for organization';
+    ELSE
+        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
+    END IF;
+END $$;
+
+-- Final verification and summary
+DO $$
+DECLARE
+    v_user_count integer;
+    v_profile_count integer;
+    v_org_count integer;
+    v_org_user_count integer;
+    v_sub_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_user_count FROM auth.users;
+    SELECT COUNT(*) INTO v_profile_count FROM user_profiles;
+    SELECT COUNT(*) INTO v_org_count FROM organizations;
+    SELECT COUNT(*) INTO v_org_user_count FROM organization_users WHERE is_active = true;
+    SELECT COUNT(*) INTO v_sub_count FROM subscriptions WHERE status IN ('trialing', 'active');
+    
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'DATABASE INITIALIZATION SUMMARY';
+    RAISE NOTICE '================================================';
+    RAISE NOTICE 'Auth users: %', v_user_count;
+    RAISE NOTICE 'User profiles: %', v_profile_count;
+    RAISE NOTICE 'Organizations: %', v_org_count;
+    RAISE NOTICE 'Active organization memberships: %', v_org_user_count;
+    RAISE NOTICE 'Active subscriptions: %', v_sub_count;
+    RAISE NOTICE '================================================';
+    RAISE NOTICE '✅ Schema initialization complete!';
+    RAISE NOTICE '================================================';
+END $$;
+
 -- =====================================================
 -- COMPREHENSIVE RLS POLICIES FIX
 -- Added: 2025-11-06
@@ -4815,25 +5224,129 @@ BEGIN
 -- =====================================================
 -- USER_PROFILES RLS POLICIES
 -- =====================================================
+-- Fix for RLS violation errors when creating user profiles during signup
+-- Problem: Service role operations through PostgREST were being blocked by RLS
+-- Solution: Added SECURITY DEFINER function (create_or_update_user_profile) that bypasses RLS
+--           This function should be used by backend services for creating/updating profiles
+-- =====================================================
 DROP POLICY IF EXISTS "user_read_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "user_write_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "user_update_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "user_all_own_profile" ON user_profiles;
+DROP POLICY IF EXISTS "service_role_all_user_profiles" ON user_profiles;
 
--- Single policy for all operations (supports upsert in onboarding)
--- Allows users to manage their own profile
--- Also allows service role to create profiles during signup (when auth.uid() is NULL but id matches a valid auth user)
-CREATE POLICY "user_all_own_profile" ON user_profiles
+-- Allow service role (admin client) to manage all user profiles
+-- Note: Service role key should bypass RLS automatically in PostgREST,
+-- but this policy provides an additional fallback
+CREATE POLICY "service_role_all_user_profiles" ON user_profiles
   FOR ALL USING (
-    id = auth.uid() OR
-    -- Allow if the profile id exists in auth.users (for service role operations)
-    EXISTS (SELECT 1 FROM auth.users WHERE auth.users.id = user_profiles.id)
+    current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
+    OR auth.jwt() ->> 'role' = 'service_role'
   )
   WITH CHECK (
-    id = auth.uid() OR
-    -- Allow if the profile id exists in auth.users (for service role operations)
-    EXISTS (SELECT 1 FROM auth.users WHERE auth.users.id = user_profiles.id)
+    current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
+    OR auth.jwt() ->> 'role' = 'service_role'
   );
+
+-- Single policy for all operations (supports upsert in onboarding)
+CREATE POLICY "user_all_own_profile" ON user_profiles
+  FOR ALL USING (
+    id = auth.uid()
+  )
+  WITH CHECK (
+    id = auth.uid()
+  );
+
+-- =====================================================
+-- USER_PROFILES HELPER FUNCTION (Bypasses RLS)
+-- =====================================================
+-- SECURITY DEFINER function to create/update user profiles
+-- This function bypasses RLS and is intended for service role/admin operations
+-- Use this when the service role key doesn't properly bypass RLS through PostgREST
+CREATE OR REPLACE FUNCTION create_or_update_user_profile(
+  p_user_id UUID,
+  p_email TEXT,
+  p_full_name TEXT DEFAULT NULL,
+  p_first_name TEXT DEFAULT NULL,
+  p_last_name TEXT DEFAULT NULL,
+  p_phone TEXT DEFAULT NULL,
+  p_language TEXT DEFAULT 'fr',
+  p_timezone TEXT DEFAULT 'Africa/Casablanca',
+  p_onboarding_completed BOOLEAN DEFAULT false,
+  p_password_set BOOLEAN DEFAULT true,
+  p_avatar_url TEXT DEFAULT NULL
+)
+RETURNS user_profiles
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_profile user_profiles;
+  v_full_name TEXT;
+BEGIN
+  -- Calculate full_name if not provided
+  v_full_name := COALESCE(
+    p_full_name,
+    CASE 
+      WHEN p_first_name IS NOT NULL AND p_last_name IS NOT NULL 
+      THEN p_first_name || ' ' || p_last_name
+      WHEN p_first_name IS NOT NULL THEN p_first_name
+      WHEN p_last_name IS NOT NULL THEN p_last_name
+      ELSE split_part(p_email, '@', 1)
+    END
+  );
+
+  -- Insert or update user profile (bypasses RLS due to SECURITY DEFINER)
+  INSERT INTO user_profiles (
+    id,
+    email,
+    full_name,
+    first_name,
+    last_name,
+    phone,
+    language,
+    timezone,
+    onboarding_completed,
+    password_set,
+    avatar_url,
+    updated_at
+  )
+  VALUES (
+    p_user_id,
+    p_email,
+    v_full_name,
+    p_first_name,
+    p_last_name,
+    p_phone,
+    p_language,
+    p_timezone,
+    p_onboarding_completed,
+    p_password_set,
+    p_avatar_url,
+    NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = EXCLUDED.full_name,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    phone = EXCLUDED.phone,
+    language = EXCLUDED.language,
+    timezone = EXCLUDED.timezone,
+    onboarding_completed = EXCLUDED.onboarding_completed,
+    password_set = EXCLUDED.password_set,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = NOW()
+  RETURNING * INTO v_profile;
+
+  RETURN v_profile;
+END;
+$$;
+
+-- Add comment
+COMMENT ON FUNCTION create_or_update_user_profile IS 
+  'Creates or updates a user profile. Uses SECURITY DEFINER to bypass RLS policies. Intended for service role/admin operations.';
 
 -- =====================================================
 -- ORGANIZATIONS RLS POLICIES
@@ -4919,15 +5432,7 @@ CREATE POLICY "org_read_farms" ON farms
 CREATE POLICY "org_write_farms" ON farms
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (
-      organization_id IS NULL OR
-      EXISTS (
-        SELECT 1 FROM organization_users ou
-        WHERE ou.organization_id = farms.organization_id
-          AND ou.user_id = auth.uid()
-          AND ou.is_active = true
-      )
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 -- Update: Users can update farms from organizations they're members of, or farms with NULL organization_id
@@ -5011,103 +5516,43 @@ DROP POLICY IF EXISTS "org_update_parcels" ON parcels;
 DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
 
 -- Read: Users can see parcels from farms they have access to
--- Handles farms with NULL organization_id (accessible to authenticated users)
--- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_read_parcels" ON parcels
   FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms f
-      WHERE f.id = parcels.farm_id
-        AND (
-          f.organization_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM organization_users ou
-            WHERE ou.organization_id = f.organization_id
-              AND ou.user_id = auth.uid()
-              AND ou.is_active = true
-          )
-        )
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
     )
   );
 
 -- Insert: Authenticated users can create parcels for farms they have access to
--- Handles farms with NULL organization_id (accessible to authenticated users)
--- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms f
-      WHERE f.id = parcels.farm_id
-        AND (
-          f.organization_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM organization_users ou
-            WHERE ou.organization_id = f.organization_id
-              AND ou.user_id = auth.uid()
-              AND ou.is_active = true
-          )
-        )
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
     )
   );
 
 -- Update: Users can update parcels from farms they have access to
--- Handles farms with NULL organization_id (accessible to authenticated users)
--- and farms with organization_id (accessible to organization members)
 CREATE POLICY "org_update_parcels" ON parcels
   FOR UPDATE USING (
-    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms f
-      WHERE f.id = parcels.farm_id
-        AND (
-          f.organization_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM organization_users ou
-            WHERE ou.organization_id = f.organization_id
-              AND ou.user_id = auth.uid()
-              AND ou.is_active = true
-          )
-        )
-    )
-  ) WITH CHECK (
-    auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms f
-      WHERE f.id = parcels.farm_id
-        AND (
-          f.organization_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM organization_users ou
-            WHERE ou.organization_id = f.organization_id
-              AND ou.user_id = auth.uid()
-              AND ou.is_active = true
-          )
-        )
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
     )
   );
 
--- Delete: Users with appropriate roles can delete parcels from farms they have access to
--- Handles farms with NULL organization_id (accessible to authenticated users)
--- and farms with organization_id (requires admin roles)
+-- Delete: Users can delete parcels from farms they have access to
 CREATE POLICY "org_delete_parcels" ON parcels
   FOR DELETE USING (
-    auth.uid() IS NOT NULL AND
     EXISTS (
-      SELECT 1 FROM farms f
-      WHERE f.id = parcels.farm_id
-        AND (
-          f.organization_id IS NULL
-          OR EXISTS (
-            SELECT 1 FROM organization_users ou
-            INNER JOIN roles r ON r.id = ou.role_id
-            WHERE ou.organization_id = f.organization_id
-              AND ou.user_id = auth.uid()
-              AND ou.is_active = true
-              AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
-          )
-        )
+      SELECT 1 FROM farms
+      WHERE farms.id = parcels.farm_id
+        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
     )
   );
 
@@ -6905,10 +7350,6 @@ CREATE POLICY "org_delete_cloud_coverage_checks" ON cloud_coverage_checks
     is_organization_member(organization_id)
   );
 
-
--- =====================================================
--- FUNCTIONS & HELPERS
--- =====================================================
 -- =====================================================
 -- INTERNATIONAL CHART OF ACCOUNTS SEEDING FUNCTIONS
 -- =====================================================
@@ -7316,6 +7757,191 @@ COMMENT ON FUNCTION seed_chart_of_accounts IS
 'Generic function to seed chart of accounts from templates based on organization country and accounting standard. Supports MA/PCEC, TN/PCN, FR/PCG, US/GAAP, GB/FRS102.';
 
 -- =====================================================
+-- FRANCE CHART OF ACCOUNTS
+-- =====================================================
+
+-- =====================================================
+-- FRENCH CHART OF ACCOUNTS (Plan Comptable Général - PCG)
+-- =====================================================
+-- Currency: EUR (Euro)
+-- Standard: Plan Comptable Général (PCG 2014)
+-- Suitable for: Agricultural businesses in France
+-- DEPRECATED: Use seed_chart_of_accounts() instead
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION seed_french_chart_of_accounts(p_org_id UUID)
+RETURNS TABLE(
+  accounts_created INTEGER,
+  success BOOLEAN,
+  message TEXT
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
+    RETURN QUERY SELECT 0, false, 'Organization not found'::TEXT;
+    RETURN;
+  END IF;
+
+  -- CLASS 1: CAPITAL (CAPITAUX PROPRES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '101', 'Capital social', 'Equity', 'Capital', false, true, 'EUR'),
+    (p_org_id, '106', 'Réserves', 'Equity', 'Retained Earnings', false, true, 'EUR'),
+    (p_org_id, '120', 'Résultat de l''exercice', 'Equity', 'Current Year Earnings', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 2: FIXED ASSETS (IMMOBILISATIONS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '211', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '213', 'Constructions agricoles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '215', 'Installations techniques', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2154', 'Matériel agricole', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2155', 'Tracteurs et véhicules', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '218', 'Autres immobilisations corporelles', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2181', 'Cheptel reproducteur', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2182', 'Plantations pérennes', 'Asset', 'Fixed Asset', false, true, 'EUR'),
+    (p_org_id, '2813', 'Amortissements constructions', 'Asset', 'Accumulated Depreciation', false, true, 'EUR'),
+    (p_org_id, '2815', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 3: INVENTORY (STOCKS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '311', 'Semences et plants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '312', 'Engrais et amendements', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '313', 'Produits phytosanitaires', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '314', 'Aliments pour le bétail', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '315', 'Combustibles et carburants', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '321', 'Cultures en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '322', 'Élevage en cours', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '355', 'Produits agricoles finis', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3551', 'Céréales', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3552', 'Fruits et légumes', 'Asset', 'Inventory', false, true, 'EUR'),
+    (p_org_id, '3553', 'Vin et produits viticoles', 'Asset', 'Inventory', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 4: THIRD PARTIES (TIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '401', 'Fournisseurs', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4011', 'Fournisseurs - intrants', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4081', 'Fournisseurs - factures non parvenues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '411', 'Clients', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4111', 'Clients - ventes agricoles', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '416', 'Clients douteux', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4181', 'Clients - factures à établir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '421', 'Personnel - rémunérations dues', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '431', 'Sécurité sociale', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '437', 'Autres organismes sociaux', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '4424', 'Impôt sur les sociétés', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '443', 'Opérations avec l''État', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '4431', 'Subventions à recevoir', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44551', 'TVA à décaisser', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '44562', 'TVA déductible sur immobilisations', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44566', 'TVA déductible sur autres biens', 'Asset', 'Receivable', false, true, 'EUR'),
+    (p_org_id, '44571', 'TVA collectée', 'Liability', 'Payable', false, true, 'EUR'),
+    (p_org_id, '467', 'Autres comptes débiteurs ou créditeurs', 'Asset', 'Receivable', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 5: FINANCIAL ACCOUNTS (COMPTES FINANCIERS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '512', 'Banque', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5121', 'Banque - Compte principal', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '5124', 'Banque - Compte agricole', 'Asset', 'Cash', false, true, 'EUR'),
+    (p_org_id, '531', 'Caisse', 'Asset', 'Cash', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 6: EXPENSES (CHARGES)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '601', 'Achats stockés - Matières premières', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6011', 'Achats semences et plants', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6012', 'Achats engrais', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6013', 'Achats produits phytosanitaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6014', 'Achats aliments pour bétail', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6015', 'Achats animaux', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '602', 'Achats stockés - Autres approvisionnements', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6021', 'Achats combustibles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6022', 'Achats produits d''entretien', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Achats non stockés', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Fournitures non stockables (eau)', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '611', 'Sous-traitance générale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6111', 'Travaux agricoles', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '613', 'Locations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6132', 'Locations matériel agricole', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '615', 'Entretien et réparations', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6151', 'Entretien bâtiments', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6155', 'Entretien matériel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '616', 'Primes d''assurances', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6161', 'Assurances multirisque', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '622', 'Rémunérations d''intermédiaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6226', 'Honoraires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6227', 'Frais vétérinaires', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '624', 'Transports de biens', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6241', 'Transports sur achats', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6242', 'Transports sur ventes', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '625', 'Déplacements, missions', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '626', 'Frais postaux et télécommunications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6261', 'Téléphone', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6262', 'Internet', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '606', 'Eau et électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6061', 'Eau', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6063', 'Électricité', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '641', 'Rémunérations du personnel', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6411', 'Salaires permanents', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6412', 'Salaires saisonniers', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6413', 'Primes et gratifications', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '645', 'Charges de sécurité sociale', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6451', 'Cotisations URSSAF', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '6452', 'Cotisations MSA', 'Expense', 'Operating Expense', false, true, 'EUR'),
+    (p_org_id, '661', 'Charges d''intérêts', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6611', 'Intérêts emprunts bancaires', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '666', 'Pertes de change', 'Expense', 'Financial Expense', false, true, 'EUR'),
+    (p_org_id, '6811', 'Dotations aux amortissements', 'Expense', 'Depreciation', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  -- CLASS 7: REVENUES (PRODUITS)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES
+    (p_org_id, '701', 'Ventes de produits finis', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7011', 'Ventes céréales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7012', 'Ventes fruits et légumes', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7013', 'Ventes vin', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7014', 'Ventes lait', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7015', 'Ventes viande', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7016', 'Ventes animaux vivants', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7017', 'Ventes œufs', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '706', 'Prestations de services', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7061', 'Travaux agricoles', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '74', 'Subventions d''exploitation', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '741', 'Aides PAC', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7411', 'Aides aux surfaces', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7412', 'Aides animales', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7413', 'Aides découplées', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '748', 'Autres subventions', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '758', 'Produits divers de gestion courante', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '7581', 'Indemnités d''assurance', 'Revenue', 'Operating Revenue', false, true, 'EUR'),
+    (p_org_id, '763', 'Revenus des créances', 'Revenue', 'Financial Revenue', false, true, 'EUR'),
+    (p_org_id, '766', 'Gains de change', 'Revenue', 'Financial Revenue', false, true, 'EUR')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  SELECT COUNT(*)::INTEGER INTO v_count FROM accounts WHERE organization_id = p_org_id;
+  RETURN QUERY SELECT v_count, true, 'French chart of accounts created successfully'::TEXT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN QUERY SELECT 0, false, SQLERRM::TEXT;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION seed_french_chart_of_accounts TO authenticated;
+
+COMMENT ON FUNCTION seed_french_chart_of_accounts IS
+'Seeds complete French chart of accounts (PCG) for an organization';
+
 -- =====================================================
 -- COST AND REVENUE LEDGER INTEGRATION
 -- =====================================================
@@ -7400,10 +8026,167 @@ BEGIN
 END;
 $$;
 
+-- Trigger function to create journal entry when cost is inserted
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_cost_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_expense_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
 
--- =====================================================
--- FIXES & AUDIT
--- =====================================================
+  -- Get expense account using mapping system (works for all countries)
+  v_expense_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cost_type',
+    NEW.cost_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_expense_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'expense',
+      COALESCE(NEW.description, 'Cost entry: ' || NEW.cost_type),
+      NEW.id,
+      'cost',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit expense, credit cash)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_expense_account_id, NEW.amount, 0, NEW.description),
+      (v_journal_entry_id, v_cash_account_id, 0, NEW.amount, 'Payment for ' || NEW.cost_type);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for cost % - missing account mappings (expense: %, cash: %)',
+      NEW.id, v_expense_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger function to create journal entry when revenue is inserted
+-- Now uses multi-country account mapping system
+CREATE OR REPLACE FUNCTION create_revenue_journal_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_journal_entry_id UUID;
+  v_revenue_account_id UUID;
+  v_cash_account_id UUID;
+  v_entry_number TEXT;
+BEGIN
+  -- Generate journal entry number
+  SELECT 'JE-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(NEXTVAL('journal_entry_seq')::TEXT, 6, '0')
+  INTO v_entry_number;
+
+  -- Get revenue account using mapping system (works for all countries)
+  v_revenue_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'revenue_type',
+    NEW.revenue_type
+  );
+
+  -- Get cash account using mapping system
+  v_cash_account_id := get_account_id_by_mapping(
+    NEW.organization_id,
+    'cash',
+    'bank'
+  );
+
+  -- Only create journal entry if both accounts exist
+  IF v_revenue_account_id IS NOT NULL AND v_cash_account_id IS NOT NULL THEN
+    -- Create journal entry
+    INSERT INTO journal_entries (
+      organization_id,
+      entry_number,
+      entry_date,
+      entry_type,
+      description,
+      reference_id,
+      reference_type,
+      total_debit,
+      total_credit,
+      status,
+      created_by
+    ) VALUES (
+      NEW.organization_id,
+      v_entry_number,
+      NEW.date,
+      'revenue',
+      COALESCE(NEW.description, 'Revenue entry: ' || NEW.revenue_type),
+      NEW.id,
+      'revenue',
+      NEW.amount,
+      NEW.amount,
+      'posted',
+      NEW.created_by
+    ) RETURNING id INTO v_journal_entry_id;
+
+    -- Create journal items (debit cash, credit revenue)
+    INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+    VALUES
+      (v_journal_entry_id, v_cash_account_id, NEW.amount, 0, 'Receipt for ' || NEW.revenue_type),
+      (v_journal_entry_id, v_revenue_account_id, 0, NEW.amount, NEW.description);
+  ELSE
+    RAISE NOTICE 'Skipping journal entry for revenue % - missing account mappings (revenue: %, cash: %)',
+      NEW.id, v_revenue_account_id, v_cash_account_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Create triggers
+DROP TRIGGER IF EXISTS trg_cost_create_journal_entry ON costs;
+CREATE TRIGGER trg_cost_create_journal_entry
+  AFTER INSERT ON costs
+  FOR EACH ROW
+  EXECUTE FUNCTION create_cost_journal_entry();
+
+DROP TRIGGER IF EXISTS trg_revenue_create_journal_entry ON revenues;
+CREATE TRIGGER trg_revenue_create_journal_entry
+  AFTER INSERT ON revenues
+  FOR EACH ROW
+  EXECUTE FUNCTION create_revenue_journal_entry();
+
 -- Create sequence for journal entry numbers if it doesn't exist
 CREATE SEQUENCE IF NOT EXISTS journal_entry_seq START 1;
 
@@ -7490,48 +8273,6 @@ BEGIN
 END $$;
 
 -- =====================================================
--- MIGRATION AUDIT LOG
--- =====================================================
--- Track database migrations and business logic changes
--- Added: 2025-11-22 - Business logic moved from database triggers to NestJS
-CREATE TABLE IF NOT EXISTS migration_audit_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  migration_name TEXT NOT NULL,
-  migration_date TIMESTAMPTZ DEFAULT NOW(),
-  description TEXT,
-  metadata JSONB
-);
-
-CREATE INDEX IF NOT EXISTS idx_migration_audit_log_name ON migration_audit_log(migration_name);
-CREATE INDEX IF NOT EXISTS idx_migration_audit_log_date ON migration_audit_log(migration_date DESC);
-
--- Record the migration of business logic to NestJS
-INSERT INTO migration_audit_log (migration_name, description, metadata)
-VALUES (
-  '20251122000001_move_business_logic_to_nestjs',
-  'Disabled database triggers for stock entries and accounting automation. Business logic moved to NestJS services.',
-  jsonb_build_object(
-    'disabled_triggers', ARRAY[
-      'stock_entry_posting_trigger',
-      'trg_cost_create_journal_entry',
-      'trg_revenue_create_journal_entry'
-    ],
-    'nestjs_services', ARRAY[
-      'StockEntriesService',
-      'AccountingAutomationService'
-    ],
-    'rollback_instructions', 'To rollback, re-enable triggers by uncommenting CREATE TRIGGER statements in schema'
-  )
-) ON CONFLICT DO NOTHING;
-
-COMMENT ON TABLE migration_audit_log IS
-  'Audit log for database migrations. Tracks when business logic is moved between database and application layers.';
-
-
--- =====================================================
--- VIEWS
--- =====================================================
--- =====================================================
 -- VIEWS
 -- =====================================================
 
@@ -7562,314 +8303,3 @@ WHERE ou.is_active = true;
 GRANT SELECT ON assignable_users TO authenticated;
 GRANT SELECT ON assignable_users TO service_role;
 COMMENT ON VIEW assignable_users IS 'View combining users, profiles, roles, and worker information for task assignment';
-
--- =====================================================
--- SEED DATA & MIGRATIONS
--- =====================================================
-  WHERE (resource IN ('farms', 'parcels', 'stock', 'users') AND action = 'read')
-     OR (resource = 'parcels' AND action IN ('create', 'update'));
-
-  -- Day Laborer: very limited, read-only on tasks
-  INSERT INTO role_permissions (role_id, permission_id)
-  SELECT v_day_laborer_id, id FROM permissions
-  WHERE resource = 'reports' AND action = 'read';
-
-  -- Viewer: read-only access
-  INSERT INTO role_permissions (role_id, permission_id)
-  SELECT v_viewer_id, id FROM permissions
-  WHERE action = 'read';
-
-END $$;
--- Populate role_id for existing users based on their role text
--- This maps the text role to the actual roles table
-DO $$
-BEGIN
-  -- Only run if the role column still exists
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role'
-  ) THEN
-    -- Update organization_users with role_id based on role text
-    UPDATE organization_users ou
-    SET role_id = r.id
-    FROM roles r
-    WHERE ou.role = r.name
-    AND ou.role_id IS NULL;
-  END IF;
-END $$;
-
--- Add first_name and last_name columns to user_profiles if they don't exist
-DO $$
-BEGIN
-  -- Add first_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'first_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
-  END IF;
-
-  -- Add last_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'last_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
-  END IF;
-
-  -- Populate first_name and last_name from full_name if they are empty
-  UPDATE user_profiles
-  SET
-    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
-    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
-  WHERE full_name IS NOT NULL
-  AND (first_name IS NULL OR last_name IS NULL);
-END $$;
-
--- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
-DO $$
-DECLARE
-  default_viewer_role_id UUID;
-BEGIN
-  -- Get the viewer role ID as a fallback
-  SELECT id INTO default_viewer_role_id FROM roles WHERE name = 'viewer';
-
-  -- Set default viewer role for any users with NULL role_id
-  IF default_viewer_role_id IS NOT NULL THEN
-    UPDATE organization_users
-    SET role_id = default_viewer_role_id
-    WHERE role_id IS NULL;
-  END IF;
-
-  -- First, ensure role_id is NOT NULL (it should be populated by now)
-  -- If any row still has NULL role_id, this will fail and alert us
-  IF EXISTS (SELECT 1 FROM organization_users WHERE role_id IS NULL) THEN
-    RAISE EXCEPTION 'Cannot drop role column: some users still have NULL role_id even after applying default viewer role.';
-  END IF;
-
-  -- Drop the foreign key constraint on role VARCHAR if it exists
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_fkey'
-  ) THEN
-    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_fkey;
-  END IF;
-
-  -- Drop the CHECK constraint on role if it exists
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_check'
-  ) THEN
-    ALTER TABLE organization_users DROP CONSTRAINT organization_users_role_check;
-  END IF;
-
-  -- Make role_id NOT NULL now that we've confirmed it's populated
-  ALTER TABLE organization_users ALTER COLUMN role_id SET NOT NULL;
-
-  -- Drop the role VARCHAR column
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role'
-  ) THEN
-    ALTER TABLE organization_users DROP COLUMN role;
-  END IF;
-END $$;
--- DATA SEEDING & FIXES
--- =====================================================
--- This section ensures user profiles and organizations exist for existing auth users
-
--- Create user profiles for all auth users that don't have one
-DO $$
-DECLARE
-    v_user RECORD;
-BEGIN
-    FOR v_user IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
-        INSERT INTO user_profiles (
-            id,
-            email,
-            full_name,
-            language,
-            timezone,
-            onboarding_completed,
-            password_set
-        )
-        VALUES (
-            v_user.id,
-            v_user.email,
-            COALESCE(
-                NULLIF(TRIM(COALESCE(v_user.raw_user_meta_data->>'full_name', '')), ''),
-                COALESCE(v_user.raw_user_meta_data->>'first_name', '') || ' ' || COALESCE(v_user.raw_user_meta_data->>'last_name', ''),
-                split_part(v_user.email, '@', 1)
-            ),
-            'fr',
-            'Africa/Casablanca',
-            true,
-            true
-        )
-        ON CONFLICT (id) DO UPDATE SET
-            email = EXCLUDED.email,
-            onboarding_completed = true,
-            password_set = true,
-            updated_at = NOW();
-    END LOOP;
-    
-    RAISE NOTICE '✅ User profiles synced for all auth users';
-END $$;
-
--- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_exists boolean;
-BEGIN
-    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
-    
-    IF NOT v_org_exists THEN
-        INSERT INTO organizations (
-            id,
-            name,
-            slug,
-            email,
-            currency_code,
-            timezone,
-            is_active
-        )
-        VALUES (
-            v_org_id,
-            'AgriTech Organization',
-            'agritech-org',
-            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
-            'MAD',
-            'Africa/Casablanca',
-            true
-        );
-        RAISE NOTICE '✅ Created organization: AgriTech Organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already exists';
-    END IF;
-END $$;
-
--- Link all auth users to the default organization as admins if they don't have an organization
-DO $$
-DECLARE
-    v_user RECORD;
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_admin_role_id UUID;
-    v_linked_count integer := 0;
-BEGIN
-    -- Get the organization_admin role_id
-    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
-    
-    IF v_org_admin_role_id IS NULL THEN
-        RAISE EXCEPTION 'organization_admin role not found';
-    END IF;
-    
-    FOR v_user IN 
-        SELECT u.id 
-        FROM auth.users u
-        WHERE NOT EXISTS (
-            SELECT 1 FROM organization_users ou 
-            WHERE ou.user_id = u.id AND ou.is_active = true
-        )
-    LOOP
-        INSERT INTO organization_users (
-            user_id,
-            organization_id,
-            role_id,
-            is_active
-        )
-        VALUES (
-            v_user.id,
-            v_org_id,
-            v_org_admin_role_id,
-            true
-        )
-        ON CONFLICT (user_id, organization_id) 
-        DO UPDATE SET 
-            is_active = true,
-            role_id = v_org_admin_role_id,
-            updated_at = NOW();
-        
-        v_linked_count := v_linked_count + 1;
-    END LOOP;
-    
-    IF v_linked_count > 0 THEN
-        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
-    ELSE
-        RAISE NOTICE 'ℹ️  All users already linked to organizations';
-    END IF;
-END $$;
-
--- Create a trial subscription for the organization if it doesn't have one
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_sub_exists boolean;
-BEGIN
-    SELECT EXISTS(
-        SELECT 1 FROM subscriptions 
-        WHERE organization_id = v_org_id 
-        AND status IN ('trialing', 'active')
-    ) INTO v_sub_exists;
-    
-    IF NOT v_sub_exists THEN
-        INSERT INTO subscriptions (
-            organization_id,
-            status,
-            plan_id,
-            current_period_start,
-            current_period_end,
-            cancel_at_period_end
-        )
-        VALUES (
-            v_org_id,
-            'trialing',
-            'basic',
-            NOW(),
-            NOW() + INTERVAL '30 days',
-            false
-        )
-        ON CONFLICT DO NOTHING;
-        
-        RAISE NOTICE '✅ Created trial subscription for organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
-    END IF;
-END $$;
-
--- Final verification and summary
-DO $$
-DECLARE
-    v_user_count integer;
-    v_profile_count integer;
-    v_org_count integer;
-    v_org_user_count integer;
-    v_sub_count integer;
-BEGIN
-    SELECT COUNT(*) INTO v_user_count FROM auth.users;
-    SELECT COUNT(*) INTO v_profile_count FROM user_profiles;
-    SELECT COUNT(*) INTO v_org_count FROM organizations;
-    SELECT COUNT(*) INTO v_org_user_count FROM organization_users WHERE is_active = true;
-    SELECT COUNT(*) INTO v_sub_count FROM subscriptions WHERE status IN ('trialing', 'active');
-    
-    RAISE NOTICE '================================================';
-    RAISE NOTICE 'DATABASE INITIALIZATION SUMMARY';
-    RAISE NOTICE '================================================';
-    RAISE NOTICE 'Auth users: %', v_user_count;
-    RAISE NOTICE 'User profiles: %', v_profile_count;
-    RAISE NOTICE 'Organizations: %', v_org_count;
-    RAISE NOTICE 'Active organization memberships: %', v_org_user_count;
-    RAISE NOTICE 'Active subscriptions: %', v_sub_count;
-    RAISE NOTICE '================================================';
-    RAISE NOTICE '✅ Schema initialization complete!';
-    RAISE NOTICE '================================================';
-END $$;
-

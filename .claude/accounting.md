@@ -6,11 +6,52 @@ Full double-entry bookkeeping system with Chart of Accounts, General Ledger, inv
 ## Core Concepts
 
 ### Double-Entry Accounting
-Every transaction has two sides:
-- **Debit** (Dr): Asset increases, liability/equity decreases
-- **Credit** (Cr): Asset decreases, liability/equity increases
 
-**Rule**: Total debits must equal total credits for every journal entry.
+Double-Entry Bookkeeping is an accounting system where **every financial transaction affects at least two accounts**, and **Total Debits always equal Total Credits**.
+
+**Fundamental Principle**: For every journal entry, the sum of debit amounts MUST equal the sum of credit amounts.
+
+#### Accounting Equation
+```
+Assets = Liabilities + Equity
+```
+
+This equation remains true after every transaction when using double-entry bookkeeping.
+
+#### Debit and Credit Rules
+
+| Account Type | Increase | Decrease | Normal Balance |
+|-------------|----------|----------|----------------|
+| **Assets** | Debit | Credit | Debit |
+| **Liabilities** | Credit | Debit | Credit |
+| **Equity** | Credit | Debit | Credit |
+| **Revenue** | Credit | Debit | Credit |
+| **Expenses** | Debit | Credit | Debit |
+
+**Examples**:
+- **Debit** (Dr): Asset increases, Expense increases, Liability/Equity/Revenue decreases
+- **Credit** (Cr): Asset decreases, Expense decreases, Liability/Equity/Revenue increases
+
+#### System Enforcement
+
+The system enforces double-entry at **three levels**:
+
+1. **Database Constraint** (lines [1178-1179](project/supabase/migrations/00000000000000_schema.sql#L1178-L1179)):
+   ```sql
+   ALTER TABLE journal_entries ADD CONSTRAINT journal_entry_balanced
+     CHECK (ABS(total_debit - total_credit) < 0.01);
+   ```
+
+2. **Database Trigger** ([20251201000000_fix_journal_entry_totals.sql](project/supabase/migrations/20251201000000_fix_journal_entry_totals.sql)):
+   - Automatically calculates `total_debit` and `total_credit` from journal_items
+   - Fires after INSERT/UPDATE/DELETE on journal_items
+   - Validates balance constraint immediately
+
+3. **Application Validation**:
+   - Edge Functions: [post-invoice](project/supabase/functions/post-invoice/index.ts#L161-L171), [allocate-payment](project/supabase/functions/allocate-payment/index.ts#L217-L227)
+   - NestJS Service: [accounting-automation.service.ts](agritech-api/src/modules/journal-entries/accounting-automation.service.ts#L103-L111)
+   - Validates balance before inserting journal items
+   - Rolls back transaction if validation fails
 
 ### Account Types
 1. **Assets** - Things the organization owns (Cash, Inventory, Equipment)
@@ -126,29 +167,137 @@ Manage organization bank accounts linked to GL.
 
 ### Automatic Journal Creation
 
-**Purchases** → Journal Entry:
+The system automatically creates journal entries for common business transactions. All entries follow the double-entry principle.
+
+#### 1. Sales Invoice (Revenue Recognition)
+
+**Business Event**: Customer places an order for 500 MAD worth of produce
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 1200 - Accounts Receivable | 500.00 | 0.00 | Invoice #INV-001 receivable |
+| 4000 - Sales Revenue | 0.00 | 500.00 | Produce sales |
+
+**Code**: [post-invoice Edge Function](project/supabase/functions/post-invoice/index.ts)
+
+**T-Account View**:
 ```
-Dr. Inventory (or Expense)     1,000
-  Cr. Accounts Payable             1,000
+    Accounts Receivable (1200)          Sales Revenue (4000)
+    -------------------------           --------------------
+Dr. |  500.00  |           |        |           | 500.00  Cr.
+    |          |           |        |           |
 ```
 
-**Harvests (Sales)** → Journal Entry:
-```
-Dr. Accounts Receivable        5,000
-  Cr. Sales Revenue                5,000
-```
+---
 
-**Task Costs** → Journal Entry:
-```
-Dr. Cost of Goods Sold         500
-  Cr. Cash / Payables              500
-```
+#### 2. Purchase Invoice (Expense Recognition)
 
-**Payment Received** → Journal Entry:
-```
-Dr. Cash                       5,000
-  Cr. Accounts Receivable          5,000
-```
+**Business Event**: Purchase fertilizer for 1,000 MAD
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 5100 - Fertilizer Expense | 1,000.00 | 0.00 | Fertilizer purchase |
+| 2110 - Accounts Payable | 0.00 | 1,000.00 | Invoice #PO-001 payable |
+
+**Code**: [post-invoice Edge Function](project/supabase/functions/post-invoice/index.ts)
+
+---
+
+#### 3. Payment Received (Cash Collection)
+
+**Business Event**: Customer pays invoice of 500 MAD
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 1110 - Cash/Bank | 500.00 | 0.00 | Payment received via bank_transfer |
+| 1200 - Accounts Receivable | 0.00 | 500.00 | Payment from Customer A |
+
+**Code**: [allocate-payment Edge Function](project/supabase/functions/allocate-payment/index.ts)
+
+**Effect**: Reduces outstanding receivables, increases cash balance
+
+---
+
+#### 4. Payment Made (Cash Disbursement)
+
+**Business Event**: Pay supplier invoice of 1,000 MAD
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 2110 - Accounts Payable | 1,000.00 | 0.00 | Payment to Supplier B |
+| 1110 - Cash/Bank | 0.00 | 1,000.00 | Payment made via bank_transfer |
+
+**Code**: [allocate-payment Edge Function](project/supabase/functions/allocate-payment/index.ts)
+
+**Effect**: Reduces outstanding payables, decreases cash balance
+
+---
+
+#### 5. Cost Entry (Operating Expense)
+
+**Business Event**: Record labor cost of 200 MAD
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 5200 - Labor Expense | 200.00 | 0.00 | Labor cost for harvesting |
+| 1110 - Cash/Bank | 0.00 | 200.00 | Payment for labor |
+
+**Code**: [accounting-automation.service.ts](agritech-api/src/modules/journal-entries/accounting-automation.service.ts#L17-L137)
+
+**Note**: Uses account_mappings to dynamically select expense account based on cost_type
+
+---
+
+#### 6. Revenue Entry (Cash Sale)
+
+**Business Event**: Direct cash sale of 300 MAD
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 1110 - Cash/Bank | 300.00 | 0.00 | Receipt for harvest_sale |
+| 4000 - Sales Revenue | 0.00 | 300.00 | Direct sale revenue |
+
+**Code**: [accounting-automation.service.ts](agritech-api/src/modules/journal-entries/accounting-automation.service.ts#L139-L264)
+
+---
+
+#### 7. Sales Invoice with Tax (VAT)
+
+**Business Event**: Invoice customer for 1,000 MAD + 200 MAD VAT (20%)
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 1200 - Accounts Receivable | 1,200.00 | 0.00 | Invoice #INV-002 receivable |
+| 4000 - Sales Revenue | 0.00 | 1,000.00 | Produce sales |
+| 2150 - Tax Payable (VAT) | 0.00 | 200.00 | Sales tax for INV-002 |
+
+**Code**: [buildInvoiceLedgerLines](project/supabase/functions/_shared/ledger.ts#L63-L123)
+
+**Balance Check**: 1,200.00 Dr = 1,000.00 Cr + 200.00 Cr ✓
+
+---
+
+#### 8. Purchase Invoice with Tax
+
+**Business Event**: Purchase equipment for 5,000 MAD + 1,000 MAD VAT (20%)
+
+**Journal Entry**:
+| Account | Debit | Credit | Description |
+|---------|-------|--------|-------------|
+| 1300 - Equipment (Asset) | 5,000.00 | 0.00 | Equipment purchase |
+| 1400 - Tax Receivable (VAT) | 1,000.00 | 0.00 | Purchase tax for PO-002 |
+| 2110 - Accounts Payable | 0.00 | 6,000.00 | Invoice #PO-002 payable |
+
+**Code**: [buildInvoiceLedgerLines](project/supabase/functions/_shared/ledger.ts#L123-L174)
+
+**Balance Check**: 5,000.00 Dr + 1,000.00 Dr = 6,000.00 Cr ✓
 
 ## Financial Reports
 
@@ -235,15 +384,206 @@ Invoices grouped by age (current, 30 days, 60 days, 90+ days).
 - Audit trail for all changes (created_by, updated_by)
 - Void entries instead of deleting (preserve history)
 
-## Common Issues
+## Common Issues & Troubleshooting
 
-**Unbalanced journal entry**: Check that `total_debit = total_credit`. Trigger will prevent posting.
+### Unbalanced Journal Entry
 
-**Invoice total mismatch**: Trigger auto-calculates. If manual override needed, check calculation logic.
+**Error Message**: `Journal entry is not balanced: debits=X, credits=Y`
 
-**Payment allocation fails**: Ensure payment amount >= allocated amounts. Check invoice status (must not be void).
+**Causes**:
+- Application validation failed before inserting journal_items
+- Manual calculation error in journal entry creation
+- Rounding errors in multi-line entries
 
-**Missing GL accounts**: Create accounts first in Chart of Accounts before creating journals.
+**Solution**:
+1. Check the journal_items being inserted:
+   ```sql
+   SELECT
+     SUM(debit) as total_debits,
+     SUM(credit) as total_credits,
+     SUM(debit) - SUM(credit) as difference
+   FROM journal_items
+   WHERE journal_entry_id = '<entry_id>';
+   ```
+2. Verify each line has either debit OR credit (not both)
+3. Check for rounding errors (tolerance: 0.01)
+4. Review the business logic creating the entry
+
+**Prevention**: The database trigger automatically calculates totals and enforces the constraint
+
+---
+
+### Database Constraint Violation
+
+**Error Message**: `new row for relation "journal_entries" violates check constraint "journal_entry_balanced"`
+
+**Cause**: The database trigger calculated `total_debit` and `total_credit` from journal_items, but they don't match within the 0.01 tolerance
+
+**Solution**:
+1. This should never happen if application validation works correctly
+2. Check for corrupted data or manual SQL updates
+3. Run this query to find problematic entries:
+   ```sql
+   SELECT
+     je.id,
+     je.entry_number,
+     je.total_debit,
+     je.total_credit,
+     ABS(je.total_debit - je.total_credit) as difference,
+     (SELECT SUM(debit) FROM journal_items WHERE journal_entry_id = je.id) as calculated_debit,
+     (SELECT SUM(credit) FROM journal_items WHERE journal_entry_id = je.id) as calculated_credit
+   FROM journal_entries je
+   WHERE ABS(je.total_debit - je.total_credit) >= 0.01;
+   ```
+
+---
+
+### Missing Account Mappings
+
+**Error Message**: `Account mapping missing for cost_type: labor` or `Cash account mapping missing`
+
+**Cause**: The NestJS service requires account_mappings to determine which GL accounts to use for costs/revenues
+
+**Solution**:
+1. Check account_mappings table:
+   ```sql
+   SELECT * FROM account_mappings
+   WHERE organization_id = '<org_id>'
+   AND mapping_type IN ('cost_type', 'revenue_type', 'cash');
+   ```
+2. Create missing mappings via UI or SQL:
+   ```sql
+   INSERT INTO account_mappings (
+     organization_id,
+     mapping_type,
+     mapping_key,
+     account_id,
+     is_active
+   ) VALUES (
+     '<org_id>',
+     'cost_type',
+     'labor',
+     '<labor_expense_account_id>',
+     true
+   );
+   ```
+
+---
+
+### Invoice Posting Fails
+
+**Error Message**: `Failed to create journal entry` or `Missing accounts receivable account`
+
+**Cause**: Required GL accounts (1200 Accounts Receivable, 2110 Accounts Payable, etc.) don't exist
+
+**Solution**:
+1. Verify required accounts exist:
+   ```sql
+   SELECT code, name, type
+   FROM accounts
+   WHERE organization_id = '<org_id>'
+   AND code IN ('1110', '1200', '1400', '2110', '2150');
+   ```
+2. Create missing accounts using Chart of Accounts template
+3. Required accounts for invoicing:
+   - **1200** - Accounts Receivable (Asset)
+   - **2110** - Accounts Payable (Liability)
+   - **2150** - Tax Payable/VAT Output (Liability)
+   - **1400** - Tax Receivable/VAT Input (Asset)
+
+---
+
+### Payment Allocation Fails
+
+**Error Message**: `Allocations must equal the payment amount` or `One or more invoices not found`
+
+**Causes**:
+- Sum of allocations doesn't match payment amount
+- Invoices are in wrong organization
+- Invoice types don't match payment type (receive vs paid)
+
+**Solution**:
+1. Verify payment and allocations:
+   ```sql
+   SELECT
+     p.amount as payment_amount,
+     SUM(pa.allocated_amount) as total_allocated,
+     p.amount - SUM(pa.allocated_amount) as difference
+   FROM accounting_payments p
+   LEFT JOIN payment_allocations pa ON p.id = pa.payment_id
+   WHERE p.id = '<payment_id>'
+   GROUP BY p.id, p.amount;
+   ```
+2. Check invoice types match:
+   - `payment_type = 'receive'` requires `invoice_type = 'sales'`
+   - `payment_type = 'paid'` requires `invoice_type = 'purchase'`
+
+---
+
+### Totals Not Updating
+
+**Problem**: `journal_entries.total_debit` and `total_credit` remain 0 after inserting journal_items
+
+**Cause**: Database trigger not installed or disabled
+
+**Solution**:
+1. Check if trigger exists:
+   ```sql
+   SELECT * FROM pg_trigger
+   WHERE tgname = 'trg_recalculate_journal_totals';
+   ```
+2. If missing, apply the migration:
+   ```bash
+   supabase db push
+   ```
+3. Manually trigger recalculation for existing entries:
+   ```sql
+   UPDATE journal_entries je
+   SET
+     total_debit = (SELECT COALESCE(SUM(debit), 0) FROM journal_items WHERE journal_entry_id = je.id),
+     total_credit = (SELECT COALESCE(SUM(credit), 0) FROM journal_items WHERE journal_entry_id = je.id)
+   WHERE organization_id = '<org_id>';
+   ```
+
+---
+
+### Invoice Total Mismatch
+
+**Error Message**: `Sales invoice debits and credits do not balance` (from [ledger.ts](project/supabase/functions/_shared/ledger.ts))
+
+**Cause**: Rounding error when calculating line items + tax vs grand_total
+
+**Solution**:
+1. The `ledger.ts` file uses `roundCurrency()` function for all calculations
+2. Check invoice data:
+   ```sql
+   SELECT
+     i.invoice_number,
+     i.subtotal,
+     i.tax_total,
+     i.grand_total,
+     SUM(ii.amount) as calculated_subtotal,
+     SUM(ii.tax_amount) as calculated_tax
+   FROM invoices i
+   LEFT JOIN invoice_items ii ON i.id = ii.invoice_id
+   WHERE i.id = '<invoice_id>'
+   GROUP BY i.id, i.invoice_number, i.subtotal, i.tax_total, i.grand_total;
+   ```
+3. Verify: `subtotal + tax_total = grand_total`
+
+---
+
+### Missing GL Accounts for Invoices
+
+**Error Message**: `Invoice item <id> missing income account` or `missing expense account`
+
+**Cause**: Invoice items don't have `income_account_id` (for sales) or `expense_account_id` (for purchases)
+
+**Solution**:
+1. Set default accounts on invoice items
+2. Use product/service catalog with pre-configured GL accounts
+3. For sales invoices, ensure all items have `income_account_id`
+4. For purchase invoices, ensure all items have `expense_account_id`
 
 ## Multi-Currency Support
 
