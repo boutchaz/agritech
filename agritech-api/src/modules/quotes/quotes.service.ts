@@ -268,6 +268,125 @@ export class QuotesService {
   }
 
   /**
+   * Convert a quote to a sales order
+   */
+  async convertToOrder(
+    id: string,
+    organizationId: string,
+    userId: string,
+  ): Promise<any> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    try {
+      // Fetch quote with items
+      const { data: quote, error: fetchError } = await supabaseClient
+        .from('quotes')
+        .select(`*, items:quote_items(*)`)
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (fetchError || !quote) {
+        throw new NotFoundException('Quote not found');
+      }
+
+      if (quote.status === 'converted') {
+        throw new BadRequestException('Quote has already been converted');
+      }
+
+      if (quote.status === 'cancelled' || quote.status === 'rejected') {
+        throw new BadRequestException('Cannot convert cancelled or rejected quotes');
+      }
+
+      // Generate order number
+      const orderNumber = await this.sequencesService.getNextSequence(
+        organizationId,
+        'sales_order' as any,
+      );
+
+      // Create sales order
+      const { data: order, error: orderError } = await supabaseClient
+        .from('sales_orders')
+        .insert({
+          organization_id: organizationId,
+          order_number: orderNumber,
+          order_date: new Date().toISOString().split('T')[0],
+          customer_id: quote.customer_id,
+          customer_name: quote.customer_name,
+          subtotal: quote.subtotal,
+          tax_amount: quote.tax_total,
+          total_amount: quote.grand_total,
+          status: 'confirmed',
+          notes: quote.notes,
+          quote_id: quote.id,
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        throw new BadRequestException(`Failed to create sales order: ${orderError.message}`);
+      }
+
+      // Copy quote items to order items
+      const orderItems = quote.items.map((item: any) => ({
+        sales_order_id: order.id,
+        line_number: item.line_number,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit_of_measure: item.unit_of_measure,
+        unit_price: item.unit_price,
+        amount: item.amount,
+        discount_percent: item.discount_percent,
+        discount_amount: item.discount_amount,
+        tax_id: item.tax_id,
+        tax_rate: item.tax_rate,
+        tax_amount: item.tax_amount,
+        line_total: item.line_total,
+        account_id: item.account_id,
+        quote_item_id: item.id,
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('sales_order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        // Rollback: delete the order
+        await supabaseClient.from('sales_orders').delete().eq('id', order.id);
+        throw new BadRequestException(`Failed to create order items: ${itemsError.message}`);
+      }
+
+      // Update quote status and link to order
+      await supabaseClient
+        .from('quotes')
+        .update({
+          status: 'converted',
+          sales_order_id: order.id,
+          converted_at: new Date().toISOString(),
+          converted_by: userId,
+        })
+        .eq('id', id);
+
+      this.logger.log(`Quote ${quote.quote_number} converted to order ${orderNumber}`);
+
+      return {
+        success: true,
+        message: 'Quote converted to sales order successfully',
+        data: {
+          quote_id: id,
+          sales_order_id: order.id,
+          order_number: orderNumber,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error converting quote: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a quote (only drafts)
    */
   async delete(id: string, organizationId: string): Promise<any> {

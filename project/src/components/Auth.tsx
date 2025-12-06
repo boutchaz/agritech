@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { authSupabase } from '../lib/auth-supabase';
 import { Lock, Mail, User } from 'lucide-react';
-import { setupNewUser, checkUserNeedsOnboarding } from '../utils/authSetup';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -95,18 +94,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         }
 
         if (data?.user) {
-          // Check if user needs onboarding (missing profile or organization)
-          const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
-
-          if (needsOnboarding) {
-            console.log('User needs onboarding, setting up account...');
-            await setupNewUser({
-              userId: data.user.id,
-              email: data.user.email!,
-            });
-          }
-
           // User is authenticated via cloud Supabase
+          // MultiTenantAuthProvider will check if onboarding is needed and redirect accordingly
           console.log('User authenticated successfully via cloud Supabase');
           onAuthSuccess();
         }

@@ -472,6 +472,14 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [loading, profileLoading, user, profile, isOnSetPasswordPage, isPublicRoute, location.pathname]);
 
+  // Redirect to onboarding if user needs onboarding
+  useEffect(() => {
+    if (!loading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
+      // User needs to complete onboarding
+      window.location.href = '/onboarding';
+    }
+  }, [loading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
+
   // Redirect to trial selection if user has organization but no subscription
   // Only redirect if subscription query is not loading and has completed (either with data or error)
   // Don't redirect if subscription query is still loading or has network errors

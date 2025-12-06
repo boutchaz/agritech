@@ -66,4 +66,37 @@ export const invoicesApi = {
   async delete(invoiceId: string, organizationId: string): Promise<void> {
     await apiClient.delete(`/invoices/${invoiceId}`);
   },
+
+  /**
+   * Update a draft invoice
+   */
+  async update(
+    invoiceId: string,
+    data: {
+      party_id?: string;
+      party_name?: string;
+      invoice_date?: string;
+      due_date?: string;
+      payment_terms?: string;
+      notes?: string;
+      items?: Array<{
+        id?: string;
+        item_name: string;
+        description?: string;
+        quantity: number;
+        unit_price: number;
+        amount: number;
+        tax_id?: string;
+        tax_rate?: number;
+        tax_amount: number;
+        line_total: number;
+        income_account_id?: string;
+        expense_account_id?: string;
+        item_id?: string;
+      }>;
+    },
+    organizationId: string
+  ): Promise<InvoiceWithItems> {
+    return apiClient.patch<InvoiceWithItems>(`/invoices/${invoiceId}`, data);
+  },
 };

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
 import { useAccounts } from '@/hooks/useAccounts';
-import { useCreateInvoice } from '@/hooks/useInvoices';
+import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useTaxes } from '@/hooks/useTaxes';
@@ -66,12 +66,17 @@ interface InvoiceFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  editInvoiceId?: string | null;
 }
 
-export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuccess }) => {
+export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuccess, editInvoiceId }) => {
   const { currentOrganization, currentFarm, farms } = useAuth();
   const navigate = useNavigate();
   const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
+  const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(editInvoiceId || null);
+
+  const isEditMode = !!editInvoiceId;
   const { data: accounts = [] } = useAccounts();
   const { data: suppliers = [] } = useSuppliers();
   const { data: customers = [] } = useCustomers();
@@ -175,17 +180,73 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     calculateTotals();
   }, [watchItems, watchInvoiceType]);
 
+  // Reset form with existing invoice data when editing
+  useEffect(() => {
+    if (isEditMode && existingInvoice && !isLoadingInvoice) {
+      reset({
+        invoice_type: existingInvoice.invoice_type,
+        party_id: existingInvoice.party_id || '',
+        invoice_date: existingInvoice.invoice_date,
+        due_date: existingInvoice.due_date,
+        farm_id: existingInvoice.farm_id || null,
+        parcel_id: existingInvoice.parcel_id || null,
+        remarks: existingInvoice.remarks || '',
+        items: existingInvoice.items?.map(item => ({
+          item_name: item.item_name,
+          description: item.description || '',
+          quantity: item.quantity,
+          rate: item.rate,
+          account_id: item.account_id,
+          tax_id: item.tax_id || undefined,
+        })) || [{
+          item_name: '',
+          description: '',
+          quantity: 1,
+          rate: 0,
+          account_id: '',
+        }],
+      });
+    }
+  }, [isEditMode, existingInvoice, isLoadingInvoice, reset]);
+
   const onSubmit = async (data: InvoiceFormData) => {
     setIsSubmitting(true);
     try {
-      await createInvoice.mutateAsync(data);
-      toast.success('Invoice created successfully');
+      if (isEditMode && editInvoiceId) {
+        // Update existing invoice
+        await updateInvoice.mutateAsync({
+          invoiceId: editInvoiceId,
+          party_id: data.party_id,
+          party_name: data.invoice_type === 'sales'
+            ? customers.find(c => c.id === data.party_id)?.name
+            : suppliers.find(s => s.id === data.party_id)?.name,
+          invoice_date: data.invoice_date,
+          due_date: data.due_date,
+          notes: data.remarks,
+          items: data.items.map(item => ({
+            item_name: item.item_name,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.rate,
+            amount: item.quantity * item.rate,
+            tax_id: item.tax_id,
+            tax_rate: 0, // Will be populated from tax lookup if needed
+            tax_amount: 0, // Will be recalculated
+            line_total: item.quantity * item.rate,
+          })),
+        });
+        toast.success('Invoice updated successfully');
+      } else {
+        // Create new invoice
+        await createInvoice.mutateAsync(data);
+        toast.success('Invoice created successfully');
+      }
       reset();
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to create invoice:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create invoice');
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} invoice:`, error);
+      toast.error(error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} invoice`);
     } finally {
       setIsSubmitting(false);
     }
@@ -203,11 +264,18 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Invoice</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Invoice' : 'Create New Invoice'}</DialogTitle>
           <DialogDescription>
-            Add a new sales or purchase invoice with line items
+            {isEditMode ? 'Update the invoice details and line items' : 'Add a new sales or purchase invoice with line items'}
           </DialogDescription>
         </DialogHeader>
+
+        {isEditMode && isLoadingInvoice ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-2 text-gray-600">Loading invoice...</span>
+          </div>
+        ) : (
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Invoice Header */}
@@ -564,11 +632,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || createInvoice.isPending}>
-              {isSubmitting || createInvoice.isPending ? 'Creating...' : 'Create Invoice'}
+            <Button type="submit" disabled={isSubmitting || createInvoice.isPending || updateInvoice.isPending}>
+              {isSubmitting || createInvoice.isPending || updateInvoice.isPending
+                ? (isEditMode ? 'Updating...' : 'Creating...')
+                : (isEditMode ? 'Update Invoice' : 'Create Invoice')}
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

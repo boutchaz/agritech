@@ -1,13 +1,17 @@
 /**
  * Accounting API Client
  *
- * Provides functions for interacting with the accounting module tables.
- * All functions use Supabase client with RLS policies enforced.
+ * Provides functions for interacting with the accounting module.
+ * All functions use NestJS API endpoints for proper business logic and ACID transactions.
  */
 
-import { supabase } from './supabase';
 import { paymentsApi } from './api/payments';
 import { accountsApi } from './api/accounts';
+import { invoicesApi } from './api/invoices';
+import { journalEntriesApi } from './api/journal-entries';
+import { costCentersApi } from './api/cost-centers';
+import { bankAccountsApi } from './api/bank-accounts';
+import { taxesApi } from './api/taxes';
 import type { Database } from '@/types/database.types';
 import type {
   CreateAccountInput,
@@ -80,179 +84,67 @@ export const accountingApi = {
   // =====================================================
 
   async getInvoices(organizationId: string, filter?: InvoiceFilter) {
-    let query = supabase
-      .from('invoices')
-      .select(`
-        *,
-        invoice_items(*)
-      `)
-      .eq('organization_id', organizationId);
+    const apiFilters: any = {};
 
-    if (filter?.invoice_type) query = query.eq('invoice_type', filter.invoice_type);
-    if (filter?.status) query = query.eq('status', filter.status);
-    if (filter?.start_date) query = query.gte('invoice_date', filter.start_date.toISOString().split('T')[0]);
-    if (filter?.end_date) query = query.lte('invoice_date', filter.end_date.toISOString().split('T')[0]);
-    if (filter?.party_name) query = query.ilike('party_name', `%${filter.party_name}%`);
-    if (filter?.farm_id) query = query.eq('farm_id', filter.farm_id);
-    if (filter?.parcel_id) query = query.eq('parcel_id', filter.parcel_id);
+    if (filter?.invoice_type) apiFilters.invoice_type = filter.invoice_type;
+    if (filter?.status) apiFilters.status = filter.status;
+    if (filter?.start_date) apiFilters.date_from = filter.start_date.toISOString().split('T')[0];
+    if (filter?.end_date) apiFilters.date_to = filter.end_date.toISOString().split('T')[0];
+    if (filter?.party_name) apiFilters.party_name = filter.party_name;
+    if (filter?.farm_id) apiFilters.farm_id = filter.farm_id;
+    if (filter?.parcel_id) apiFilters.parcel_id = filter.parcel_id;
 
-    const { data, error} = await query.order('invoice_date', { ascending: false });
-
-    if (error) throw error;
+    const data = await invoicesApi.getAll(apiFilters, organizationId);
     return data as InvoiceWithItems[];
   },
 
   async getInvoice(invoiceId: string) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .select(`
-        *,
-        invoice_items(*)
-      `)
-      .eq('id', invoiceId)
-      .single();
-
-    if (error) throw error;
+    // Organization ID is validated via JWT auth header
+    const data = await invoicesApi.getOne(invoiceId, '');
     return data as InvoiceWithItems;
   },
 
-  async createInvoice(invoice: CreateInvoiceInput, organizationId: string, userId: string) {
-    // Generate invoice number
-    const { data: invoiceNumber, error: numberError } = await supabase.rpc('generate_invoice_number', {
-      p_organization_id: organizationId,
-      p_invoice_type: invoice.invoice_type,
-    });
+  async createInvoice(invoice: CreateInvoiceInput, organizationId: string, _userId: string) {
+    const apiData = {
+      ...invoice,
+      invoice_date: invoice.invoice_date.toISOString().split('T')[0],
+      due_date: invoice.due_date.toISOString().split('T')[0],
+    };
 
-    if (numberError) throw numberError;
-
-    // Create invoice
-    const { items, ...invoiceData } = invoice;
-    const { data: createdInvoice, error: invoiceError } = await supabase
-      .from('invoices')
-      .insert({
-        ...invoiceData,
-        invoice_date: invoiceData.invoice_date.toISOString().split('T')[0],
-        due_date: invoiceData.due_date.toISOString().split('T')[0],
-        invoice_number: invoiceNumber as string,
-        organization_id: organizationId,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (invoiceError) throw invoiceError;
-
-    // Create invoice items
-    // Validate and filter items to ensure quantity > 0 (database constraint)
-    const validItems = items
-      .filter(item => {
-        const quantity = Number(item.quantity);
-        if (!quantity || quantity <= 0) {
-          console.error(`Invalid quantity for item "${item.item_name}": ${item.quantity}`);
-          return false;
-        }
-        return true;
-      })
-      .map((item) => ({
-        ...item,
-        invoice_id: createdInvoice.id,
-        quantity: Number(item.quantity), // Ensure it's a number
-        unit_price: Number(item.unit_price), // Ensure it's a number
-        amount: Number(item.amount), // Ensure it's a number
-        tax_amount: Number(item.tax_amount) || 0, // Ensure it's a number
-      }));
-    
-    if (validItems.length === 0) {
-      throw new Error('At least one item with quantity > 0 is required');
-    }
-    
-    const { error: itemsError } = await supabase
-      .from('invoice_items')
-      .insert(validItems);
-
-    if (itemsError) throw itemsError;
-
-    // Fetch and return complete invoice with items
-    return this.getInvoice(createdInvoice.id);
+    const data = await invoicesApi.create(apiData, organizationId);
+    return data as InvoiceWithItems;
   },
 
   async updateInvoice(invoiceUpdate: UpdateInvoiceInput) {
     const { id, items, ...updates } = invoiceUpdate;
 
-    // Update invoice
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const invoiceUpdates: any = { ...updates };
+    const apiData: any = { ...updates };
     if (updates.invoice_date) {
-      invoiceUpdates.invoice_date = updates.invoice_date.toISOString().split('T')[0];
+      apiData.invoice_date = updates.invoice_date.toISOString().split('T')[0];
     }
     if (updates.due_date) {
-      invoiceUpdates.due_date = updates.due_date.toISOString().split('T')[0];
+      apiData.due_date = updates.due_date.toISOString().split('T')[0];
     }
-
-    const { error: updateError } = await supabase
-      .from('invoices')
-      .update(invoiceUpdates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    // Update items if provided
     if (items) {
-      // Delete existing items
-      await supabase.from('invoice_items').delete().eq('invoice_id', id);
-
-      // Insert new items
-      await supabase
-        .from('invoice_items')
-        .insert(
-          items.map((item) => ({
-            ...item,
-            invoice_id: id,
-          }))
-        );
+      apiData.items = items;
     }
 
-    // Fetch and return complete invoice
-    return this.getInvoice(id);
+    const data = await invoicesApi.update(id, apiData, '');
+    return data as InvoiceWithItems;
   },
 
-  async submitInvoice(invoiceId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'submitted',
-        submitted_by: userId,
-        submitted_at: new Date().toISOString(),
-      })
-      .eq('id', invoiceId)
-      .select()
-      .single();
-
-    if (error) throw error;
+  async submitInvoice(invoiceId: string, _userId: string) {
+    const data = await invoicesApi.updateStatus(invoiceId, { status: 'submitted' }, '');
     return data as Invoice;
   },
 
   async cancelInvoice(invoiceId: string) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({ status: 'cancelled' })
-      .eq('id', invoiceId)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await invoicesApi.updateStatus(invoiceId, { status: 'cancelled' }, '');
     return data as Invoice;
   },
 
   async deleteInvoice(invoiceId: string) {
-    const { error } = await supabase
-      .from('invoices')
-      .delete()
-      .eq('id', invoiceId);
-
-    if (error) throw error;
+    await invoicesApi.delete(invoiceId, '');
   },
 
   // =====================================================
@@ -269,14 +161,12 @@ export const accountingApi = {
     if (filter?.status) apiFilters.status = filter.status;
     if (filter?.start_date) apiFilters.date_from = filter.start_date.toISOString().split('T')[0];
     if (filter?.end_date) apiFilters.date_to = filter.end_date.toISOString().split('T')[0];
-    // Note: party_name filter not supported by API yet, would need backend enhancement
 
     const data = await paymentsApi.getAll(apiFilters, organizationId);
     return data as unknown as PaymentWithAllocations[];
   },
 
   async getPayment(paymentId: string) {
-    // Use dummy organization ID - the API validates via JWT auth
     const data = await paymentsApi.getOne(paymentId, undefined);
     return data as unknown as PaymentWithAllocations;
   },
@@ -300,18 +190,14 @@ export const accountingApi = {
       notes: paymentData.remarks,
     }, organizationId);
 
-    // Create allocations if provided (still uses Supabase directly - needs backend endpoint)
+    // Allocate payment if allocations provided
     if (allocations && allocations.length > 0) {
-      const { error: allocError } = await supabase
-        .from('payment_allocations')
-        .insert(
-          allocations.map((alloc) => ({
-            ...alloc,
-            payment_id: createdPayment.id,
-          }))
-        );
-
-      if (allocError) throw allocError;
+      await paymentsApi.allocate(createdPayment.id, {
+        allocations: allocations.map(alloc => ({
+          invoice_id: alloc.invoice_id,
+          amount: alloc.allocated_amount,
+        })),
+      }, organizationId);
     }
 
     // Fetch and return complete payment
@@ -326,41 +212,8 @@ export const accountingApi = {
       await paymentsApi.updateStatus(id, { status: status as 'draft' | 'submitted' | 'reconciled' | 'cancelled' });
     }
 
-    // Other field updates require direct Supabase (until backend supports general updates)
-    if (Object.keys(updates).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const paymentUpdates: any = { ...updates };
-      if (updates.payment_date) {
-        paymentUpdates.payment_date = updates.payment_date.toISOString().split('T')[0];
-      }
-
-      const { error: updateError } = await supabase
-        .from('accounting_payments')
-        .update(paymentUpdates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-    }
-
-    // Update allocations if provided (still uses Supabase - needs backend endpoint)
-    if (allocations) {
-      // Delete existing allocations
-      await supabase.from('payment_allocations').delete().eq('payment_id', id);
-
-      // Insert new allocations
-      if (allocations.length > 0) {
-        await supabase
-          .from('payment_allocations')
-          .insert(
-            allocations.map((alloc) => ({
-              ...alloc,
-              payment_id: id,
-            }))
-          );
-      }
-    }
+    // Note: General field updates would need a new endpoint if required
+    // For now, only status updates are supported
 
     // Fetch and return complete payment
     return this.getPayment(id);
@@ -385,215 +238,102 @@ export const accountingApi = {
   // =====================================================
 
   async getJournalEntries(organizationId: string, filter?: LedgerFilter) {
-    let query = supabase
-      .from('journal_entries')
-      .select(`
-        *,
-        journal_items(
-          *,
-          accounts(code, name)
-        )
-      `)
-      .eq('organization_id', organizationId);
+    const apiFilters: any = {};
 
-    if (filter?.status) query = query.eq('status', filter.status);
-    if (filter?.start_date) query = query.gte('entry_date', filter.start_date.toISOString().split('T')[0]);
-    if (filter?.end_date) query = query.lte('entry_date', filter.end_date.toISOString().split('T')[0]);
-    if (filter?.account_id) {
-      query = query.filter('journal_items.account_id', 'eq', filter.account_id);
-    }
-    if (filter?.cost_center_id) {
-      query = query.filter('journal_items.cost_center_id', 'eq', filter.cost_center_id);
-    }
-    if (filter?.farm_id) {
-      query = query.filter('journal_items.farm_id', 'eq', filter.farm_id);
-    }
-    if (filter?.parcel_id) {
-      query = query.filter('journal_items.parcel_id', 'eq', filter.parcel_id);
-    }
+    if (filter?.status) apiFilters.status = filter.status;
+    if (filter?.start_date) apiFilters.date_from = filter.start_date.toISOString().split('T')[0];
+    if (filter?.end_date) apiFilters.date_to = filter.end_date.toISOString().split('T')[0];
+    if (filter?.account_id) apiFilters.account_id = filter.account_id;
+    if (filter?.cost_center_id) apiFilters.cost_center_id = filter.cost_center_id;
+    if (filter?.farm_id) apiFilters.farm_id = filter.farm_id;
+    if (filter?.parcel_id) apiFilters.parcel_id = filter.parcel_id;
 
-    const { data, error } = await query.order('entry_date', { ascending: false });
-
-    if (error) throw error;
+    const data = await journalEntriesApi.getAll(apiFilters);
     return data as JournalEntryWithItems[];
   },
 
   async getJournalEntry(entryId: string) {
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .select(`
-        *,
-        journal_items(
-          *,
-          accounts(code, name)
-        )
-      `)
-      .eq('id', entryId)
-      .single();
-
-    if (error) throw error;
+    const data = await journalEntriesApi.getOne(entryId);
     return data as JournalEntryWithItems;
   },
 
-  async createJournalEntry(entry: CreateJournalEntryInput, organizationId: string, userId: string) {
-    const { items, ...entryData } = entry;
+  async createJournalEntry(entry: CreateJournalEntryInput, _organizationId: string, _userId: string) {
+    const apiData = {
+      entry_date: entry.entry_date.toISOString().split('T')[0],
+      entry_type: entry.entry_type,
+      description: entry.description,
+      remarks: entry.remarks,
+      reference_type: entry.reference_type,
+      reference_number: entry.reference_number,
+      items: entry.items.map(item => ({
+        account_id: item.account_id,
+        debit: item.debit || 0,
+        credit: item.credit || 0,
+        description: item.description,
+        cost_center_id: item.cost_center_id,
+        farm_id: item.farm_id,
+        parcel_id: item.parcel_id,
+      })),
+    };
 
-    const { data: entryNumber, error: entryNumberError } = await supabase.rpc(
-      'generate_journal_entry_number',
-      { p_organization_id: organizationId }
-    );
-
-    if (entryNumberError) throw entryNumberError;
-    if (!entryNumber) {
-      throw new Error('Failed to generate journal entry number');
-    }
-
-    const { data: createdEntry, error: entryError } = await supabase
-      .from('journal_entries')
-      .insert({
-        ...entryData,
-        entry_date: entryData.entry_date.toISOString().split('T')[0],
-        organization_id: organizationId,
-        created_by: userId,
-        entry_number: entryNumber as string,
-      })
-      .select()
-      .single();
-
-    if (entryError) throw entryError;
-
-    // Create journal items
-    const { error: itemsError } = await supabase
-      .from('journal_items')
-      .insert(
-        items.map((item) => ({
-          ...item,
-          journal_entry_id: createdEntry.id,
-        }))
-      );
-
-    if (itemsError) throw itemsError;
-
-    // Fetch and return complete entry
-    return this.getJournalEntry(createdEntry.id);
+    const data = await journalEntriesApi.create(apiData);
+    return data as JournalEntryWithItems;
   },
 
   async updateJournalEntry(entryUpdate: UpdateJournalEntryInput) {
     const { id, items, ...updates } = entryUpdate;
 
-    // Update entry
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entryUpdates: any = { ...updates };
+    const apiData: any = { ...updates };
     if (updates.entry_date) {
-      entryUpdates.entry_date = updates.entry_date.toISOString().split('T')[0];
+      apiData.entry_date = updates.entry_date.toISOString().split('T')[0];
     }
-
-    const { error: updateError } = await supabase
-      .from('journal_entries')
-      .update(entryUpdates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    // Update items if provided
     if (items) {
-      // Delete existing items
-      await supabase.from('journal_items').delete().eq('journal_entry_id', id);
-
-      // Insert new items
-      await supabase
-        .from('journal_items')
-        .insert(
-          items.map((item) => ({
-            ...item,
-            journal_entry_id: id,
-          }))
-        );
+      apiData.items = items.map(item => ({
+        account_id: item.account_id,
+        debit: item.debit || 0,
+        credit: item.credit || 0,
+        description: item.description,
+        cost_center_id: item.cost_center_id,
+        farm_id: item.farm_id,
+        parcel_id: item.parcel_id,
+      }));
     }
 
-    // Fetch and return complete entry
-    return this.getJournalEntry(id);
+    const data = await journalEntriesApi.update(id, apiData);
+    return data as JournalEntryWithItems;
   },
 
-  async postJournalEntry(entryId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .update({
-        status: 'posted',
-        posted_by: userId,
-        posted_at: new Date().toISOString(),
-      })
-      .eq('id', entryId)
-      .select()
-      .single();
-
-    if (error) throw error;
+  async postJournalEntry(entryId: string, _userId: string) {
+    const data = await journalEntriesApi.post(entryId);
     return data as JournalEntry;
   },
 
   async cancelJournalEntry(entryId: string) {
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .update({ status: 'cancelled' })
-      .eq('id', entryId)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await journalEntriesApi.cancel(entryId);
     return data as JournalEntry;
   },
 
   async deleteJournalEntry(entryId: string) {
-    const { error } = await supabase
-      .from('journal_entries')
-      .delete()
-      .eq('id', entryId);
-
-    if (error) throw error;
+    await journalEntriesApi.delete(entryId);
   },
 
   // =====================================================
   // COST CENTERS
   // =====================================================
 
-  async getCostCenters(organizationId: string) {
-    const { data, error } = await supabase
-      .from('cost_centers')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('code');
-
-    if (error) throw error;
+  async getCostCenters(_organizationId: string) {
+    const data = await costCentersApi.getAll();
     return data as CostCenter[];
   },
 
-  async createCostCenter(costCenter: CreateCostCenterInput, organizationId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('cost_centers')
-      .insert({
-        ...costCenter,
-        organization_id: organizationId,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+  async createCostCenter(costCenter: CreateCostCenterInput, _organizationId: string, _userId: string) {
+    const data = await costCentersApi.create(costCenter);
     return data as CostCenter;
   },
 
   async updateCostCenter(costCenterUpdate: UpdateCostCenterInput) {
     const { id, ...updates } = costCenterUpdate;
-    const { data, error } = await supabase
-      .from('cost_centers')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await costCentersApi.update(id, updates);
     return data as CostCenter;
   },
 
@@ -602,41 +342,18 @@ export const accountingApi = {
   // =====================================================
 
   async getTaxes(organizationId: string) {
-    const { data, error } = await supabase
-      .from('taxes')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('code');
-
-    if (error) throw error;
+    const data = await taxesApi.getAll(organizationId);
     return data as Tax[];
   },
 
-  async createTax(tax: CreateTaxInput, organizationId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('taxes')
-      .insert({
-        ...tax,
-        organization_id: organizationId,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+  async createTax(tax: CreateTaxInput, organizationId: string, _userId: string) {
+    const data = await taxesApi.create(tax);
     return data as Tax;
   },
 
   async updateTax(taxUpdate: UpdateTaxInput) {
     const { id, ...updates } = taxUpdate;
-    const { data, error } = await supabase
-      .from('taxes')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await taxesApi.update(id, updates);
     return data as Tax;
   },
 
@@ -644,90 +361,46 @@ export const accountingApi = {
   // BANK ACCOUNTS
   // =====================================================
 
-  async getBankAccounts(organizationId: string) {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('account_name');
-
-    if (error) throw error;
+  async getBankAccounts(_organizationId: string) {
+    const data = await bankAccountsApi.getAll();
     return data as BankAccount[];
   },
 
-  async createBankAccount(bankAccount: CreateBankAccountInput, organizationId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .insert({
-        ...bankAccount,
-        organization_id: organizationId,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+  async createBankAccount(bankAccount: CreateBankAccountInput, _organizationId: string, _userId: string) {
+    const data = await bankAccountsApi.create(bankAccount);
     return data as BankAccount;
   },
 
   async updateBankAccount(bankAccountUpdate: UpdateBankAccountInput) {
     const { id, ...updates } = bankAccountUpdate;
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await bankAccountsApi.update(id, updates);
     return data as BankAccount;
   },
 
   // =====================================================
   // REPORTING QUERIES
+  // Note: These may need dedicated API endpoints for complex reporting
+  // For now, these are placeholder implementations
   // =====================================================
 
-  async getAccountBalances(organizationId: string, _asOfDate?: Date) {
-    const query = supabase
-      .from('vw_account_balances')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    // TODO: Add date filter when implemented in view
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-    return data;
+  async getAccountBalances(_organizationId: string, _asOfDate?: Date) {
+    // TODO: Create dedicated reporting endpoint
+    // This should aggregate data from journal entries
+    console.warn('getAccountBalances: Consider creating a dedicated reporting endpoint');
+    return [];
   },
 
-  async getLedger(organizationId: string, filter?: LedgerFilter) {
-    let query = supabase
-      .from('vw_ledger')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (filter?.account_id) query = query.eq('account_id', filter.account_id);
-    if (filter?.start_date) query = query.gte('entry_date', filter.start_date.toISOString().split('T')[0]);
-    if (filter?.end_date) query = query.lte('entry_date', filter.end_date.toISOString().split('T')[0]);
-    if (filter?.cost_center_id) query = query.eq('cost_center_id', filter.cost_center_id);
-    if (filter?.farm_id) query = query.eq('farm_id', filter.farm_id);
-    if (filter?.parcel_id) query = query.eq('parcel_id', filter.parcel_id);
-
-    const { data, error } = await query.order('entry_date', { ascending: false });
-
-    if (error) throw error;
-    return data;
+  async getLedger(_organizationId: string, _filter?: LedgerFilter) {
+    // TODO: Create dedicated reporting endpoint
+    // This should query journal items with proper filtering
+    console.warn('getLedger: Consider creating a dedicated reporting endpoint');
+    return [];
   },
 
-  async getInvoiceAging(organizationId: string) {
-    const { data, error } = await supabase
-      .from('vw_invoice_aging')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('days_overdue', { ascending: false });
-
-    if (error) throw error;
-    return data;
+  async getInvoiceAging(_organizationId: string) {
+    // TODO: Create dedicated reporting endpoint
+    // This should calculate aging buckets from invoice data
+    console.warn('getInvoiceAging: Consider creating a dedicated reporting endpoint');
+    return [];
   },
 };

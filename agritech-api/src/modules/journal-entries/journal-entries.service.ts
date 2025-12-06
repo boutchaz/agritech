@@ -1,0 +1,427 @@
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
+import { SequencesService } from '../sequences/sequences.service';
+
+export interface CreateJournalEntryDto {
+  entry_date: string;
+  entry_type?: 'expense' | 'revenue' | 'transfer' | 'adjustment';
+  description?: string;
+  remarks?: string;
+  reference_type?: string;
+  reference_number?: string;
+  items: {
+    account_id: string;
+    debit: number;
+    credit: number;
+    description?: string;
+    cost_center_id?: string;
+    farm_id?: string;
+    parcel_id?: string;
+  }[];
+}
+
+export interface UpdateJournalEntryDto {
+  entry_date?: string;
+  entry_type?: 'expense' | 'revenue' | 'transfer' | 'adjustment';
+  description?: string;
+  remarks?: string;
+  items?: {
+    account_id: string;
+    debit: number;
+    credit: number;
+    description?: string;
+    cost_center_id?: string;
+    farm_id?: string;
+    parcel_id?: string;
+  }[];
+}
+
+@Injectable()
+export class JournalEntriesService {
+  private readonly logger = new Logger(JournalEntriesService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly sequencesService: SequencesService,
+  ) {}
+
+  /**
+   * Get all journal entries with optional filters
+   */
+  async findAll(organizationId: string, filters?: any) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      let query = supabaseClient
+        .from('journal_entries')
+        .select(`
+          *,
+          journal_items(
+            *,
+            accounts(code, name)
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .order('entry_date', { ascending: false });
+
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters?.entry_type) {
+        query = query.eq('entry_type', filters.entry_type);
+      }
+
+      if (filters?.date_from) {
+        query = query.gte('entry_date', filters.date_from);
+      }
+
+      if (filters?.date_to) {
+        query = query.lte('entry_date', filters.date_to);
+      }
+
+      if (filters?.account_id) {
+        // Filter by account in journal items
+        query = query.filter('journal_items.account_id', 'eq', filters.account_id);
+      }
+
+      if (filters?.cost_center_id) {
+        query = query.filter('journal_items.cost_center_id', 'eq', filters.cost_center_id);
+      }
+
+      if (filters?.farm_id) {
+        query = query.filter('journal_items.farm_id', 'eq', filters.farm_id);
+      }
+
+      if (filters?.parcel_id) {
+        query = query.filter('journal_items.parcel_id', 'eq', filters.parcel_id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        this.logger.error('Error fetching journal entries:', error);
+        throw new BadRequestException(`Failed to fetch journal entries: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      this.logger.error('Error in findAll journal entries:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single journal entry by ID
+   */
+  async findOne(id: string, organizationId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('journal_entries')
+        .select(`
+          *,
+          journal_items(
+            *,
+            accounts(code, name)
+          )
+        `)
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (error || !data) {
+        throw new NotFoundException(`Journal entry with ID ${id} not found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error('Error in findOne journal entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new journal entry
+   */
+  async create(dto: CreateJournalEntryDto, organizationId: string, userId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      // Validate double-entry principle
+      const totalDebit = dto.items.reduce((sum, item) => sum + (item.debit || 0), 0);
+      const totalCredit = dto.items.reduce((sum, item) => sum + (item.credit || 0), 0);
+
+      if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        throw new BadRequestException(
+          `Journal entry is not balanced: debits (${totalDebit}) must equal credits (${totalCredit})`
+        );
+      }
+
+      // Generate entry number
+      const { data: entryNumber, error: numberError } = await supabaseClient.rpc(
+        'generate_journal_entry_number',
+        { p_organization_id: organizationId }
+      );
+
+      if (numberError) {
+        throw new BadRequestException(`Failed to generate entry number: ${numberError.message}`);
+      }
+
+      // Create journal entry
+      const { data: entry, error: entryError } = await supabaseClient
+        .from('journal_entries')
+        .insert({
+          organization_id: organizationId,
+          entry_number: entryNumber,
+          entry_date: dto.entry_date,
+          entry_type: dto.entry_type || 'adjustment',
+          description: dto.description,
+          remarks: dto.remarks,
+          reference_type: dto.reference_type,
+          reference_number: dto.reference_number,
+          total_debit: totalDebit,
+          total_credit: totalCredit,
+          status: 'draft',
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (entryError) {
+        this.logger.error('Error creating journal entry:', entryError);
+        throw new BadRequestException(`Failed to create journal entry: ${entryError.message}`);
+      }
+
+      // Create journal items
+      const items = dto.items.map(item => ({
+        journal_entry_id: entry.id,
+        account_id: item.account_id,
+        debit: item.debit || 0,
+        credit: item.credit || 0,
+        description: item.description,
+        cost_center_id: item.cost_center_id,
+        farm_id: item.farm_id,
+        parcel_id: item.parcel_id,
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('journal_items')
+        .insert(items);
+
+      if (itemsError) {
+        // Rollback: delete the entry
+        await supabaseClient.from('journal_entries').delete().eq('id', entry.id);
+        this.logger.error('Error creating journal items:', itemsError);
+        throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
+      }
+
+      return this.findOne(entry.id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in create journal entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a draft journal entry
+   */
+  async update(id: string, dto: UpdateJournalEntryDto, organizationId: string, userId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      // Check if entry exists and is draft
+      const entry = await this.findOne(id, organizationId);
+
+      if (entry.status !== 'draft') {
+        throw new BadRequestException('Only draft journal entries can be updated');
+      }
+
+      // Build update data
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (dto.entry_date) updateData.entry_date = dto.entry_date;
+      if (dto.entry_type) updateData.entry_type = dto.entry_type;
+      if (dto.description !== undefined) updateData.description = dto.description;
+      if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
+
+      // If items are provided, recalculate totals
+      if (dto.items) {
+        const totalDebit = dto.items.reduce((sum, item) => sum + (item.debit || 0), 0);
+        const totalCredit = dto.items.reduce((sum, item) => sum + (item.credit || 0), 0);
+
+        if (Math.abs(totalDebit - totalCredit) > 0.01) {
+          throw new BadRequestException(
+            `Journal entry is not balanced: debits (${totalDebit}) must equal credits (${totalCredit})`
+          );
+        }
+
+        updateData.total_debit = totalDebit;
+        updateData.total_credit = totalCredit;
+      }
+
+      // Update entry header
+      const { error: updateError } = await supabaseClient
+        .from('journal_entries')
+        .update(updateData)
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to update journal entry: ${updateError.message}`);
+      }
+
+      // Update items if provided
+      if (dto.items) {
+        // Delete existing items
+        const { error: deleteError } = await supabaseClient
+          .from('journal_items')
+          .delete()
+          .eq('journal_entry_id', id);
+
+        if (deleteError) {
+          throw new BadRequestException(`Failed to delete existing items: ${deleteError.message}`);
+        }
+
+        // Insert new items
+        const items = dto.items.map(item => ({
+          journal_entry_id: id,
+          account_id: item.account_id,
+          debit: item.debit || 0,
+          credit: item.credit || 0,
+          description: item.description,
+          cost_center_id: item.cost_center_id,
+          farm_id: item.farm_id,
+          parcel_id: item.parcel_id,
+        }));
+
+        const { error: insertError } = await supabaseClient
+          .from('journal_items')
+          .insert(items);
+
+        if (insertError) {
+          throw new BadRequestException(`Failed to create journal items: ${insertError.message}`);
+        }
+      }
+
+      return this.findOne(id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in update journal entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Post a journal entry
+   */
+  async post(id: string, organizationId: string, userId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      const entry = await this.findOne(id, organizationId);
+
+      if (entry.status !== 'draft') {
+        throw new BadRequestException('Only draft journal entries can be posted');
+      }
+
+      const now = new Date().toISOString();
+      const { error } = await supabaseClient
+        .from('journal_entries')
+        .update({
+          status: 'posted',
+          posted_by: userId,
+          posted_at: now,
+          posting_date: entry.entry_date,
+          updated_at: now,
+        })
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        throw new BadRequestException(`Failed to post journal entry: ${error.message}`);
+      }
+
+      return this.findOne(id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in post journal entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a journal entry
+   */
+  async cancel(id: string, organizationId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      const entry = await this.findOne(id, organizationId);
+
+      if (entry.status === 'cancelled') {
+        throw new BadRequestException('Journal entry is already cancelled');
+      }
+
+      const { error } = await supabaseClient
+        .from('journal_entries')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        throw new BadRequestException(`Failed to cancel journal entry: ${error.message}`);
+      }
+
+      return this.findOne(id, organizationId);
+    } catch (error) {
+      this.logger.error('Error in cancel journal entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a draft journal entry
+   */
+  async delete(id: string, organizationId: string) {
+    const supabaseClient = this.databaseService.getClient();
+
+    try {
+      const entry = await this.findOne(id, organizationId);
+
+      if (entry.status !== 'draft') {
+        throw new BadRequestException('Only draft journal entries can be deleted');
+      }
+
+      // Delete items first
+      const { error: itemsError } = await supabaseClient
+        .from('journal_items')
+        .delete()
+        .eq('journal_entry_id', id);
+
+      if (itemsError) {
+        throw new BadRequestException(`Failed to delete journal items: ${itemsError.message}`);
+      }
+
+      // Delete entry
+      const { error } = await supabaseClient
+        .from('journal_entries')
+        .delete()
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        throw new BadRequestException(`Failed to delete journal entry: ${error.message}`);
+      }
+
+      return { message: 'Journal entry deleted successfully' };
+    } catch (error) {
+      this.logger.error('Error in delete journal entry:', error);
+      throw error;
+    }
+  }
+}

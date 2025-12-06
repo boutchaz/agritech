@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import OnboardingFlow from '../components/OnboardingFlow';
+import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export const Route = createFileRoute('/onboarding/')({
   component: OnboardingPage,
@@ -7,20 +8,35 @@ export const Route = createFileRoute('/onboarding/')({
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    // Redirect all users directly to dashboard - onboarding is temporarily disabled
-    console.log('🔄 Redirecting from onboarding to dashboard');
+  const handleOnboardingComplete = () => {
+    // Navigate to dashboard after onboarding is complete
     navigate({ to: '/' });
-  }, [navigate]);
+  };
 
-  // Show loading spinner while redirecting
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  // If no user, redirect to login
+  if (!user) {
+    navigate({ to: '/login' });
+    return null;
+  }
+
+  return (
+    <OnboardingFlow
+      user={user}
+      onComplete={handleOnboardingComplete}
+    />
   );
 }

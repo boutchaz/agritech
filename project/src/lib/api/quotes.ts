@@ -68,6 +68,13 @@ export const quotesApi = {
   },
 
   /**
+   * Convert a quote to a sales order
+   */
+  async convertToOrder(id: string, organizationId?: string) {
+    return apiClient.post(`${BASE_URL}/${id}/convert-to-order`, {}, {}, organizationId);
+  },
+
+  /**
    * Delete a quote (only drafts)
    */
   async delete(id: string, organizationId?: string) {

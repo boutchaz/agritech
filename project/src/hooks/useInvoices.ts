@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
 import { invoicesApi } from '../lib/api/invoices';
@@ -298,6 +297,52 @@ export function useDeleteInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to update a draft invoice
+ */
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      invoiceId: string;
+      party_id?: string;
+      party_name?: string;
+      invoice_date?: string;
+      due_date?: string;
+      payment_terms?: string;
+      notes?: string;
+      items?: Array<{
+        id?: string;
+        item_name: string;
+        description?: string;
+        quantity: number;
+        unit_price: number;
+        amount: number;
+        tax_id?: string;
+        tax_rate?: number;
+        tax_amount: number;
+        line_total: number;
+        income_account_id?: string;
+        expense_account_id?: string;
+        item_id?: string;
+      }>;
+    }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const { invoiceId, ...updateData } = data;
+      return await invoicesApi.update(invoiceId, updateData, currentOrganization.id);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
     },
   });
 }

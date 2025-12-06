@@ -19,7 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
-import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto } from './dto';
+import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -95,6 +95,24 @@ export class InvoicesController {
     const organizationId = req.headers['x-organization-id'];
     const userId = req.user.sub;
     return this.invoicesService.postInvoice(id, organizationId, userId, dto.posting_date);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a draft invoice' })
+  @ApiParam({ name: 'id', description: 'Invoice ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoice updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Only draft invoices can be edited' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async update(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateInvoiceDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.invoicesService.update(id, organizationId, dto);
   }
 
   @Patch(':id/status')

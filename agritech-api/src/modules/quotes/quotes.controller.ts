@@ -99,6 +99,21 @@ export class QuotesController {
     return this.quotesService.updateStatus(id, organizationId, userId, dto);
   }
 
+  @Post(':id/convert-to-order')
+  @ApiOperation({ summary: 'Convert a quote to a sales order' })
+  @ApiParam({ name: 'id', description: 'Quote ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Quote converted to sales order successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Cannot convert quote' })
+  @ApiResponse({ status: 404, description: 'Quote not found' })
+  async convertToOrder(@Req() req, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.quotesService.convertToOrder(id, organizationId, userId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a quote (only drafts)' })
   @ApiParam({ name: 'id', description: 'Quote ID' })

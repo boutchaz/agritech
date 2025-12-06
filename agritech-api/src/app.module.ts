@@ -44,6 +44,8 @@ import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module
 import { RolesModule } from './modules/roles/roles.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { PaymentRecordsModule } from './modules/payment-records/payment-records.module';
+import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
+import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
 
 @Module({
   imports: [
@@ -96,6 +98,8 @@ import { PaymentRecordsModule } from './modules/payment-records/payment-records.
     DashboardModule,
     ReceptionBatchesModule,
     BlogsModule,
+    CostCentersModule,
+    BankAccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

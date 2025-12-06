@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { journalEntriesApi } from '../lib/api/journal-entries';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export interface JournalEntry {
@@ -54,13 +54,7 @@ export function useJournalEntries() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('entry_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await journalEntriesApi.getAll();
       return (data || []) as JournalEntry[];
     },
     enabled: !!currentOrganization?.id,
@@ -80,14 +74,7 @@ export function useJournalEntriesByStatus(status: 'draft' | 'posted' | 'cancelle
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('status', status)
-        .order('entry_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await journalEntriesApi.getAll({ status });
       return (data || []) as JournalEntry[];
     },
     enabled: !!currentOrganization?.id,
@@ -107,29 +94,8 @@ export function useJournalEntry(entryId: string | null) {
         throw new Error('Journal entry not specified');
       }
 
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select(`
-          *,
-          journal_items(
-            id,
-            account_id,
-            debit,
-            credit,
-            description,
-            cost_center_id,
-            accounts(
-              id,
-              code,
-              name
-            )
-          )
-        `)
-        .eq('id', entryId)
-        .eq('organization_id', currentOrganization.id)
-        .maybeSingle();
+      const data = await journalEntriesApi.getOne(entryId);
 
-      if (error) throw error;
       if (!data) {
         throw new Error('Journal entry not found');
       }

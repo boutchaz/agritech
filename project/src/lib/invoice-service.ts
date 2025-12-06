@@ -6,15 +6,17 @@
  * - From sales orders
  * - From purchase orders
  *
- * This eliminates duplicate invoice creation logic across the codebase.
+ * This service uses NestJS API endpoints for proper ACID transactions
+ * and business logic validation.
  *
  * IMPORTANT: All invoice creation automatically creates journal entries
- * for double-entry bookkeeping via syncInvoiceToLedger.
+ * for double-entry bookkeeping via the NestJS invoice service.
  */
 
-import { supabase } from './supabase';
+import { invoicesApi } from './api/invoices';
+import { customersApi } from './api/customers';
+import { suppliersApi } from './api/suppliers';
 import { calculateInvoiceTotals } from './taxCalculations';
-import { syncInvoiceToLedger, linkJournalEntry } from './ledger-integration';
 
 export interface InvoiceItemInput {
   item_id?: string; // Reference to items table (preferred)
@@ -75,81 +77,6 @@ export interface CreatedInvoice {
 }
 
 /**
- * Generate invoice number using database RPC function
- */
-async function generateInvoiceNumber(
-  organizationId: string,
-  invoiceType: 'sales' | 'purchase'
-): Promise<string> {
-  const { data: invoiceNumber, error } = await supabase.rpc('generate_invoice_number', {
-    p_organization_id: organizationId,
-    p_invoice_type: invoiceType,
-  });
-
-  if (error) throw error;
-  if (!invoiceNumber) throw new Error('Failed to generate invoice number');
-  return invoiceNumber as string;
-}
-
-/**
- * Create invoice items from calculated totals
- */
-async function createInvoiceItems(
-  invoiceId: string,
-  items: Array<{
-    item_name: string;
-    description?: string | null;
-    quantity: number;
-    unit_price: number;
-    amount: number;
-    tax_id?: string | null;
-    tax_amount: number;
-    account_id: string | null;
-  }>,
-  invoiceType: 'sales' | 'purchase'
-): Promise<void> {
-  // Validate and prepare items
-  const itemsToInsert = items
-    .filter(item => {
-      // Ensure quantity is greater than 0 (database constraint)
-      if (!item.quantity || item.quantity <= 0) {
-        console.error(`Invalid quantity for item "${item.item_name}": ${item.quantity}`);
-        return false;
-      }
-      return true;
-    })
-    .map(item => ({
-      invoice_id: invoiceId,
-      item_id: item.item_id || null, // Reference to items table
-      item_name: item.item_name,
-      description: item.description || null,
-      quantity: Number(item.quantity),
-      unit_price: Number(item.unit_price),
-      amount: Number(item.amount),
-      tax_amount: Number(item.tax_amount) || 0,
-      income_account_id: invoiceType === 'sales' ? item.account_id : null,
-      expense_account_id: invoiceType === 'purchase' ? item.account_id : null,
-      tax_id: item.tax_id || null,
-      cost_center_id: null, // Can be added if needed from order items
-    }));
-
-  if (itemsToInsert.length === 0) {
-    throw new Error('At least one item with quantity > 0 is required');
-  }
-
-  // Validate all items have quantity > 0
-  const invalidItems = itemsToInsert.filter(item => item.quantity <= 0);
-  if (invalidItems.length > 0) {
-    throw new Error(
-      `Invalid quantities found. All items must have quantity > 0. Invalid items: ${invalidItems.map(i => i.item_name).join(', ')}`
-    );
-  }
-
-  const { error } = await supabase.from('invoice_items').insert(itemsToInsert);
-  if (error) throw error;
-}
-
-/**
  * Create invoice from items with tax calculation
  * Used by manual invoice creation from InvoiceForm
  */
@@ -158,7 +85,6 @@ export async function createInvoiceFromItems(
 ): Promise<CreatedInvoice> {
   const {
     organization_id,
-    user_id,
     invoice_type,
     party_id,
     party_name,
@@ -167,10 +93,7 @@ export async function createInvoiceFromItems(
     items,
     currency_code = 'MAD',
     exchange_rate = 1.0,
-    status = 'draft',
     remarks,
-    farm_id,
-    parcel_id,
     sales_order_id,
     purchase_order_id,
   } = input;
@@ -179,69 +102,41 @@ export async function createInvoiceFromItems(
   const totals = await calculateInvoiceTotals(items, invoice_type);
   const { subtotal, tax_total, grand_total, items_with_tax } = totals;
 
-  // Generate invoice number
-  const invoiceNumber = await generateInvoiceNumber(organization_id, invoice_type);
+  // Prepare items for API
+  const apiItems = items_with_tax.map(item => ({
+    item_name: item.item_name,
+    description: item.description || undefined,
+    quantity: Number(item.quantity),
+    unit_price: Number(item.unit_price),
+    amount: Number(item.amount),
+    tax_id: item.tax_id || undefined,
+    tax_rate: item.tax_rate || 0,
+    tax_amount: Number(item.tax_amount) || 0,
+    line_total: Number(item.amount) + (Number(item.tax_amount) || 0),
+    income_account_id: invoice_type === 'sales' ? item.account_id : undefined,
+    expense_account_id: invoice_type === 'purchase' ? item.account_id : undefined,
+    item_id: item.item_id || undefined,
+  }));
 
-  // Create invoice record
-  const { data: invoice, error: invoiceError } = await supabase
-    .from('invoices')
-    .insert({
-      organization_id,
-      invoice_number: invoiceNumber,
-      invoice_type,
-      party_type: invoice_type === 'sales' ? 'Customer' : 'Supplier',
-      party_id,
-      party_name,
-      invoice_date,
-      due_date,
-      subtotal,
-      tax_total,
-      grand_total,
-      outstanding_amount: grand_total,
-      currency_code,
-      exchange_rate,
-      status,
-      remarks: remarks || null,
-      farm_id: farm_id || null,
-      parcel_id: parcel_id || null,
-      sales_order_id: sales_order_id || null,
-      purchase_order_id: purchase_order_id || null,
-      created_by: user_id,
-    })
-    .select()
-    .single();
-
-  if (invoiceError) throw invoiceError;
-
-  // Create invoice items from calculated totals (includes accurate tax per line)
-  await createInvoiceItems(invoice.id, items_with_tax, invoice_type);
-
-  // Sync to ledger (create journal entry for double-entry bookkeeping)
-  try {
-    const ledgerResult = await syncInvoiceToLedger(
-      {
-        ...invoice,
-        invoice_items: items_with_tax.map(item => ({
-          ...item,
-          invoice_id: invoice.id,
-          income_account_id: invoice_type === 'sales' ? item.account_id : null,
-          expense_account_id: invoice_type === 'purchase' ? item.account_id : null,
-        })),
-      },
-      user_id
-    );
-
-    if (ledgerResult.success && ledgerResult.journalEntryId) {
-      // Link the journal entry to the invoice
-      await linkJournalEntry('invoices', invoice.id, ledgerResult.journalEntryId);
-      console.log(`✓ Invoice ${invoice.invoice_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
-    } else {
-      console.warn(`⚠ Invoice ${invoice.invoice_number} created but ledger sync failed: ${ledgerResult.error}`);
-    }
-  } catch (ledgerError) {
-    console.error(`Failed to sync invoice ${invoice.invoice_number} to ledger:`, ledgerError);
-    // Don't throw - invoice is already created, ledger sync is supplementary
-  }
+  // Create invoice via NestJS API (handles invoice number generation and ledger sync)
+  const invoice = await invoicesApi.create({
+    invoice_type,
+    party_type: invoice_type === 'sales' ? 'Customer' : 'Supplier',
+    party_id: party_id || undefined,
+    party_name,
+    invoice_date,
+    due_date,
+    subtotal,
+    tax_total,
+    grand_total,
+    outstanding_amount: grand_total,
+    currency_code,
+    exchange_rate,
+    notes: remarks || undefined,
+    sales_order_id: sales_order_id || undefined,
+    purchase_order_id: purchase_order_id || undefined,
+    items: apiItems,
+  }, organization_id);
 
   return invoice as CreatedInvoice;
 }
@@ -255,7 +150,6 @@ export async function createInvoiceFromOrder(
 ): Promise<CreatedInvoice> {
   const {
     organization_id,
-    user_id,
     invoice_type,
     party_id,
     party_name,
@@ -267,95 +161,51 @@ export async function createInvoiceFromOrder(
     items,
     currency_code = 'MAD',
     exchange_rate = 1.0,
-    status = 'draft',
     remarks,
-    farm_id,
-    parcel_id,
     sales_order_id,
     purchase_order_id,
   } = input;
 
-  // Generate invoice number
-  const invoiceNumber = await generateInvoiceNumber(organization_id, invoice_type);
-
-  // Create invoice record with totals from order
-  const { data: invoice, error: invoiceError } = await supabase
-    .from('invoices')
-    .insert({
-      organization_id,
-      invoice_number: invoiceNumber,
-      invoice_type,
-      party_type: invoice_type === 'sales' ? 'Customer' : 'Supplier',
-      party_id,
-      party_name,
-      invoice_date,
-      due_date,
-      subtotal,
-      tax_total,
-      grand_total,
-      outstanding_amount: grand_total,
-      currency_code,
-      exchange_rate,
-      status,
-      remarks: remarks || null,
-      farm_id: farm_id || null,
-      parcel_id: parcel_id || null,
-      sales_order_id: sales_order_id || null,
-      purchase_order_id: purchase_order_id || null,
-      created_by: user_id,
-    })
-    .select()
-    .single();
-
-  if (invoiceError) throw invoiceError;
-
-  // Prepare invoice items from order items
-  // Calculate tax_amount from quantity, unit_price, and tax_rate
-  const invoiceItems = items.map(item => ({
+  // Prepare items for API - calculate tax_amount from tax_rate
+  const apiItems = items.map(item => ({
     item_name: item.item_name,
-    description: item.description || null,
+    description: item.description || undefined,
     quantity: Number(item.quantity),
     unit_price: Number(item.unit_price),
     amount: Number(item.amount),
-    tax_id: item.tax_id || null,
+    tax_id: item.tax_id || undefined,
+    tax_rate: item.tax_rate || 0,
     tax_amount: (Number(item.quantity) * Number(item.unit_price) * Number(item.tax_rate || 0)) / 100,
-    account_id: item.account_id,
+    line_total: Number(item.amount) + ((Number(item.quantity) * Number(item.unit_price) * Number(item.tax_rate || 0)) / 100),
+    income_account_id: invoice_type === 'sales' ? item.account_id : undefined,
+    expense_account_id: invoice_type === 'purchase' ? item.account_id : undefined,
   }));
 
-  await createInvoiceItems(invoice.id, invoiceItems, invoice_type);
-
-  // Sync to ledger (create journal entry for double-entry bookkeeping)
-  try {
-    const ledgerResult = await syncInvoiceToLedger(
-      {
-        ...invoice,
-        invoice_items: invoiceItems.map(item => ({
-          ...item,
-          invoice_id: invoice.id,
-          income_account_id: invoice_type === 'sales' ? item.account_id : null,
-          expense_account_id: invoice_type === 'purchase' ? item.account_id : null,
-        })),
-      },
-      user_id
-    );
-
-    if (ledgerResult.success && ledgerResult.journalEntryId) {
-      // Link the journal entry to the invoice
-      await linkJournalEntry('invoices', invoice.id, ledgerResult.journalEntryId);
-      console.log(`✓ Invoice ${invoice.invoice_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
-    } else {
-      console.warn(`⚠ Invoice ${invoice.invoice_number} created but ledger sync failed: ${ledgerResult.error}`);
-    }
-  } catch (ledgerError) {
-    console.error(`Failed to sync invoice ${invoice.invoice_number} to ledger:`, ledgerError);
-    // Don't throw - invoice is already created, ledger sync is supplementary
-  }
+  // Create invoice via NestJS API (handles invoice number generation and ledger sync)
+  const invoice = await invoicesApi.create({
+    invoice_type,
+    party_type: invoice_type === 'sales' ? 'Customer' : 'Supplier',
+    party_id: party_id || undefined,
+    party_name,
+    invoice_date,
+    due_date,
+    subtotal,
+    tax_total,
+    grand_total,
+    outstanding_amount: grand_total,
+    currency_code,
+    exchange_rate,
+    notes: remarks || undefined,
+    sales_order_id: sales_order_id || undefined,
+    purchase_order_id: purchase_order_id || undefined,
+    items: apiItems,
+  }, organization_id);
 
   return invoice as CreatedInvoice;
 }
 
 /**
- * Helper: Fetch party name from database
+ * Helper: Fetch party name from database via API
  */
 export async function fetchPartyName(
   partyId: string,
@@ -363,20 +213,16 @@ export async function fetchPartyName(
 ): Promise<string> {
   if (!partyId) return '';
 
-  if (invoiceType === 'purchase') {
-    const { data: supplier } = await supabase
-      .from('suppliers')
-      .select('name')
-      .eq('id', partyId)
-      .single();
-    return supplier?.name || '';
-  } else {
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('name')
-      .eq('id', partyId)
-      .single();
-    return customer?.name || '';
+  try {
+    if (invoiceType === 'purchase') {
+      const supplier = await suppliersApi.getOne(partyId) as { name?: string };
+      return supplier?.name || '';
+    } else {
+      const customer = await customersApi.getOne(partyId) as { name?: string };
+      return customer?.name || '';
+    }
+  } catch (error) {
+    console.error('Error fetching party name:', error);
+    return '';
   }
 }
-

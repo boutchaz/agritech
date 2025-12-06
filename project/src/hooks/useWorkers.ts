@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase'; // TODO: Remove when work_records and metayage_settlements APIs are added
 import { workersApi } from '../lib/api/workers';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
 
@@ -263,61 +263,13 @@ export const useCalculateMetayageShare = () => {
 };
 
 // Get worker statistics
-export const useWorkerStats = (workerId: string | null) => {
+export const useWorkerStats = (organizationId: string | null, workerId: string | null) => {
   return useQuery({
-    queryKey: ['worker-stats', workerId],
+    queryKey: ['worker-stats', organizationId, workerId],
     queryFn: async () => {
-      if (!workerId) return null;
-
-      // Get worker basic info
-      const { data: worker, error: workerError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('id', workerId)
-        .single();
-
-      if (workerError) throw workerError;
-
-      // Get work records count and total paid
-      const { data: workRecords, error: recordsError } = await supabase
-        .from('work_records')
-        .select('amount_paid, payment_status')
-        .eq('worker_id', workerId);
-
-      if (recordsError) throw recordsError;
-
-      const totalPaid = workRecords
-        ?.filter(r => r.payment_status === 'paid')
-        .reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
-
-      const pendingPayments = workRecords
-        ?.filter(r => r.payment_status === 'pending')
-        .reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
-
-      // Get métayage settlements if applicable
-      let metayageTotal = 0;
-      if (worker.worker_type === 'metayage') {
-        const { data: settlements, error: settlementsError } = await supabase
-          .from('metayage_settlements')
-          .select('worker_share_amount, payment_status')
-          .eq('worker_id', workerId);
-
-        if (!settlementsError && settlements) {
-          metayageTotal = settlements
-            .filter(s => s.payment_status === 'paid')
-            .reduce((sum, s) => sum + s.worker_share_amount, 0);
-        }
-      }
-
-      return {
-        worker,
-        totalWorkRecords: workRecords?.length || 0,
-        totalPaid: totalPaid + metayageTotal,
-        pendingPayments,
-        totalDaysWorked: worker.total_days_worked || 0,
-        totalTasksCompleted: worker.total_tasks_completed || 0,
-      };
+      if (!organizationId || !workerId) return null;
+      return workersApi.getStats(organizationId, workerId);
     },
-    enabled: !!workerId,
+    enabled: !!organizationId && !!workerId,
   });
 };

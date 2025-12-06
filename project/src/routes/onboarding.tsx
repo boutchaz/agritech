@@ -1,10 +1,9 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Outlet } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/onboarding')({
-  beforeLoad: () => {
-    // Redirect to dashboard - onboarding is temporarily disabled
-    throw redirect({
-      to: '/',
-    });
-  },
+  component: OnboardingLayout,
 });
+
+function OnboardingLayout() {
+  return <Outlet />;
+}

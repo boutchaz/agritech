@@ -37,6 +37,7 @@ const AppContent: React.FC = () => {
   const [modules, _setModules] = useState(mockModules);
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -347,8 +348,8 @@ const AppContent: React.FC = () => {
                                 if (invoice.status !== 'draft') {
                                   toast.error('Only draft invoices can be edited');
                                 } else {
-                                  toast.info('Edit functionality coming soon');
-                                  // TODO: Implement edit functionality
+                                  setEditInvoiceId(invoice.id);
+                                  setIsInvoiceFormOpen(true);
                                 }
                               }}
                               title="Edit invoice (drafts only)"
@@ -386,14 +387,19 @@ const AppContent: React.FC = () => {
           </Card>
         </div>
 
-        {/* Invoice Creation Dialog */}
+        {/* Invoice Creation/Edit Dialog */}
         <InvoiceForm
           isOpen={isInvoiceFormOpen}
-          onClose={() => setIsInvoiceFormOpen(false)}
+          onClose={() => {
+            setIsInvoiceFormOpen(false);
+            setEditInvoiceId(null);
+          }}
           onSuccess={() => {
             setIsInvoiceFormOpen(false);
+            setEditInvoiceId(null);
             // Invoices will auto-refresh via query invalidation
           }}
+          editInvoiceId={editInvoiceId}
         />
 
         {/* Invoice Detail Dialog */}

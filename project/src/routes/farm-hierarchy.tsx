@@ -101,8 +101,11 @@ function FarmHierarchyPage() {
             <ModernFarmHierarchy
               organizationId={currentOrganization.id}
               onFarmSelect={(farmId) => {
-                console.log('Select farm:', farmId);
-                // TODO: Navigate to farm details
+                // Navigate to parcels page filtered by the selected farm
+                navigate({
+                  to: '/parcels',
+                  search: { farmId }
+                });
               }}
               onManageFarm={(farmId) => {
                 setSelectedFarm({ id: farmId, name: `Farm ${farmId}` });

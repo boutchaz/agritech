@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
 import { quotesApi } from '../lib/api/quotes';
@@ -195,90 +194,17 @@ export function useUpdateQuoteStatus() {
  */
 export function useConvertQuoteToOrder() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (quoteId: string) => {
-      if (!currentOrganization?.id || !user?.id) {
-        throw new Error('No organization or user');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
       }
 
-      // Fetch quote with items
-      const { data: quote, error: fetchError } = await supabase
-        .from('quotes')
-        .select(`*, items:quote_items(*)`)
-        .eq('id', quoteId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Generate order number
-      const { data: orderNumber, error: numberError } = await supabase
-        .rpc('generate_sales_order_number', {
-          p_organization_id: currentOrganization.id,
-        });
-
-      if (numberError) throw numberError;
-
-      // Create sales order
-      const { data: order, error: orderError } = await supabase
-        .from('sales_orders')
-        .insert({
-          organization_id: currentOrganization.id,
-          order_number: orderNumber,
-          order_date: new Date().toISOString().split('T')[0],
-          customer_id: quote.customer_id,
-          customer_name: quote.customer_name,
-          subtotal: quote.subtotal,
-          tax_amount: quote.tax_total,
-          total_amount: quote.grand_total,
-          status: 'confirmed',
-          notes: quote.notes,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Copy quote items to order items
-      const orderItems = quote.items.map((item: any) => ({
-        sales_order_id: order.id,
-        line_number: item.line_number,
-        item_name: item.item_name,
-        description: item.description,
-        quantity: item.quantity,
-        unit_of_measure: item.unit_of_measure,
-        unit_price: item.unit_price,
-        amount: item.amount,
-        discount_percent: item.discount_percent,
-        discount_amount: item.discount_amount,
-        tax_id: item.tax_id,
-        tax_rate: item.tax_rate,
-        tax_amount: item.tax_amount,
-        line_total: item.line_total,
-        account_id: item.account_id,
-        quote_item_id: item.id,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('sales_order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Update quote status and link to order
-      await supabase
-        .from('quotes')
-        .update({
-          status: 'converted',
-          sales_order_id: order.id,
-          converted_at: new Date().toISOString(),
-          converted_by: user.id,
-        })
-        .eq('id', quoteId);
-
-      return order;
+      // Use NestJS API to convert quote to order
+      const result = await quotesApi.convertToOrder(quoteId, currentOrganization.id);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });

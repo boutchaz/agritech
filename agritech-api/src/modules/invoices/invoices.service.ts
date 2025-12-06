@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
-import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto } from './dto';
+import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
@@ -191,6 +191,112 @@ export class InvoicesService {
       this.logger.error('Error creating invoice:', error);
       throw error;
     }
+  }
+
+  /**
+   * Update a draft invoice
+   */
+  async update(
+    id: string,
+    organizationId: string,
+    dto: UpdateInvoiceDto
+  ): Promise<any> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    // Check if invoice exists and is a draft
+    const { data: existingInvoice, error: fetchError } = await supabaseClient
+      .from('invoices')
+      .select('id, status')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchError || !existingInvoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    if (existingInvoice.status !== 'draft') {
+      throw new BadRequestException('Only draft invoices can be edited');
+    }
+
+    // Build update data for invoice header
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (dto.party_id !== undefined) updateData.party_id = dto.party_id;
+    if (dto.party_name !== undefined) updateData.party_name = dto.party_name;
+    if (dto.invoice_date !== undefined) updateData.invoice_date = dto.invoice_date;
+    if (dto.due_date !== undefined) updateData.due_date = dto.due_date;
+    if (dto.payment_terms !== undefined) updateData.payment_terms = dto.payment_terms;
+    if (dto.notes !== undefined) updateData.notes = dto.notes;
+
+    // If items are provided, recalculate totals
+    if (dto.items && dto.items.length > 0) {
+      const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);
+      const taxTotal = dto.items.reduce((sum, item) => sum + item.tax_amount, 0);
+      const grandTotal = subtotal + taxTotal;
+
+      updateData.subtotal = subtotal;
+      updateData.tax_total = taxTotal;
+      updateData.grand_total = grandTotal;
+      updateData.outstanding_amount = grandTotal;
+    }
+
+    // Update invoice header
+    const { error: updateError } = await supabaseClient
+      .from('invoices')
+      .update(updateData)
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (updateError) {
+      this.logger.error(`Failed to update invoice: ${updateError.message}`);
+      throw new BadRequestException(`Failed to update invoice: ${updateError.message}`);
+    }
+
+    // If items are provided, replace all items
+    if (dto.items && dto.items.length > 0) {
+      // Delete existing items
+      const { error: deleteError } = await supabaseClient
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', id);
+
+      if (deleteError) {
+        this.logger.error(`Failed to delete old invoice items: ${deleteError.message}`);
+        throw new BadRequestException(`Failed to update invoice items: ${deleteError.message}`);
+      }
+
+      // Insert new items
+      const itemsToInsert = dto.items.map((item) => ({
+        invoice_id: id,
+        item_name: item.item_name,
+        description: item.description || null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        amount: item.amount,
+        tax_id: item.tax_id || null,
+        tax_rate: item.tax_rate || 0,
+        tax_amount: item.tax_amount,
+        line_total: item.line_total,
+        income_account_id: item.income_account_id || null,
+        expense_account_id: item.expense_account_id || null,
+        item_id: item.item_id || null,
+      }));
+
+      const { error: insertError } = await supabaseClient
+        .from('invoice_items')
+        .insert(itemsToInsert);
+
+      if (insertError) {
+        this.logger.error(`Failed to insert invoice items: ${insertError.message}`);
+        throw new BadRequestException(`Failed to update invoice items: ${insertError.message}`);
+      }
+    }
+
+    // Return updated invoice with items
+    return this.findOne(id, organizationId);
   }
 
   /**
