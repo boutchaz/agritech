@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { authSupabase } from '../lib/auth-supabase';
 import { Lock, Mail, User } from 'lucide-react';
 
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 interface AuthProps {
   onAuthSuccess: () => void;
 }
@@ -20,66 +22,57 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isSignUp) {
-        const emailRedirectUrl = new URL('/auth/callback', window.location.origin);
-        emailRedirectUrl.searchParams.set('next', '/select-trial');
-
-        const { data, error: signUpError } = await authSupabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: emailRedirectUrl.toString(),
-            data: {
-              email_confirm: false
-            }
-          }
+        // Use NestJS API for signup
+        const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            firstName: email.split('@')[0],
+            lastName: 'User',
+          }),
         });
 
-        if (signUpError) {
-          if (signUpError.message.includes('User already registered')) {
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 409 || data.message?.includes('already exists') || data.message?.includes('already registered')) {
             throw new Error('Un compte existe déjà avec cette adresse email');
           }
-          if (signUpError.message.includes('Error sending confirmation email')) {
-            // Try to sign in directly if email confirmation fails
-            const { data: signInData } = await authSupabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (signInData?.user) {
-              // Setup new user account
-              await setupNewUser({
-                userId: signInData.user.id,
-                email: signInData.user.email!,
-              });
-              onAuthSuccess();
-              return;
-            }
-
-            throw new Error('Inscription réussie mais l\'envoi d\'email a échoué. Essayez de vous connecter.');
-          }
-          throw signUpError;
+          throw new Error(data.message || 'Une erreur est survenue lors de l\'inscription');
         }
 
-        if (data?.user) {
-          // Setup new user with profile and organization
-          const setupResult = await setupNewUser({
-            userId: data.user.id,
-            email: data.user.email!,
+        // Store session tokens
+        if (data.session) {
+          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+
+          const { error: sessionError } = await authSupabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
           });
 
-          if (!setupResult.success) {
-            console.error('User setup failed:', setupResult.error);
-            setError('Compte créé mais configuration incomplète. Essayez de vous reconnecter.');
-            return;
-          }
-
-          if (data.user.email_confirmed_at) {
-            // Reload to refresh auth state after setup
-            window.location.href = '/';
-          } else {
-            setError('Vérifiez votre email pour confirmer votre inscription');
+          if (sessionError) {
+            console.error('Error setting session:', sessionError);
           }
         }
+
+        // Store organization data
+        if (data.organization?.id) {
+          localStorage.setItem('currentOrganizationId', data.organization.id);
+          localStorage.setItem('currentOrganization', JSON.stringify({
+            id: data.organization.id,
+            name: data.organization.name,
+            slug: data.organization.slug,
+            role: 'organization_admin',
+            is_active: true
+          }));
+        }
+
+        // Redirect to trial selection
+        window.location.href = '/select-trial';
       } else {
         const { data, error: signInError } = await authSupabase.auth.signInWithPassword({
           email,

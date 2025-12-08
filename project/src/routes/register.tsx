@@ -7,6 +7,8 @@ import { PasswordInput } from '../components/ui/PasswordInput'
 import { authSupabase } from '../lib/auth-supabase'
 import { useAuth } from '../hooks/useAuth'
 
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
 })
@@ -47,7 +49,6 @@ function RegisterPage() {
       const lastName = nameParts.slice(1).join(' ') || 'User'
 
       // Call NestJS signup endpoint
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
       const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
         method: 'POST',
         headers: {
@@ -105,9 +106,7 @@ function RegisterPage() {
         }))
       }
 
-      // Verify organization membership before redirecting
-
-      // Verify organization membership with retry logic
+      // Verify organization membership via NestJS API with retry logic
       // This ensures the database transaction is fully committed and queryable
       let membershipVerified = false
       const maxRetries = 5
@@ -118,17 +117,20 @@ function RegisterPage() {
         await new Promise(resolve => setTimeout(resolve, delay))
 
         try {
-          // Check if organization_users record exists
-          const { data: orgCheck, error: orgCheckError } = await authSupabase
-            .from('organization_users')
-            .select('organization_id')
-            .eq('user_id', data.user.id)
-            .eq('organization_id', data.organization.id)
-            .maybeSingle()
+          // Verify organization membership via NestJS API
+          const verifyResponse = await fetch(`${apiUrl}/api/v1/auth/organizations`, {
+            headers: {
+              'Authorization': `Bearer ${data.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          })
 
-          if (!orgCheckError && orgCheck) {
-            membershipVerified = true
-            break
+          if (verifyResponse.ok) {
+            const orgs = await verifyResponse.json()
+            if (orgs && orgs.length > 0) {
+              membershipVerified = true
+              break
+            }
           }
         } catch (error) {
           console.warn(`⚠️ Error checking organization membership (attempt ${attempt + 1}):`, error)
