@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { authSupabase } from './auth-supabase';
 import { useOrganizationStore } from '../stores/organizationStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -21,7 +21,7 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await authSupabase.auth.getSession();
 
   if (!session?.access_token) {
     throw new Error('No active session');
