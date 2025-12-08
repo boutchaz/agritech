@@ -41,9 +41,12 @@ export class OrganizationsService {
     /**
      * Create a new organization
      * Migrated from create_organization SQL function
+     * Uses admin client to bypass RLS policies
      */
     async create(dto: CreateOrganizationDto) {
-        const client = this.databaseService.getAdminClient();
+        // Use supabaseAdmin directly - it's initialized with service role key
+        const client = this.supabaseAdmin;
+        this.logger.debug(`Creating organization with admin client: ${dto.name}`);
 
         let slug = dto.slug;
         if (!slug) {
