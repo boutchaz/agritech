@@ -79,7 +79,9 @@ export class SatelliteIndicesService {
 
   constructor() {
     // Update this URL to match your satellite-indices-service endpoint
-    this.baseUrl = import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8000';
+    // Remove trailing slash to avoid double slashes in URLs
+    const url = import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8000';
+    this.baseUrl = url.replace(/\/+$/, '');
   }
 
   async calculateIndices(request: IndexCalculationRequest): Promise<IndexCalculationResponse> {

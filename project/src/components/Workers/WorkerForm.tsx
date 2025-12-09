@@ -204,16 +204,33 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     try {
       let workerId = worker?.id;
 
+      // Clean up empty strings - convert them to undefined for optional fields
+      // This ensures backend validation passes (empty string != valid email/UUID/date)
+      const cleanedData = {
+        ...data,
+        email: data.email?.trim() || undefined,
+        date_of_birth: data.date_of_birth?.trim() || undefined,
+        farm_id: data.farm_id?.trim() || undefined,
+        cin: data.cin?.trim() || undefined,
+        phone: data.phone?.trim() || undefined,
+        address: data.address?.trim() || undefined,
+        position: data.position?.trim() || undefined,
+        cnss_number: data.cnss_number?.trim() || undefined,
+        bank_account: data.bank_account?.trim() || undefined,
+        payment_method: data.payment_method?.trim() || undefined,
+        notes: data.notes?.trim() || undefined,
+      };
+
       // 1. Create or update the worker
       if (isEditing) {
-        await updateWorker.mutateAsync({ id: worker.id, organizationId, data });
+        await updateWorker.mutateAsync({ id: worker.id, organizationId, data: cleanedData });
       } else {
-        const result = await createWorker.mutateAsync({ ...data, organization_id: organizationId });
+        const result = await createWorker.mutateAsync({ ...cleanedData, organization_id: organizationId });
         workerId = result.id;
       }
 
       // 2. Grant platform access if requested and worker doesn't have it yet
-      if (grantPlatformAccess && data.email && workerId && !worker?.user_id) {
+      if (grantPlatformAccess && cleanedData.email && workerId && !worker?.user_id) {
         setPlatformAccessLoading(true);
 
         try {
@@ -234,9 +251,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               },
               body: JSON.stringify({
                 worker_id: workerId,
-                email: data.email,
-                first_name: data.first_name,
-                last_name: data.last_name,
+                email: cleanedData.email,
+                first_name: cleanedData.first_name,
+                last_name: cleanedData.last_name,
                 organization_id: organizationId
               })
             }

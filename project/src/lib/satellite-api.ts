@@ -306,7 +306,8 @@ class SatelliteAPIClient {
   private baseUrl: string;
 
   constructor(baseUrl: string = SATELLITE_SERVICE_URL) {
-    this.baseUrl = baseUrl;
+    // Remove trailing slash to avoid double slashes in URLs
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
