@@ -55,6 +55,7 @@ export default defineConfig({
 
         runtimeCaching: [
           {
+            // Fonts - long cache, rarely change
             urlPattern: /^https:\/\/fonts\.(gstatic|googleapis)\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -63,25 +64,31 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ url }) => url.origin === self.location.origin,
-            handler: 'NetworkFirst',
+            // API calls - Always network first, no caching to ensure fresh data
+            urlPattern: /\/api\/v1\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // Supabase REST API - Always network first, no caching
+            urlPattern: /\/rest\/v1\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // Static assets (JS/CSS) - Cache with version hash handles updates
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'app-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              networkTimeoutSeconds: 10,
+              cacheName: 'static-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 }, // 1 day
             },
           },
           {
-            // API calls - Network first with shorter cache
-            urlPattern: /^https:\/\/.*\/api\/.*/i,
-            handler: 'NetworkFirst',
+            // Images and other assets - Cache first for performance
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60, // 1 hour
-              },
-              networkTimeoutSeconds: 10,
+              cacheName: 'image-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 days
             },
           },
         ],
