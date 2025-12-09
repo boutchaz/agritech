@@ -81,11 +81,11 @@ import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventor
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
 import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
 import { Route as ParcelsParcelIdWeatherRouteImport } from './routes/parcels.$parcelId.weather'
-import { Route as ParcelsParcelIdSoilRouteImport } from './routes/parcels.$parcelId.soil'
 import { Route as ParcelsParcelIdSatelliteRouteImport } from './routes/parcels.$parcelId.satellite'
 import { Route as ParcelsParcelIdReportsRouteImport } from './routes/parcels.$parcelId.reports'
 import { Route as ParcelsParcelIdProfitabilityRouteImport } from './routes/parcels.$parcelId.profitability'
 import { Route as ParcelsParcelIdProductionRouteImport } from './routes/parcels.$parcelId.production'
+import { Route as ParcelsParcelIdAnalyseRouteImport } from './routes/parcels.$parcelId.analyse'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -446,11 +446,6 @@ const ParcelsParcelIdWeatherRoute = ParcelsParcelIdWeatherRouteImport.update({
   path: '/weather',
   getParentRoute: () => ParcelsParcelIdRoute,
 } as any)
-const ParcelsParcelIdSoilRoute = ParcelsParcelIdSoilRouteImport.update({
-  id: '/soil',
-  path: '/soil',
-  getParentRoute: () => ParcelsParcelIdRoute,
-} as any)
 const ParcelsParcelIdSatelliteRoute =
   ParcelsParcelIdSatelliteRouteImport.update({
     id: '/satellite',
@@ -474,6 +469,11 @@ const ParcelsParcelIdProductionRoute =
     path: '/production',
     getParentRoute: () => ParcelsParcelIdRoute,
   } as any)
+const ParcelsParcelIdAnalyseRoute = ParcelsParcelIdAnalyseRouteImport.update({
+  id: '/analyse',
+  path: '/analyse',
+  getParentRoute: () => ParcelsParcelIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -543,11 +543,11 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
-  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
@@ -615,11 +615,11 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/stock': typeof StockIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
-  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdIndexRoute
@@ -695,11 +695,11 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof ParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof ParcelsParcelIdSatelliteRoute
-  '/parcels/$parcelId/soil': typeof ParcelsParcelIdSoilRoute
   '/parcels/$parcelId/weather': typeof ParcelsParcelIdWeatherRoute
   '/stock/inventory/stock': typeof StockInventoryStockRoute
   '/parcels/$parcelId/': typeof ParcelsParcelIdIndexRoute
@@ -775,11 +775,11 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
-    | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/parcels/$parcelId/'
@@ -847,11 +847,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stock'
     | '/tasks'
+    | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
-    | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/parcels/$parcelId'
@@ -926,11 +926,11 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
-    | '/parcels/$parcelId/soil'
     | '/parcels/$parcelId/weather'
     | '/stock/inventory/stock'
     | '/parcels/$parcelId/'
@@ -1489,13 +1489,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdWeatherRouteImport
       parentRoute: typeof ParcelsParcelIdRoute
     }
-    '/parcels/$parcelId/soil': {
-      id: '/parcels/$parcelId/soil'
-      path: '/soil'
-      fullPath: '/parcels/$parcelId/soil'
-      preLoaderRoute: typeof ParcelsParcelIdSoilRouteImport
-      parentRoute: typeof ParcelsParcelIdRoute
-    }
     '/parcels/$parcelId/satellite': {
       id: '/parcels/$parcelId/satellite'
       path: '/satellite'
@@ -1524,6 +1517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdProductionRouteImport
       parentRoute: typeof ParcelsParcelIdRoute
     }
+    '/parcels/$parcelId/analyse': {
+      id: '/parcels/$parcelId/analyse'
+      path: '/analyse'
+      fullPath: '/parcels/$parcelId/analyse'
+      preLoaderRoute: typeof ParcelsParcelIdAnalyseRouteImport
+      parentRoute: typeof ParcelsParcelIdRoute
+    }
   }
 }
 
@@ -1550,21 +1550,21 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
 )
 
 interface ParcelsParcelIdRouteChildren {
+  ParcelsParcelIdAnalyseRoute: typeof ParcelsParcelIdAnalyseRoute
   ParcelsParcelIdProductionRoute: typeof ParcelsParcelIdProductionRoute
   ParcelsParcelIdProfitabilityRoute: typeof ParcelsParcelIdProfitabilityRoute
   ParcelsParcelIdReportsRoute: typeof ParcelsParcelIdReportsRoute
   ParcelsParcelIdSatelliteRoute: typeof ParcelsParcelIdSatelliteRoute
-  ParcelsParcelIdSoilRoute: typeof ParcelsParcelIdSoilRoute
   ParcelsParcelIdWeatherRoute: typeof ParcelsParcelIdWeatherRoute
   ParcelsParcelIdIndexRoute: typeof ParcelsParcelIdIndexRoute
 }
 
 const ParcelsParcelIdRouteChildren: ParcelsParcelIdRouteChildren = {
+  ParcelsParcelIdAnalyseRoute: ParcelsParcelIdAnalyseRoute,
   ParcelsParcelIdProductionRoute: ParcelsParcelIdProductionRoute,
   ParcelsParcelIdProfitabilityRoute: ParcelsParcelIdProfitabilityRoute,
   ParcelsParcelIdReportsRoute: ParcelsParcelIdReportsRoute,
   ParcelsParcelIdSatelliteRoute: ParcelsParcelIdSatelliteRoute,
-  ParcelsParcelIdSoilRoute: ParcelsParcelIdSoilRoute,
   ParcelsParcelIdWeatherRoute: ParcelsParcelIdWeatherRoute,
   ParcelsParcelIdIndexRoute: ParcelsParcelIdIndexRoute,
 }

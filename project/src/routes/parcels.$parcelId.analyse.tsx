@@ -243,6 +243,6 @@ const ParcelSoilAnalysis = () => {
   );
 };
 
-export const Route = createFileRoute('/parcels/$parcelId/soil')({
+export const Route = createFileRoute('/parcels/$parcelId/analyse')({
   component: ParcelSoilAnalysis,
 });
