@@ -10,11 +10,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private authService: AuthService,
   ) {
+    // Use Supabase JWT secret for validation
+    // This should be the same as SUPABASE_JWT_SECRET or the JWT secret from Supabase dashboard
+    const jwtSecret = configService.get<string>('SUPABASE_JWT_SECRET') ||
+                      configService.get<string>('JWT_SECRET');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
-      // Also accept Supabase JWTs
+      secretOrKey: jwtSecret,
       passReqToCallback: true,
     });
   }
@@ -24,11 +28,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
     try {
-      // Try to validate as Supabase token first
+      // Validate the token with Supabase to get full user info
       const user = await this.authService.validateToken(token);
       return user;
     } catch (error) {
-      // If not a valid Supabase token, check if it's our own JWT
+      // If Supabase validation fails but payload exists, use payload
       if (payload && payload.sub) {
         return { id: payload.sub, email: payload.email };
       }
