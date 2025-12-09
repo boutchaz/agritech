@@ -83,30 +83,63 @@ export class OrganizationUsersService {
     const client = this.databaseService.getAdminClient();
 
     try {
-      const { data, error } = await client
+      // First get organization users with their roles
+      const { data: orgUsers, error: orgUsersError } = await client
         .from('organization_users')
         .select(`
           user_id,
           organization_id,
           role_id,
-          roles!inner(name, display_name),
-          user_profiles!organization_users_user_id_fkey!inner(id, first_name, last_name),
-          workers(id, position, is_active)
+          roles!inner(name, display_name)
         `)
         .eq('organization_id', organizationId)
         .eq('is_active', true)
         .not('roles.name', 'in', '(viewer,day_laborer)');
 
-      if (error) {
-        this.logger.error(`Failed to fetch assignable users: ${error.message}`);
-        throw new BadRequestException(`Failed to fetch assignable users: ${error.message}`);
+      if (orgUsersError) {
+        this.logger.error(`Failed to fetch organization users: ${orgUsersError.message}`);
+        throw new BadRequestException(`Failed to fetch assignable users: ${orgUsersError.message}`);
       }
 
+      if (!orgUsers || orgUsers.length === 0) {
+        return [];
+      }
+
+      // Get user IDs for profile lookup
+      const userIds = orgUsers.map((ou: any) => ou.user_id);
+
+      // Fetch user profiles separately
+      const { data: profiles, error: profilesError } = await client
+        .from('user_profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      if (profilesError) {
+        this.logger.warn(`Failed to fetch user profiles: ${profilesError.message}`);
+        // Continue without profiles
+      }
+
+      // Fetch workers for these users
+      const { data: workers, error: workersError } = await client
+        .from('workers')
+        .select('id, user_id, position, is_active')
+        .in('user_id', userIds)
+        .eq('is_active', true);
+
+      if (workersError) {
+        this.logger.warn(`Failed to fetch workers: ${workersError.message}`);
+        // Continue without workers
+      }
+
+      // Create lookup maps
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      const workerMap = new Map((workers || []).map((w: any) => [w.user_id, w]));
+
       // Transform to match expected format
-      const assignableUsers = (data || []).map((ou: any) => {
-        const profile = Array.isArray(ou.user_profiles) ? ou.user_profiles[0] : ou.user_profiles;
+      const assignableUsers = orgUsers.map((ou: any) => {
+        const profile = profileMap.get(ou.user_id);
         const role = Array.isArray(ou.roles) ? ou.roles[0] : ou.roles;
-        const worker = Array.isArray(ou.workers) ? ou.workers[0] : ou.workers;
+        const worker = workerMap.get(ou.user_id);
 
         return {
           user_id: ou.user_id,
