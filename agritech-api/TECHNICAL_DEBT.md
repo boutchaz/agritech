@@ -2,73 +2,7 @@
 
 ## Critical Issues
 
-### 1. **No True Database Transactions** 🔴
-**Severity:** CRITICAL (Foundation Issue)
-**Location:** `stock-entries.service.ts:709-731`
-
-**Problem:**
-- `executeInTransaction()` doesn't implement real ACID transactions
-- Uses same Supabase client without BEGIN/COMMIT/ROLLBACK
-- Partial writes can occur if operations fail mid-way
-- Example: Stock entry created, but items insert fails → orphaned entry
-- **BLOCKER:** All other fixes depend on transaction integrity
-
-**Impact:**
-- Data integrity violations
-- Inconsistent inventory state
-- Race conditions in concurrent operations
-- Cannot safely implement #2 (valuation) or #4 (locking) without this
-
-**Recommended Solution Path:**
-**Phase 1: Add pg client with transaction support (Week 1-2)**
-```typescript
-import { Pool } from 'pg';
-
-// In module initialization
-private pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-// New transaction wrapper
-private async executeInPgTransaction<T>(
-  operation: (client: PoolClient) => Promise<T>
-): Promise<T> {
-  const client = await this.pgPool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await operation(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-```
-
-**Phase 2: Migrate critical operations (Week 2-3)**
-Priority order:
-1. `createStockEntry()` - multi-table inserts
-2. `postStockEntry()` - movements + valuations
-3. `processStockTransfer()` - dual warehouse updates
-
-**Testing/Validation:**
-- Simulate failures at each step (network errors, constraint violations)
-- Verify rollback leaves no partial data
-- Load test: 10 concurrent posts to same item/warehouse
-- Monitor for deadlocks, tune lock timeouts
-- Rollback plan: Keep Supabase fallback for reads
-
-**Effort:** High (2-3 weeks)
-**Dependencies:** None (this enables everything else)
-**Risk:** Connection pool tuning, potential performance degradation
-
----
-
-### 2. **Stock Valuation Not Consumed on Issue/Transfer** 🔴
+### 1. **Stock Valuation Not Consumed on Issue/Transfer** 🔴
 **Severity:** HIGH (Foundation Issue)
 **Location:** `processMaterialIssue()`, `processStockTransfer()`
 
@@ -190,12 +124,12 @@ WHERE ABS(m.net_quantity - COALESCE(v.total_remaining, 0)) > 0.001;
 - Rollback: Keep consumption logic behind feature flag
 
 **Effort:** Medium (2-3 weeks including backfill)
-**Dependencies:** #1 (Transactions) - MUST have rollback if consumption fails
+**Dependencies:** Requires ACID transactions for rollback if consumption fails (COMPLETED ✓)
 **Risk:** Data migration complexity, performance impact of FOR UPDATE locks
 
 ---
 
-### 3. **Stock Reconciliation Unimplemented**
+### 2. **Stock Reconciliation Unimplemented**
 **Severity:** MEDIUM
 **Location:** `processStockReconciliation()` - stub only
 
@@ -261,12 +195,12 @@ WHERE ABS(m.net_quantity - COALESCE(v.total_remaining, 0)) > 0.001;
 - Financial report check: Inventory value matches `SUM(stock_valuation.remaining_quantity * cost_per_unit)`
 
 **Effort:** Medium (2 weeks including GL integration)
-**Dependencies:** #2 (Valuation consumption) - must be able to consume/add valuation
+**Dependencies:** #1 (Valuation consumption) - must be able to consume/add valuation
 **Risk:** Accounting rules vary by jurisdiction, may need configurable GL accounts
 
 ---
 
-### 4. **Race Conditions in Stock Availability Check**
+### 3. **Race Conditions in Stock Availability Check**
 **Severity:** HIGH
 **Location:** `validateStockAvailability()`
 
@@ -281,8 +215,7 @@ WHERE ABS(m.net_quantity - COALESCE(v.total_remaining, 0)) > 0.001;
   Order B: Needs 80 (checks → OK)
   Both post → -60 stock!
   ```
-- **Supabase Limitation:** JS client cannot execute `SELECT ... FOR UPDATE`
-- Current approach is fundamentally unsafe for concurrent access
+- Requires row-level locking to prevent concurrent access
 
 **Impact:**
 - Negative inventory
@@ -290,9 +223,9 @@ WHERE ABS(m.net_quantity - COALESCE(v.total_remaining, 0)) > 0.001;
 - Customer service issues
 - Lost revenue or customer trust
 
-**Recommended Solution (MUST use pg client or RPC):**
+**Recommended Solution:**
 
-**Option A: PostgreSQL Function (Recommended)**
+**Option A: PostgreSQL Function with Row Locking (Recommended)**
 ```sql
 -- Create atomic check-and-deduct function
 CREATE OR REPLACE FUNCTION check_and_reserve_stock(
@@ -332,9 +265,9 @@ if (!data[0].reserved) {
 }
 ```
 
-**Option B: pg client with explicit locking**
+**Option B: Direct pg client with explicit locking**
 ```typescript
-// Requires #1 (pg client with transactions)
+// Use pg client with transactions for row-level locking
 const result = await pgClient.query(`
   SELECT item_id,
          SUM(CASE WHEN movement_type = 'IN' THEN quantity ELSE -quantity END) as available
@@ -367,12 +300,12 @@ SELECT pg_advisory_xact_lock(
 - Contention risk: High-velocity items may see lock contention
 
 **Effort:** Medium (4-5 days)
-**Dependencies:** #1 (Transactions) for rollback on lock timeout
+**Dependencies:** Requires ACID transactions for rollback on lock timeout (COMPLETED ✓)
 **Risk:** Lock contention on popular items, need monitoring/alerting
 
 ---
 
-### 5. **Warehouse Validation Gaps**
+### 4. **Warehouse Validation Gaps**
 **Severity:** MEDIUM
 **Location:** `validateStockEntry()`, `processMaterialReceipt()`, etc.
 
@@ -402,7 +335,7 @@ if (item.target_warehouse_id) {
 
 ---
 
-### 6. **No Re-validation on Posting Drafts**
+### 5. **No Re-validation on Posting Drafts**
 **Severity:** MEDIUM
 **Location:** `postStockEntry()`
 
@@ -436,7 +369,7 @@ validateWarehouses(entry);
 
 ---
 
-### 7. **Balance Check Limitations**
+### 6. **Balance Check Limitations**
 **Severity:** MEDIUM
 **Location:** `validateStockAvailability()`
 
@@ -469,7 +402,7 @@ Plus unit conversion logic.
 
 ## Medium Priority Issues
 
-### 8. **Frontend Alignment Issues**
+### 7. **Frontend Alignment Issues**
 **Severity:** LOW
 **Location:** `project/src/components/Stock/ItemManagement.tsx`
 
@@ -495,7 +428,7 @@ Plus unit conversion logic.
 
 ---
 
-### 9. **Missing Audit Trail**
+### 8. **Missing Audit Trail**
 **Severity:** MEDIUM
 **Problem:** No comprehensive log of:
 - Who approved postings
@@ -508,7 +441,7 @@ Plus unit conversion logic.
 
 ---
 
-### 10. **No Soft Deletes**
+### 9. **No Soft Deletes**
 **Severity:** LOW
 **Problem:** Hard deletes lose history
 
@@ -521,19 +454,19 @@ Plus unit conversion logic.
 ## Recommendations
 
 ### Immediate (Sprint 1)
-1. ✅ Document transaction limitation (Done)
-2. Add stock valuation consumption (#2)
-3. Fix race conditions with locking (#4)
+1. ✅ ACID Transactions Implementation (COMPLETED - using direct pg client)
+2. Add stock valuation consumption (#1)
+3. Fix race conditions with locking (#3)
 
 ### Short-term (Sprint 2-3)
-4. Implement reconciliation (#3)
-5. Add warehouse validation (#5)
-6. Add re-validation on posting (#6)
+4. Implement reconciliation (#2)
+5. Add warehouse validation (#4)
+6. Add re-validation on posting (#5)
 
 ### Medium-term (Quarter)
-7. Migrate to PostgreSQL stored procedures for transactions
-8. Implement reservation system
-9. Add comprehensive audit logging
+7. Implement reservation system
+8. Add comprehensive audit logging
+9. Optimize stored procedures for high-volume operations
 
 ### Long-term (Roadmap)
 10. Microservice for inventory with event sourcing

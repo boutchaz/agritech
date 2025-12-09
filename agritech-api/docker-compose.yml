@@ -45,4 +45,4 @@ networks:
     name: dokploy-network
   supabase-network:
     external: true
-    name: agritech-supabase-5gdghc
+    name: agritech-supabase-5gdghc_default

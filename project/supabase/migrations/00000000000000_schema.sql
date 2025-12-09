@@ -412,19 +412,32 @@ CREATE TABLE IF NOT EXISTS suppliers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
+  supplier_code TEXT,
+  contact_person TEXT,
   email VARCHAR(255),
   phone VARCHAR(50),
+  mobile TEXT,
   address TEXT,
   city VARCHAR(100),
+  state_province TEXT,
   postal_code VARCHAR(20),
   country VARCHAR(100),
+  website TEXT,
   tax_id VARCHAR(100),
+  payment_terms TEXT,
+  currency_code TEXT DEFAULT 'MAD',
+  supplier_type TEXT,
+  assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_suppliers_org ON suppliers(organization_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_assigned_to ON suppliers(assigned_to) WHERE assigned_to IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_code_org ON suppliers(organization_id, supplier_code) WHERE supplier_code IS NOT NULL;
 
 -- Currencies
 CREATE TABLE IF NOT EXISTS currencies (
