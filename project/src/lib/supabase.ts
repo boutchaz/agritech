@@ -1,23 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+// Re-export the auth supabase client as the main supabase client
+// This ensures session is shared between auth and data operations
+import { authSupabase } from './auth-supabase';
 import type { Database } from '../types/database.types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_AUTH_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_AUTH_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl) {
-  throw new Error('Missing Supabase URL environment variable (VITE_SUPABASE_URL or VITE_AUTH_SUPABASE_URL)');
-}
-
-if (!supabaseAnonKey) {
-  throw new Error('Missing Supabase anon key environment variable (VITE_SUPABASE_ANON_KEY or VITE_AUTH_SUPABASE_ANON_KEY)');
-}
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+// Use the same client for both auth and data operations
+// This ensures the session token is automatically included in all requests
+export const supabase = authSupabase;
 
 // Re-export Database type for convenience
 export type { Database };
