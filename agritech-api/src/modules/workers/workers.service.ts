@@ -396,4 +396,267 @@ export class WorkersService {
       totalTasksCompleted: worker.total_tasks_completed || 0,
     };
   }
+
+  /**
+   * Get work records for a worker
+   */
+  async getWorkRecords(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    let query = client
+      .from('work_records')
+      .select(`
+        *,
+        workers!inner(first_name, last_name),
+        farms(name),
+        parcels(name)
+      `)
+      .eq('worker_id', workerId)
+      .order('work_date', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('work_date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('work_date', endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch work records: ${error.message}`);
+    }
+
+    return (data || []).map(record => ({
+      ...record,
+      worker: record.workers,
+      farm_name: record.farms?.name,
+      parcel_name: record.parcels?.name,
+    }));
+  }
+
+  /**
+   * Create a work record
+   */
+  async createWorkRecord(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    data: any,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { data: record, error } = await client
+      .from('work_records')
+      .insert({
+        ...data,
+        worker_id: workerId,
+        created_by: userId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create work record: ${error.message}`);
+    }
+
+    return record;
+  }
+
+  /**
+   * Update a work record
+   */
+  async updateWorkRecord(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    recordId: string,
+    data: any,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { data: record, error } = await client
+      .from('work_records')
+      .update(data)
+      .eq('id', recordId)
+      .eq('worker_id', workerId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update work record: ${error.message}`);
+    }
+
+    return record;
+  }
+
+  /**
+   * Get métayage settlements for a worker
+   */
+  async getMetayageSettlements(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { data, error } = await client
+      .from('metayage_settlements')
+      .select(`
+        *,
+        workers!inner(first_name, last_name, metayage_type),
+        farms(name),
+        parcels(name)
+      `)
+      .eq('worker_id', workerId)
+      .order('period_start', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch métayage settlements: ${error.message}`);
+    }
+
+    return (data || []).map(settlement => ({
+      ...settlement,
+      worker: settlement.workers,
+      farm_name: settlement.farms?.name,
+      parcel_name: settlement.parcels?.name,
+    }));
+  }
+
+  /**
+   * Create a métayage settlement
+   */
+  async createMetayageSettlement(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    data: any,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { data: settlement, error } = await client
+      .from('metayage_settlements')
+      .insert({
+        ...data,
+        worker_id: workerId,
+        created_by: userId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create métayage settlement: ${error.message}`);
+    }
+
+    return settlement;
+  }
+
+  /**
+   * Calculate métayage share
+   */
+  async calculateMetayageShare(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    grossRevenue: number,
+    totalCharges: number = 0,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify worker belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { data, error } = await client.rpc('calculate_metayage_share', {
+      p_worker_id: workerId,
+      p_gross_revenue: grossRevenue,
+      p_total_charges: totalCharges,
+    });
+
+    if (error) {
+      throw new Error(`Failed to calculate métayage share: ${error.message}`);
+    }
+
+    return { share: data };
+  }
 }

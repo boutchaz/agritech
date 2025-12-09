@@ -4,7 +4,7 @@ import SoilAnalysisForm from './SoilAnalysisForm';
 import CSVBulkUpload from './SoilAnalysis/CSVBulkUpload';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
 import { useAuth } from './MultiTenantAuthProvider';
-import { supabase } from '../lib/supabase';
+import { parcelsApi } from '../lib/api/parcels';
 import type { SoilAnalysis } from '../types';
 import { Select } from './ui/Select';
 
@@ -53,13 +53,7 @@ const SoilAnalysisPage: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('parcels')
-          .select('id, name, farm_id, area, area_unit, soil_type')
-          .eq('farm_id', currentFarm.id)
-          .order('name');
-
-        if (error) throw error;
+        const data = await parcelsApi.getAll({ farm_id: currentFarm.id });
         setParcels(data || []);
       } catch (err) {
         console.error('Error fetching parcels:', err);

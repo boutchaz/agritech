@@ -21,7 +21,6 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -32,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { workUnitsApi } from '@/lib/api/work-units';
 
 import type {
   WorkUnit,
@@ -108,14 +108,7 @@ export function WorkUnitManagement() {
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
 
-      const { data, error } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('unit_category', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+      const data = await workUnitsApi.getAll({}, currentOrganization.id);
       return data as WorkUnit[];
     },
     enabled: !!currentOrganization?.id,
@@ -129,19 +122,16 @@ export function WorkUnitManagement() {
     mutationFn: async (data: WorkUnitFormData) => {
       if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
-      const insertData: WorkUnitInsertDto = {
-        organization_id: currentOrganization.id,
-        ...data,
+      const createData = {
+        code: data.code,
+        name: data.name,
+        unit_category: data.unit_category,
+        description: undefined, // Not in the form currently
+        base_rate: undefined, // Not in the form currently
+        is_active: data.is_active ?? true,
       };
 
-      const { data: newUnit, error } = await supabase
-        .from('work_units')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newUnit;
+      return await workUnitsApi.create(createData, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
@@ -158,17 +148,15 @@ export function WorkUnitManagement() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: WorkUnitFormData }) => {
-      const updateData: WorkUnitUpdateDto = data;
+      if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
-      const { data: updatedUnit, error } = await supabase
-        .from('work_units')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+      const updateData = {
+        name: data.name,
+        unit_category: data.unit_category,
+        is_active: data.is_active,
+      };
 
-      if (error) throw error;
-      return updatedUnit;
+      return await workUnitsApi.update(id, updateData, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
@@ -186,12 +174,8 @@ export function WorkUnitManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('work_units')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
+      return await workUnitsApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });
@@ -208,11 +192,21 @@ export function WorkUnitManagement() {
     mutationFn: async () => {
       if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
-      const { error } = await supabase.rpc('seed_default_work_units', {
-        p_organization_id: currentOrganization.id,
-      });
+      // Create default work units one by one using the API
+      const { DEFAULT_WORK_UNITS } = await import('@/types/work-units');
+      const promises = DEFAULT_WORK_UNITS.map((unit) =>
+        workUnitsApi.create(
+          {
+            code: unit.code,
+            name: unit.name,
+            unit_category: unit.unit_category,
+            is_active: true,
+          },
+          currentOrganization.id
+        )
+      );
 
-      if (error) throw error;
+      await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-units'] });

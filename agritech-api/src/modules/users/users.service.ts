@@ -177,4 +177,160 @@ export class UsersService {
             };
         });
     }
+
+    /**
+     * Get all users in an organization with their profiles and roles
+     */
+    async getOrganizationUsers(organizationId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            // Fetch organization users with roles
+            const { data: orgUsers, error: orgError } = await client
+                .from('organization_users')
+                .select(`
+                    *,
+                    role:roles!organization_users_role_id_fkey(
+                        name,
+                        display_name,
+                        level
+                    )
+                `)
+                .eq('organization_id', organizationId)
+                .order('created_at', { ascending: false });
+
+            if (orgError) {
+                this.logger.error(`Failed to fetch organization users: ${orgError.message}`);
+                throw new BadRequestException(`Failed to fetch organization users: ${orgError.message}`);
+            }
+
+            if (!orgUsers || orgUsers.length === 0) {
+                return [];
+            }
+
+            // Get all user IDs
+            const userIds = orgUsers.map(u => u.user_id).filter(id => id);
+
+            // Validate UUIDs
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const validUserIds = userIds.filter(id => uuidRegex.test(id));
+
+            if (validUserIds.length === 0) {
+                return [];
+            }
+
+            // Fetch user profiles
+            const { data: profiles, error: profilesError } = await client
+                .from('user_profiles')
+                .select('id, first_name, last_name, email, avatar_url')
+                .in('id', validUserIds);
+
+            if (profilesError) {
+                this.logger.error(`Failed to fetch user profiles: ${profilesError.message}`);
+                // Continue without profiles rather than failing
+            }
+
+            // Merge profiles into users
+            const usersWithProfiles = orgUsers.map(user => ({
+                ...user,
+                profile: profiles?.find(p => p.id === user.user_id) || null,
+            }));
+
+            return usersWithProfiles;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to fetch organization users: ${error.message}`);
+            throw new InternalServerErrorException('Failed to fetch organization users');
+        }
+    }
+
+    /**
+     * Update user role in organization
+     */
+    async updateUserRole(organizationId: string, userId: string, roleId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { data, error } = await client
+                .from('organization_users')
+                .update({ role_id: roleId })
+                .eq('user_id', userId)
+                .eq('organization_id', organizationId)
+                .select()
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to update user role: ${error.message}`);
+                throw new BadRequestException(`Failed to update user role: ${error.message}`);
+            }
+
+            return data;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to update user role: ${error.message}`);
+            throw new InternalServerErrorException('Failed to update user role');
+        }
+    }
+
+    /**
+     * Update user active status in organization
+     */
+    async updateUserStatus(organizationId: string, userId: string, isActive: boolean) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { data, error } = await client
+                .from('organization_users')
+                .update({ is_active: isActive })
+                .eq('user_id', userId)
+                .eq('organization_id', organizationId)
+                .select()
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to update user status: ${error.message}`);
+                throw new BadRequestException(`Failed to update user status: ${error.message}`);
+            }
+
+            return data;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to update user status: ${error.message}`);
+            throw new InternalServerErrorException('Failed to update user status');
+        }
+    }
+
+    /**
+     * Remove user from organization
+     */
+    async removeUserFromOrganization(organizationId: string, userId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { error } = await client
+                .from('organization_users')
+                .delete()
+                .eq('user_id', userId)
+                .eq('organization_id', organizationId);
+
+            if (error) {
+                this.logger.error(`Failed to remove user from organization: ${error.message}`);
+                throw new BadRequestException(`Failed to remove user from organization: ${error.message}`);
+            }
+
+            return { message: 'User removed successfully' };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to remove user from organization: ${error.message}`);
+            throw new InternalServerErrorException('Failed to remove user from organization');
+        }
+    }
 }

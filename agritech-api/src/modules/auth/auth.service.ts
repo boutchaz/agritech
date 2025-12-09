@@ -353,4 +353,75 @@ export class AuthService {
 
     return role.id;
   }
+
+  /**
+   * Get user role and permissions for a specific organization
+   * Returns role info and all permissions granted to that role
+   */
+  async getUserRoleAndPermissions(userId: string, organizationId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Get user's role in the organization
+    const { data: orgUser, error: orgUserError } = await client
+      .from('organization_users')
+      .select(`
+        role_id,
+        roles (
+          id,
+          name,
+          display_name,
+          level
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgUserError) {
+      this.logger.error(`Error fetching user role: ${orgUserError.message}`);
+      throw new BadRequestException('Failed to fetch user role');
+    }
+
+    if (!orgUser || !orgUser.roles) {
+      return {
+        role: null,
+        permissions: [],
+      };
+    }
+
+    const role = orgUser.roles as any;
+
+    // Get permissions for this role
+    const { data: rolePermissions, error: permissionsError } = await client
+      .from('role_permissions')
+      .select(`
+        permissions (
+          name,
+          display_name,
+          resource,
+          action
+        )
+      `)
+      .eq('role_id', role.id);
+
+    if (permissionsError) {
+      this.logger.warn(`Error fetching permissions: ${permissionsError.message}`);
+      // Continue without permissions
+    }
+
+    // Format response to match frontend expectations
+    return {
+      role: {
+        role_name: role.name,
+        role_display_name: role.display_name,
+        role_level: role.level,
+      },
+      permissions: (rolePermissions || []).map((rp: any) => ({
+        permission_name: rp.permissions.name,
+        resource: rp.permissions.resource,
+        action: rp.permissions.action,
+      })),
+    };
+  }
 }

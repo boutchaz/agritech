@@ -11,12 +11,14 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
 import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
 import SubscriptionPlans from './SubscriptionPlans';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
+
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
@@ -24,48 +26,29 @@ const SubscriptionSettings: React.FC = () => {
   const { t } = useTranslation();
   const [showPlans, setShowPlans] = React.useState(false);
 
-  // Query actual usage counts
+  // Query actual usage counts from NestJS API
   const { data: usage } = useQuery({
     queryKey: ['usage-counts', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return null;
 
-      // Get farms count
-      const { count: farmsCount } = await supabase
-        .from('farms')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id);
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) return null;
 
-      // Get parcels count - first get farm IDs, then count parcels
-      const { data: farms } = await supabase
-        .from('farms')
-        .select('id')
-        .eq('organization_id', currentOrganization.id);
-      
-      const farmIds = farms?.map(f => f.id) || [];
-      let parcelsCount = 0;
-      
-      if (farmIds.length > 0) {
-        const { count } = await supabase
-          .from('parcels')
-          .select('*', { count: 'exact', head: true })
-          .in('farm_id', farmIds);
-        parcelsCount = count || 0;
+      const response = await fetch(`${apiUrl}/api/v1/subscriptions/usage`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'x-organization-id': currentOrganization.id,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch usage counts');
       }
 
-      // Get users count
-      const { count: usersCount } = await supabase
-        .from('organization_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true);
-
-      return {
-        farms_count: farmsCount || 0,
-        parcels_count: parcelsCount || 0,
-        users_count: usersCount || 0,
-        satellite_reports_count: 0, // TODO: Add if you have satellite reports table
-      };
+      return response.json();
     },
     enabled: !!currentOrganization?.id,
     staleTime: 30 * 1000, // 30 seconds

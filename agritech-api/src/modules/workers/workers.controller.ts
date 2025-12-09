@@ -118,4 +118,96 @@ export class WorkersController {
   ) {
     return this.workersService.remove(req.user.id, organizationId, workerId);
   }
+
+  // Work Records Endpoints
+
+  @Get(':workerId/work-records')
+  @ApiOperation({ summary: 'Get work records for a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Filter by start date (ISO format)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'Filter by end date (ISO format)' })
+  async getWorkRecords(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.workersService.getWorkRecords(req.user.id, organizationId, workerId, startDate, endDate);
+  }
+
+  @Post(':workerId/work-records')
+  @ApiOperation({ summary: 'Create a work record for a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  async createWorkRecord(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Body() data: any,
+  ) {
+    return this.workersService.createWorkRecord(req.user.id, organizationId, workerId, data);
+  }
+
+  @Patch(':workerId/work-records/:recordId')
+  @ApiOperation({ summary: 'Update a work record' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiParam({ name: 'recordId', description: 'Work Record ID' })
+  async updateWorkRecord(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Param('recordId') recordId: string,
+    @Body() data: any,
+  ) {
+    return this.workersService.updateWorkRecord(req.user.id, organizationId, workerId, recordId, data);
+  }
+
+  // Métayage Settlements Endpoints
+
+  @Get(':workerId/metayage-settlements')
+  @ApiOperation({ summary: 'Get métayage settlements for a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  async getMetayageSettlements(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+  ) {
+    return this.workersService.getMetayageSettlements(req.user.id, organizationId, workerId);
+  }
+
+  @Post(':workerId/metayage-settlements')
+  @ApiOperation({ summary: 'Create a métayage settlement for a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  async createMetayageSettlement(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Body() data: any,
+  ) {
+    return this.workersService.createMetayageSettlement(req.user.id, organizationId, workerId, data);
+  }
+
+  @Post(':workerId/calculate-metayage-share')
+  @ApiOperation({ summary: 'Calculate métayage share for a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  async calculateMetayageShare(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Body() data: { grossRevenue: number; totalCharges?: number },
+  ) {
+    return this.workersService.calculateMetayageShare(
+      req.user.id,
+      organizationId,
+      workerId,
+      data.grossRevenue,
+      data.totalCharges,
+    );
+  }
 }

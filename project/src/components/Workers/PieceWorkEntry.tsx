@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -35,10 +34,13 @@ import { FormField } from '@/components/ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { workersApi } from '@/lib/api/workers';
+import { workUnitsApi } from '@/lib/api/work-units';
+import { tasksApi } from '@/lib/api/tasks';
+import { parcelsApi } from '@/lib/api/parcels';
+import { pieceWorkApi } from '@/lib/api/piece-work';
 
 import type {
-  PieceWorkRecord,
-  PieceWorkRecordInsertDto,
   WorkUnit,
 } from '@/types/work-units';
 import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES } from '@/types/work-units';
@@ -95,16 +97,7 @@ export function PieceWorkEntry({
     queryKey: ['workers', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-
-      const { data, error } = await supabase
-        .from('workers')
-        .select('id, first_name, last_name, worker_type, payment_frequency, rate_per_unit, default_work_unit_id')
-        .eq('organization_id', currentOrganization.id)
-        .eq('status', 'active')
-        .order('first_name');
-
-      if (error) throw error;
-      return data;
+      return workersApi.getActive(currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -114,56 +107,35 @@ export function PieceWorkEntry({
     queryKey: ['work-units', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-
-      const { data, error } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data as WorkUnit[];
+      return workUnitsApi.getAll({ is_active: true }, currentOrganization.id) as Promise<WorkUnit[]>;
     },
     enabled: !!currentOrganization?.id,
   });
 
   // Fetch tasks (optional)
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks', currentFarm?.id],
+    queryKey: ['tasks', currentOrganization?.id, currentFarm?.id],
     queryFn: async () => {
-      if (!currentFarm?.id) return [];
-
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, parcel_id, status')
-        .eq('farm_id', currentFarm.id)
-        .in('status', ['assigned', 'in_progress', 'completed'])
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return data;
+      if (!currentOrganization?.id || !currentFarm?.id) return [];
+      return tasksApi.getAll(currentOrganization.id, {
+        farm_id: currentFarm.id,
+        status: ['assigned', 'in_progress', 'completed'],
+      });
     },
-    enabled: !!currentFarm?.id,
+    enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });
 
   // Fetch parcels (optional)
   const { data: parcels = [] } = useQuery({
-    queryKey: ['parcels', currentFarm?.id],
+    queryKey: ['parcels', currentOrganization?.id, currentFarm?.id],
     queryFn: async () => {
-      if (!currentFarm?.id) return [];
-
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('id, name')
-        .eq('farm_id', currentFarm.id)
-        .order('name');
-
-      if (error) throw error;
-      return data;
+      if (!currentOrganization?.id || !currentFarm?.id) return [];
+      return parcelsApi.getAll({
+        organization_id: currentOrganization.id,
+        farm_id: currentFarm.id
+      }, currentOrganization.id);
     },
-    enabled: !!currentFarm?.id,
+    enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });
 
   // =====================================================
@@ -176,9 +148,7 @@ export function PieceWorkEntry({
         throw new Error('No organization or farm selected');
       }
 
-      const insertData: PieceWorkRecordInsertDto = {
-        organization_id: currentOrganization.id,
-        farm_id: currentFarm.id,
+      return pieceWorkApi.create(currentOrganization.id, currentFarm.id, {
         worker_id: data.worker_id,
         work_date: data.work_date,
         task_id: data.task_id || undefined,
@@ -191,16 +161,7 @@ export function PieceWorkEntry({
         end_time: data.end_time || undefined,
         break_duration: data.break_duration || 0,
         notes: data.notes || undefined,
-      };
-
-      const { data: newRecord, error } = await supabase
-        .from('piece_work_records')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newRecord;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['piece-work-records'] });
@@ -612,44 +573,18 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
   const { currentOrganization, currentFarm } = useAuth();
 
   const { data: pieceWorkRecords = [], isLoading } = useQuery({
-    queryKey: ['piece-work-records', currentFarm?.id, workerId, filters],
+    queryKey: ['piece-work-records', currentOrganization?.id, currentFarm?.id, workerId, filters],
     queryFn: async () => {
-      if (!currentFarm?.id) return [];
+      if (!currentOrganization?.id || !currentFarm?.id) return [];
 
-      let query = supabase
-        .from('piece_work_records')
-        .select(`
-          *,
-          worker:workers!inner(first_name, last_name),
-          work_unit:work_units!inner(name, code),
-          task:tasks(title),
-          parcel:parcels(name)
-        `)
-        .eq('farm_id', currentFarm.id)
-        .order('work_date', { ascending: false });
-
-      if (workerId) {
-        query = query.eq('worker_id', workerId);
-      }
-
-      if (filters?.startDate) {
-        query = query.gte('work_date', filters.startDate);
-      }
-
-      if (filters?.endDate) {
-        query = query.lte('work_date', filters.endDate);
-      }
-
-      if (filters?.status) {
-        query = query.eq('payment_status', filters.status);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as any[];
+      return pieceWorkApi.getAll(currentOrganization.id, currentFarm.id, {
+        worker_id: workerId,
+        start_date: filters?.startDate,
+        end_date: filters?.endDate,
+        payment_status: filters?.status as any,
+      });
     },
-    enabled: !!currentFarm?.id,
+    enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });
 
   if (isLoading) {

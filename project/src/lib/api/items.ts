@@ -198,4 +198,15 @@ export const itemsApi = {
     const url = `${BASE_URL}/stock-levels${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get<any>(url, {}, organizationId);
   },
+
+  // =====================================================
+  // ITEM PRICES
+  // =====================================================
+
+  /**
+   * Get all prices for a specific item
+   */
+  async getItemPrices(itemId: string, organizationId?: string): Promise<any[]> {
+    return apiClient.get<any[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
+  },
 };

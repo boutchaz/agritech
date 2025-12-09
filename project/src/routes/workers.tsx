@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { farmsApi } from '../lib/api/farms';
 
 const mockModules: Module[] = [
   {
@@ -50,14 +51,10 @@ function WorkersPage() {
     }
 
     try {
-      const { supabase } = await import('../lib/supabase');
-      const { data, error } = await supabase
-        .from('farms')
-        .select('id, name, location, size')
-        .eq('organization_id', currentOrganization.id)
-        .order('name');
-
-      if (error) throw error;
+      const data = await farmsApi.getAll(
+        { organization_id: currentOrganization.id },
+        currentOrganization.id
+      );
       setFarms(data || []);
     } catch (error) {
       console.error('Error fetching farms:', error);

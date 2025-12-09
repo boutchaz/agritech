@@ -7,11 +7,43 @@ export interface Warehouse {
   organization_id: string;
   name: string;
   code?: string;
+  description?: string;
   location?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  capacity?: number;
+  capacity_unit?: string;
+  temperature_controlled?: boolean;
+  humidity_controlled?: boolean;
+  security_level?: string;
+  manager_name?: string;
+  manager_phone?: string;
+  farm_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export interface CreateWarehouseInput {
+  name: string;
+  description?: string;
+  location?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  capacity?: number;
+  capacity_unit?: string;
+  temperature_controlled?: boolean;
+  humidity_controlled?: boolean;
+  security_level?: string;
+  manager_name?: string;
+  manager_phone?: string;
+  farm_id?: string;
+  is_active?: boolean;
+}
+
+export type UpdateWarehouseInput = Partial<CreateWarehouseInput>;
 
 export interface InventoryItem {
   id: string;
@@ -37,6 +69,34 @@ export const warehousesApi = {
    */
   async getAll(organizationId?: string): Promise<Warehouse[]> {
     return apiClient.get<Warehouse[]>(BASE_URL, {}, organizationId);
+  },
+
+  /**
+   * Get a single warehouse by ID
+   */
+  async getOne(id: string, organizationId?: string): Promise<Warehouse> {
+    return apiClient.get<Warehouse>(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  /**
+   * Create a new warehouse
+   */
+  async create(data: CreateWarehouseInput, organizationId?: string): Promise<Warehouse> {
+    return apiClient.post<Warehouse>(BASE_URL, data, {}, organizationId);
+  },
+
+  /**
+   * Update a warehouse
+   */
+  async update(id: string, data: UpdateWarehouseInput, organizationId?: string): Promise<Warehouse> {
+    return apiClient.patch<Warehouse>(`${BASE_URL}/${id}`, data, {}, organizationId);
+  },
+
+  /**
+   * Delete a warehouse (soft delete)
+   */
+  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`${BASE_URL}/${id}`, {}, organizationId);
   },
 
   /**

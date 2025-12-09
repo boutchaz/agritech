@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload, MoreVertical, Pencil } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useCurrency } from '../hooks/useCurrency';
 import { FormField } from './ui/FormField';
@@ -14,6 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { suppliersApi } from '@/lib/api/suppliers';
+import { warehousesApi } from '@/lib/api/warehouses';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -194,14 +196,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
+      const data = await suppliersApi.getAll({ is_active: true }, currentOrganization.id);
       setSuppliers(data || []);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -213,14 +208,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const { data, error } = await supabase
-        .from('warehouses')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
+      const data = await warehousesApi.getAll(currentOrganization.id);
       setWarehouses(data || []);
     } catch (error) {
       console.error('Error fetching warehouses:', error);
@@ -307,42 +295,32 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setIsSubmittingSupplier(true);
     try {
       if (editingSupplierId) {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .update({
-            ...newSupplier,
-          })
-          .eq('id', editingSupplierId)
-          .eq('organization_id', currentOrganization.id)
-          .select()
-          .single();
-
-        if (error) throw error;
+        const data = await suppliersApi.update(editingSupplierId, newSupplier, currentOrganization.id);
 
         setSuppliers((prev) =>
           prev.map((supplier) => (supplier.id === editingSupplierId ? data : supplier)),
         );
+        toast.success('Supplier updated successfully');
       } else {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .insert([{
+        const data = await suppliersApi.create(
+          {
             ...newSupplier,
-            organization_id: currentOrganization.id,
             is_active: true,
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
+          },
+          currentOrganization.id
+        );
 
         setSuppliers([...suppliers, data]);
+        toast.success('Supplier created successfully');
       }
 
       closeSupplierModal();
       setError(null);
     } catch (error) {
       console.error('Error saving supplier:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save supplier');
+      const message = error instanceof Error ? error.message : 'Failed to save supplier';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmittingSupplier(false);
     }
@@ -353,22 +331,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const { error } = await supabase
-        .from('suppliers')
-        .update({ is_active: false })
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await suppliersApi.delete(id, currentOrganization.id);
 
       setSuppliers(suppliers.filter(s => s.id !== id));
       if (editingSupplierId === id) {
         closeSupplierModal();
       }
       setError(null);
+      toast.success('Supplier archived successfully');
     } catch (error) {
       console.error('Error deleting supplier:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete supplier');
+      const message = error instanceof Error ? error.message : 'Failed to delete supplier';
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -379,42 +354,31 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     try {
       const payload = {
         ...newWarehouse,
-        capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : null,
-        organization_id: currentOrganization.id,
-        farm_id: currentFarm?.id || null,
+        capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : undefined,
+        farm_id: currentFarm?.id || undefined,
       };
 
       if (editingWarehouseId) {
-        const { data, error } = await supabase
-          .from('warehouses')
-          .update(payload)
-          .eq('id', editingWarehouseId)
-          .eq('organization_id', currentOrganization.id)
-          .select()
-          .single();
-
-        if (error) throw error;
+        const data = await warehousesApi.update(editingWarehouseId, payload, currentOrganization.id);
 
         setWarehouses((prev) =>
           prev.map((warehouse) => (warehouse.id === editingWarehouseId ? data : warehouse)),
         );
+        toast.success('Warehouse updated successfully');
       } else {
-        const { data, error } = await supabase
-          .from('warehouses')
-          .insert([payload])
-          .select()
-          .single();
-
-        if (error) throw error;
+        const data = await warehousesApi.create(payload, currentOrganization.id);
 
         setWarehouses([...warehouses, data]);
+        toast.success('Warehouse created successfully');
       }
 
       closeWarehouseModal();
       setError(null);
     } catch (error) {
       console.error('Error saving warehouse:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save warehouse');
+      const message = error instanceof Error ? error.message : 'Failed to save warehouse';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmittingWarehouse(false);
     }
@@ -425,22 +389,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const { error } = await supabase
-        .from('warehouses')
-        .update({ is_active: false })
-        .eq('id', id)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await warehousesApi.delete(id, currentOrganization.id);
 
       setWarehouses(warehouses.filter(w => w.id !== id));
       if (editingWarehouseId === id) {
         closeWarehouseModal();
       }
       setError(null);
+      toast.success('Warehouse archived successfully');
     } catch (error) {
       console.error('Error deleting warehouse:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete warehouse');
+      const message = error instanceof Error ? error.message : 'Failed to delete warehouse';
+      setError(message);
+      toast.error(message);
     }
   };
 

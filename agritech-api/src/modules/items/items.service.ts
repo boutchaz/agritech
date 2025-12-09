@@ -823,4 +823,34 @@ export class ItemsService {
     }
   }
 
+  // =====================================================
+  // ITEM PRICES
+  // =====================================================
+
+  /**
+   * Get all prices for a specific item
+   */
+  async getItemPrices(itemId: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('item_prices')
+      .select(`
+        *,
+        customer:customers(id, name),
+        supplier:suppliers(id, name)
+      `)
+      .eq('item_id', itemId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .order('price_list_name', { ascending: true });
+
+    if (error) {
+      this.logger.error(`Failed to fetch item prices: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch item prices: ${error.message}`);
+    }
+
+    return data;
+  }
+
 }

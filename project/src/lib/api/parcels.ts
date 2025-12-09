@@ -5,52 +5,74 @@ const BASE_URL = '/api/v1/parcels';
 export interface Parcel {
   id: string;
   name: string;
-  boundary: number[][];
+  description?: string;
+  boundary?: number[][];
   farm_id: string;
-  crop_id?: string;
+  crop_category?: string;
+  crop_type?: string;
+  variety?: string;
   soil_type?: string;
   area?: number;
+  area_unit?: string;
   calculated_area?: number;
   perimeter?: number;
-  planting_density?: number;
-  irrigation_type?: string;
-  variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
   planting_date?: string;
-  planting_type?: string;
+  planting_year?: number;
+  rootstock?: string;
+  irrigation_type?: string;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
-  organization_id: string;
+  organization_id?: string;
 }
 
 export interface CreateParcelDto {
   name: string;
   farm_id: string;
-  boundary: number[][];
+  description?: string;
+  boundary?: number[][];
+  area: number;
+  area_unit?: string;
+  crop_category?: string;
+  crop_type?: string;
+  variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
+  planting_date?: string;
+  planting_year?: number;
+  rootstock?: string;
   soil_type?: string;
-  area?: number;
+  irrigation_type?: string;
   calculated_area?: number;
   perimeter?: number;
-  planting_density?: number;
-  irrigation_type?: string;
-  crop_id?: string;
-  variety?: string;
-  planting_date?: string;
-  planting_type?: string;
 }
 
 export interface UpdateParcelDto {
   name?: string;
+  description?: string;
   boundary?: number[][];
-  soil_type?: string;
   area?: number;
+  area_unit?: string;
+  crop_category?: string;
+  crop_type?: string;
+  variety?: string;
+  planting_system?: string;
+  spacing?: string;
+  density_per_hectare?: number;
+  plant_count?: number;
+  planting_date?: string;
+  planting_year?: number;
+  rootstock?: string;
+  soil_type?: string;
+  irrigation_type?: string;
   calculated_area?: number;
   perimeter?: number;
-  planting_density?: number;
-  irrigation_type?: string;
-  crop_id?: string;
-  variety?: string;
-  planting_date?: string;
-  planting_type?: string;
 }
 
 export interface ParcelFilters {
@@ -78,28 +100,51 @@ export const parcelsApi = {
       params.append('farm_id', filters.farm_id);
     }
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
+
+    try {
+      // Backend returns { success: boolean, parcels: Parcel[] }
+      const response = await apiClient.get<{ success: boolean; parcels: Parcel[] } | Parcel[]>(url, {}, organizationId);
+
+      // Check if response is wrapped in success object
+      if (response && typeof response === 'object' && 'success' in response) {
+        const wrappedResponse = response as { success: boolean; parcels: Parcel[] };
+        if (wrappedResponse.success && Array.isArray(wrappedResponse.parcels)) {
+          return wrappedResponse.parcels;
+        }
+      }
+
+      // Fallback: if response is already an array (backward compatibility)
+      if (Array.isArray(response)) {
+        return response;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching parcels:', error);
+      return [];
+    }
   },
 
   /**
    * Create a new parcel
    */
   async create(data: CreateParcelDto, organizationId?: string): Promise<Parcel> {
-    return apiClient.post(BASE_URL, data, organizationId);
+    return apiClient.post(BASE_URL, data, {}, organizationId);
   },
 
   /**
    * Update an existing parcel
    */
   async update(id: string, data: UpdateParcelDto, organizationId?: string): Promise<Parcel> {
-    return apiClient.put(`${BASE_URL}/${id}`, data, organizationId);
+    return apiClient.put(`${BASE_URL}/${id}`, data, {}, organizationId);
   },
 
   /**
    * Delete a parcel
    */
-  async delete(parcelId: string, farmId: string, organizationId?: string): Promise<void> {
-    return apiClient.delete(BASE_URL, { parcel_id: parcelId, farm_id: farmId }, organizationId);
+  async delete(parcelId: string, farmId: string, organizationId?: string): Promise<{ success: boolean; message?: string }> {
+    // Backend expects DELETE with body containing parcel_id and farm_id
+    return apiClient.delete(BASE_URL, { body: JSON.stringify({ parcel_id: parcelId, farm_id: farmId }) }, organizationId);
   },
 
   /**

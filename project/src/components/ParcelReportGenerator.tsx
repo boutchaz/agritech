@@ -10,7 +10,6 @@ import {
   Calendar
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { generateParcelReport } from '../lib/edge-functions-api';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
 
@@ -76,6 +75,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
 
   const fetchReports = async () => {
     try {
+      const { supabase } = await import('../lib/supabase');
       const { data, error } = await supabase
         .from('parcel_reports')
         .select('*')
@@ -119,6 +119,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
 
       // If file_url exists, download from storage
       if (report.file_url) {
+        const { supabase } = await import('../lib/supabase');
         const { data, error } = await supabase.storage
           .from('reports')
           .download(report.file_url);

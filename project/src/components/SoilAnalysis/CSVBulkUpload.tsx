@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { parcelsApi } from '../../lib/api/parcels';
+import { soilAnalysesApi } from '../../lib/api/soil-analyses';
 
 interface CSVBulkUploadProps {
   onImportComplete: () => void;
@@ -131,47 +132,46 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
     let failedCount = 0;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      // Get all parcels to match by name
+      const parcels = await parcelsApi.getAll({});
 
       for (const analysis of parsedData) {
         try {
           // Find parcel by name
-          const { data: parcel } = await supabase
-            .from('parcels')
-            .select('id')
-            .eq('name', analysis.parcel_name)
-            .single();
+          const parcel = parcels.find(p => p.name === analysis.parcel_name);
 
           if (!parcel) {
             failedCount++;
             continue;
           }
 
-          // Insert soil analysis
-          const { error } = await supabase
-            .from('soil_analyses')
-            .insert({
-              parcel_id: parcel.id,
-              sample_date: analysis.sample_date,
-              ph_level: analysis.ph_level,
-              organic_matter: analysis.organic_matter,
+          // Map CSV data to new API structure with nested objects
+          const soilAnalysisData = {
+            parcel_id: parcel.id,
+            analysis_date: analysis.sample_date,
+            physical: {
+              ph: analysis.ph_level,
+              texture: analysis.soil_type || 'Unknown',
+              moisture: analysis.organic_matter, // Map organic_matter to moisture
+              depth_cm: analysis.depth
+            },
+            chemical: {
               nitrogen: analysis.nitrogen,
               phosphorus: analysis.phosphorus,
-              potassium: analysis.potassium,
-              soil_type: analysis.soil_type,
-              depth_cm: analysis.depth,
-              lab_name: analysis.lab_name,
-              notes: analysis.notes,
-              created_by: user.id
-            });
+              potassium: analysis.potassium
+            },
+            biological: {
+              microbial_activity: 'Medium', // Default value as CSV doesn't have this
+              earthworm_count: 0 // Default value as CSV doesn't have this
+            },
+            notes: analysis.notes ? `${analysis.notes}${analysis.lab_name ? ` (Lab: ${analysis.lab_name})` : ''}` : analysis.lab_name ? `Lab: ${analysis.lab_name}` : undefined
+          };
 
-          if (error) {
-            failedCount++;
-          } else {
-            successCount++;
-          }
-        } catch {
+          // Create soil analysis via API
+          await soilAnalysesApi.create(soilAnalysisData);
+          successCount++;
+        } catch (err) {
+          console.error('Error importing analysis:', err);
           failedCount++;
         }
       }

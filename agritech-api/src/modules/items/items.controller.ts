@@ -260,4 +260,17 @@ export class ItemsController {
     const organizationId = req.headers['x-organization-id'];
     return this.itemsService.deleteItem(id, organizationId);
   }
+
+  // =====================================================
+  // ITEM PRICES ENDPOINTS
+  // =====================================================
+
+  @Get(':id/prices')
+  @ApiOperation({ summary: 'Get all prices for a specific item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item prices retrieved successfully' })
+  async getItemPrices(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.getItemPrices(id, organizationId);
+  }
 }

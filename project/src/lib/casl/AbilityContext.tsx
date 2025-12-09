@@ -3,7 +3,7 @@ import { createContextualCan } from '@casl/react';
 import { useAuth } from '../../components/MultiTenantAuthProvider';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../supabase';
+import { apiClient } from '../api-client';
 import { defineAbilitiesFor, type AppAbility } from './ability';
 
 // Create CASL context
@@ -12,62 +12,44 @@ const AbilityContext = createContext<AppAbility | undefined>(undefined);
 // Create Can component
 export const Can = createContextualCan(AbilityContext.Consumer);
 
+interface UsageCounts {
+  farms_count: number;
+  parcels_count: number;
+  users_count: number;
+  satellite_reports_count: number;
+}
+
 // Provider component
 export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, currentOrganization, userRole } = useAuth();
   const { data: subscription } = useSubscription();
 
-  // Fetch current usage counts
+  // Fetch current usage counts from NestJS API
   const { data: currentCounts } = useQuery({
     queryKey: ['usage-counts', currentOrganization?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ farms: number; parcels: number; users: number; satelliteReports: number }> => {
       if (!currentOrganization?.id) {
         return { farms: 0, parcels: 0, users: 0, satelliteReports: 0 };
       }
 
-      // Get farms count
-      const { count: farmsCount } = await supabase
-        .from('farms')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id);
+      try {
+        // Call NestJS API endpoint to get usage counts
+        const usageCounts = await apiClient.get<UsageCounts>(
+          '/api/v1/subscriptions/usage',
+          {},
+          currentOrganization.id
+        );
 
-      // Get parcels count - first get farm IDs, then count parcels
-      const { data: farms } = await supabase
-        .from('farms')
-        .select('id')
-        .eq('organization_id', currentOrganization.id);
-      
-      const farmIds = farms?.map(f => f.id) || [];
-      let parcelsCount = 0;
-      
-      if (farmIds.length > 0) {
-        const { count } = await supabase
-          .from('parcels')
-          .select('*', { count: 'exact', head: true })
-          .in('farm_id', farmIds);
-        parcelsCount = count || 0;
+        return {
+          farms: usageCounts.farms_count || 0,
+          parcels: usageCounts.parcels_count || 0,
+          users: usageCounts.users_count || 0,
+          satelliteReports: usageCounts.satellite_reports_count || 0,
+        };
+      } catch (error) {
+        console.error('Error fetching usage counts:', error);
+        return { farms: 0, parcels: 0, users: 0, satelliteReports: 0 };
       }
-
-      // Get users count
-      const { count: usersCount } = await supabase
-        .from('organization_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true);
-
-      // Get satellite indices data count for current period
-      const { count: reportsCount } = await supabase
-        .from('satellite_indices_data')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id)
-        .gte('created_at', subscription?.current_period_start || new Date().toISOString());
-
-      return {
-        farms: farmsCount || 0,
-        parcels: parcelsCount || 0,
-        users: usersCount || 0,
-        satelliteReports: reportsCount || 0,
-      };
     },
     enabled: !!currentOrganization?.id,
     staleTime: 30 * 1000, // 30 seconds

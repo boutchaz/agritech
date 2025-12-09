@@ -14,7 +14,22 @@ export interface AssignableUser {
   user_type: 'worker' | 'user';
 }
 
+export interface OrganizationUserProfile {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  email?: string;
+}
+
+export interface OrganizationUserRole {
+  name: string;
+  display_name: string;
+  level: number;
+}
+
 export interface OrganizationUser {
+  id?: string;
   user_id: string;
   organization_id: string;
   role_id: string;
@@ -23,6 +38,8 @@ export interface OrganizationUser {
   updated_at?: string;
   created_by?: string;
   updated_by?: string;
+  profile?: OrganizationUserProfile | null;
+  role?: OrganizationUserRole;
 }
 
 export interface OrganizationUserFilters {
@@ -83,5 +100,55 @@ export const organizationUsersApi = {
    */
   async delete(userId: string, organizationId?: string) {
     return apiClient.delete(`${BASE_URL}/${userId}`, {}, organizationId);
+  },
+
+  /**
+   * Get all users in an organization with profiles and roles
+   * Uses the new users module endpoint
+   */
+  async getAllWithProfiles(organizationId: string): Promise<OrganizationUser[]> {
+    return apiClient.get<OrganizationUser[]>(
+      `/api/v1/users/organizations/${organizationId}/users`
+    );
+  },
+
+  /**
+   * Update user role in organization
+   * Uses the new users module endpoint
+   */
+  async updateRole(
+    organizationId: string,
+    userId: string,
+    roleId: string
+  ): Promise<OrganizationUser> {
+    return apiClient.patch<OrganizationUser>(
+      `/api/v1/users/organizations/${organizationId}/users/${userId}/role`,
+      { role_id: roleId }
+    );
+  },
+
+  /**
+   * Update user active status in organization
+   * Uses the new users module endpoint
+   */
+  async updateStatus(
+    organizationId: string,
+    userId: string,
+    isActive: boolean
+  ): Promise<OrganizationUser> {
+    return apiClient.patch<OrganizationUser>(
+      `/api/v1/users/organizations/${organizationId}/users/${userId}/status`,
+      { is_active: isActive }
+    );
+  },
+
+  /**
+   * Remove user from organization
+   * Uses the new users module endpoint
+   */
+  async removeUser(organizationId: string, userId: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(
+      `/api/v1/users/organizations/${organizationId}/users/${userId}`
+    );
   },
 };

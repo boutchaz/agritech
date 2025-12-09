@@ -179,4 +179,81 @@ export const workersApi = {
   async delete(organizationId: string, workerId: string): Promise<{ message: string }> {
     return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${workerId}`);
   },
+
+  /**
+   * Get work records for a worker
+   */
+  async getWorkRecords(
+    organizationId: string,
+    workerId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.get<any[]>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records${queryString}`,
+    );
+  },
+
+  /**
+   * Create a work record for a worker
+   */
+  async createWorkRecord(organizationId: string, workerId: string, data: any): Promise<any> {
+    return apiClient.post<any>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records`,
+      data,
+    );
+  },
+
+  /**
+   * Update a work record
+   */
+  async updateWorkRecord(
+    organizationId: string,
+    workerId: string,
+    recordId: string,
+    data: any,
+  ): Promise<any> {
+    return apiClient.patch<any>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records/${recordId}`,
+      data,
+    );
+  },
+
+  /**
+   * Get métayage settlements for a worker
+   */
+  async getMetayageSettlements(organizationId: string, workerId: string): Promise<any[]> {
+    return apiClient.get<any[]>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
+    );
+  },
+
+  /**
+   * Create a métayage settlement for a worker
+   */
+  async createMetayageSettlement(organizationId: string, workerId: string, data: any): Promise<any> {
+    return apiClient.post<any>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
+      data,
+    );
+  },
+
+  /**
+   * Calculate métayage share for a worker
+   */
+  async calculateMetayageShare(
+    organizationId: string,
+    workerId: string,
+    grossRevenue: number,
+    totalCharges?: number,
+  ): Promise<{ share: number }> {
+    return apiClient.post<{ share: number }>(
+      `/api/v1/organizations/${organizationId}/workers/${workerId}/calculate-metayage-share`,
+      { grossRevenue, totalCharges },
+    );
+  },
 };

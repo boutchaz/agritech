@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { UserRole, UserPermission, ResourceType, ActionType } from '../types/auth';
+
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface RoleBasedAccess {
   userRole: UserRole | null;
@@ -24,7 +26,7 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchUserRoleAndPermissions = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !currentOrganization?.id) {
       setUserRole(null);
       setUserPermissions([]);
       setLoading(false);
@@ -35,57 +37,41 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       setLoading(true);
       setError(null);
 
-      // Get user role - direct query instead of RPC
-      const { data: orgUser, error: orgUserError} = await supabase
-        .from('organization_users')
-        .select('role_id, role:roles!organization_users_role_id_fkey(id, name, display_name, level)')
-        .eq('user_id', user.id)
-        .eq('organization_id', currentOrganization?.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (orgUserError) throw orgUserError;
-
-      // If no org user found, user is not part of this organization
-      if (!orgUser || !orgUser.role) {
+      // Get session token for API authentication
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) {
         setLoading(false);
         return;
       }
 
-      // Role details are already joined from the query above
-      const roleDetails = orgUser.role;
+      // Call NestJS API to get role and permissions
+      const response = await fetch(`${apiUrl}/api/v1/auth/me/role`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'x-organization-id': currentOrganization.id,
+        },
+      });
 
-      const roleData = {
-        role_name: roleDetails.name,
-        role_display_name: roleDetails.display_name,
-        role_level: roleDetails.level
-      };
-
-      // Get user permissions - direct query instead of RPC
-      // Query role_permissions joined with permissions table
-      const { data: permissionsData, error: permissionsError } = await supabase
-        .from('role_permissions')
-        .select(`
-          permissions!inner(
-            name,
-            display_name,
-            resource,
-            action
-          )
-        `)
-        .eq('role_id', roleDetails.id);
-
-      if (permissionsError) {
-        console.warn('Error fetching permissions:', permissionsError);
-        // Continue without permissions
+      if (!response.ok) {
+        if (response.status === 401) {
+          setLoading(false);
+          return;
+        }
+        throw new Error('Failed to fetch role and permissions');
       }
 
-      setUserRole(roleData);
-      setUserPermissions(permissionsData?.map(rp => ({
-        permission_name: rp.permissions.name,
-        resource: rp.permissions.resource,
-        action: rp.permissions.action
-      })) || []);
+      const data = await response.json();
+
+      // If no role found, user is not part of this organization
+      if (!data.role) {
+        setLoading(false);
+        return;
+      }
+
+      setUserRole(data.role);
+      setUserPermissions(data.permissions || []);
     } catch (err) {
       console.error('Error fetching user role and permissions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch role and permissions');

@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { tasksApi } from '../lib/api/tasks';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type {
@@ -76,22 +75,16 @@ export function useTaskTimeLogs(taskId: string | null) {
   });
 }
 
-export function useWorkerAvailability(workerId: string | null, date: string) {
+// TODO: Add worker availability endpoint to NestJS API when needed
+// Currently this hook is not being used in the application
+export function useWorkerAvailability(_workerId: string | null, _date: string) {
   return useQuery({
-    queryKey: ['worker-availability', workerId, date],
+    queryKey: ['worker-availability', _workerId, _date],
     queryFn: async () => {
-      if (!workerId || !date) return null;
-
-      const { data, error } = await supabase
-        .rpc('get_worker_availability', {
-          p_worker_id: workerId,
-          p_date: date,
-        });
-
-      if (error) throw error;
-      return data as WorkerAvailability;
+      // Placeholder - needs NestJS API endpoint implementation
+      return null as WorkerAvailability | null;
     },
-    enabled: !!workerId && !!date,
+    enabled: false, // Disabled until API endpoint is implemented
   });
 }
 

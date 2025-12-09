@@ -370,4 +370,66 @@ export class SubscriptionsService {
     // Return null if no subscription found (this is expected, not an error)
     return subscription || null;
   }
+
+  /**
+   * Get usage counts for an organization
+   */
+  async getUsageCounts(userId: string, organizationId: string) {
+    this.logger.log(
+      `Getting usage counts for user ${userId} and organization ${organizationId}`,
+    );
+
+    // Verify user belongs to the organization
+    const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (orgUserError || !orgUser) {
+      this.logger.error(
+        `User ${userId} does not have access to organization ${organizationId}`,
+      );
+      throw new ForbiddenException('Access denied to organization');
+    }
+
+    // Get farms count
+    const { count: farmsCount } = await this.supabaseAdmin
+      .from('farms')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
+    // Get farm IDs for parcels query
+    const { data: farms } = await this.supabaseAdmin
+      .from('farms')
+      .select('id')
+      .eq('organization_id', organizationId);
+
+    const farmIds = farms?.map((f) => f.id) || [];
+    let parcelsCount = 0;
+
+    if (farmIds.length > 0) {
+      const { count } = await this.supabaseAdmin
+        .from('parcels')
+        .select('*', { count: 'exact', head: true })
+        .in('farm_id', farmIds);
+      parcelsCount = count || 0;
+    }
+
+    // Get users count
+    const { count: usersCount } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    return {
+      farms_count: farmsCount || 0,
+      parcels_count: parcelsCount,
+      users_count: usersCount || 0,
+      satellite_reports_count: 0, // TODO: Add if satellite reports table exists
+    };
+  }
 }

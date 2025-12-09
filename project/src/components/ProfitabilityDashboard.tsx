@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
-import type { ProfitabilityData, Cost, Revenue } from '../types/cost-tracking';
+import { profitabilityApi } from '../lib/api/profitability';
+import type { Cost, Revenue } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -44,12 +44,7 @@ const ProfitabilityDashboard: React.FC = () => {
     queryKey: ['parcels', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization) return [];
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('id, name')
-        .order('name');
-      if (error) throw error;
-      return data || [];
+      return profitabilityApi.getParcels(currentOrganization.id);
     },
     enabled: !!currentOrganization
   });
@@ -59,21 +54,11 @@ const ProfitabilityDashboard: React.FC = () => {
     queryKey: ['costs', currentOrganization?.id, selectedParcel, startDate, endDate],
     queryFn: async () => {
       if (!currentOrganization) return [];
-      let query = supabase
-        .from('costs')
-        .select('*, parcel:parcels(id, name), category:cost_categories(name, type)')
-        .eq('organization_id', currentOrganization.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false });
-
-      if (selectedParcel !== 'all') {
-        query = query.eq('parcel_id', selectedParcel);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Cost[];
+      return profitabilityApi.getCosts({
+        start_date: startDate,
+        end_date: endDate,
+        parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
+      }, currentOrganization.id);
     },
     enabled: !!currentOrganization
   });
@@ -83,21 +68,11 @@ const ProfitabilityDashboard: React.FC = () => {
     queryKey: ['revenues', currentOrganization?.id, selectedParcel, startDate, endDate],
     queryFn: async () => {
       if (!currentOrganization) return [];
-      let query = supabase
-        .from('revenues')
-        .select('*, parcel:parcels(id, name)')
-        .eq('organization_id', currentOrganization.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false });
-
-      if (selectedParcel !== 'all') {
-        query = query.eq('parcel_id', selectedParcel);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Revenue[];
+      return profitabilityApi.getRevenues({
+        start_date: startDate,
+        end_date: endDate,
+        parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
+      }, currentOrganization.id);
     },
     enabled: !!currentOrganization
   });
@@ -122,7 +97,7 @@ const ProfitabilityDashboard: React.FC = () => {
     }, {} as Record<string, number>);
 
     // Group by parcel
-    const byParcel: Record<string, ProfitabilityData> = {};
+    const byParcel: Record<string, any> = {};
 
     costs.forEach(cost => {
       const parcelId = cost.parcel_id || 'unassigned';

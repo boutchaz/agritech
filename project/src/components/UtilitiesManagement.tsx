@@ -4,6 +4,7 @@ import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, C
 import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { accountingApi } from '../lib/accounting-api';
+import { utilitiesApi } from '../lib/api/utilities';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -108,7 +109,7 @@ const UtilitiesManagement: React.FC = () => {
     accountType: string,
     accountSubtype?: string
   ): Promise<string> => {
-    if (!currentOrganization?.id) {
+    if (!currentOrganization?.id || !currentFarm?.id) {
       throw new Error('Aucune organisation active pour résoudre les comptes comptables.');
     }
 
@@ -118,36 +119,24 @@ const UtilitiesManagement: React.FC = () => {
       return cached;
     }
 
-    let query = supabase
-      .from('accounts')
-      .select('id, code, name')
-      .eq('organization_id', currentOrganization.id)
-      .eq('account_type', accountType)
-      .eq('is_active', true)
-      .eq('is_group', false);
+    try {
+      const account = await utilitiesApi.getAccountByType(
+        currentOrganization.id,
+        currentFarm.id,
+        accountType,
+        accountSubtype
+      );
 
-    if (accountSubtype) {
-      query = query.eq('account_subtype', accountSubtype);
-    }
-
-    // Order by code and take the first match to handle multiple accounts
-    const { data, error } = await query.order('code', { ascending: true }).limit(1).single();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (!data?.id) {
+      accountIdCacheRef.current[cacheKey] = account.id;
+      return account.id;
+    } catch (error) {
       const subtypeMsg = accountSubtype ? ` (${accountSubtype})` : '';
       throw new Error(
         `Compte comptable de type "${accountType}"${subtypeMsg} introuvable. ` +
         `Veuillez créer ce compte dans le plan comptable.`
       );
     }
-
-    accountIdCacheRef.current[cacheKey] = data.id;
-    return data.id;
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, currentFarm?.id]);
 
   // Helper function to calculate unit cost
   const calculateUnitCost = (amount: number, consumptionValue?: number): string => {
@@ -312,27 +301,11 @@ const UtilitiesManagement: React.FC = () => {
     const paymentStatus = utility.payment_status ?? 'pending';
 
     // Dynamic account lookup by type/subtype instead of hardcoded codes
-    // Note: We look for utilities by account name "Utilities" within Operating Expenses
+    // Note: We look for utilities by Operating Expenses
     let debitAccountId: string;
     try {
-      // First try to find an account with name "Utilities" in Operating Expense
-      const { data: utilityAccount } = await supabase
-        .from('accounts')
-        .select('id')
-        .eq('organization_id', currentOrganization.id)
-        .eq('account_type', 'Expense')
-        .eq('account_subtype', 'Operating Expense')
-        .eq('is_active', true)
-        .eq('is_group', false)
-        .ilike('name', '%Utilities%')
-        .maybeSingle();
-
-      if (utilityAccount?.id) {
-        debitAccountId = utilityAccount.id;
-      } else {
-        // Fallback: any Operating Expense account
-        debitAccountId = await getAccountByType('Expense', 'Operating Expense');
-      }
+      // Try to find an Operating Expense account
+      debitAccountId = await getAccountByType('Expense', 'Operating Expense');
     } catch {
       // Last resort: any Expense account
       debitAccountId = await getAccountByType('Expense');
@@ -461,19 +434,13 @@ const UtilitiesManagement: React.FC = () => {
 
   const fetchUtilities = async () => {
     try {
-      if (!currentFarm?.id) {
+      if (!currentFarm?.id || !currentOrganization?.id) {
         setUtilities([]);
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('utilities')
-        .select('*')
-        .eq('farm_id', currentFarm.id)
-        .order('billing_date', { ascending: false });
-
-      if (error) throw error;
+      const data = await utilitiesApi.getAll(currentOrganization.id, currentFarm.id);
       setUtilities(data || []);
     } catch (error) {
       console.error('Error fetching utilities:', error);
@@ -485,7 +452,7 @@ const UtilitiesManagement: React.FC = () => {
 
   const handleAddUtility = async () => {
     try {
-      if (!currentFarm?.id) {
+      if (!currentFarm?.id || !currentOrganization?.id) {
         setError('Sélectionnez une ferme pour ajouter une charge.');
         return;
       }
@@ -504,22 +471,17 @@ const UtilitiesManagement: React.FC = () => {
         }
       }
 
-      const { data, error } = await supabase
-        .from('utilities')
-        .insert([{
-          ...newUtility,
-          farm_id: currentFarm.id,
-          invoice_url: invoiceUrl
-        }])
-        .select()
-        .single();
+      const createdUtility = await utilitiesApi.create(currentOrganization.id, {
+        ...newUtility,
+        farm_id: currentFarm.id,
+        invoice_url: invoiceUrl,
+        type: newUtility.type as any,
+        payment_status: newUtility.payment_status as any,
+        amount: newUtility.amount || 0,
+        billing_date: newUtility.billing_date || new Date().toISOString().split('T')[0],
+      });
 
-      if (error || !data) {
-        throw error ?? new Error('Échec de la création de la charge.');
-      }
-
-      let createdUtility = data as Utility;
-
+      let finalUtility = createdUtility;
       try {
         const journalEntryId = await syncUtilityJournalEntry({
           ...createdUtility,
@@ -527,11 +489,9 @@ const UtilitiesManagement: React.FC = () => {
         });
 
         if (journalEntryId && journalEntryId !== createdUtility.journal_entry_id) {
-          await supabase
-            .from('utilities')
-            .update({ journal_entry_id: journalEntryId })
-            .eq('id', createdUtility.id);
-          createdUtility = { ...createdUtility, journal_entry_id: journalEntryId };
+          finalUtility = await utilitiesApi.update(currentOrganization.id, currentFarm.id, createdUtility.id, {
+            journal_entry_id: journalEntryId
+          });
         }
       } catch (journalError) {
         console.error('Error creating journal entry for utility:', journalError);
@@ -553,7 +513,7 @@ const UtilitiesManagement: React.FC = () => {
         }
       }
 
-      setUtilities([createdUtility, ...utilities]);
+      setUtilities([finalUtility, ...utilities]);
       setShowAddModal(false);
       setSelectedFile(null);
       setNewUtility({
@@ -579,37 +539,28 @@ const UtilitiesManagement: React.FC = () => {
     if (!editingUtility) return;
 
     try {
-      if (!currentFarm?.id) {
+      if (!currentFarm?.id || !currentOrganization?.id) {
         setError('Sélectionnez une ferme pour modifier une charge.');
         return;
       }
       setError(null);
 
-      const { data, error } = await supabase
-        .from('utilities')
-        .update(editingUtility)
-        .eq('id', editingUtility.id)
-        .eq('farm_id', currentFarm.id)
-        .select()
-        .single();
-
-      if (error || !data) {
-        throw error ?? new Error('Échec de la mise à jour de la charge.');
-      }
-
-      let updatedUtility: Utility = {
-        ...data,
-        journal_entry_id: data.journal_entry_id ?? editingUtility.journal_entry_id ?? null,
-      };
+      let updatedUtility = await utilitiesApi.update(
+        currentOrganization.id,
+        currentFarm.id,
+        editingUtility.id,
+        editingUtility
+      );
 
       try {
         const journalEntryId = await syncUtilityJournalEntry(updatedUtility);
         if (journalEntryId && journalEntryId !== updatedUtility.journal_entry_id) {
-          await supabase
-            .from('utilities')
-            .update({ journal_entry_id: journalEntryId })
-            .eq('id', updatedUtility.id);
-          updatedUtility = { ...updatedUtility, journal_entry_id: journalEntryId };
+          updatedUtility = await utilitiesApi.update(
+            currentOrganization.id,
+            currentFarm.id,
+            updatedUtility.id,
+            { journal_entry_id: journalEntryId }
+          );
         }
       } catch (journalError) {
         console.error('Error updating journal entry for utility:', journalError);
@@ -632,18 +583,13 @@ const UtilitiesManagement: React.FC = () => {
     const utilityToDelete = utilities.find(util => util.id === id);
 
     try {
-      if (!currentFarm?.id) {
+      if (!currentFarm?.id || !currentOrganization?.id) {
         setError('Sélectionnez une ferme pour supprimer une charge.');
         return;
       }
       setError(null);
-      const { error } = await supabase
-        .from('utilities')
-        .delete()
-        .eq('id', id)
-        .eq('farm_id', currentFarm.id);
 
-      if (error) throw error;
+      await utilitiesApi.delete(currentOrganization.id, currentFarm.id, id);
 
       if (utilityToDelete?.journal_entry_id) {
         try {

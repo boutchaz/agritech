@@ -23,7 +23,6 @@ import {
   Info,
 } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -31,6 +30,8 @@ import { Select } from '@/components/ui/Select';
 import { FormField } from '@/components/ui/FormField';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { workersApi } from '@/lib/api/workers';
+import { workUnitsApi } from '@/lib/api/work-units';
 
 import type { WorkUnit } from '@/types/work-units';
 
@@ -119,16 +120,10 @@ export function WorkerConfiguration({
   const { data: worker, isLoading: isLoadingWorker } = useQuery({
     queryKey: ['worker', workerId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('id', workerId)
-        .single();
-
-      if (error) throw error;
-      return data;
+      if (!currentOrganization?.id) throw new Error('No organization selected');
+      return await workersApi.getById(currentOrganization.id, workerId);
     },
-    enabled: !!workerId,
+    enabled: !!workerId && !!currentOrganization?.id,
   });
 
   // Fetch work units
@@ -137,14 +132,10 @@ export function WorkerConfiguration({
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
 
-      const { data, error } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
+      const data = await workUnitsApi.getAll(
+        { is_active: true },
+        currentOrganization.id
+      );
       return data as WorkUnit[];
     },
     enabled: !!currentOrganization?.id,
@@ -156,23 +147,19 @@ export function WorkerConfiguration({
 
   const updateMutation = useMutation({
     mutationFn: async (data: WorkerPaymentFormData) => {
-      const { data: updatedWorker, error } = await supabase
-        .from('workers')
-        .update({
-          worker_type: data.worker_type,
-          payment_frequency: data.payment_frequency,
-          daily_rate: data.daily_rate || null,
-          monthly_salary: data.monthly_salary || null,
-          default_work_unit_id: data.default_work_unit_id || null,
-          rate_per_unit: data.rate_per_unit || null,
-          metayage_percentage: data.metayage_percentage || null,
-        })
-        .eq('id', workerId)
-        .select()
-        .single();
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      if (error) throw error;
-      return updatedWorker;
+      const updateData: any = {
+        worker_type: data.worker_type,
+        payment_frequency: data.payment_frequency,
+        daily_rate: data.daily_rate || undefined,
+        monthly_salary: data.monthly_salary || undefined,
+        default_work_unit_id: data.default_work_unit_id || undefined,
+        rate_per_unit: data.rate_per_unit || undefined,
+        metayage_percentage: data.metayage_percentage || undefined,
+      };
+
+      return await workersApi.update(currentOrganization.id, workerId, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['worker', workerId] });

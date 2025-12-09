@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { analysesApi } from '../lib/api/analyses';
+import { parcelsApi } from '../lib/api/parcels';
 import type {
   Analysis,
   AnalysisType,
@@ -31,14 +32,8 @@ export function useParcels(farmId: string | undefined) {
     queryFn: async () => {
       if (!farmId) return [];
 
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('id, name, farm_id, area, area_unit, soil_type')
-        .eq('farm_id', farmId)
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
+      const parcels = await parcelsApi.getAll({ farm_id: farmId });
+      return parcels || [];
     },
     enabled: !!farmId,
   });
@@ -51,19 +46,11 @@ export function useAnalysesByParcel(parcelId: string | undefined, analysisType?:
     queryFn: async () => {
       if (!parcelId) return [];
 
-      let query = supabase
-        .from('analyses')
-        .select('*')
-        .eq('parcel_id', parcelId)
-        .order('analysis_date', { ascending: false });
-
-      if (analysisType) {
-        query = query.eq('analysis_type', analysisType);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as Analysis[];
+      const response = await analysesApi.getAll({
+        parcel_id: parcelId,
+        analysis_type: analysisType
+      });
+      return response.data || [];
     },
     enabled: !!parcelId,
   });
@@ -71,29 +58,18 @@ export function useAnalysesByParcel(parcelId: string | undefined, analysisType?:
 
 // Hook to fetch analyses by farm ID (all parcels in farm)
 export function useAnalysesByFarm(farmId: string | undefined, analysisType?: AnalysisType) {
-  const { data: parcels = [] } = useParcels(farmId);
-  const parcelIds = parcels.map(p => p.id);
-
   return useQuery({
     queryKey: analysesKeys.byFarm(farmId || '', analysisType),
     queryFn: async () => {
-      if (!farmId || parcelIds.length === 0) return [];
+      if (!farmId) return [];
 
-      let query = supabase
-        .from('analyses')
-        .select('*')
-        .in('parcel_id', parcelIds)
-        .order('analysis_date', { ascending: false });
-
-      if (analysisType) {
-        query = query.eq('analysis_type', analysisType);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as Analysis[];
+      const response = await analysesApi.getAll({
+        farm_id: farmId,
+        analysis_type: analysisType
+      });
+      return response.data || [];
     },
-    enabled: !!farmId && parcelIds.length > 0,
+    enabled: !!farmId,
   });
 }
 
@@ -117,23 +93,14 @@ export function useAddAnalysis() {
       laboratory?: string;
       notes?: string;
     }) => {
-      const dbData = {
+      return await analysesApi.create({
         parcel_id: parcelId,
         analysis_type: analysisType,
         analysis_date: analysisDate,
-        laboratory,
         data,
+        laboratory,
         notes,
-      };
-
-      const { data: newAnalysis, error } = await supabase
-        .from('analyses')
-        .insert([dbData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newAnalysis as Analysis;
+      });
     },
     onSuccess: (newAnalysis) => {
       // Invalidate all relevant queries
@@ -165,15 +132,7 @@ export function useUpdateAnalysis() {
         notes?: string;
       };
     }) => {
-      const { data: updatedAnalysis, error } = await supabase
-        .from('analyses')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return updatedAnalysis as Analysis;
+      return await analysesApi.update(id, updates);
     },
     onSuccess: (updatedAnalysis) => {
       // Invalidate all relevant queries
@@ -195,18 +154,8 @@ export function useDeleteAnalysis() {
   return useMutation({
     mutationFn: async (id: string) => {
       // First get the analysis to know which queries to invalidate
-      const { data: analysis } = await supabase
-        .from('analyses')
-        .select('parcel_id, analysis_type')
-        .eq('id', id)
-        .single();
-
-      const { error } = await supabase
-        .from('analyses')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const analysis = await analysesApi.getOne(id);
+      await analysesApi.delete(id);
       return analysis;
     },
     onSuccess: (analysis) => {

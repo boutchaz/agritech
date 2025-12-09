@@ -10,6 +10,7 @@ import { Can, useCan } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { organizationUsersApi } from '../lib/api/organization-users';
 
 interface OrganizationUser {
   id: string;
@@ -63,46 +64,8 @@ const UsersSettings: React.FC = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('organization_users')
-        .select(`
-          *,
-          role:roles!organization_users_role_id_fkey(
-            name,
-            display_name,
-            level
-          )
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch user profiles separately since there's no direct FK
-      const userIds = data?.map(u => u.user_id).filter(id => id) || [];
-
-      // Validate UUIDs
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const validUserIds = userIds.filter(id => uuidRegex.test(id));
-
-      if (validUserIds.length === 0) {
-        setUsers([]);
-        return;
-      }
-
-      // Fetch profiles with email (email is already in user_profiles)
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('id, first_name, last_name, email, avatar_url')
-        .in('id', validUserIds);
-
-      // Merge profiles into users
-      const usersWithProfiles = data?.map(user => ({
-        ...user,
-        profile: profiles?.find(p => p.id === user.user_id)
-      })) || [];
-
-      setUsers(usersWithProfiles);
+      const data = await organizationUsersApi.getAllWithProfiles(currentOrganization.id);
+      setUsers(data);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError(t('users.errors.loadFailed'));
@@ -202,13 +165,7 @@ const UsersSettings: React.FC = () => {
     if (!currentOrganization?.id) return;
 
     try {
-      const { error } = await supabase
-        .from('organization_users')
-        .update({ role_id: newRoleId })
-        .eq('user_id', userId)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await organizationUsersApi.updateRole(currentOrganization.id, userId, newRoleId);
       await fetchUsers();
       toast.success(t('users.updateRole.success'));
     } catch (err) {
@@ -223,15 +180,9 @@ const UsersSettings: React.FC = () => {
     if (!currentOrganization?.id) return;
 
     try {
-      const { error } = await supabase
-        .from('organization_users')
-        .update({ is_active: !isActive })
-        .eq('user_id', userId)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await organizationUsersApi.updateStatus(currentOrganization.id, userId, !isActive);
       await fetchUsers();
-      toast.success(t('users.updateStatus.success', { 
+      toast.success(t('users.updateStatus.success', {
         status: !isActive ? t('users.status.active') : t('users.status.inactive')
       }));
     } catch (err) {
@@ -248,13 +199,7 @@ const UsersSettings: React.FC = () => {
     if (!confirm(t('users.remove.confirm'))) return;
 
     try {
-      const { error } = await supabase
-        .from('organization_users')
-        .delete()
-        .eq('user_id', userId)
-        .eq('organization_id', currentOrganization.id);
-
-      if (error) throw error;
+      await organizationUsersApi.removeUser(currentOrganization.id, userId);
       await fetchUsers();
       toast.success(t('users.remove.success'));
     } catch (err) {

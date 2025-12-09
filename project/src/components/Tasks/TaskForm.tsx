@@ -3,6 +3,7 @@ import { X, UserCog } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
+import { workUnitsApi } from '../../lib/api/work-units';
 import type { Task, CreateTaskRequest, TaskType, TaskPriority } from '../../types/tasks';
 import { TASK_TYPE_LABELS } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
@@ -55,18 +56,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const updateTask = useUpdateTask();
   const { data: workers = [] } = useWorkers(organizationId);
 
-  // Fetch work units for piece-work selection
+  // Fetch work units for piece-work selection - now uses NestJS API
   const { data: workUnits = [] } = useQuery({
     queryKey: ['work-units', organizationId],
     queryFn: async () => {
-      const { supabase } = await import('../../lib/supabase');
-      const { data } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_active', true)
-        .order('name');
-      return data || [];
+      if (!organizationId) return [];
+      const units = await workUnitsApi.getAll({ is_active: true }, organizationId);
+      return units || [];
     },
     enabled: !!organizationId,
   });

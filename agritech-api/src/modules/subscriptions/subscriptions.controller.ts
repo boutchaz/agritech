@@ -48,6 +48,27 @@ export class SubscriptionsController {
     return this.subscriptionsService.getSubscription(req.user.id, organizationId);
   }
 
+  @Get('usage')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get usage counts for an organization',
+    description: 'Retrieve current usage counts (farms, parcels, users) for the organization. Organization ID is passed via X-Organization-Id header.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Usage counts retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
+  async getUsageCounts(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required in X-Organization-Id header');
+    }
+    return this.subscriptionsService.getUsageCounts(req.user.id, organizationId);
+  }
+
   @Post('trial')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a trial subscription for an organization' })

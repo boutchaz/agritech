@@ -41,11 +41,17 @@ import { OrganizationUsersModule } from './modules/organization-users/organizati
 import { SatelliteIndicesModule } from './modules/satellite-indices/satellite-indices.module';
 import { WorkUnitsModule } from './modules/work-units/work-units.module';
 import { SoilAnalysesModule } from './modules/soil-analyses/soil-analyses.module';
+import { AnalysesModule } from './modules/analyses/analyses.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { PaymentRecordsModule } from './modules/payment-records/payment-records.module';
 import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
 import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
+import { UtilitiesModule } from './modules/utilities/utilities.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { PieceWorkModule } from './modules/piece-work/piece-work.module';
+import { ProfitabilityModule } from './modules/profitability/profitability.module';
+import { ProductApplicationsModule } from './modules/product-applications/product-applications.module';
 
 @Module({
   imports: [
@@ -84,6 +90,7 @@ import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module
     TasksModule,
     WorkersModule,
     WorkUnitsModule,
+    PieceWorkModule,
     PaymentRecordsModule,
     StockEntriesModule,
     ItemsModule,
@@ -94,12 +101,17 @@ import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module
     ParcelsModule,
     SatelliteIndicesModule,
     SoilAnalysesModule,
+    AnalysesModule,
     StructuresModule,
     DashboardModule,
     ReceptionBatchesModule,
     BlogsModule,
     CostCentersModule,
     BankAccountsModule,
+    UtilitiesModule,
+    ReportsModule,
+    ProfitabilityModule,
+    ProductApplicationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

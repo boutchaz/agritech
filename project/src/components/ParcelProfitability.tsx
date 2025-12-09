@@ -14,11 +14,10 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './MultiTenantAuthProvider';
-import type { Cost, Revenue } from '../types/cost-tracking';
+import { profitabilityApi } from '../lib/api/profitability';
+import type { Cost, Revenue, CreateCostDto, CreateRevenueDto } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
-import { useProfitabilityData, useJournalEntriesForParcel } from '../hooks/useProfitabilityQuery';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/Input';
@@ -87,23 +86,37 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   const {
     data: profitabilityData,
     isLoading: profitabilityLoading,
-  } = useProfitabilityData(
-    parcelId,
-    startDate,
-    endDate,
-    currentOrganization?.id || ''
-  );
+  } = useQuery({
+    queryKey: ['profitability', parcelId, startDate, endDate, currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization) throw new Error('No organization');
+      return profitabilityApi.getParcelProfitability(
+        parcelId,
+        startDate,
+        endDate,
+        currentOrganization.id
+      );
+    },
+    enabled: !!currentOrganization && !!parcelId,
+  });
 
   // Fetch journal entries for detailed view
   const {
     data: journalEntries = [],
     isLoading: journalEntriesLoading,
-  } = useJournalEntriesForParcel(
-    parcelId,
-    startDate,
-    endDate,
-    currentOrganization?.id || ''
-  );
+  } = useQuery({
+    queryKey: ['journal-entries-parcel', parcelId, startDate, endDate, currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization) return [];
+      return profitabilityApi.getJournalEntriesForParcel(
+        parcelId,
+        startDate,
+        endDate,
+        currentOrganization.id
+      );
+    },
+    enabled: !!currentOrganization && !!parcelId,
+  });
 
   // Legacy data for backward compatibility
   const costs = profitabilityData?.costs || [];
@@ -114,24 +127,20 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
     mutationFn: async (costData: typeof newCost) => {
       if (!currentOrganization || !user) throw new Error('No organization or user');
 
-      // Insert cost
-      const { data: cost, error } = await supabase
-        .from('costs')
-        .insert({
-          organization_id: currentOrganization.id,
+      // Create cost via API
+      const cost = await profitabilityApi.createCost(
+        {
           parcel_id: parcelId,
           ...costData,
           currency: currencyCode,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+        },
+        currentOrganization.id
+      );
 
       // Create journal entry if enabled
       if (createJournalEntry) {
         try {
+          const { supabase } = await import('../lib/supabase');
           // Get expense account (you may need to adjust account codes based on your chart of accounts)
           const { data: expenseAccounts } = await supabase
             .from('accounts')
@@ -205,24 +214,20 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
     mutationFn: async (revenueData: typeof newRevenue) => {
       if (!currentOrganization || !user) throw new Error('No organization or user');
 
-      // Insert revenue
-      const { data: revenue, error } = await supabase
-        .from('revenues')
-        .insert({
-          organization_id: currentOrganization.id,
+      // Create revenue via API
+      const revenue = await profitabilityApi.createRevenue(
+        {
           parcel_id: parcelId,
           ...revenueData,
           currency: currencyCode,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+        },
+        currentOrganization.id
+      );
 
       // Create journal entry if enabled
       if (createJournalEntry) {
         try {
+          const { supabase } = await import('../lib/supabase');
           // Get revenue account
           const { data: revenueAccounts } = await supabase
             .from('accounts')

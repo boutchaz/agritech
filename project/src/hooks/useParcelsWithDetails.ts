@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { parcelsApi, Parcel } from '@/lib/api/parcels';
+import { farmsApi } from '@/lib/api/farms';
 
 export interface ParcelWithDetails {
   id: string;
   name: string;
   farm_id: string;
-  crop_id?: string | null;
+  crop_category?: string | null;
+  crop_type?: string | null;
+  variety?: string | null;
   soil_type?: string | null;
   area?: number | null;
   irrigation_type?: string | null;
@@ -17,11 +20,6 @@ export interface ParcelWithDetails {
   farm?: {
     id: string;
     name: string;
-  };
-  crop?: {
-    id: string;
-    name: string;
-    variety?: string | null;
   };
 }
 
@@ -42,16 +40,11 @@ export function useParcelsWithDetails() {
       try {
         console.warn('Fetching parcels for organization:', currentOrganization.id);
 
-        // Step 1: Get all farms for this organization
-        const { data: farms, error: farmsError } = await supabase
-          .from('farms')
-          .select('id, name')
-          .eq('organization_id', currentOrganization.id);
-
-        if (farmsError) {
-          console.error('Error fetching farms:', farmsError);
-          return [];
-        }
+        // Step 1: Get all farms for this organization using API
+        const farms = await farmsApi.getAll(
+          { organization_id: currentOrganization.id },
+          currentOrganization.id
+        );
 
         console.warn('Found farms:', farms?.length || 0);
 
@@ -63,9 +56,7 @@ export function useParcelsWithDetails() {
         const farmIds = farms.map(f => f.id);
         console.warn('Farm IDs:', farmIds);
 
-        // Step 2: Get all parcels for these farms
-        const { parcelsApi } = await import('@/lib/api/parcels');
-
+        // Step 2: Get all parcels for these farms using API
         // Fetch parcels for each farm and combine
         const parcelPromises = farmIds.map(farmId =>
           parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id)
@@ -81,34 +72,24 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        // Step 3: Get crop details if needed
-        const cropIds = parcels
-          .map(p => p.crop_id)
-          .filter(Boolean) as string[];
-
-        let cropsMap = new Map();
-        if (cropIds.length > 0) {
-          const { data: crops } = await supabase
-            .from('crops')
-            .select('id, name')
-            .in('id', cropIds);
-
-          if (crops) {
-            cropsMap = new Map(crops.map(c => [c.id, c]));
-          }
-        }
-
         // Create farms map for easy lookup
         const farmsMap = new Map(farms.map(f => [f.id, f]));
 
-        // Step 4: Combine the data
+        // Step 3: Combine the data with farm information
+        // Note: crop information (crop_category, crop_type, variety) is already on the parcel
         const result: ParcelWithDetails[] = parcels.map(parcel => ({
           id: parcel.id,
           name: parcel.name,
           farm_id: parcel.farm_id,
-          crop_id: parcel.crop_id,
+          crop_category: parcel.crop_category,
+          crop_type: parcel.crop_type,
+          variety: parcel.variety,
+          soil_type: parcel.soil_type,
+          area: parcel.area,
+          irrigation_type: parcel.irrigation_type,
+          created_at: parcel.created_at,
+          updated_at: parcel.updated_at,
           farm: farmsMap.get(parcel.farm_id) || undefined,
-          crop: parcel.crop_id ? cropsMap.get(parcel.crop_id) : undefined,
         }));
 
         console.warn('Returning parcels with details:', result.length);
@@ -135,43 +116,29 @@ export function useFarmParcelsWithDetails(farmId: string | undefined) {
       if (!farmId) throw new Error('Farm ID is required');
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { parcelsApi } = await import('@/lib/api/parcels');
-
-      // Get parcels from API (without joins for now)
+      // Get parcels from API
       const parcels = await parcelsApi.getAll(
         { farm_id: farmId, organization_id: currentOrganization.id },
         currentOrganization.id
       );
 
-      // For now, we'll fetch farm and crop details separately
-      // TODO: Enhance backend to return joined data
-      const { data: farms } = await supabase
-        .from('farms')
-        .select('id, name')
-        .eq('id', farmId)
-        .single();
+      // Get farm details using API
+      const farm = await farmsApi.getOne(farmId, currentOrganization.id);
 
-      const cropIds = parcels
-        .map(p => p.crop_id)
-        .filter(Boolean) as string[];
-
-      let cropsMap = new Map();
-      if (cropIds.length > 0) {
-        const { data: crops } = await supabase
-          .from('crops')
-          .select('id, name, variety')
-          .in('id', cropIds);
-
-        if (crops) {
-          cropsMap = new Map(crops.map(c => [c.id, c]));
-        }
-      }
-
-      // Combine data
+      // Combine data - crop information is already on the parcel
       return parcels.map(parcel => ({
-        ...parcel,
-        farm: farms || undefined,
-        crop: parcel.crop_id ? cropsMap.get(parcel.crop_id) : undefined,
+        id: parcel.id,
+        name: parcel.name,
+        farm_id: parcel.farm_id,
+        crop_category: parcel.crop_category,
+        crop_type: parcel.crop_type,
+        variety: parcel.variety,
+        soil_type: parcel.soil_type,
+        area: parcel.area,
+        irrigation_type: parcel.irrigation_type,
+        created_at: parcel.created_at,
+        updated_at: parcel.updated_at,
+        farm: farm ? { id: farm.id, name: farm.name } : undefined,
       })) as ParcelWithDetails[];
     },
     enabled: !!farmId && !!currentOrganization?.id,

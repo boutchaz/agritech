@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase'; // TODO: Remove when work_records and metayage_settlements APIs are added
 import { workersApi } from '../lib/api/workers';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
 
@@ -102,162 +101,120 @@ export const useDeactivateWorker = () => {
   });
 };
 
-// Fetch work records
-export const useWorkRecords = (workerId: string | null, startDate?: string, endDate?: string) => {
+// Fetch work records - now uses NestJS API
+export const useWorkRecords = (
+  organizationId: string | null,
+  workerId: string | null,
+  startDate?: string,
+  endDate?: string,
+) => {
   return useQuery({
-    queryKey: ['work-records', workerId, startDate, endDate],
+    queryKey: ['work-records', organizationId, workerId, startDate, endDate],
     queryFn: async () => {
-      if (!workerId) return [];
-
-      let query = supabase
-        .from('work_records')
-        .select(`
-          *,
-          workers!inner(first_name, last_name),
-          farms(name),
-          parcels(name)
-        `)
-        .eq('worker_id', workerId)
-        .order('work_date', { ascending: false });
-
-      if (startDate) {
-        query = query.gte('work_date', startDate);
-      }
-      if (endDate) {
-        query = query.lte('work_date', endDate);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      return (data || []).map(record => ({
-        ...record,
-        worker: record.workers,
-        farm_name: record.farms?.name,
-        parcel_name: record.parcels?.name,
-      })) as WorkRecord[];
+      if (!organizationId || !workerId) return [];
+      return workersApi.getWorkRecords(organizationId, workerId, startDate, endDate) as Promise<WorkRecord[]>;
     },
-    enabled: !!workerId,
+    enabled: !!organizationId && !!workerId,
   });
 };
 
-// Create work record
+// Create work record - now uses NestJS API
 export const useCreateWorkRecord = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Omit<WorkRecord, 'id' | 'created_at' | 'created_by'>) => {
-      const { data: record, error } = await supabase
-        .from('work_records')
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return record as WorkRecord;
+    mutationFn: async ({
+      organizationId,
+      workerId,
+      data,
+    }: {
+      organizationId: string;
+      workerId: string;
+      data: Omit<WorkRecord, 'id' | 'created_at' | 'created_by' | 'worker_id'>;
+    }) => {
+      return workersApi.createWorkRecord(organizationId, workerId, data) as Promise<WorkRecord>;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['work-records', variables.worker_id] });
-      queryClient.invalidateQueries({ queryKey: ['worker', variables.worker_id] });
+      queryClient.invalidateQueries({ queryKey: ['work-records', variables.organizationId, variables.workerId] });
+      queryClient.invalidateQueries({ queryKey: ['worker', variables.organizationId, variables.workerId] });
     },
   });
 };
 
-// Update work record
+// Update work record - now uses NestJS API
 export const useUpdateWorkRecord = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<WorkRecord> }) => {
-      const { data: record, error } = await supabase
-        .from('work_records')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return record as WorkRecord;
+    mutationFn: async ({
+      organizationId,
+      workerId,
+      recordId,
+      data,
+    }: {
+      organizationId: string;
+      workerId: string;
+      recordId: string;
+      data: Partial<WorkRecord>;
+    }) => {
+      return workersApi.updateWorkRecord(organizationId, workerId, recordId, data) as Promise<WorkRecord>;
     },
-    onSuccess: (record) => {
-      queryClient.invalidateQueries({ queryKey: ['work-records', record.worker_id] });
+    onSuccess: (record, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-records', variables.organizationId, variables.workerId] });
     },
   });
 };
 
-// Fetch métayage settlements
-export const useMetayageSettlements = (workerId: string | null) => {
+// Fetch métayage settlements - now uses NestJS API
+export const useMetayageSettlements = (organizationId: string | null, workerId: string | null) => {
   return useQuery({
-    queryKey: ['metayage-settlements', workerId],
+    queryKey: ['metayage-settlements', organizationId, workerId],
     queryFn: async () => {
-      if (!workerId) return [];
-
-      const { data, error } = await supabase
-        .from('metayage_settlements')
-        .select(`
-          *,
-          workers!inner(first_name, last_name, metayage_type),
-          farms(name),
-          parcels(name)
-        `)
-        .eq('worker_id', workerId)
-        .order('period_start', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map(settlement => ({
-        ...settlement,
-        worker: settlement.workers,
-        farm_name: settlement.farms?.name,
-        parcel_name: settlement.parcels?.name,
-      })) as MetayageSettlement[];
+      if (!organizationId || !workerId) return [];
+      return workersApi.getMetayageSettlements(organizationId, workerId) as Promise<MetayageSettlement[]>;
     },
-    enabled: !!workerId,
+    enabled: !!organizationId && !!workerId,
   });
 };
 
-// Create métayage settlement
+// Create métayage settlement - now uses NestJS API
 export const useCreateMetayageSettlement = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Omit<MetayageSettlement, 'id' | 'net_revenue' | 'created_at' | 'created_by'>) => {
-      const { data: settlement, error } = await supabase
-        .from('metayage_settlements')
-        .insert(data)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return settlement as MetayageSettlement;
+    mutationFn: async ({
+      organizationId,
+      workerId,
+      data,
+    }: {
+      organizationId: string;
+      workerId: string;
+      data: Omit<MetayageSettlement, 'id' | 'net_revenue' | 'created_at' | 'created_by' | 'worker_id'>;
+    }) => {
+      return workersApi.createMetayageSettlement(organizationId, workerId, data) as Promise<MetayageSettlement>;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['metayage-settlements', variables.worker_id] });
+      queryClient.invalidateQueries({ queryKey: ['metayage-settlements', variables.organizationId, variables.workerId] });
     },
   });
 };
 
-// Calculate métayage share using DB function
+// Calculate métayage share - now uses NestJS API
 export const useCalculateMetayageShare = () => {
   return useMutation({
     mutationFn: async ({
+      organizationId,
       workerId,
       grossRevenue,
       totalCharges = 0,
     }: {
+      organizationId: string;
       workerId: string;
       grossRevenue: number;
       totalCharges?: number;
     }) => {
-      const { data, error } = await supabase.rpc('calculate_metayage_share', {
-        p_worker_id: workerId,
-        p_gross_revenue: grossRevenue,
-        p_total_charges: totalCharges,
-      });
-
-      if (error) throw error;
-      return data as number;
+      const result = await workersApi.calculateMetayageShare(organizationId, workerId, grossRevenue, totalCharges);
+      return result.share;
     },
   });
 };

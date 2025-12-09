@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { authSupabase } from '../lib/auth-supabase';
+import { useAuth } from './MultiTenantAuthProvider';
+
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface Farm {
   id: string;
@@ -15,6 +18,7 @@ interface FarmSwitcherProps {
 }
 
 const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
+  const { currentOrganization } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
   const [_error, setError] = useState<string | null>(null);
@@ -28,21 +32,31 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
 
   useEffect(() => {
     fetchFarms();
-  }, []);
+  }, [currentOrganization?.id]);
 
   const fetchFarms = async () => {
+    if (!currentOrganization?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) return;
 
-      const { data, error } = await supabase
-        .from('farms')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
+      const response = await fetch(`${apiUrl}/api/v1/farms?organization_id=${currentOrganization.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'x-organization-id': currentOrganization.id,
+        },
+      });
 
-      if (error) throw error;
-      setFarms(data || []);
+      if (!response.ok) throw new Error('Failed to fetch farms');
+
+      const data = await response.json();
+      setFarms(data.farms || data || []);
     } catch (error) {
       console.error('Error fetching farms:', error);
       setError('Failed to fetch farms');
@@ -52,21 +66,28 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
   };
 
   const handleAddFarm = async () => {
+    if (!currentOrganization?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await authSupabase.auth.getSession();
+      if (!session?.access_token) return;
 
-      const { data, error } = await supabase
-        .from('farms')
-        .insert([{
+      const response = await fetch(`${apiUrl}/api/v1/farms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'x-organization-id': currentOrganization.id,
+        },
+        body: JSON.stringify({
           ...newFarm,
-          user_id: user.id
-        }])
-        .select()
-        .single();
+          organization_id: currentOrganization.id,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to add farm');
 
+      const data = await response.json();
       setFarms([...farms, data]);
       setShowAddModal(false);
       setNewFarm({

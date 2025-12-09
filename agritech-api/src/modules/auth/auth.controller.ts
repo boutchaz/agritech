@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Headers } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -47,5 +48,19 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getOrganizations(@Request() req) {
     return this.authService.getUserOrganizations(req.user.id);
+  }
+
+  @Get('me/role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
+  @ApiOperation({ summary: 'Get current user role and permissions in organization' })
+  @ApiResponse({ status: 200, description: 'User role and permissions retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getUserRole(
+    @Request() req,
+    @Headers('x-organization-id') organizationId: string,
+  ) {
+    return this.authService.getUserRoleAndPermissions(req.user.id, organizationId);
   }
 }

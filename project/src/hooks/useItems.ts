@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { itemsApi } from '../lib/api/items';
 import type {
@@ -319,20 +318,11 @@ export function useItemPrices(itemId: string | null) {
     queryKey: ['item-prices', itemId],
     queryFn: async () => {
       if (!itemId) throw new Error('Item ID is required');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data, error } = await supabase
-        .from('item_prices')
-        .select(`
-          *,
-          customer:customers(id, name),
-          supplier:suppliers(id, name)
-        `)
-        .eq('item_id', itemId)
-        .eq('is_active', true)
-        .order('price_list_name', { ascending: true });
-
-      if (error) throw error;
-      return data as ItemPrice[];
+      return itemsApi.getItemPrices(itemId, currentOrganization.id);
     },
     enabled: !!itemId && !!currentOrganization?.id,
   });

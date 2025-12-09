@@ -1,11 +1,11 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
+import { itemsApi } from '@/lib/api/items';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Package, Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -33,61 +33,52 @@ export default function InventoryStock() {
   const { data: items = [], isLoading: itemsLoading } = useItems({ is_stock_item: true });
   const { data: warehouses = [] } = useWarehouses();
 
-  // Fetch stock levels aggregated from stock_valuation
-  const { data: stockLevels = [], isLoading: stockLoading } = useQuery({
+  // Fetch stock levels using NestJS API
+  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery({
     queryKey: ['inventory-stock-levels', currentOrganization?.id, selectedWarehouse],
     queryFn: async () => {
-      if (!currentOrganization?.id) return [];
+      if (!currentOrganization?.id) return {};
 
-      // For now, we'll aggregate from stock_valuation table
-      // Note: After migration, stock_valuation.item_id should reference items table
-      let query = supabase
-        .from('stock_valuation')
-        .select(`
-          item_id,
-          warehouse_id,
-          quantity,
-          remaining_quantity,
-          cost_per_unit,
-          total_cost,
-          warehouse:warehouses(id, name)
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .gt('remaining_quantity', 0);
-
-      if (selectedWarehouse !== 'all') {
-        query = query.eq('warehouse_id', selectedWarehouse);
+      try {
+        // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
+        const filters: any = {};
+        // Note: The API returns data grouped by item_id with warehouse details
+        // We need to transform it to match the expected format
+        const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
+        return stockData;
+      } catch (error) {
+        console.warn('Could not fetch stock levels:', error);
+        return {};
       }
-
-      const { data, error } = await query;
-
-      if (error) {
-        // If stock_valuation doesn't exist or has errors, return empty array
-        console.warn('Could not fetch stock valuation:', error);
-        return [];
-      }
-
-      // Group by item_id and warehouse_id
-      const grouped = (data || []).reduce((acc, val) => {
-        const key = `${val.item_id}_${val.warehouse_id}`;
-        if (!acc[key]) {
-          acc[key] = {
-            item_id: val.item_id,
-            warehouse_id: val.warehouse_id,
-            warehouse_name: (val.warehouse as any)?.name || 'Unknown',
-            total_quantity: 0,
-            total_value: 0,
-          };
-        }
-        acc[key].total_quantity += parseFloat(val.remaining_quantity || 0);
-        acc[key].total_value += parseFloat(val.total_cost || val.remaining_quantity * val.cost_per_unit || 0);
-        return acc;
-      }, {} as Record<string, any>);
-
-      return Object.values(grouped);
     },
     enabled: !!currentOrganization?.id,
   });
+
+  // Transform stock levels data to match the expected format
+  const stockLevels = React.useMemo(() => {
+    const result: any[] = [];
+
+    Object.entries(stockLevelsData).forEach(([itemId, itemStock]: [string, any]) => {
+      if (itemStock.warehouses && Array.isArray(itemStock.warehouses)) {
+        itemStock.warehouses.forEach((wh: any) => {
+          // Filter by selected warehouse if not 'all'
+          if (selectedWarehouse !== 'all' && wh.warehouse_id !== selectedWarehouse) {
+            return;
+          }
+
+          result.push({
+            item_id: itemId,
+            warehouse_id: wh.warehouse_id,
+            warehouse_name: wh.warehouse_name,
+            total_quantity: wh.quantity || 0,
+            total_value: wh.value || 0,
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [stockLevelsData, selectedWarehouse]);
 
   // Combine items with stock levels
   const inventoryData = React.useMemo(() => {

@@ -1,39 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, FileText, Calendar } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { useAuth } from './MultiTenantAuthProvider';
+import { productApplicationsApi, ProductApplication } from '../lib/api/product-applications';
+import { inventoryApi, InventoryProduct } from '../lib/api/inventory';
+import { parcelsApi, Parcel } from '../lib/api/parcels';
+import { farmsApi } from '../lib/api/farms';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
-
-interface Product {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-}
-
-interface Parcel {
-  id: string;
-  name: string;
-}
-
-interface Application {
-  id: string;
-  product_id: string;
-  application_date: string;
-  quantity_used: number;
-  area_treated: number;
-  notes: string;
-  created_at: string;
-}
+type Application = ProductApplication;
 
 const ProductApplications: React.FC = () => {
   const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,20 +31,23 @@ const ProductApplications: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchApplications();
-    fetchProducts();
-    fetchParcels();
-    fetchUserFarm();
-  }, []);
+    if (currentOrganization?.id) {
+      fetchApplications();
+      fetchProducts();
+      fetchParcels();
+      fetchUserFarm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id]);
 
   const fetchParcels = async () => {
     try {
-      const { data, error } = await supabase
-        .from('parcels')
-        .select('id, name')
-        .order('name');
+      if (!currentOrganization?.id) return;
 
-      if (error) throw error;
+      const data = await parcelsApi.getAll(
+        { organization_id: currentOrganization.id },
+        currentOrganization.id
+      );
       setParcels(data || []);
     } catch (error) {
       console.error('Error fetching parcels:', error);
@@ -74,34 +55,30 @@ const ProductApplications: React.FC = () => {
   };
 
   const fetchUserFarm = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      if (!currentOrganization?.id) return;
 
-    const { data: farms } = await supabase
-      .from('farms')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+      const farms = await farmsApi.getAll(
+        { organization_id: currentOrganization.id },
+        currentOrganization.id
+      );
 
-    if (farms) {
-      setFarmId(farms.id);
+      if (farms && farms.length > 0) {
+        setFarmId(farms[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching user farm:', error);
     }
   };
 
   const fetchApplications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('product_applications')
-        .select(`
-          *,
-          inventory:product_id (
-            name,
-            unit
-          )
-        `)
-        .order('application_date', { ascending: false });
+      if (!currentOrganization?.id) {
+        setLoading(false);
+        return;
+      }
 
-      if (error) throw error;
+      const data = await productApplicationsApi.getAll(currentOrganization.id);
       setApplications(data || []);
     } catch (error) {
       console.error('Error fetching applications:', error);
@@ -112,13 +89,9 @@ const ProductApplications: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('inventory')
-        .select('*')
-        .gt('quantity', 0)
-        .order('name');
+      if (!currentOrganization?.id) return;
 
-      if (error) throw error;
+      const data = await inventoryApi.getAvailableProducts(currentOrganization.id);
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -131,18 +104,20 @@ const ProductApplications: React.FC = () => {
       return;
     }
 
+    if (!currentOrganization?.id) {
+      console.error('No organization ID available');
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .from('product_applications')
-        .insert([{
+      await productApplicationsApi.create(
+        {
           ...newApplication,
           farm_id: farmId,
-          currency: currency
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
+          currency: currency,
+        },
+        currentOrganization.id
+      );
 
       await fetchApplications();
       await fetchProducts();

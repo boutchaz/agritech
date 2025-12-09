@@ -1,32 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import TasksCalendar from '../components/Tasks/TasksCalendar';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import { farmsApi } from '../lib/api/farms';
 
 function TasksCalendarPage() {
   const { currentOrganization } = useAuth();
-  const [farms, setFarms] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
-    const fetchFarms = async () => {
-      if (!currentOrganization?.id) return;
-
-      try {
-        const { supabase } = await import('../lib/supabase');
-        const { data } = await supabase
-          .from('farms')
-          .select('id, name')
-          .eq('organization_id', currentOrganization.id)
-          .order('name');
-
-        setFarms(data || []);
-      } catch (error) {
-        console.error('Error fetching farms:', error);
-      }
-    };
-
-    fetchFarms();
-  }, [currentOrganization]);
+  // Fetch farms - now uses NestJS API
+  const { data: farms = [] } = useQuery({
+    queryKey: ['farms', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return [];
+      const farmsList = await farmsApi.getAll(
+        { organization_id: currentOrganization.id },
+        currentOrganization.id
+      );
+      return farmsList.map(f => ({ id: f.id, name: f.name }));
+    },
+    enabled: !!currentOrganization?.id,
+  });
 
   if (!currentOrganization) return null;
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { analysesApi } from '../lib/api/analyses';
 import type {
   Analysis,
   AnalysisType,
@@ -27,45 +27,12 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
       setLoading(true);
       setError(null);
 
-      let parcelIds: string[] = [];
+      const filters = queryType === 'farm'
+        ? { farm_id: parcelIdOrFarmId, analysis_type: analysisType }
+        : { parcel_id: parcelIdOrFarmId, analysis_type: analysisType };
 
-      if (queryType === 'farm') {
-        // Get all parcels for this farm
-        const { data: parcels, error: parcelsError } = await supabase
-          .from('parcels')
-          .select('id')
-          .eq('farm_id', parcelIdOrFarmId);
-
-        if (parcelsError) throw parcelsError;
-
-        if (!parcels || parcels.length === 0) {
-          setAnalyses([]);
-          return;
-        }
-
-        parcelIds = parcels.map(p => p.id);
-      } else {
-        // Query by parcel ID directly
-        parcelIds = [parcelIdOrFarmId];
-      }
-
-      // Get analyses for those parcels
-      let query = supabase
-        .from('analyses')
-        .select('*')
-        .in('parcel_id', parcelIds)
-        .order('analysis_date', { ascending: false });
-
-      // Filter by analysis type if specified
-      if (analysisType) {
-        query = query.eq('analysis_type', analysisType);
-      }
-
-      const { data, error: supabaseError } = await query;
-
-      if (supabaseError) throw supabaseError;
-
-      setAnalyses(data || []);
+      const response = await analysesApi.getAll(filters);
+      setAnalyses(response.data || []);
     } catch (err) {
       console.error('Error fetching analyses:', err);
       setError(err instanceof Error ? err.message : 'Error fetching analyses');
@@ -83,22 +50,14 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
     notes?: string
   ) => {
     try {
-      const dbData = {
+      const newAnalysis = await analysesApi.create({
         parcel_id: parcelId,
         analysis_type: analysisType,
         analysis_date: analysisDate,
-        laboratory,
         data,
+        laboratory,
         notes
-      };
-
-      const { data: newAnalysis, error: supabaseError } = await supabase
-        .from('analyses')
-        .insert([dbData])
-        .select()
-        .single();
-
-      if (supabaseError) throw supabaseError;
+      });
 
       setAnalyses(prev => [newAnalysis, ...prev]);
       return newAnalysis;
@@ -119,14 +78,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
     }
   ) => {
     try {
-      const { data: updatedAnalysis, error: supabaseError } = await supabase
-        .from('analyses')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (supabaseError) throw supabaseError;
+      const updatedAnalysis = await analysesApi.update(id, updates);
 
       setAnalyses(prev =>
         prev.map(analysis =>
@@ -143,13 +95,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
 
   const deleteAnalysis = async (id: string) => {
     try {
-      const { error: supabaseError } = await supabase
-        .from('analyses')
-        .delete()
-        .eq('id', id);
-
-      if (supabaseError) throw supabaseError;
-
+      await analysesApi.delete(id);
       setAnalyses(prev => prev.filter(analysis => analysis.id !== id));
     } catch (err) {
       console.error('Error deleting analysis:', err);
