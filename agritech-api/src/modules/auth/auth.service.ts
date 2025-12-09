@@ -157,8 +157,11 @@ export class AuthService {
     const adminClient = this.databaseService.getAdminClient();
     const regularClient = this.databaseService.getClient();
 
-    // 1. Create Supabase user using regular signUp (not admin.createUser)
-    // This ensures the password is properly hashed and the user can sign in
+    // 1. Create Supabase user using regular signUp
+    // IMPORTANT: Requires ENABLE_EMAIL_AUTOCONFIRM=true in Supabase config
+    // This ensures passwords are properly hashed for signInWithPassword
+    this.logger.log(`Creating user with email: ${signupDto.email}`);
+
     const { data: signUpData, error: signUpError } =
       await regularClient.auth.signUp({
         email: signupDto.email,
@@ -172,6 +175,8 @@ export class AuthService {
             invited_to_organization: signupDto.invitedToOrganization || null,
             invited_with_role: signupDto.invitedWithRole || null,
           },
+          // Skip email confirmation redirect
+          emailRedirectTo: undefined,
         },
       });
 
@@ -182,16 +187,7 @@ export class AuthService {
       );
     }
 
-    // Auto-confirm the email using admin API
-    const { error: confirmError } = await adminClient.auth.admin.updateUserById(
-      signUpData.user.id,
-      { email_confirm: true }
-    );
-
-    if (confirmError) {
-      this.logger.warn(`Failed to auto-confirm email: ${confirmError.message}`);
-      // Continue anyway - user can still log in, just needs to confirm email
-    }
+    this.logger.log(`User created successfully: ${signUpData.user.id}`);
 
     const authData = signUpData;
 
