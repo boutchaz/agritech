@@ -30,9 +30,8 @@ export class PaymentsService {
 
         try {
             // Generate payment number
-            const paymentNumber = await this.sequencesService.getNextSequence(
+            const paymentNumber = await this.sequencesService.generatePaymentNumber(
                 organizationId,
-                'payment' as any,
             );
 
             // Create payment

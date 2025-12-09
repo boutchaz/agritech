@@ -110,9 +110,8 @@ export class QuotesService {
 
     try {
       // Generate quote number
-      const quoteNumber = await this.sequencesService.getNextSequence(
+      const quoteNumber = await this.sequencesService.generateQuoteNumber(
         organizationId,
-        'quote' as any,
       );
 
       // Fetch customer details
@@ -299,9 +298,8 @@ export class QuotesService {
       }
 
       // Generate order number
-      const orderNumber = await this.sequencesService.getNextSequence(
+      const orderNumber = await this.sequencesService.generateSalesOrderNumber(
         organizationId,
-        'sales_order' as any,
       );
 
       // Create sales order

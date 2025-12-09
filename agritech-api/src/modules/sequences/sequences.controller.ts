@@ -31,11 +31,32 @@ export class SequencesController {
     @OrganizationId() organizationId: string,
     @Body() dto: GenerateSequenceDto,
   ) {
-    const sequence = await this.sequencesService.getNextSequence(
-      organizationId,
-      dto.sequenceType,
-      dto.prefix,
-    );
+    let sequence: string;
+    switch (dto.sequenceType) {
+      case SequenceType.QUOTE:
+        sequence = await this.sequencesService.generateQuoteNumber(organizationId);
+        break;
+      case SequenceType.INVOICE:
+        sequence = await this.sequencesService.generateInvoiceNumber(organizationId);
+        break;
+      case SequenceType.SALES_ORDER:
+        sequence = await this.sequencesService.generateSalesOrderNumber(organizationId);
+        break;
+      case SequenceType.PURCHASE_ORDER:
+        sequence = await this.sequencesService.generatePurchaseOrderNumber(organizationId);
+        break;
+      case SequenceType.JOURNAL_ENTRY:
+        sequence = await this.sequencesService.generateJournalEntryNumber(organizationId);
+        break;
+      case SequenceType.PAYMENT:
+        sequence = await this.sequencesService.generatePaymentNumber(organizationId);
+        break;
+      case SequenceType.STOCK_ENTRY:
+        sequence = await this.sequencesService.generateStockEntryNumber(organizationId);
+        break;
+      default:
+        throw new Error(`Unknown sequence type: ${dto.sequenceType}`);
+    }
     return { sequence };
   }
 

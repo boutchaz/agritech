@@ -116,7 +116,7 @@ export class InvoicesService {
     try {
       // Generate invoice number if not provided
       const invoiceNumber = dto.invoice_number ||
-        await this.sequencesService.getNextSequence(organizationId, 'invoice' as any);
+        await this.sequencesService.generateInvoiceNumber(organizationId, dto.invoice_type);
 
       // Calculate totals from items
       const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);

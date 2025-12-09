@@ -33,9 +33,8 @@ export class PurchaseOrdersService {
       // Generate order number if not provided
       let orderNumber = createPurchaseOrderDto.order_number;
       if (!orderNumber) {
-        orderNumber = await this.sequencesService.getNextSequence(
+        orderNumber = await this.sequencesService.generatePurchaseOrderNumber(
           organizationId,
-          'purchase_order' as any,
         );
       }
 
@@ -479,9 +478,9 @@ export class PurchaseOrdersService {
       const grandTotal = subtotal + taxTotal;
 
       // Generate invoice number
-      const invoiceNumber = await this.sequencesService.getNextSequence(
+      const invoiceNumber = await this.sequencesService.generateInvoiceNumber(
         organizationId,
-        'invoice' as any,
+        'purchase',
       );
 
       // Create bill (purchase invoice)
