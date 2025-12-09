@@ -1,6 +1,8 @@
 import { apiClient } from '../api-client';
 import type { Database } from '@/types/database.types';
 
+const BASE_URL = '/api/v1/invoices';
+
 type Tables = Database['public']['Tables'];
 type Invoice = Tables['invoices']['Row'];
 type InvoiceItem = Tables['invoice_items']['Row'];
@@ -32,15 +34,15 @@ export const invoicesApi = {
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
     const queryString = params.toString();
-    return apiClient.get<InvoiceWithItems[]>(`/invoices${queryString ? `?${queryString}` : ''}`);
+    return apiClient.get<InvoiceWithItems[]>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
   },
 
   async getOne(invoiceId: string, organizationId: string): Promise<InvoiceWithItems> {
-    return apiClient.get<InvoiceWithItems>(`/invoices/${invoiceId}`);
+    return apiClient.get<InvoiceWithItems>(`${BASE_URL}/${invoiceId}`);
   },
 
   async create(invoice: any, organizationId: string): Promise<InvoiceWithItems> {
-    return apiClient.post<InvoiceWithItems>(`/invoices`, invoice);
+    return apiClient.post<InvoiceWithItems>(BASE_URL, invoice);
   },
 
   async updateStatus(
@@ -48,7 +50,7 @@ export const invoicesApi = {
     data: { status: string; remarks?: string },
     organizationId: string
   ): Promise<Invoice> {
-    return apiClient.patch<Invoice>(`/invoices/${invoiceId}/status`, data);
+    return apiClient.patch<Invoice>(`${BASE_URL}/${invoiceId}/status`, data);
   },
 
   /**
@@ -60,11 +62,11 @@ export const invoicesApi = {
     postingDate: string,
     organizationId: string
   ): Promise<{ success: boolean; message: string; data: { invoice_id: string; journal_entry_id: string } }> {
-    return apiClient.post(`/invoices/${invoiceId}/post`, { posting_date: postingDate });
+    return apiClient.post(`${BASE_URL}/${invoiceId}/post`, { posting_date: postingDate });
   },
 
   async delete(invoiceId: string, organizationId: string): Promise<void> {
-    await apiClient.delete(`/invoices/${invoiceId}`);
+    await apiClient.delete(`${BASE_URL}/${invoiceId}`);
   },
 
   /**
@@ -97,6 +99,6 @@ export const invoicesApi = {
     },
     organizationId: string
   ): Promise<InvoiceWithItems> {
-    return apiClient.patch<InvoiceWithItems>(`/invoices/${invoiceId}`, data);
+    return apiClient.patch<InvoiceWithItems>(`${BASE_URL}/${invoiceId}`, data);
   },
 };

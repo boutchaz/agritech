@@ -1,6 +1,8 @@
 import { apiClient } from '../api-client';
 import type { Database } from '@/types/database.types';
 
+const BASE_URL = '/api/v1/journal-entries';
+
 type Tables = Database['public']['Tables'];
 type JournalEntry = Tables['journal_entries']['Row'];
 type JournalItem = Tables['journal_items']['Row'];
@@ -70,30 +72,30 @@ export const journalEntriesApi = {
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.parcel_id) params.append('parcel_id', filters.parcel_id);
     const queryString = params.toString();
-    return apiClient.get<JournalEntryWithItems[]>(`/journal-entries${queryString ? `?${queryString}` : ''}`);
+    return apiClient.get<JournalEntryWithItems[]>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
   },
 
   async getOne(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.get<JournalEntryWithItems>(`/journal-entries/${id}`);
+    return apiClient.get<JournalEntryWithItems>(`${BASE_URL}/${id}`);
   },
 
   async create(data: CreateJournalEntryInput): Promise<JournalEntryWithItems> {
-    return apiClient.post<JournalEntryWithItems>('/journal-entries', data);
+    return apiClient.post<JournalEntryWithItems>(BASE_URL, data);
   },
 
   async update(id: string, data: UpdateJournalEntryInput): Promise<JournalEntryWithItems> {
-    return apiClient.patch<JournalEntryWithItems>(`/journal-entries/${id}`, data);
+    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}`, data);
   },
 
   async post(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.post<JournalEntryWithItems>(`/journal-entries/${id}/post`, {});
+    return apiClient.post<JournalEntryWithItems>(`${BASE_URL}/${id}/post`, {});
   },
 
   async cancel(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.patch<JournalEntryWithItems>(`/journal-entries/${id}/cancel`, {});
+    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}/cancel`, {});
   },
 
   async delete(id: string): Promise<void> {
-    await apiClient.delete(`/journal-entries/${id}`);
+    await apiClient.delete(`${BASE_URL}/${id}`);
   },
 };
