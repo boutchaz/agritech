@@ -165,16 +165,19 @@ export class AccountsService {
         throw new BadRequestException('Organization not found');
       }
 
-      // Insert all accounts
+      // Insert all accounts (without parent_id first)
       let accountsCreated = 0;
+      const accountsWithParent: Array<{ code: string; parent_code: string }> = [];
 
       for (const account of moroccanChartOfAccounts) {
+        // Use description_fr as the description field (schema only has 'description')
+        const description = account.description_fr || null;
+
         const result = await client.query(
           `INSERT INTO accounts (
             organization_id, code, name, account_type, account_subtype,
-            is_group, is_active, parent_code, currency_code,
-            description_fr, description_ar
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            is_group, is_active, currency_code, description
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           ON CONFLICT (organization_id, code) DO NOTHING
           RETURNING id`,
           [
@@ -185,16 +188,35 @@ export class AccountsService {
             account.account_subtype,
             account.is_group,
             account.is_active,
-            account.parent_code || null,
             account.currency_code,
-            account.description_fr || null,
-            account.description_ar || null,
+            description,
           ]
         );
 
         if (result.rows.length > 0) {
           accountsCreated++;
         }
+
+        // Track accounts with parent references to update later
+        if (account.parent_code) {
+          accountsWithParent.push({
+            code: account.code,
+            parent_code: account.parent_code,
+          });
+        }
+      }
+
+      // Update parent_id references for accounts that have parent_code
+      for (const { code, parent_code } of accountsWithParent) {
+        await client.query(
+          `UPDATE accounts
+           SET parent_id = (
+             SELECT id FROM accounts
+             WHERE organization_id = $1 AND code = $2
+           )
+           WHERE organization_id = $1 AND code = $3`,
+          [organizationId, parent_code, code]
+        );
       }
 
       await client.query('COMMIT');
