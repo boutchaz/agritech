@@ -51,6 +51,8 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
           'x-organization-id': currentOrganization.id,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
         },
       });
 

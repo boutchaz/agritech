@@ -180,12 +180,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 
       // Using direct Supabase call for work_units (reference data)
       // This should be migrated to NestJS API when endpoint is available
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+      // Use the shared Supabase client to avoid multiple GoTrueClient instances
+      const { supabase } = await import('../../lib/supabase');
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('work_units')
         .select('*')
         .eq('organization_id', currentOrganization.id)

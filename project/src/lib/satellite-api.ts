@@ -497,21 +497,18 @@ class SatelliteAPIClient {
   // Generate vegetation index image
   async generateIndexImage(request: IndexImageRequest): Promise<IndexImageResponse> {
     // Use Supabase Edge Function with proper authentication
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
+    // Import the shared Supabase client to avoid multiple GoTrueClient instances
+    const { authSupabase } = await import('./auth-supabase');
 
     // Get the current session to send the user's JWT
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await authSupabase.auth.getSession();
 
     if (sessionError || !session?.access_token) {
       throw new Error('Authentication required to generate index images');
     }
 
     // Use supabase.functions.invoke for proper authentication
-    const { data, error } = await supabase.functions.invoke('generate-index-image', {
+    const { data, error } = await authSupabase.functions.invoke('generate-index-image', {
       body: {
         aoi: request.aoi,
         date_range: request.date_range,

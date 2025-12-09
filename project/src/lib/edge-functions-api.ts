@@ -1,9 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { authSupabase } from './auth-supabase';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Use the shared Supabase client to avoid multiple GoTrueClient instances
+const supabase = authSupabase;
 
 const EDGE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
