@@ -37,8 +37,12 @@ services:
       - "traefik.http.services.agritech-api.loadbalancer.server.port=3001"
     networks:
       - agritech-network
+      - supabase-network
 
 networks:
   agritech-network:
     external: true
     name: dokploy-network
+  supabase-network:
+    external: true
+    name: agritech-supabase-5gdghc_default

@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '../hooks/useParcelsQuery'
 import { useAnalyses } from '../hooks/useAnalyses'
-import { FlaskRound as Flask, Plus } from 'lucide-react'
+import { FlaskRound as Flask, Plus, Leaf, Droplets } from 'lucide-react'
 import SoilAnalysisForm from '../components/Analysis/SoilAnalysisForm'
-import type { Analysis, AnalysisType, SoilAnalysisData } from '../types/analysis'
+import PlantAnalysisForm from '../components/Analysis/PlantAnalysisForm'
+import WaterAnalysisForm from '../components/Analysis/WaterAnalysisForm'
+import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '../types/analysis'
 
 const ParcelSoilAnalysis = () => {
   const { t } = useTranslation();
@@ -15,9 +17,9 @@ const ParcelSoilAnalysis = () => {
   const [showForm, setShowForm] = useState(false);
   
   // Fetch real analyses data
-  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis } = useAnalyses(parcelId, 'soil');
-  const { analyses: plantAnalyses, loading: plantLoading } = useAnalyses(parcelId, 'plant');
-  const { analyses: waterAnalyses, loading: waterLoading } = useAnalyses(parcelId, 'water');
+  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil');
+  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant');
+  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water');
 
   if (isLoading) {
     return (
@@ -34,7 +36,7 @@ const ParcelSoilAnalysis = () => {
                                       analysisTab === 'plant' ? plantAnalyses :
                                       waterAnalyses;
 
-  const handleSaveAnalysis = async (
+  const handleSaveSoilAnalysis = async (
     data: SoilAnalysisData,
     analysisDate: string,
     laboratory?: string,
@@ -44,15 +46,52 @@ const ParcelSoilAnalysis = () => {
       await addSoilAnalysis(parcelId, 'soil', analysisDate, data, laboratory, notes);
       setShowForm(false);
     } catch (error) {
-      console.error('Error saving analysis:', error);
+      console.error('Error saving soil analysis:', error);
       alert(t('farmHierarchy.parcel.soil.saveError'));
+    }
+  };
+
+  const handleSavePlantAnalysis = async (
+    data: PlantAnalysisData,
+    analysisDate: string,
+    laboratory?: string,
+    notes?: string
+  ) => {
+    try {
+      await addPlantAnalysis(parcelId, 'plant', analysisDate, data, laboratory, notes);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving plant analysis:', error);
+      alert(t('farmHierarchy.parcel.plant.saveError', 'Error saving plant analysis'));
+    }
+  };
+
+  const handleSaveWaterAnalysis = async (
+    data: WaterAnalysisData,
+    analysisDate: string,
+    laboratory?: string,
+    notes?: string
+  ) => {
+    try {
+      await addWaterAnalysis(parcelId, 'water', analysisDate, data, laboratory, notes);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving water analysis:', error);
+      alert(t('farmHierarchy.parcel.water.saveError', 'Error saving water analysis'));
     }
   };
 
   const handleDeleteAnalysis = async (id: string) => {
     if (confirm(t('farmHierarchy.parcel.soil.deleteConfirm'))) {
       try {
-        await deleteAnalysis(id);
+        // Use the correct delete function based on the current tab
+        if (analysisTab === 'soil') {
+          await deleteSoilAnalysis(id);
+        } else if (analysisTab === 'plant') {
+          await deletePlantAnalysis(id);
+        } else {
+          await deleteWaterAnalysis(id);
+        }
       } catch (error) {
         console.error('Error deleting analysis:', error);
         alert(t('farmHierarchy.parcel.soil.deleteError'));
@@ -60,15 +99,43 @@ const ParcelSoilAnalysis = () => {
     }
   };
 
+  // Render the correct form based on the selected tab
+  const renderForm = () => {
+    switch (analysisTab) {
+      case 'soil':
+        return (
+          <SoilAnalysisForm
+            onSave={handleSaveSoilAnalysis}
+            onCancel={() => setShowForm(false)}
+            selectedParcel={parcel}
+          />
+        );
+      case 'plant':
+        return (
+          <PlantAnalysisForm
+            onSave={handleSavePlantAnalysis}
+            onCancel={() => setShowForm(false)}
+            selectedParcel={parcel}
+          />
+        );
+      case 'water':
+        return (
+          <WaterAnalysisForm
+            onSave={handleSaveWaterAnalysis}
+            onCancel={() => setShowForm(false)}
+            selectedParcel={parcel}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   // Show form if needed
   if (showForm) {
     return (
       <div className="space-y-6">
-        <SoilAnalysisForm
-          onSave={handleSaveAnalysis}
-          onCancel={() => setShowForm(false)}
-          selectedParcel={parcel}
-        />
+        {renderForm()}
       </div>
     );
   }
@@ -114,7 +181,7 @@ const ParcelSoilAnalysis = () => {
             }`}
           >
             <div className="flex items-center justify-center space-x-2">
-              <Flask className="h-4 w-4" />
+              <Leaf className="h-4 w-4" />
               <span>{t('farmHierarchy.parcel.soil.tabs.plant')}</span>
             </div>
           </button>
@@ -122,12 +189,12 @@ const ParcelSoilAnalysis = () => {
             onClick={() => setAnalysisTab('water')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               analysisTab === 'water'
-                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400 bg-green-50 dark:bg-green-900/20'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
             }`}
           >
             <div className="flex items-center justify-center space-x-2">
-              <Flask className="h-4 w-4" />
+              <Droplets className="h-4 w-4" />
               <span>{t('farmHierarchy.parcel.soil.tabs.water')}</span>
             </div>
           </button>
@@ -141,13 +208,19 @@ const ParcelSoilAnalysis = () => {
             </div>
           ) : currentAnalyses.length === 0 ? (
             <div className="text-center py-12">
-              <Flask className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              {analysisTab === 'soil' && <Flask className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
+              {analysisTab === 'plant' && <Leaf className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
+              {analysisTab === 'water' && <Droplets className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {t('farmHierarchy.parcel.soil.noAnalyses')}
               </p>
               <button
                 onClick={() => setShowForm(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                  analysisTab === 'water'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
               >
                 {t('farmHierarchy.parcel.soil.addAnalysis')}
               </button>
