@@ -27,14 +27,15 @@ export class AuthService {
    */
   async validateToken(token: string): Promise<any> {
     try {
-      // Use Supabase client to verify the token
-      const client = this.databaseService.getClient();
+      // Use admin client to verify the token - it can validate any user's token
+      const adminClient = this.databaseService.getAdminClient();
       const {
         data: { user },
         error,
-      } = await client.auth.getUser(token);
+      } = await adminClient.auth.getUser(token);
 
       if (error || !user) {
+        this.logger.error(`Token validation error: ${error?.message}`);
         throw new UnauthorizedException('Invalid token');
       }
 
