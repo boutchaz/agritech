@@ -229,21 +229,25 @@ export class AuthService {
           (await this.getOrgAdminRoleId(adminClient));
 
         // Add user to organization
-        const { error: orgUserError } = await adminClient
+        this.logger.log(`Creating organization_users record (invited): user_id=${userId}, organization_id=${organizationId}, role_id=${roleId}`);
+        const { data: orgUserData, error: orgUserError } = await adminClient
           .from('organization_users')
           .insert({
             user_id: userId,
             organization_id: organizationId,
             role_id: roleId,
             is_active: true,
-          });
+          })
+          .select()
+          .single();
 
         if (orgUserError) {
           this.logger.error(
-            `Failed to add user to organization: ${orgUserError.message}`,
+            `Failed to add user to organization: ${orgUserError.message}, code: ${orgUserError.code}, details: ${JSON.stringify(orgUserError.details)}`,
           );
           throw new BadRequestException('Failed to join organization');
         }
+        this.logger.log(`Successfully created organization_users record (invited): ${JSON.stringify(orgUserData)}`);
       } else {
         // 4. No invitation - Create new organization using OrganizationsService
         organizationName =
@@ -262,30 +266,37 @@ export class AuthService {
 
         // Get organization_admin role
         const orgAdminRoleId = await this.getOrgAdminRoleId(adminClient);
+        this.logger.log(`Got organization_admin role ID: ${orgAdminRoleId}`);
 
         // Add user to organization as admin
-        const { error: orgUserError } = await adminClient
+        this.logger.log(`Creating organization_users record: user_id=${userId}, organization_id=${organizationId}, role_id=${orgAdminRoleId}`);
+        const { data: orgUserData, error: orgUserError } = await adminClient
           .from('organization_users')
           .insert({
             user_id: userId,
             organization_id: organizationId,
             role_id: orgAdminRoleId,
             is_active: true,
-          });
+          })
+          .select()
+          .single();
 
         if (orgUserError) {
           this.logger.error(
-            `Failed to add user to organization: ${orgUserError.message}`,
+            `Failed to add user to organization: ${orgUserError.message}, code: ${orgUserError.code}, details: ${JSON.stringify(orgUserError.details)}`,
           );
           throw new BadRequestException(
             'Failed to add user as organization admin',
           );
         }
+        this.logger.log(`Successfully created organization_users record: ${JSON.stringify(orgUserData)}`);
       }
 
-      // 5. Generate session tokens
+      // 5. Generate session tokens using regular client (not admin)
+      // The admin client cannot be used for signInWithPassword as it's meant for admin operations
+      const regularClient = this.databaseService.getClient();
       const { data: sessionData, error: sessionError } =
-        await adminClient.auth.signInWithPassword({
+        await regularClient.auth.signInWithPassword({
           email: signupDto.email,
           password: signupDto.password,
         });
