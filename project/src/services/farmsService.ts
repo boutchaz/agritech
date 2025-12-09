@@ -1,4 +1,5 @@
 import { apiClient } from '../lib/api-client';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 export interface Farm {
   id: string;
@@ -40,18 +41,35 @@ export interface RelatedDataCounts {
 }
 
 /**
- * Get the current organization ID from localStorage
+ * Get the current organization ID from Zustand store or localStorage fallback
  */
 function getCurrentOrganizationId(): string | null {
   try {
+    // Try Zustand store first (preferred)
+    const storeOrg = useOrganizationStore.getState().currentOrganization;
+    if (storeOrg?.id) {
+      return storeOrg.id;
+    }
+
+    // Fallback to localStorage (legacy key)
     const orgStr = localStorage.getItem('currentOrganization');
     if (orgStr) {
       const org = JSON.parse(orgStr);
-      return org.id || null;
+      if (org.id) return org.id;
     }
+
+    // Try Zustand persisted storage key
+    const zustandStorage = localStorage.getItem('organization-storage');
+    if (zustandStorage) {
+      const parsed = JSON.parse(zustandStorage);
+      if (parsed?.state?.currentOrganization?.id) {
+        return parsed.state.currentOrganization.id;
+      }
+    }
+
     return null;
   } catch (error) {
-    console.error('Error reading organization from localStorage:', error);
+    console.error('Error reading organization:', error);
     return null;
   }
 }
