@@ -23,11 +23,12 @@ export interface CreateQuoteInput {
   quote_date: string;
   valid_until: string;
   items: Array<{
+    line_number: number;
     item_id?: string;
     item_name: string;
     description?: string;
     quantity: number;
-    rate: number;
+    unit_price: number;
     account_id: string;
     tax_id?: string | null;
   }>;

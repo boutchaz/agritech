@@ -173,12 +173,13 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     try {
       await createQuote.mutateAsync({
         ...data,
-        items: data.items.map((item) => ({
+        items: data.items.map((item, index) => ({
+          line_number: index + 1,
           item_id: item.item_id || undefined,
           item_name: item.item_name,
           description: item.description,
           quantity: Number(item.quantity),
-          rate: Number(item.rate),
+          unit_price: Number(item.rate),
           account_id: item.account_id,
           tax_id: item.tax_id || null,
         })),
