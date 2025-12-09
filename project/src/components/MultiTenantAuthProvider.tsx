@@ -191,6 +191,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setCurrentOrganization(org);
     setCurrentFarm(null); // Clear current farm when switching organizations
 
+    // Clear all cached data when switching organizations to ensure fresh data
+    queryClient.clear();
+
     // Save to both localStorage (for backward compatibility) and Zustand store
     localStorage.setItem('currentOrganization', JSON.stringify(org));
     setOrganizationInStore({

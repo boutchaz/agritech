@@ -9,15 +9,21 @@ import './index.css'
 import { registerSW } from 'virtual:pwa-register'
 import { checkMobileUpdate } from './utils/clearCache'
 
-// Create a client
+// Create a client with shorter stale time for fresher data
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minute
+      staleTime: 5 * 1000, // 5 seconds - data goes stale quickly
+      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
       retry: 1,
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnReconnect: true, // Refetch when network reconnects
     },
   },
 })
+
+// Export queryClient for use in other modules (e.g., to clear cache on auth changes)
+export { queryClient }
 
 // Create router context with auth
 const routerContext = {
@@ -117,9 +123,14 @@ async function init() {
   }
 
   // Subscribe to auth changes
-  authSupabase.auth.onAuthStateChange((_event, session) => {
+  authSupabase.auth.onAuthStateChange((event, session) => {
     routerContext.auth.user = session?.user || null
     router.invalidate()
+
+    // Clear all cached data on sign in/out to ensure fresh data
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      queryClient.clear()
+    }
   })
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
