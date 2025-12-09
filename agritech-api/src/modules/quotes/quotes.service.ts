@@ -315,8 +315,7 @@ export class QuotesService {
           tax_amount: quote.tax_total,
           total_amount: quote.grand_total,
           status: 'confirmed',
-          notes: quote.notes,
-          quote_id: quote.id,
+          notes: `Converted from Quote ${quote.quote_number}. ${quote.notes || ''}`.trim(),
           created_by: userId,
         })
         .select()
