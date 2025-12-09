@@ -11,118 +11,143 @@ export enum SequenceType {
   STOCK_ENTRY = 'stock_entry',
 }
 
+interface SequenceConfig {
+  table: string;
+  dateColumn: string;
+  prefix: string;
+}
+
 @Injectable()
 export class SequencesService {
   private readonly logger = new Logger(SequencesService.name);
 
+  private readonly sequenceConfigs: Record<SequenceType, SequenceConfig> = {
+    [SequenceType.QUOTE]: {
+      table: 'quotes',
+      dateColumn: 'quote_date',
+      prefix: 'QT',
+    },
+    [SequenceType.INVOICE]: {
+      table: 'invoices',
+      dateColumn: 'invoice_date',
+      prefix: 'INV',
+    },
+    [SequenceType.SALES_ORDER]: {
+      table: 'sales_orders',
+      dateColumn: 'order_date',
+      prefix: 'SO',
+    },
+    [SequenceType.PURCHASE_ORDER]: {
+      table: 'purchase_orders',
+      dateColumn: 'order_date',
+      prefix: 'PO',
+    },
+    [SequenceType.JOURNAL_ENTRY]: {
+      table: 'journal_entries',
+      dateColumn: 'entry_date',
+      prefix: 'JE',
+    },
+    [SequenceType.PAYMENT]: {
+      table: 'payments',
+      dateColumn: 'payment_date',
+      prefix: 'PAY',
+    },
+    [SequenceType.STOCK_ENTRY]: {
+      table: 'stock_entries',
+      dateColumn: 'entry_date',
+      prefix: 'SE',
+    },
+  };
+
   constructor(private databaseService: DatabaseService) {}
 
   /**
-   * Generate next sequence number for a given type and organization
-   * Migrated from Supabase Edge Functions (generate_invoice_number, etc.)
+   * Generate sequence number for any type
+   * Format: PREFIX-YYYY-NNNNN (e.g., QT-2025-00001)
    */
-  async getNextSequence(
+  private async generateSequence(
     organizationId: string,
-    sequenceType: SequenceType,
-    prefix?: string,
+    type: SequenceType,
+    customPrefix?: string,
   ): Promise<string> {
     const client = this.databaseService.getAdminClient();
+    const config = this.sequenceConfigs[type];
+    const prefix = customPrefix || config.prefix;
+    const year = new Date().getFullYear();
 
     try {
-      // Call the existing Supabase RPC function
-      const { data, error } = await client.rpc('get_next_sequence', {
-        p_organization_id: organizationId,
-        p_sequence_type: sequenceType,
-        p_prefix: prefix || this.getDefaultPrefix(sequenceType),
-      });
+      const { count, error } = await client
+        .from(config.table)
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .gte(config.dateColumn, `${year}-01-01`)
+        .lt(config.dateColumn, `${year + 1}-01-01`);
 
       if (error) {
-        this.logger.error(`Failed to generate sequence: ${error.message}`);
-        throw new Error(`Failed to generate sequence: ${error.message}`);
+        this.logger.error(
+          `Failed to count ${type} for sequence: ${error.message}`,
+        );
+        throw new Error(`Failed to generate ${type} number: ${error.message}`);
       }
 
-      return data;
+      const nextNumber = (count || 0) + 1;
+      return `${prefix}-${year}-${nextNumber.toString().padStart(5, '0')}`;
     } catch (error) {
-      this.logger.error(`Sequence generation error: ${error.message}`);
+      this.logger.error(`${type} number generation error: ${error.message}`);
       throw error;
     }
-  }
-
-  /**
-   * Generate invoice number
-   */
-  async generateInvoiceNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(organizationId, SequenceType.INVOICE, 'INV');
   }
 
   /**
    * Generate quote number
    */
   async generateQuoteNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(organizationId, SequenceType.QUOTE, 'QUO');
+    return this.generateSequence(organizationId, SequenceType.QUOTE);
+  }
+
+  /**
+   * Generate invoice number
+   */
+  async generateInvoiceNumber(
+    organizationId: string,
+    invoiceType: 'sales' | 'purchase' = 'sales',
+  ): Promise<string> {
+    const prefix = invoiceType === 'sales' ? 'INV' : 'PINV';
+    return this.generateSequence(organizationId, SequenceType.INVOICE, prefix);
   }
 
   /**
    * Generate sales order number
    */
   async generateSalesOrderNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(organizationId, SequenceType.SALES_ORDER, 'SO');
+    return this.generateSequence(organizationId, SequenceType.SALES_ORDER);
   }
 
   /**
    * Generate purchase order number
    */
   async generatePurchaseOrderNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(
-      organizationId,
-      SequenceType.PURCHASE_ORDER,
-      'PO',
-    );
+    return this.generateSequence(organizationId, SequenceType.PURCHASE_ORDER);
   }
 
   /**
    * Generate journal entry number
    */
   async generateJournalEntryNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(
-      organizationId,
-      SequenceType.JOURNAL_ENTRY,
-      'JE',
-    );
+    return this.generateSequence(organizationId, SequenceType.JOURNAL_ENTRY);
   }
 
   /**
    * Generate payment number
    */
   async generatePaymentNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(organizationId, SequenceType.PAYMENT, 'PAY');
+    return this.generateSequence(organizationId, SequenceType.PAYMENT);
   }
 
   /**
    * Generate stock entry number
    */
   async generateStockEntryNumber(organizationId: string): Promise<string> {
-    return this.getNextSequence(
-      organizationId,
-      SequenceType.STOCK_ENTRY,
-      'SE',
-    );
-  }
-
-  /**
-   * Get default prefix for sequence type
-   */
-  private getDefaultPrefix(sequenceType: SequenceType): string {
-    const prefixes: Record<SequenceType, string> = {
-      [SequenceType.INVOICE]: 'INV',
-      [SequenceType.QUOTE]: 'QUO',
-      [SequenceType.SALES_ORDER]: 'SO',
-      [SequenceType.PURCHASE_ORDER]: 'PO',
-      [SequenceType.JOURNAL_ENTRY]: 'JE',
-      [SequenceType.PAYMENT]: 'PAY',
-      [SequenceType.STOCK_ENTRY]: 'SE',
-    };
-
-    return prefixes[sequenceType] || 'SEQ';
+    return this.generateSequence(organizationId, SequenceType.STOCK_ENTRY);
   }
 }
