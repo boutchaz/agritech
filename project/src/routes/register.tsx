@@ -75,22 +75,21 @@ function RegisterPage() {
         throw new Error(data.message || 'An error occurred during registration')
       }
 
-      // Signup successful
+      // Signup successful - now sign in with Supabase directly
+      console.log('✅ User created, signing in with Supabase...')
 
-      // Store tokens in localStorage
-      if (data.session) {
-        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session))
+      // Sign in with Supabase to get session
+      const { data: signInData, error: signInError } = await authSupabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        // Set the session in Supabase auth
-        const { error: sessionError } = await authSupabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        })
-
-        if (sessionError) {
-          console.error('⚠️ Error setting session:', sessionError)
-        }
+      if (signInError || !signInData.session) {
+        console.error('❌ Sign in error after signup:', signInError)
+        throw new Error('Account created but failed to sign in. Please try logging in.')
       }
+
+      console.log('✅ Signed in successfully')
 
       // Store organization ID and data for later use
       if (data.organization?.id) {
@@ -104,41 +103,6 @@ function RegisterPage() {
           role: 'organization_admin',
           is_active: true
         }))
-      }
-
-      // Verify organization membership via NestJS API with retry logic
-      // This ensures the database transaction is fully committed and queryable
-      let membershipVerified = false
-      const maxRetries = 5
-
-      for (let attempt = 0; attempt < maxRetries && !membershipVerified; attempt++) {
-        // Wait before checking (exponential backoff: 300ms, 600ms, 1200ms, etc.)
-        const delay = 300 * Math.pow(2, attempt)
-        await new Promise(resolve => setTimeout(resolve, delay))
-
-        try {
-          // Verify organization membership via NestJS API
-          const verifyResponse = await fetch(`${apiUrl}/api/v1/auth/organizations`, {
-            headers: {
-              'Authorization': `Bearer ${data.session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (verifyResponse.ok) {
-            const orgs = await verifyResponse.json()
-            if (orgs && orgs.length > 0) {
-              membershipVerified = true
-              break
-            }
-          }
-        } catch (error) {
-          console.warn(`⚠️ Error checking organization membership (attempt ${attempt + 1}):`, error)
-        }
-      }
-
-      if (!membershipVerified) {
-        console.warn('⚠️ Could not verify organization membership, but proceeding anyway')
       }
 
       // Redirect to trial selection

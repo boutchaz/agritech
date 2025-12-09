@@ -293,19 +293,10 @@ export class AuthService {
         this.logger.log(`Successfully created organization_users record: ${JSON.stringify(orgUserData)}`);
       }
 
-      // 5. Generate session tokens using regular client (not admin)
-      // The admin client cannot be used for signInWithPassword as it's meant for admin operations
-      const regularClient = this.databaseService.getClient();
-      const { data: sessionData, error: sessionError } =
-        await regularClient.auth.signInWithPassword({
-          email: signupDto.email,
-          password: signupDto.password,
-        });
-
-      if (sessionError || !sessionData.session) {
-        this.logger.error(`Failed to create session: ${sessionError?.message}`);
-        throw new BadRequestException('Failed to create session');
-      }
+      // 5. Return user info - frontend will handle the login
+      // Note: Supabase admin API cannot generate sessions via signInWithPassword
+      // The frontend should call Supabase directly to sign in after signup
+      this.logger.log(`User ${userId} created successfully, frontend will handle session creation`);
 
       this.logger.log(
         `User ${email} signed up successfully with organization ${organizationName}`,
@@ -322,11 +313,8 @@ export class AuthService {
           name: organizationName,
           slug: organizationSlug,
         },
-        session: {
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token,
-          expires_in: sessionData.session.expires_in,
-        },
+        // No session - frontend must call Supabase signInWithPassword directly
+        requiresLogin: true,
       };
     } catch (error) {
       // Rollback: Delete the auth user if anything fails
