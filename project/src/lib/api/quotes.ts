@@ -38,6 +38,23 @@ export interface CreateQuoteInput {
   reference_number?: string;
 }
 
+// Transform frontend input to API format
+function transformQuoteForApi(data: CreateQuoteInput) {
+  return {
+    ...data,
+    items: data.items.map((item, index) => ({
+      line_number: index + 1,
+      item_id: item.item_id,
+      item_name: item.item_name,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.rate, // Map rate to unit_price
+      account_id: item.account_id,
+      tax_id: item.tax_id || undefined,
+    })),
+  };
+}
+
 export const quotesApi = {
   /**
    * Get all quotes with optional filters
@@ -57,7 +74,8 @@ export const quotesApi = {
    * Create a new quote
    */
   async create(data: CreateQuoteInput, organizationId?: string) {
-    return apiClient.post(BASE_URL, data, {}, organizationId);
+    const transformedData = transformQuoteForApi(data);
+    return apiClient.post(BASE_URL, transformedData, {}, organizationId);
   },
 
   /**
