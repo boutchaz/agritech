@@ -155,29 +155,45 @@ export class AuthService {
    */
   async signup(signupDto: SignupDto) {
     const adminClient = this.databaseService.getAdminClient();
+    const regularClient = this.databaseService.getClient();
 
-    // 1. Create Supabase user
-    const { data: authData, error: authError } =
-      await adminClient.auth.admin.createUser({
+    // 1. Create Supabase user using regular signUp (not admin.createUser)
+    // This ensures the password is properly hashed and the user can sign in
+    const { data: signUpData, error: signUpError } =
+      await regularClient.auth.signUp({
         email: signupDto.email,
         password: signupDto.password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
-          full_name: `${signupDto.firstName} ${signupDto.lastName}`,
-          first_name: signupDto.firstName,
-          last_name: signupDto.lastName,
-          phone: signupDto.phone || null,
-          invited_to_organization: signupDto.invitedToOrganization || null,
-          invited_with_role: signupDto.invitedWithRole || null,
+        options: {
+          data: {
+            full_name: `${signupDto.firstName} ${signupDto.lastName}`,
+            first_name: signupDto.firstName,
+            last_name: signupDto.lastName,
+            phone: signupDto.phone || null,
+            invited_to_organization: signupDto.invitedToOrganization || null,
+            invited_with_role: signupDto.invitedWithRole || null,
+          },
         },
       });
 
-    if (authError || !authData.user) {
-      this.logger.error(`Failed to create user: ${authError?.message}`);
+    if (signUpError || !signUpData.user) {
+      this.logger.error(`Failed to create user: ${signUpError?.message}`);
       throw new BadRequestException(
-        authError?.message || 'Failed to create user',
+        signUpError?.message || 'Failed to create user',
       );
     }
+
+    // Auto-confirm the email using admin API
+    const { error: confirmError } = await adminClient.auth.admin.updateUserById(
+      signUpData.user.id,
+      { email_confirm: true }
+    );
+
+    if (confirmError) {
+      this.logger.warn(`Failed to auto-confirm email: ${confirmError.message}`);
+      // Continue anyway - user can still log in, just needs to confirm email
+    }
+
+    const authData = signUpData;
 
     const userId = authData.user.id;
     const email = authData.user.email;
