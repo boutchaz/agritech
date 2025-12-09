@@ -108,7 +108,6 @@
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitejs/plugin-react": "^5.0.4",
-    "vite-plugin-pwa": "^0.20.5",
     "autoprefixer": "^10",
     "dotenv": "^17.2.3",
     "eslint": "^9.36.0",
