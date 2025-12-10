@@ -111,6 +111,8 @@ export class SalesOrdersService {
       throw new BadRequestException('Valid organization ID is required');
     }
 
+    this.logger.debug(`Fetching sales orders for organization: ${organizationId}`);
+
     const supabaseClient = this.databaseService.getClient();
 
     try {
@@ -210,6 +212,8 @@ export class SalesOrdersService {
       if (countError) {
         this.logger.warn('Error fetching sales orders count:', countError);
       }
+
+      this.logger.debug(`Found ${data?.length || 0} sales orders, total count: ${count || 0}`);
 
       return {
         data: data || [],
