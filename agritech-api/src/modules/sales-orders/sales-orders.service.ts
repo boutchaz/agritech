@@ -27,7 +27,7 @@ export class SalesOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Generate order number if not provided
@@ -113,7 +113,7 @@ export class SalesOrdersService {
 
     this.logger.debug(`Fetching sales orders for organization: ${organizationId}`);
 
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       let query = supabaseClient
@@ -234,7 +234,7 @@ export class SalesOrdersService {
    * Find one sales order by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -268,7 +268,7 @@ export class SalesOrdersService {
     updateSalesOrderDto: UpdateSalesOrderDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if order exists
@@ -305,7 +305,7 @@ export class SalesOrdersService {
     updateStatusDto: UpdateStatusDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if order exists
@@ -352,7 +352,7 @@ export class SalesOrdersService {
    * Delete a sales order (only if status is draft)
    */
   async remove(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const order = await this.findOne(id, organizationId);
@@ -468,7 +468,7 @@ export class SalesOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Fetch sales order with items
