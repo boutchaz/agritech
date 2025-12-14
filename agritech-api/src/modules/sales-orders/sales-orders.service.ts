@@ -511,6 +511,7 @@ export class SalesOrdersService {
           item_name: item.item_name,
           description: item.description || null,
           quantity: remainingQty,
+          unit_of_measure: item.unit_of_measure || 'unit',
           unit_price: item.unit_price,
           amount: amount,
           tax_id: item.tax_id || null,
@@ -563,8 +564,9 @@ export class SalesOrdersService {
       }
 
       // Create invoice items
-      const itemsToInsert = invoiceItems.map((item) => ({
+      const itemsToInsert = invoiceItems.map((item, index) => ({
         invoice_id: invoice.id,
+        line_number: index + 1,
         ...item,
       }));
 

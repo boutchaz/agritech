@@ -2,6 +2,36 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { salesOrdersApi } from '../lib/api/sales-orders';
 
+// Raw sales order from database
+interface SalesOrderRaw {
+  id: string;
+  organization_id: string;
+  order_number: string;
+  order_date: string;
+  expected_delivery_date: string | null;
+  customer_id: string | null;
+  customer_name: string;
+  customer_contact: string | null;
+  customer_address: string | null;
+  shipping_address: string | null;
+  tracking_number: string | null;
+  subtotal: number | null;
+  tax_amount: number | null;
+  total_amount: number | null;
+  currency_code: string | null;
+  status: string | null;
+  notes: string | null;
+  terms_and_conditions: string | null;
+  stock_entry_id: string | null;
+  stock_issued: boolean | null;
+  stock_issued_date: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  sales_order_items?: SalesOrderItem[];
+}
+
+// Normalized sales order for frontend use
 export interface SalesOrder {
   id: string;
   organization_id: string;
@@ -10,36 +40,28 @@ export interface SalesOrder {
   expected_delivery_date: string | null;
   customer_id: string | null;
   customer_name: string;
+  customer_contact: string | null;
+  customer_address: string | null;
   shipping_address: string | null;
-  shipping_city: string | null;
-  shipping_postal_code: string | null;
-  shipping_country: string | null;
-  contact_person: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
+  tracking_number: string | null;
   subtotal: number;
+  tax_amount: number;
+  total_amount: number;
+  // Aliases for backward compatibility
   tax_total: number;
-  discount_amount: number;
-  shipping_charges: number;
   grand_total: number;
-  delivered_amount: number;
   invoiced_amount: number;
-  outstanding_amount: number;
   currency_code: string;
-  exchange_rate: number;
-  status: 'draft' | 'confirmed' | 'processing' | 'partially_delivered' | 'delivered' | 'partially_invoiced' | 'invoiced' | 'cancelled';
-  payment_terms: string | null;
-  delivery_terms: string | null;
+  status: 'draft' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'in_progress' | 'ready_to_ship' | 'invoiced';
   notes: string | null;
-  quote_id: string | null;
-  customer_po_number: string | null;
-  farm_id: string | null;
-  parcel_id: string | null;
+  terms_and_conditions: string | null;
+  stock_entry_id: string | null;
+  stock_issued: boolean | null;
+  stock_issued_date: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
-  confirmed_at: string | null;
-  confirmed_by: string | null;
+  items?: SalesOrderItem[];
 }
 
 export interface SalesOrderItem {
@@ -66,6 +88,57 @@ export interface SalesOrderItem {
 
 export interface SalesOrderWithItems extends SalesOrder {
   items?: SalesOrderItem[];
+}
+
+/**
+ * Transform raw database sales order to normalized frontend format
+ */
+function normalizeSalesOrder(raw: SalesOrderRaw): SalesOrder {
+  const subtotal = Number(raw.subtotal) || 0;
+  const taxAmount = Number(raw.tax_amount) || 0;
+  const totalAmount = Number(raw.total_amount) || 0;
+
+  // Calculate invoiced amount from items if available
+  let invoicedAmount = 0;
+  if (raw.sales_order_items && Array.isArray(raw.sales_order_items)) {
+    invoicedAmount = raw.sales_order_items.reduce((sum, item) => {
+      const invoicedQty = Number(item.invoiced_quantity) || 0;
+      const unitPrice = Number(item.unit_price) || 0;
+      return sum + (invoicedQty * unitPrice);
+    }, 0);
+  }
+
+  return {
+    id: raw.id,
+    organization_id: raw.organization_id,
+    order_number: raw.order_number,
+    order_date: raw.order_date,
+    expected_delivery_date: raw.expected_delivery_date,
+    customer_id: raw.customer_id,
+    customer_name: raw.customer_name,
+    customer_contact: raw.customer_contact,
+    customer_address: raw.customer_address,
+    shipping_address: raw.shipping_address,
+    tracking_number: raw.tracking_number,
+    subtotal,
+    tax_amount: taxAmount,
+    total_amount: totalAmount,
+    // Aliases for backward compatibility
+    tax_total: taxAmount,
+    grand_total: totalAmount,
+    invoiced_amount: invoicedAmount,
+    currency_code: raw.currency_code || 'MAD',
+    status: (raw.status || 'draft') as SalesOrder['status'],
+    notes: raw.notes,
+    terms_and_conditions: raw.terms_and_conditions,
+    stock_entry_id: raw.stock_entry_id,
+    stock_issued: raw.stock_issued,
+    stock_issued_date: raw.stock_issued_date,
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+    created_by: raw.created_by,
+    items: raw.sales_order_items,
+  };
 }
 
 /**
@@ -98,12 +171,13 @@ export function useSalesOrders(status?: SalesOrder['status']) {
           console.error('Sales orders API response missing data property:', response);
           // If response is an array directly (fallback), return it
           if (Array.isArray(response)) {
-            return response as SalesOrder[];
+            return (response as SalesOrderRaw[]).map(normalizeSalesOrder);
           }
           return [];
         }
 
-        return Array.isArray(response.data) ? response.data : [];
+        const rawData = Array.isArray(response.data) ? response.data : [];
+        return (rawData as SalesOrderRaw[]).map(normalizeSalesOrder);
       } catch (error) {
         console.error('Error fetching sales orders:', error);
         throw error;
@@ -126,7 +200,7 @@ export function useSalesOrder(orderId: string | null) {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
       const data = await salesOrdersApi.getSalesOrder(orderId, currentOrganization.id);
-      return data as SalesOrderWithItems;
+      return normalizeSalesOrder(data as SalesOrderRaw);
     },
     enabled: !!orderId && !!currentOrganization?.id,
   });

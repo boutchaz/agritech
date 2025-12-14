@@ -6,7 +6,6 @@ import {
   Trees as Tree,
   Fish,
   Leaf,
-  AlertCircle,
   Settings,
   Sun,
   Moon,
@@ -22,29 +21,16 @@ import {
   Package,
   Building2,
   Users,
-  Wallet,
-  FileSpreadsheet,
   Network,
   Menu,
   X,
-  CheckSquare,
   ChevronDown,
   ChevronRight,
-  Receipt,
-  CreditCard,
   BookOpen,
-  UserCheck,
-  FileEdit,
   ShoppingCart,
-  PackageSearch,
-  List,
-  Warehouse,
   Wheat,
-  ClipboardCheck,
-  Scale,
   Bell,
   BarChart3,
-  Truck,
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -76,20 +62,59 @@ const Sidebar: React.FC<SidebarProps> = ({
   const isRTL = i18n.language === 'ar';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Section toggles
-  const [showPersonnel, setShowPersonnel] = useState(false);
-  const [showProduction, setShowProduction] = useState(false);
-  const [showSalesPurchasing, setShowSalesPurchasing] = useState(false);
-  const [showAccounting, setShowAccounting] = useState(false);
-  const [showConfiguration, setShowConfiguration] = useState(false);
+  const currentPath = location.pathname;
+
+  // Helper to determine which section should be open based on current path
+  const getInitialSectionState = (sectionPaths: string[]) => {
+    return sectionPaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
+  };
+
+  // Section toggles - initialize based on current path
+  const [showPersonnel, setShowPersonnel] = useState(() =>
+    getInitialSectionState(['/workers', '/tasks'])
+  );
+  const [showProduction, setShowProduction] = useState(() =>
+    getInitialSectionState(['/harvests', '/reception-batches', '/quality-control'])
+  );
+  const [showSalesPurchasing, setShowSalesPurchasing] = useState(() =>
+    getInitialSectionState(['/billing-quotes', '/billing-sales-orders', '/billing-purchase-orders'])
+  );
+  const [showAccounting, setShowAccounting] = useState(() =>
+    getInitialSectionState(['/accounting', '/accounting-accounts', '/accounting-invoices', '/accounting-payments', '/accounting-journal', '/utilities'])
+  );
+  const [showConfiguration, setShowConfiguration] = useState(() =>
+    getInitialSectionState(['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'])
+  );
   const [showAgricultureModules, setShowAgricultureModules] = useState(false);
   const [showElevageModules, setShowElevageModules] = useState(false);
+
+  // Auto-expand parent section when navigating to a child route
+  useEffect(() => {
+    // Personnel section
+    if (['/workers', '/tasks'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowPersonnel(true);
+    }
+    // Production section
+    if (['/harvests', '/reception-batches', '/quality-control'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowProduction(true);
+    }
+    // Sales & Purchasing section
+    if (['/billing-quotes', '/billing-sales-orders', '/billing-purchase-orders'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowSalesPurchasing(true);
+    }
+    // Accounting section
+    if (['/accounting', '/accounting-accounts', '/accounting-invoices', '/accounting-payments', '/accounting-journal', '/utilities'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowAccounting(true);
+    }
+    // Configuration section
+    if (['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowConfiguration(true);
+    }
+  }, [currentPath]);
 
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
   const scrollPositionRef = React.useRef(0);
   const SCROLL_STORAGE_KEY = 'sidebarScrollTop';
-
-  const currentPath = location.pathname;
 
   const getModuleIcon = (iconName: string) => {
     switch (iconName) {

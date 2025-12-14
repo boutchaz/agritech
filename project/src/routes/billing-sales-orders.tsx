@@ -31,7 +31,7 @@ const AppContent: React.FC = () => {
   const [modules, _setModules] = useState(mockModules);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
+  const [statusFilter, _setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = useSalesOrders(statusFilter);
 
@@ -311,7 +311,9 @@ const AppContent: React.FC = () => {
                           {new Date(order.order_date).toLocaleDateString('fr-FR')}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(order.expected_delivery_date).toLocaleDateString('fr-FR')}
+                          {order.expected_delivery_date
+                            ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR')
+                            : '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-right font-medium">
                           {order.currency_code} {Number(order.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}

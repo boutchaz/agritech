@@ -102,47 +102,53 @@ export const salesOrdersApi = {
    * Get a single sales order by ID
    */
   async getSalesOrder(id: string, organizationId?: string) {
-    const { data } = await apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
-    return data;
+    // The API returns the sales order directly, not wrapped in { data }
+    const response = await apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
+    return response;
   },
 
   /**
    * Create a new sales order
    */
   async createSalesOrder(input: CreateSalesOrderInput, organizationId?: string) {
-    const { data } = await apiClient.post(BASE_URL, input, {}, organizationId);
-    return data;
+    // The API returns the sales order directly, not wrapped in { data }
+    const response = await apiClient.post(BASE_URL, input, {}, organizationId);
+    return response;
   },
 
   /**
    * Update an existing sales order
    */
   async updateSalesOrder(id: string, input: UpdateSalesOrderInput, organizationId?: string) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
-    return data;
+    // The API returns the sales order directly, not wrapped in { data }
+    const response = await apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
+    return response;
   },
 
   /**
    * Update sales order status
    */
   async updateSalesOrderStatus(id: string, input: UpdateStatusInput, organizationId?: string) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input, {}, organizationId);
-    return data;
+    // The API returns the sales order directly, not wrapped in { data }
+    const response = await apiClient.patch(`${BASE_URL}/${id}/status`, input, {}, organizationId);
+    return response;
   },
 
   /**
    * Delete a sales order (only drafts)
    */
   async deleteSalesOrder(id: string, organizationId?: string) {
-    const { data} = await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
-    return data;
+    // The API returns success message directly
+    const response = await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
+    return response;
   },
 
   /**
    * Convert sales order to invoice
    */
   async convertToInvoice(id: string, params?: { invoice_date?: string; due_date?: string }, organizationId?: string) {
-    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {}, {}, organizationId);
-    return data;
+    // The API returns the invoice directly, not wrapped in { data }
+    const response = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {}, {}, organizationId);
+    return response;
   },
 };

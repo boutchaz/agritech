@@ -12,12 +12,40 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
-import { CheckCircle2, ShoppingCart, FileText, Truck } from 'lucide-react';
+import { CheckCircle2, ShoppingCart, FileText, Truck, Clock, XCircle, Circle, AlertCircle, Loader2 } from 'lucide-react';
 import type { SalesOrder } from '@/hooks/useSalesOrders';
 import { useSalesOrder, useConvertOrderToInvoice } from '@/hooks/useSalesOrders';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { useAuth } from '../MultiTenantAuthProvider';
+
+// Types for timeline
+type TimelineStepKey = 'confirmed' | 'processing' | 'delivered' | 'invoiced';
+type StepState = 'completed' | 'current' | 'upcoming' | 'cancelled';
+
+const statusOrder: TimelineStepKey[] = ['confirmed', 'processing', 'delivered', 'invoiced'];
+
+const timelineStepConfig: Record<TimelineStepKey, { label: string; description: string }> = {
+  confirmed: { label: 'Order Confirmed', description: 'Order has been confirmed and is ready for processing' },
+  processing: { label: 'Processing', description: 'Order is being prepared for shipment' },
+  delivered: { label: 'Delivered', description: 'Order has been delivered to the customer' },
+  invoiced: { label: 'Invoiced', description: 'Invoice has been generated for this order' },
+};
+
+function formatDateTime(dateString: string | null): string | null {
+  if (!dateString) return null;
+  try {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return null;
+  }
+}
 
 interface SalesOrderDetailDialogProps {
   salesOrder: SalesOrder | null;
@@ -33,7 +61,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
-  
+
   const salesOrderId = salesOrder?.id ?? null;
   const {
     data: salesOrderWithItems,
@@ -69,7 +97,6 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const handleCreateInvoice = () => {
     if (!salesOrder) return;
 
-    // Use today as invoice date and 30 days later as due date
     const invoiceDate = new Date().toISOString().split('T')[0];
     const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -91,6 +118,9 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
     );
   };
 
+  const handleMarkProcessing = () => updateStatus.mutate('processing');
+  const handleMarkDelivered = () => updateStatus.mutate('delivered');
+
   const getStatusColor = (status: SalesOrder['status']) => {
     switch (status) {
       case 'draft':
@@ -99,14 +129,14 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
       case 'processing':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      case 'partially_delivered':
+      case 'shipped':
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
       case 'delivered':
         return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'partially_invoiced':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
       case 'invoiced':
         return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400';
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
       case 'cancelled':
         return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
       default:
@@ -135,6 +165,9 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
         <DialogContent className="max-w-md">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Failed to load sales order details.
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -142,22 +175,34 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   }
 
   const so = resolvedSalesOrder;
-  const normalizedStatus = so.status as NormalizedStatus;
-  const currentIndex =
-    normalizedStatus === 'cancelled'
-      ? statusOrder.indexOf('confirmed')
-      : statusOrder.indexOf(normalizedStatus as TimelineStepKey);
 
+  // Determine current step in timeline
   const getStepState = (step: TimelineStepKey): StepState => {
-    if (normalizedStatus === 'cancelled') {
+    if (so.status === 'cancelled') {
       if (step === 'confirmed' && so.status !== 'draft') return 'completed';
       return 'cancelled';
     }
 
-    if (normalizedStatus === 'partially_delivered') return getStepState('processing');
-    if (normalizedStatus === 'partially_invoiced') return getStepState('delivered');
+    const currentStatuses: Record<string, number> = {
+      draft: -1,
+      confirmed: 0,
+      processing: 1,
+      shipped: 2,
+      delivered: 2,
+      completed: 3,
+      invoiced: 3,
+    };
 
-    const stepIndex = statusOrder.indexOf(step);
+    const stepIndexes: Record<TimelineStepKey, number> = {
+      confirmed: 0,
+      processing: 1,
+      delivered: 2,
+      invoiced: 3,
+    };
+
+    const currentIndex = currentStatuses[so.status] ?? -1;
+    const stepIndex = stepIndexes[step];
+
     if (currentIndex > stepIndex) return 'completed';
     if (currentIndex === stepIndex) return 'current';
     return 'upcoming';
@@ -184,29 +229,10 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   }));
 
   const canMarkProcessing = so.status === 'confirmed';
-  const canMarkDelivered = ['processing', 'partially_delivered'].includes(so.status);
-  const canCreateInvoice = ['confirmed', 'processing', 'partially_delivered', 'delivered', 'partially_invoiced'].includes(so.status);
+  const canMarkDelivered = ['processing', 'shipped'].includes(so.status);
+  const canCreateInvoice = ['confirmed', 'processing', 'shipped', 'delivered', 'completed'].includes(so.status);
 
-  const remainingToInvoice = Number(so.grand_total) - Number(so.invoiced_amount);
-
-  const statusActions: Array<{
-    key: StatusActionKey;
-    label: string;
-    disabled: boolean;
-  }> = [
-    {
-      key: 'processing',
-      label: 'Start Processing',
-      disabled: !canMarkProcessing,
-    },
-    {
-      key: 'delivered',
-      label: 'Mark as Delivered',
-      disabled: !canMarkDelivered,
-    },
-  ];
-
-  const availableStatusActions = statusActions.filter((action) => !action.disabled);
+  const remainingToInvoice = Math.max(0, Number(so.grand_total) - Number(so.invoiced_amount));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -261,7 +287,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                     const icon = (() => {
                       switch (state) {
                         case 'completed': return <CheckCircle2 className="h-4 w-4" />;
-                        case 'current': return <ClockIcon className="h-4 w-4" />;
+                        case 'current': return <Clock className="h-4 w-4" />;
                         case 'cancelled': return <XCircle className="h-4 w-4" />;
                         default: return <Circle className="h-3 w-3" />;
                       }
@@ -289,7 +315,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                   })}
                 </div>
 
-                {normalizedStatus === 'cancelled' && (
+                {so.status === 'cancelled' && (
                   <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
                     <AlertCircle className="mt-0.5 h-4 w-4" />
                     <span>This sales order was cancelled.</span>
@@ -308,6 +334,28 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
+                {canMarkProcessing && (
+                  <Button
+                    onClick={handleMarkProcessing}
+                    disabled={updateStatus.isPending}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    Start Processing
+                  </Button>
+                )}
+                {canMarkDelivered && (
+                  <Button
+                    onClick={handleMarkDelivered}
+                    disabled={updateStatus.isPending}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
+                    <Truck className="mr-2 h-4 w-4" />
+                    Mark as Delivered
+                  </Button>
+                )}
                 <div className="flex flex-col gap-1">
                   <Button
                     onClick={handleCreateInvoice}
@@ -363,22 +411,6 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                   {so.currency_code}
                 </p>
               </div>
-              {so.quote_id && (
-                <div className="col-span-2">
-                  <span className="text-gray-600 dark:text-gray-400">Converted from Quote:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    Yes (Quote linked)
-                  </p>
-                </div>
-              )}
-              {so.payment_terms && (
-                <div className="col-span-2">
-                  <span className="text-gray-600 dark:text-gray-400">Payment Terms:</span>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {so.payment_terms}
-                  </p>
-                </div>
-              )}
               {so.shipping_address && (
                 <div className="col-span-2">
                   <span className="text-gray-600 dark:text-gray-400">Shipping Address:</span>
@@ -441,12 +473,6 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                         Qty
                       </th>
                       <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Delivered
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Invoiced
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Rate
                       </th>
                       <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -472,14 +498,8 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                         <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                           {item.quantity}
                         </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                          {item.delivered_quantity || 0}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                          {item.invoiced_quantity || 0}
-                        </td>
                         <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
-                          {formatCurrency(Number(item.rate), so.currency_code)}
+                          {formatCurrency(Number(item.unit_price), so.currency_code)}
                         </td>
                         <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                           {formatCurrency(Number(item.amount), so.currency_code)}
@@ -488,16 +508,13 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                           {formatCurrency(Number(item.tax_amount ?? 0), so.currency_code)}
                         </td>
                         <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            Number(item.amount) + Number(item.tax_amount ?? 0),
-                            so.currency_code
-                          )}
+                          {formatCurrency(Number(item.line_total ?? (Number(item.amount) + Number(item.tax_amount ?? 0))), so.currency_code)}
                         </td>
                       </tr>
                     ))}
                     {(!so.items || so.items.length === 0) && (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <td colSpan={7} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                           No line items found for this sales order.
                         </td>
                       </tr>
@@ -517,16 +534,16 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
             </CardHeader>
             <CardContent>
               <InvoiceTotalsDisplay
-                subtotal={Number(salesOrder.subtotal)}
-                taxTotal={Number(salesOrder.tax_total)}
-                grandTotal={Number(salesOrder.grand_total)}
-                currency={salesOrder.currency_code}
+                subtotal={Number(so.subtotal)}
+                taxTotal={Number(so.tax_total)}
+                grandTotal={Number(so.grand_total)}
+                currency={so.currency_code}
               />
             </CardContent>
           </Card>
 
           {/* Notes */}
-          {salesOrder.notes && (
+          {so.notes && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -535,7 +552,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {salesOrder.notes}
+                  {so.notes}
                 </p>
               </CardContent>
             </Card>
@@ -543,51 +560,16 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-4 border-t">
-            {canConfirm && (
-              <Button
-                onClick={handleConfirm}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Confirm Order
-              </Button>
-            )}
-            {canMarkProcessing && (
-              <Button
-                onClick={handleMarkProcessing}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                Start Processing
-              </Button>
-            )}
-            {canMarkPartiallyDelivered && (
-              <Button
-                onClick={handleMarkPartiallyDelivered}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <Truck className="mr-2 h-4 w-4" />
-                Mark Partially Delivered
-              </Button>
-            )}
-            {canMarkDelivered && (
-              <Button
-                onClick={handleMarkDelivered}
-                disabled={updateStatus.isPending}
-                variant="outline"
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Mark as Delivered
-              </Button>
-            )}
             {canCreateInvoice && remainingToInvoice > 0 && (
               <Button
                 onClick={handleCreateInvoice}
                 disabled={convertToInvoice.isPending}
               >
-                <FileText className="mr-2 h-4 w-4" />
+                {convertToInvoice.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
                 Create Invoice
               </Button>
             )}
