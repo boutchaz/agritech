@@ -4,6 +4,7 @@ import os
 import uuid
 import httpx
 import math
+import tempfile
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -27,13 +28,79 @@ class EarthEngineService:
             
         try:
             if settings.GEE_SERVICE_ACCOUNT and settings.GEE_PRIVATE_KEY:
-                credentials = ee.ServiceAccountCredentials(
-                    settings.GEE_SERVICE_ACCOUNT,
-                    key_data=settings.GEE_PRIVATE_KEY
-                )
-                ee.Initialize(credentials, project=settings.GEE_PROJECT_ID)
+                private_key_data = settings.GEE_PRIVATE_KEY
+                temp_path = None
+                
+                # Diagnostic logging (without exposing sensitive data)
+                data_type = type(private_key_data).__name__
+                if isinstance(private_key_data, str):
+                    preview = private_key_data[:50] + "..." if len(private_key_data) > 50 else private_key_data
+                    logger.info(f"GEE_PRIVATE_KEY type: {data_type}, length: {len(private_key_data)}, preview: {preview}")
+                else:
+                    logger.info(f"GEE_PRIVATE_KEY type: {data_type}, keys: {list(private_key_data.keys()) if isinstance(private_key_data, dict) else 'N/A'}")
+                
+                try:
+                    # Handle case where GEE_PRIVATE_KEY was parsed as a dict (e.g., by Dokploy)
+                    if isinstance(private_key_data, dict):
+                        # It's already a parsed dict - write to temp file
+                        logger.info("GEE_PRIVATE_KEY is a dict (parsed by environment loader), writing to temp file")
+                        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                            json.dump(private_key_data, f)
+                            temp_path = f.name
+                        credentials = ee.ServiceAccountCredentials(
+                            settings.GEE_SERVICE_ACCOUNT,
+                            temp_path
+                        )
+                    elif isinstance(private_key_data, str):
+                        # It's a string - try original approach first (key_data parameter)
+                        # This is the original working approach for JSON strings
+                        try:
+                            logger.info("GEE_PRIVATE_KEY is a string, using key_data parameter (original approach)")
+                            credentials = ee.ServiceAccountCredentials(
+                                settings.GEE_SERVICE_ACCOUNT,
+                                key_data=private_key_data
+                            )
+                            # Don't initialize here - let it initialize below with the rest
+                        except Exception as key_data_error:
+                            # If key_data fails, fall back to temp file approach
+                            logger.warning(f"key_data approach failed: {key_data_error}, trying temp file approach")
+                            if private_key_data.strip().startswith('{'):
+                                # It's a JSON string - write to temp file
+                                logger.info("Writing JSON string to temp file as fallback")
+                                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                                    f.write(private_key_data)
+                                    temp_path = f.name
+                                credentials = ee.ServiceAccountCredentials(
+                                    settings.GEE_SERVICE_ACCOUNT,
+                                    temp_path
+                                )
+                            else:
+                                # Re-raise the original error if it's not JSON
+                                raise key_data_error
+                    else:
+                        raise ValueError(f"GEE_PRIVATE_KEY has unexpected type: {type(private_key_data)}")
+                    
+                    ee.Initialize(credentials, project=settings.GEE_PROJECT_ID)
+                    
+                    # Clean up temp file if created
+                    if temp_path and os.path.exists(temp_path):
+                        try:
+                            os.unlink(temp_path)
+                        except Exception:
+                            pass  # Ignore cleanup errors
+                            
+                except Exception as init_error:
+                    logger.error(f"Error during credential initialization: {init_error}")
+                    # Clean up temp file on error
+                    if temp_path and os.path.exists(temp_path):
+                        try:
+                            os.unlink(temp_path)
+                        except Exception:
+                            pass
+                    raise
             else:
                 # Fallback to default authentication for development
+                logger.info("No service account credentials provided, using default authentication")
                 ee.Initialize(project=settings.GEE_PROJECT_ID)
             
             self.initialized = True

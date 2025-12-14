@@ -1,0 +1,9 @@
+# Browser data and temp files
+profiles/
+tmp/
+node_modules/
+bun.lock
+
+# Test files
+*.test.ts
+__tests__/

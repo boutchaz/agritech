@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
-from typing import List
+from typing import List, Union, Any
 import os
 
 class Settings(BaseSettings):
@@ -18,8 +18,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
     
     # Google Earth Engine
+    # GEE_PRIVATE_KEY can be a string (JSON) or dict (if parsed by environment loader like Dokploy)
     GEE_SERVICE_ACCOUNT: str = os.getenv("GEE_SERVICE_ACCOUNT", "")
-    GEE_PRIVATE_KEY: str = os.getenv("GEE_PRIVATE_KEY", "")
+    GEE_PRIVATE_KEY: Union[str, dict, Any] = os.getenv("GEE_PRIVATE_KEY", "")
     GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "")
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     
