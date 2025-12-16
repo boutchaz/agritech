@@ -333,8 +333,6 @@ export class JournalEntriesService {
           status: 'posted',
           posted_by: userId,
           posted_at: now,
-          posting_date: entry.entry_date,
-          updated_at: now,
         })
         .eq('id', id)
         .eq('organization_id', organizationId);

@@ -99,4 +99,9 @@ export class CreateUtilityDto {
   @IsOptional()
   @IsNumber()
   cost_per_parcel?: number;
+
+  @ApiPropertyOptional({ description: 'Journal entry ID (ignored, for frontend compatibility)' })
+  @IsOptional()
+  @IsString()
+  journal_entry_id?: string;
 }

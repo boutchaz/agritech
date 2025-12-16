@@ -20,8 +20,12 @@ export const Route = createRootRoute({
                 <Outlet />
                 <OfflineIndicator />
                 <Toaster richColors position="top-right" />
-                <TanStackRouterDevtools />
-                <ReactQueryDevtools initialIsOpen={false} />
+                {import.meta.env.DEV && (
+                  <>
+                    <TanStackRouterDevtools />
+                    <ReactQueryDevtools initialIsOpen={false} />
+                  </>
+                )}
               </div>
             </GlobalCommandPalette>
           </AbilityProvider>
