@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Package, TrendingUp, Edit, Trash2, Eye, Award } from 'lucide-react';
+import { Calendar, MapPin, Package, TrendingUp, Edit, Trash2, Eye, Award, ClipboardCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { HarvestSummary } from '../../types/harvests';
@@ -9,9 +9,10 @@ interface HarvestCardProps {
   onEdit: (harvest: HarvestSummary) => void;
   onDelete: (harvestId: string) => void;
   onViewDetails: (harvestId: string) => void;
+  onCreateReception?: (harvest: HarvestSummary) => void;
 }
 
-const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, onViewDetails }) => {
+const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, onViewDetails, onCreateReception }) => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       stored: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
@@ -69,6 +70,15 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
           </h3>
         </div>
         <div className="flex items-center gap-1">
+          {onCreateReception && harvest.status === 'stored' && (
+            <button
+              onClick={() => onCreateReception(harvest)}
+              className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+              title="Créer Lot de Réception"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={() => onViewDetails(harvest.id)}
             className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"

@@ -36,21 +36,25 @@ const ParcelSatellite = () => {
           <IndexImageViewer
             parcelId={parcel.id}
             parcelName={parcel.name}
+            farmId={parcel.farm_id || undefined}
             boundary={parcel.boundary}
           />
           <StatisticsCalculator
             parcelId={parcel.id}
             parcelName={parcel.name}
+            farmId={parcel.farm_id || undefined}
             boundary={parcel.boundary}
           />
           <IndicesCalculator
             parcelId={parcel.id}
             parcelName={parcel.name}
+            farmId={parcel.farm_id || undefined}
             boundary={parcel.boundary}
           />
           <TimeSeriesChart
             parcelId={parcel.id}
             parcelName={parcel.name}
+            farmId={parcel.farm_id}
             boundary={parcel.boundary}
           />
         </Suspense>

@@ -19,6 +19,9 @@ import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as SelectTrialRouteImport } from './routes/select-trial'
 import { Route as SatelliteAnalysisRouteImport } from './routes/satellite-analysis'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ReportTrialBalanceRouteImport } from './routes/report-trial-balance'
+import { Route as ReportProfitLossRouteImport } from './routes/report-profit-loss'
+import { Route as ReportBalanceSheetRouteImport } from './routes/report-balance-sheet'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReceptionBatchesRouteImport } from './routes/reception-batches'
 import { Route as QualityControlRouteImport } from './routes/quality-control'
@@ -77,9 +80,6 @@ import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboa
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AccountingReportsTrialBalanceRouteImport } from './routes/accounting-reports.trial-balance'
-import { Route as AccountingReportsProfitLossRouteImport } from './routes/accounting-reports.profit-loss'
-import { Route as AccountingReportsBalanceSheetRouteImport } from './routes/accounting-reports.balance-sheet'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
 import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
@@ -138,6 +138,21 @@ const SatelliteAnalysisRoute = SatelliteAnalysisRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportTrialBalanceRoute = ReportTrialBalanceRouteImport.update({
+  id: '/report-trial-balance',
+  path: '/report-trial-balance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportProfitLossRoute = ReportProfitLossRouteImport.update({
+  id: '/report-profit-loss',
+  path: '/report-profit-loss',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportBalanceSheetRoute = ReportBalanceSheetRouteImport.update({
+  id: '/report-balance-sheet',
+  path: '/report-balance-sheet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -429,24 +444,6 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountingReportsTrialBalanceRoute =
-  AccountingReportsTrialBalanceRouteImport.update({
-    id: '/trial-balance',
-    path: '/trial-balance',
-    getParentRoute: () => AccountingReportsRoute,
-  } as any)
-const AccountingReportsProfitLossRoute =
-  AccountingReportsProfitLossRouteImport.update({
-    id: '/profit-loss',
-    path: '/profit-loss',
-    getParentRoute: () => AccountingReportsRoute,
-  } as any)
-const AccountingReportsBalanceSheetRoute =
-  AccountingReportsBalanceSheetRouteImport.update({
-    id: '/balance-sheet',
-    path: '/balance-sheet',
-    getParentRoute: () => AccountingReportsRoute,
-  } as any)
 const StockInventoryIndexRoute = StockInventoryIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -505,7 +502,7 @@ export interface FileRoutesByFullPath {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRouteWithChildren
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -528,6 +525,9 @@ export interface FileRoutesByFullPath {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-balance-sheet': typeof ReportBalanceSheetRoute
+  '/report-profit-loss': typeof ReportProfitLossRoute
+  '/report-trial-balance': typeof ReportTrialBalanceRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
@@ -538,9 +538,6 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
-  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
-  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
-  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
@@ -586,7 +583,7 @@ export interface FileRoutesByTo {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRouteWithChildren
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -608,6 +605,9 @@ export interface FileRoutesByTo {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-balance-sheet': typeof ReportBalanceSheetRoute
+  '/report-profit-loss': typeof ReportProfitLossRoute
+  '/report-trial-balance': typeof ReportTrialBalanceRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
@@ -615,9 +615,6 @@ export interface FileRoutesByTo {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
-  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
-  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
-  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -663,7 +660,7 @@ export interface FileRoutesById {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRouteWithChildren
+  '/accounting-reports': typeof AccountingReportsRoute
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -686,6 +683,9 @@ export interface FileRoutesById {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-balance-sheet': typeof ReportBalanceSheetRoute
+  '/report-profit-loss': typeof ReportProfitLossRoute
+  '/report-trial-balance': typeof ReportTrialBalanceRoute
   '/reports': typeof ReportsRoute
   '/satellite-analysis': typeof SatelliteAnalysisRoute
   '/select-trial': typeof SelectTrialRoute
@@ -696,9 +696,6 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
-  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
-  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
-  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
@@ -769,6 +766,9 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-balance-sheet'
+    | '/report-profit-loss'
+    | '/report-trial-balance'
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
@@ -779,9 +779,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
-    | '/accounting-reports/balance-sheet'
-    | '/accounting-reports/profit-loss'
-    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
@@ -849,6 +846,9 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-balance-sheet'
+    | '/report-profit-loss'
+    | '/report-trial-balance'
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
@@ -856,9 +856,6 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/utilities'
     | '/workers'
-    | '/accounting-reports/balance-sheet'
-    | '/accounting-reports/profit-loss'
-    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/settings/dashboard'
@@ -926,6 +923,9 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-balance-sheet'
+    | '/report-profit-loss'
+    | '/report-trial-balance'
     | '/reports'
     | '/satellite-analysis'
     | '/select-trial'
@@ -936,9 +936,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
-    | '/accounting-reports/balance-sheet'
-    | '/accounting-reports/profit-loss'
-    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
@@ -986,7 +983,7 @@ export interface RootRouteChildren {
   AccountingInvoicesRoute: typeof AccountingInvoicesRoute
   AccountingJournalRoute: typeof AccountingJournalRoute
   AccountingPaymentsRoute: typeof AccountingPaymentsRoute
-  AccountingReportsRoute: typeof AccountingReportsRouteWithChildren
+  AccountingReportsRoute: typeof AccountingReportsRoute
   AnalysesRoute: typeof AnalysesRoute
   BillingPurchaseOrdersRoute: typeof BillingPurchaseOrdersRoute
   BillingQuotesRoute: typeof BillingQuotesRoute
@@ -1009,6 +1006,9 @@ export interface RootRouteChildren {
   QualityControlRoute: typeof QualityControlRoute
   ReceptionBatchesRoute: typeof ReceptionBatchesRoute
   RegisterRoute: typeof RegisterRoute
+  ReportBalanceSheetRoute: typeof ReportBalanceSheetRoute
+  ReportProfitLossRoute: typeof ReportProfitLossRoute
+  ReportTrialBalanceRoute: typeof ReportTrialBalanceRoute
   ReportsRoute: typeof ReportsRoute
   SatelliteAnalysisRoute: typeof SatelliteAnalysisRoute
   SelectTrialRoute: typeof SelectTrialRoute
@@ -1092,6 +1092,27 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report-trial-balance': {
+      id: '/report-trial-balance'
+      path: '/report-trial-balance'
+      fullPath: '/report-trial-balance'
+      preLoaderRoute: typeof ReportTrialBalanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report-profit-loss': {
+      id: '/report-profit-loss'
+      path: '/report-profit-loss'
+      fullPath: '/report-profit-loss'
+      preLoaderRoute: typeof ReportProfitLossRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report-balance-sheet': {
+      id: '/report-balance-sheet'
+      path: '/report-balance-sheet'
+      fullPath: '/report-balance-sheet'
+      preLoaderRoute: typeof ReportBalanceSheetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -1500,27 +1521,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/accounting-reports/trial-balance': {
-      id: '/accounting-reports/trial-balance'
-      path: '/trial-balance'
-      fullPath: '/accounting-reports/trial-balance'
-      preLoaderRoute: typeof AccountingReportsTrialBalanceRouteImport
-      parentRoute: typeof AccountingReportsRoute
-    }
-    '/accounting-reports/profit-loss': {
-      id: '/accounting-reports/profit-loss'
-      path: '/profit-loss'
-      fullPath: '/accounting-reports/profit-loss'
-      preLoaderRoute: typeof AccountingReportsProfitLossRouteImport
-      parentRoute: typeof AccountingReportsRoute
-    }
-    '/accounting-reports/balance-sheet': {
-      id: '/accounting-reports/balance-sheet'
-      path: '/balance-sheet'
-      fullPath: '/accounting-reports/balance-sheet'
-      preLoaderRoute: typeof AccountingReportsBalanceSheetRouteImport
-      parentRoute: typeof AccountingReportsRoute
-    }
     '/stock/inventory/': {
       id: '/stock/inventory/'
       path: '/'
@@ -1586,21 +1586,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface AccountingReportsRouteChildren {
-  AccountingReportsBalanceSheetRoute: typeof AccountingReportsBalanceSheetRoute
-  AccountingReportsProfitLossRoute: typeof AccountingReportsProfitLossRoute
-  AccountingReportsTrialBalanceRoute: typeof AccountingReportsTrialBalanceRoute
-}
-
-const AccountingReportsRouteChildren: AccountingReportsRouteChildren = {
-  AccountingReportsBalanceSheetRoute: AccountingReportsBalanceSheetRoute,
-  AccountingReportsProfitLossRoute: AccountingReportsProfitLossRoute,
-  AccountingReportsTrialBalanceRoute: AccountingReportsTrialBalanceRoute,
-}
-
-const AccountingReportsRouteWithChildren =
-  AccountingReportsRoute._addFileChildren(AccountingReportsRouteChildren)
 
 interface BlogRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1762,7 +1747,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountingInvoicesRoute: AccountingInvoicesRoute,
   AccountingJournalRoute: AccountingJournalRoute,
   AccountingPaymentsRoute: AccountingPaymentsRoute,
-  AccountingReportsRoute: AccountingReportsRouteWithChildren,
+  AccountingReportsRoute: AccountingReportsRoute,
   AnalysesRoute: AnalysesRoute,
   BillingPurchaseOrdersRoute: BillingPurchaseOrdersRoute,
   BillingQuotesRoute: BillingQuotesRoute,
@@ -1785,6 +1770,9 @@ const rootRouteChildren: RootRouteChildren = {
   QualityControlRoute: QualityControlRoute,
   ReceptionBatchesRoute: ReceptionBatchesRoute,
   RegisterRoute: RegisterRoute,
+  ReportBalanceSheetRoute: ReportBalanceSheetRoute,
+  ReportProfitLossRoute: ReportProfitLossRoute,
+  ReportTrialBalanceRoute: ReportTrialBalanceRoute,
   ReportsRoute: ReportsRoute,
   SatelliteAnalysisRoute: SatelliteAnalysisRoute,
   SelectTrialRoute: SelectTrialRoute,

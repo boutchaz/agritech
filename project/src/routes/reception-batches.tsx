@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
@@ -29,6 +29,14 @@ function ReceptionBatchesPage() {
   const [modules] = useState(mockModules);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
+  const search = Route.useSearch();
+  const defaultHarvestId = search.harvest_id;
+
+  useEffect(() => {
+    if (defaultHarvestId) {
+      setShowCreateForm(true);
+    }
+  }, [defaultHarvestId]);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -90,6 +98,7 @@ function ReceptionBatchesPage() {
         <ReceptionBatchForm
           open={showCreateForm}
           onOpenChange={setShowCreateForm}
+          defaultHarvestId={defaultHarvestId}
         />
       </main>
     </div>
@@ -97,5 +106,10 @@ function ReceptionBatchesPage() {
 }
 
 export const Route = createFileRoute('/reception-batches')({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      harvest_id: search.harvest_id as string | undefined,
+    };
+  },
   component: ReceptionBatchesPage,
 });

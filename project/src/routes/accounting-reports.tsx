@@ -44,7 +44,7 @@ const AppContent: React.FC = () => {
       icon: Scale,
       iconBg: 'bg-blue-500',
       available: true,
-      path: '/accounting-reports/balance-sheet',
+      path: '/report-balance-sheet',
     },
     {
       id: 'profit-loss',
@@ -53,7 +53,7 @@ const AppContent: React.FC = () => {
       icon: TrendingUp,
       iconBg: 'bg-green-500',
       available: true,
-      path: '/accounting-reports/profit-loss',
+      path: '/report-profit-loss',
     },
     {
       id: 'trial-balance',
@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
       icon: BookOpen,
       iconBg: 'bg-purple-500',
       available: true,
-      path: '/accounting-reports/trial-balance',
+      path: '/report-trial-balance',
     },
     {
       id: 'general-ledger',
@@ -71,7 +71,7 @@ const AppContent: React.FC = () => {
       icon: FileSpreadsheet,
       iconBg: 'bg-orange-500',
       available: false,
-      path: '/accounting-reports/general-ledger',
+      path: '/report-general-ledger',
     },
     {
       id: 'aged-receivables',
@@ -80,7 +80,7 @@ const AppContent: React.FC = () => {
       icon: Calendar,
       iconBg: 'bg-red-500',
       available: false,
-      path: '/accounting-reports/aged-receivables',
+      path: '/report-aged-receivables',
     },
     {
       id: 'aged-payables',
@@ -89,7 +89,7 @@ const AppContent: React.FC = () => {
       icon: Users,
       iconBg: 'bg-indigo-500',
       available: false,
-      path: '/accounting-reports/aged-payables',
+      path: '/report-aged-payables',
     },
   ];
 

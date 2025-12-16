@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer, CalendarDays } from 'lucide-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer, CalendarDays, Satellite, Database, RefreshCw } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -9,19 +9,35 @@ import {
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
+import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
+import { useAuth } from '../MultiTenantAuthProvider';
 import InteractiveIndexViewer from './InteractiveIndexViewer';
 
 interface IndexImageViewerProps {
   parcelId: string;
   parcelName?: string;
+  farmId?: string;
   boundary?: number[][];
+}
+
+interface CachedImageData {
+  index: VegetationIndexType;
+  image_url: string;
+  date: string;
+  cloud_coverage: number;
+  metadata?: Record<string, any>;
 }
 
 const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   parcelId,
   parcelName,
+  farmId,
   boundary
 }) => {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const organizationId = currentOrganization?.id;
+
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -30,6 +46,8 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
   const [displayMode, setDisplayMode] = useState<'static' | 'interactive'>('static');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncedRef = useRef<Set<string>>(new Set());
 
   // Initialize with last 30 days for better date availability
   useEffect(() => {
@@ -37,6 +55,43 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
     setStartDate(defaultRange.start_date);
     setEndDate(defaultRange.end_date);
   }, []);
+
+  // Query cached images from database
+  const {
+    data: cachedImages,
+    isLoading: isLoadingCache,
+    refetch: refetchCache,
+  } = useQuery({
+    queryKey: ['satellite-images-cache', parcelId, selectedDate || startDate],
+    queryFn: async (): Promise<CachedImageData[]> => {
+      if (!organizationId || !parcelId) return [];
+
+      const targetDate = selectedDate || startDate;
+      if (!targetDate) return [];
+
+      const response = await satelliteIndicesApi.getAll(
+        {
+          parcel_id: parcelId,
+          date_from: targetDate,
+          date_to: targetDate,
+        },
+        organizationId
+      );
+
+      // Filter entries that have image_url in metadata
+      return response
+        .filter(item => item.metadata?.image_url)
+        .map(item => ({
+          index: item.index_name as VegetationIndexType,
+          image_url: item.metadata?.image_url,
+          date: item.date?.split('T')[0],
+          cloud_coverage: item.cloud_coverage_percentage || 0,
+          metadata: item.metadata,
+        }));
+    },
+    enabled: !!organizationId && !!parcelId && !!(selectedDate || startDate),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Fetch available dates when boundary and date range are set
   const availableDatesQuery = useQuery({
@@ -65,10 +120,10 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
     );
   };
 
-  // Use React Query mutation for generating images
+  // Use React Query mutation for generating images from satellite API
   const generateImagesMutation = useMutation({
     mutationFn: async () => {
-      if (!boundary || selectedIndices.length === 0) {
+      if (!boundary || selectedIndices.length === 0 || !organizationId) {
         throw new Error('Missing required parameters');
       }
 
@@ -80,7 +135,6 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
       // Use selected date if available, otherwise use date range
       let dateRange;
       if (selectedDate) {
-        // For a specific date, use a narrow range around it
         dateRange = {
           start_date: selectedDate,
           end_date: selectedDate
@@ -91,17 +145,79 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
         throw new Error('Please select a specific date or set a date range');
       }
 
-      return satelliteApi.generateMultipleIndexImages(
-        aoi,
-        dateRange,
-        selectedIndices,
-        cloudCoverage
-      );
+      setIsSyncing(true);
+
+      try {
+        const results = await satelliteApi.generateMultipleIndexImages(
+          aoi,
+          dateRange,
+          selectedIndices,
+          cloudCoverage
+        );
+
+        // Save each image to database cache
+        for (const imageData of results) {
+          try {
+            await satelliteIndicesApi.create(
+              {
+                parcel_id: parcelId,
+                farm_id: farmId,
+                index_name: imageData.index,
+                date: imageData.date,
+                cloud_coverage_percentage: imageData.cloud_coverage,
+                metadata: {
+                  image_url: imageData.image_url,
+                  ...imageData.metadata,
+                },
+              },
+              organizationId
+            );
+          } catch {
+            // Ignore duplicates
+          }
+        }
+
+        // Refetch cache
+        await refetchCache();
+        queryClient.invalidateQueries({ queryKey: ['satellite-images-cache', parcelId] });
+
+        return results;
+      } finally {
+        setIsSyncing(false);
+      }
     },
   });
 
+  // Get display images: prefer cached, fall back to mutation results
+  const displayImages = useCallback((): CachedImageData[] => {
+    // First check cached images for selected indices
+    const cached = (cachedImages || []).filter(img => selectedIndices.includes(img.index));
+
+    if (cached.length > 0) {
+      return cached;
+    }
+
+    // Fall back to mutation results
+    if (generateImagesMutation.data) {
+      return generateImagesMutation.data.map(img => ({
+        index: img.index,
+        image_url: img.image_url,
+        date: img.date,
+        cloud_coverage: img.cloud_coverage,
+        metadata: img.metadata,
+      }));
+    }
+
+    return [];
+  }, [cachedImages, selectedIndices, generateImagesMutation.data]);
+
   const generateImages = () => {
     generateImagesMutation.mutate();
+  };
+
+  const getCacheStats = () => {
+    const cached = (cachedImages || []).filter(img => selectedIndices.includes(img.index));
+    return { total: cached.length, fromCache: cached.length > 0 };
   };
 
   const getIndexColor = (index: VegetationIndexType) => {
@@ -323,16 +439,41 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           </div>
         </div>
 
-        {/* Generate Button */}
-        <button
-          onClick={generateImages}
-          disabled={generateImagesMutation.isPending || !boundary || selectedIndices.length === 0 || (!selectedDate && (!startDate || !endDate))}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {generateImagesMutation.isPending ? <Loader className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-          {generateImagesMutation.isPending ? 'Generating Images...' :
-           selectedDate ? `Generate Images for ${selectedDate}` : 'Generate Images'}
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-3 items-center">
+          {/* Cache indicator */}
+          {getCacheStats().fromCache && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <Database className="w-3 h-3" />
+              <span>{getCacheStats().total} images en cache</span>
+            </div>
+          )}
+
+          {/* Refresh cache button */}
+          <button
+            onClick={() => refetchCache()}
+            disabled={isLoadingCache}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
+            Actualiser le cache
+          </button>
+
+          {/* Generate from satellite API button */}
+          <button
+            onClick={generateImages}
+            disabled={generateImagesMutation.isPending || isSyncing || !boundary || selectedIndices.length === 0 || (!selectedDate && (!startDate || !endDate))}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {(generateImagesMutation.isPending || isSyncing) ? (
+              <Loader className="w-4 h-4 animate-spin" />
+            ) : (
+              <Satellite className="w-4 h-4" />
+            )}
+            {(generateImagesMutation.isPending || isSyncing) ? 'Récupération...' :
+             selectedDate ? `Récupérer depuis satellite (${selectedDate})` : 'Récupérer depuis satellite'}
+          </button>
+        </div>
         {!selectedDate && availableDatesQuery.data?.available_dates.length > 0 && (
           <p className="text-sm text-amber-600 mt-2">
             Tip: Select a specific date from the available dates above for better results.
@@ -356,10 +497,12 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
       )}
 
       {/* Image Display */}
-      {generateImagesMutation.data && generateImagesMutation.data.length > 0 && (
+      {displayImages().length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Generated Images</h3>
+            <h3 className="text-lg font-semibold">
+              {getCacheStats().fromCache ? 'Images (depuis cache)' : 'Images générées'}
+            </h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode(viewMode === 'grid' ? 'single' : 'grid')}
@@ -374,7 +517,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
           {viewMode === 'grid' ? (
             /* Grid View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {generateImagesMutation.data.map((imageData) => (
+              {displayImages().map((imageData) => (
                 <div key={imageData.index} className="bg-white border rounded-lg overflow-hidden shadow-sm">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-2">
@@ -456,7 +599,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
             <div className="space-y-4">
               {/* Image Navigation */}
               <div className="flex items-center justify-center gap-2">
-                {generateImagesMutation.data.map((_, index) => (
+                {displayImages().map((img, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
@@ -466,91 +609,92 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    {generateImagesMutation.data[index].index}
+                    {img.index}
                   </button>
                 ))}
               </div>
 
               {/* Selected Image */}
-              {generateImagesMutation.data[selectedImageIndex] && (
-                <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="p-6 border-b">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4
-                        className="text-2xl font-bold"
-                        style={{ color: getIndexColor(generateImagesMutation.data[selectedImageIndex].index) }}
-                      >
-                        {generateImagesMutation.data[selectedImageIndex].index}
-                      </h4>
-                      <button
-                        onClick={() => downloadImage(
-                          generateImagesMutation.data[selectedImageIndex].image_url,
-                          generateImagesMutation.data[selectedImageIndex].index,
-                          generateImagesMutation.data[selectedImageIndex].date
+              {(() => {
+                const selectedImg = displayImages()[selectedImageIndex];
+                if (!selectedImg) return null;
+                return (
+                  <div className="bg-white border rounded-lg overflow-hidden">
+                    <div className="p-6 border-b">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4
+                          className="text-2xl font-bold"
+                          style={{ color: getIndexColor(selectedImg.index) }}
+                        >
+                          {selectedImg.index}
+                        </h4>
+                        <button
+                          onClick={() => downloadImage(
+                            selectedImg.image_url,
+                            selectedImg.index,
+                            selectedImg.date
+                          )}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download Image
+                        </button>
+                      </div>
+                      <p className="text-gray-700 mb-4">
+                        {VEGETATION_INDEX_DESCRIPTIONS[selectedImg.index]}
+                      </p>
+                      <div className="flex items-center gap-6 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Date: {selectedImg.date}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Cloud className="w-4 h-4" />
+                          Cloud Coverage: {selectedImg.cloud_coverage.toFixed(1)}%
+                        </div>
+                        {selectedImg.metadata?.suitable_images && (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            {selectedImg.metadata.suitable_images} suitable images found
+                          </div>
                         )}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download Image
-                      </button>
-                    </div>
-                    <p className="text-gray-700 mb-4">
-                      {VEGETATION_INDEX_DESCRIPTIONS[generateImagesMutation.data[selectedImageIndex].index]}
-                    </p>
-                    <div className="flex items-center gap-6 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Date: {generateImagesMutation.data[selectedImageIndex].date}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Cloud className="w-4 h-4" />
-                        Cloud Coverage: {generateImagesMutation.data[selectedImageIndex].cloud_coverage.toFixed(1)}%
-                        {generateImagesMutation.data[selectedImageIndex].metadata?.threshold_used > generateImagesMutation.data[selectedImageIndex].metadata?.requested_threshold && (
-                          <span className="text-sm text-amber-600 font-medium" title={`Requested ${generateImagesMutation.data[selectedImageIndex].metadata.requested_threshold}% but used ${generateImagesMutation.data[selectedImageIndex].metadata.threshold_used}%`}>
-                            (threshold relaxed to {generateImagesMutation.data[selectedImageIndex].metadata.threshold_used}%)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        {generateImagesMutation.data[selectedImageIndex].metadata.suitable_images} suitable images found
                       </div>
                     </div>
-                  </div>
 
-                  {/* Large Image Display */}
-                  <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                    <img
-                      src={generateImagesMutation.data[selectedImageIndex].image_url}
-                      alt={`${generateImagesMutation.data[selectedImageIndex].index} visualization`}
-                      className="max-w-full max-h-full object-contain rounded"
-                    />
-                  </div>
+                    {/* Large Image Display */}
+                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                      <img
+                        src={selectedImg.image_url}
+                        alt={`${selectedImg.index} visualization`}
+                        className="max-w-full max-h-full object-contain rounded"
+                      />
+                    </div>
 
-                  {/* Enhanced Color Legend */}
-                  <div className="p-6 bg-gray-50">
-                    <h5 className="font-medium mb-3">Color Scale Interpretation</h5>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {getColorLegend(generateImagesMutation.data[selectedImageIndex].index).min}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {getColorLegend(generateImagesMutation.data[selectedImageIndex].index).max}
-                      </span>
-                    </div>
-                    <div
-                      className="h-4 rounded-full mb-3"
-                      style={{
-                        background: `linear-gradient(to right, ${getColorLegend(generateImagesMutation.data[selectedImageIndex].index).colors.join(', ')})`
-                      }}
-                    />
-                    <div className="text-sm text-gray-600">
-                      Colors represent the range of {generateImagesMutation.data[selectedImageIndex].index} values across your parcel.
-                      Darker greens typically indicate healthier vegetation.
+                    {/* Enhanced Color Legend */}
+                    <div className="p-6 bg-gray-50">
+                      <h5 className="font-medium mb-3">Color Scale Interpretation</h5>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">
+                          {getColorLegend(selectedImg.index).min}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {getColorLegend(selectedImg.index).max}
+                        </span>
+                      </div>
+                      <div
+                        className="h-4 rounded-full mb-3"
+                        style={{
+                          background: `linear-gradient(to right, ${getColorLegend(selectedImg.index).colors.join(', ')})`
+                        }}
+                      />
+                      <div className="text-sm text-gray-600">
+                        Colors represent the range of {selectedImg.index} values across your parcel.
+                        Darker greens typically indicate healthier vegetation.
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>

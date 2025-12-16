@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Satellite, Download, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AlertCircle, Satellite, Download, BarChart3, Database, RefreshCw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -9,18 +10,34 @@ import {
   IndexCalculationResponse,
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
+import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
+import { useAuth } from '../MultiTenantAuthProvider';
 
 interface IndicesCalculatorProps {
+  parcelId: string;
   parcelName?: string;
+  farmId?: string;
   boundary?: number[][];
   onResultsUpdate?: (results: IndexCalculationResponse) => void;
 }
 
+interface CachedIndexResult {
+  index: VegetationIndexType;
+  value: number;
+  date: string;
+}
+
 const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
+  parcelId,
   parcelName,
+  farmId,
   boundary,
   onResultsUpdate
 }) => {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const organizationId = currentOrganization?.id;
+
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -40,6 +57,77 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     setStartDate(startDate.toISOString().split('T')[0]);
   }, []);
 
+  // Query cached indices from database
+  const {
+    data: cachedIndices,
+    isLoading: isLoadingCache,
+    refetch: refetchCache,
+  } = useQuery({
+    queryKey: ['satellite-indices-calc-cache', parcelId, selectedIndices, startDate, endDate],
+    queryFn: async (): Promise<CachedIndexResult[]> => {
+      if (!organizationId || !parcelId || !startDate || !endDate) return [];
+
+      const allIndices: CachedIndexResult[] = [];
+      for (const index of selectedIndices) {
+        const response = await satelliteIndicesApi.getAll(
+          {
+            parcel_id: parcelId,
+            index_name: index,
+            date_from: startDate,
+            date_to: endDate,
+          },
+          organizationId
+        );
+        // Get the most recent entry with mean_value for each index
+        const sorted = response
+          .filter(item => item.mean_value !== undefined && item.mean_value !== null)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        if (sorted.length > 0) {
+          allIndices.push({
+            index: sorted[0].index_name as VegetationIndexType,
+            value: sorted[0].mean_value || 0,
+            date: sorted[0].date?.split('T')[0] || startDate,
+          });
+        }
+      }
+      return allIndices;
+    },
+    enabled: !!organizationId && !!parcelId && selectedIndices.length > 0 && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Build results from cache
+  const buildResultsFromCache = useCallback((): IndexCalculationResponse | null => {
+    if (!cachedIndices || cachedIndices.length === 0) return null;
+
+    return {
+      timestamp: new Date().toISOString(),
+      indices: cachedIndices.map(item => ({
+        index: item.index,
+        value: item.value,
+      })),
+      metadata: {
+        source: 'cache',
+        date_range: `${startDate} - ${endDate}`,
+      },
+    };
+  }, [cachedIndices, startDate, endDate]);
+
+  // Get display results: prefer cached, fall back to API result
+  const getDisplayResults = useCallback((): IndexCalculationResponse | null => {
+    const fromCache = buildResultsFromCache();
+    if (fromCache && fromCache.indices.length > 0) {
+      return fromCache;
+    }
+    return results;
+  }, [buildResultsFromCache, results]);
+
+  const getCacheStats = () => {
+    const cached = cachedIndices || [];
+    return { total: cached.length, fromCache: cached.length > 0 };
+  };
+
   const handleIndexToggle = (index: VegetationIndexType) => {
     setSelectedIndices(prev =>
       prev.includes(index)
@@ -49,8 +137,8 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   };
 
   const handleCalculate = async () => {
-    if (!boundary || !startDate || !endDate || selectedIndices.length === 0) {
-      setError('Please select date range and at least one vegetation index');
+    if (!boundary || !startDate || !endDate || selectedIndices.length === 0 || !organizationId) {
+      setError('Veuillez sélectionner une plage de dates et au moins un indice de végétation');
       return;
     }
 
@@ -60,17 +148,17 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     const now = new Date();
 
     if (start >= end) {
-      setError('End date must be after start date');
+      setError('La date de fin doit être après la date de début');
       return;
     }
 
     if (start >= now) {
-      setError('Start date cannot be in the future');
+      setError('La date de début ne peut pas être dans le futur');
       return;
     }
 
     if (end >= now) {
-      setError('End date cannot be in the future. Satellite data is not available for future dates.');
+      setError('La date de fin ne peut pas être dans le futur. Les données satellite ne sont pas disponibles pour les dates futures.');
       return;
     }
 
@@ -79,7 +167,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
 
     if (start < threeYearsAgo) {
-      setError('Start date is too far in the past. Please select a date within the last 3 years.');
+      setError('La date de début est trop ancienne. Veuillez sélectionner une date dans les 3 dernières années.');
       return;
     }
 
@@ -102,10 +190,35 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
       };
 
       const response = await satelliteApi.calculateIndices(request);
+
+      // Save results to database cache
+      for (const indexResult of response.indices) {
+        try {
+          await satelliteIndicesApi.create(
+            {
+              parcel_id: parcelId,
+              farm_id: farmId,
+              index_name: indexResult.index,
+              date: endDate,
+              mean_value: indexResult.value,
+              cloud_coverage_percentage: cloudCoverage,
+              metadata: { scale, source: 'indices_calculator' },
+            },
+            organizationId
+          );
+        } catch {
+          // Ignore duplicates
+        }
+      }
+
+      // Refetch cache
+      await refetchCache();
+      queryClient.invalidateQueries({ queryKey: ['satellite-indices-calc-cache', parcelId] });
+
       setResults(response);
       onResultsUpdate?.(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to calculate indices');
+      setError(err instanceof Error ? err.message : 'Échec du calcul des indices');
     } finally {
       setIsCalculating(false);
     }
@@ -225,7 +338,24 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {/* Cache indicator */}
+          {getCacheStats().fromCache && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <Database className="w-3 h-3" />
+              <span>{getCacheStats().total} indices en cache</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => refetchCache()}
+            disabled={isLoadingCache}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
+            Actualiser le cache
+          </button>
+
           <button
             onClick={handleCalculate}
             disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate}
@@ -234,20 +364,20 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             {isCalculating ? (
               <>
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                Calculating...
+                Calcul en cours...
               </>
             ) : (
               <>
-                <BarChart3 className="w-4 h-4" />
-                Calculate Indices
+                <Satellite className="w-4 h-4" />
+                Récupérer depuis satellite
               </>
             )}
           </button>
 
-          {results && (
+          {getDisplayResults() && (
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
               <Download className="w-4 h-4" />
-              Export Results
+              Exporter les résultats
             </button>
           )}
         </div>
@@ -265,15 +395,17 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
       )}
 
       {/* Results Display */}
-      {results && (
+      {getDisplayResults() && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-2">Calculation Results</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {getCacheStats().fromCache ? 'Résultats (depuis cache)' : 'Résultats du calcul'}
+          </h3>
           <p className="text-gray-600 mb-4">
-            Processed on {new Date(results.timestamp).toLocaleDateString()}
+            Traité le {new Date(getDisplayResults()!.timestamp).toLocaleDateString()}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {results.indices.map((result: any, index: number) => (
+            {getDisplayResults()!.indices.map((result: any, index: number) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${getIndexColor(result.index as VegetationIndexType)}`}>
@@ -290,11 +422,11 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             ))}
           </div>
 
-          {results.metadata && (
+          {getDisplayResults()!.metadata && (
             <div className="mt-6 pt-4 border-t border-gray-200">
-              <h4 className="font-medium mb-2">Processing Metadata</h4>
+              <h4 className="font-medium mb-2">Métadonnées de traitement</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                {Object.entries(results.metadata).map(([key, value]) => (
+                {Object.entries(getDisplayResults()!.metadata).map(([key, value]) => (
                   <div key={key}>
                     <span className="text-gray-500">{key}:</span>
                     <span className="ml-1 font-medium">{String(value)}</span>

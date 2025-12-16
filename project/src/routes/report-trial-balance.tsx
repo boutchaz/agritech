@@ -288,6 +288,6 @@ const AppContent: React.FC = () => {
   );
 };
 
-export const Route = createFileRoute('/accounting-reports/trial-balance')({
+export const Route = createFileRoute('/report-trial-balance')({
   component: withRouteProtection(AppContent, 'read', 'AccountingReport'),
 });

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
@@ -41,6 +41,7 @@ function HarvestsPage() {
   // Filters state
   const [filters, setFilters] = useState<HarvestFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   // Data fetching
   const { data: harvests = [], isLoading } = useHarvests(currentOrganization?.id || '', filters);
@@ -78,7 +79,10 @@ function HarvestsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette récolte ?')) return;
 
     try {
-      await deleteHarvestMutation.mutateAsync(harvestId);
+      await deleteHarvestMutation.mutateAsync({
+        harvestId,
+        organizationId: currentOrganization?.id || ''
+      });
     } catch (error) {
       console.error('Error deleting harvest:', error);
       alert('Erreur lors de la suppression de la récolte');
@@ -92,6 +96,13 @@ function HarvestsPage() {
 
   const handleViewDetails = (harvestId: string) => {
     setSelectedHarvest(harvestId);
+  };
+
+  const handleCreateReception = (harvest: HarvestSummary) => {
+    navigate({
+      to: '/reception-batches',
+      search: { harvest_id: harvest.id }
+    });
   };
 
   const exportToCSV = () => {
@@ -163,33 +174,33 @@ function HarvestsPage() {
             searchPlaceholder="Rechercher par culture, parcelle, ferme..."
             onSearch={setSearchQuery}
             actions={
-            <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
-              >
-                <Filter className="h-4 w-4" />
-                Filtres
-              </button>
+              <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtres
+                </button>
 
-              <button
-                onClick={exportToCSV}
-                disabled={harvests.length === 0}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-              >
-                <Download className="h-4 w-4" />
-                Exporter
-              </button>
+                <button
+                  onClick={exportToCSV}
+                  disabled={harvests.length === 0}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4" />
+                  Exporter
+                </button>
 
-              <button
-                onClick={handleAddHarvest}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4" />
-                Nouvelle Récolte
-              </button>
-            </div>
-          }
+                <button
+                  onClick={handleAddHarvest}
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nouvelle Récolte
+                </button>
+              </div>
+            }
           />
         </div>
 
@@ -308,6 +319,7 @@ function HarvestsPage() {
                   onEdit={handleEditHarvest}
                   onDelete={handleDeleteHarvest}
                   onViewDetails={handleViewDetails}
+                  onCreateReception={handleCreateReception}
                 />
               ))}
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { BarChart3, Download, Cloud, AlertTriangle, CheckCircle, Database, TrendingUp, Info } from 'lucide-react';
+import { BarChart3, Download, Cloud, AlertTriangle, CheckCircle, Database, TrendingUp, Info, Satellite, RefreshCw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -10,18 +11,26 @@ import {
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
+import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
+import { useAuth } from '../MultiTenantAuthProvider';
 
 interface StatisticsCalculatorProps {
   parcelId: string;
   parcelName?: string;
+  farmId?: string;
   boundary?: number[][];
 }
 
 const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
   parcelId,
   parcelName,
+  farmId,
   boundary
 }) => {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const organizationId = currentOrganization?.id;
+
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -41,6 +50,96 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
     setStartDate(defaultRange.start_date);
     setEndDate(defaultRange.end_date);
   }, []);
+
+  // Query cached statistics from database
+  const {
+    data: cachedStats,
+    isLoading: isLoadingCache,
+    refetch: refetchCache,
+  } = useQuery({
+    queryKey: ['satellite-stats-cache', parcelId, selectedIndices, startDate, endDate],
+    queryFn: async (): Promise<SatelliteIndex[]> => {
+      if (!organizationId || !parcelId || !startDate || !endDate) return [];
+
+      const allStats: SatelliteIndex[] = [];
+      for (const index of selectedIndices) {
+        const response = await satelliteIndicesApi.getAll(
+          {
+            parcel_id: parcelId,
+            index_name: index,
+            date_from: startDate,
+            date_to: endDate,
+          },
+          organizationId
+        );
+        // Filter to only include entries with full statistics (mean_value exists)
+        const statsWithData = response.filter(item => item.mean_value !== undefined && item.mean_value !== null);
+        allStats.push(...statsWithData);
+      }
+      return allStats;
+    },
+    enabled: !!organizationId && !!parcelId && selectedIndices.length > 0 && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Build statistics result from cache
+  const buildStatsFromCache = useCallback((): ParcelStatisticsResponse | null => {
+    if (!cachedStats || cachedStats.length === 0) return null;
+
+    const statistics: Record<string, any> = {};
+    for (const item of cachedStats) {
+      if (!statistics[item.index_name]) {
+        statistics[item.index_name] = {
+          mean: item.mean_value || 0,
+          min: item.min_value || 0,
+          max: item.max_value || 0,
+          std: item.std_value || 0,
+          median: item.median_value || 0,
+          percentile_25: item.percentile_25 || 0,
+          percentile_75: item.percentile_75 || 0,
+          percentile_90: item.percentile_90 || 0,
+          pixel_count: item.pixel_count || 0,
+        };
+      }
+    }
+
+    // Get the most recent date from cached stats
+    const mostRecentDate = cachedStats.reduce((latest, item) => {
+      const itemDate = new Date(item.date);
+      return itemDate > new Date(latest) ? item.date : latest;
+    }, cachedStats[0].date);
+
+    return {
+      parcel_id: parcelId,
+      statistics,
+      cloud_coverage_info: {
+        threshold_used: cloudCoverage,
+        images_found: cachedStats.length,
+        avg_cloud_coverage: cachedStats[0]?.cloud_coverage_percentage || 0,
+        best_date: mostRecentDate?.split('T')[0] || startDate,
+      },
+      metadata: {
+        date_range: { start_date: startDate, end_date: endDate },
+        processing_date: cachedStats[0]?.created_at || new Date().toISOString(),
+        scale,
+      },
+    };
+  }, [cachedStats, parcelId, cloudCoverage, startDate, endDate, scale]);
+
+  // Get display statistics: prefer cached, fall back to API result
+  const getDisplayStats = useCallback((): ParcelStatisticsResponse | null => {
+    const fromCache = buildStatsFromCache();
+    if (fromCache && Object.keys(fromCache.statistics).length > 0) {
+      return fromCache;
+    }
+    return statisticsResult;
+  }, [buildStatsFromCache, statisticsResult]);
+
+  const getCacheStats = () => {
+    const cached = cachedStats || [];
+    const uniqueIndices = new Set(cached.map(s => s.index_name));
+    return { total: cached.length, indices: uniqueIndices.size, fromCache: cached.length > 0 };
+  };
 
   const handleIndexToggle = (index: VegetationIndexType) => {
     setSelectedIndices(prev =>
@@ -72,7 +171,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
   }, [boundary, startDate, endDate, cloudCoverage]);
 
   const calculateStatistics = useCallback(async () => {
-    if (!boundary || !startDate || !endDate || selectedIndices.length === 0) return;
+    if (!boundary || !startDate || !endDate || selectedIndices.length === 0 || !organizationId) return;
 
     setIsLoading(true);
     setError(null);
@@ -101,7 +200,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         statistics: {},
         cloud_coverage_info: {
           threshold_used: cloudCoverage,
-          images_found: 1, // This would need to be determined from the actual response
+          images_found: 1,
           avg_cloud_coverage: cloudCoverage,
           best_date: startDate
         },
@@ -112,20 +211,51 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         }
       };
 
-      // Transform statistics to our expected format
-      Object.entries(result.statistics || {}).forEach(([index, stats]: [string, any]) => {
+      // Transform statistics to our expected format and save to cache
+      for (const [index, stats] of Object.entries(result.statistics || {})) {
+        const typedStats = stats as any;
         formattedResult.statistics[index as VegetationIndexType] = {
-          mean: stats.mean || 0,
-          min: 0, // These would need to be calculated or returned by the API
-          max: 0,
-          std: stats.std || 0,
-          median: stats.median || 0,
-          percentile_25: stats.p25 || 0,
-          percentile_75: stats.p75 || 0,
-          percentile_90: stats.p98 || 0,
-          pixel_count: 1000 // This would need to be returned by the API
+          mean: typedStats.mean || 0,
+          min: typedStats.min || 0,
+          max: typedStats.max || 0,
+          std: typedStats.std || 0,
+          median: typedStats.median || 0,
+          percentile_25: typedStats.p25 || 0,
+          percentile_75: typedStats.p75 || 0,
+          percentile_90: typedStats.p98 || 0,
+          pixel_count: typedStats.pixel_count || 1000
         };
-      });
+
+        // Save to database cache
+        try {
+          await satelliteIndicesApi.create(
+            {
+              parcel_id: parcelId,
+              farm_id: farmId,
+              index_name: index,
+              date: startDate,
+              mean_value: typedStats.mean || 0,
+              min_value: typedStats.min || 0,
+              max_value: typedStats.max || 0,
+              std_value: typedStats.std || 0,
+              median_value: typedStats.median || 0,
+              percentile_25: typedStats.p25 || 0,
+              percentile_75: typedStats.p75 || 0,
+              percentile_90: typedStats.p98 || 0,
+              pixel_count: typedStats.pixel_count || 1000,
+              cloud_coverage_percentage: cloudCoverage,
+              metadata: { scale, source: 'statistics_calculator' },
+            },
+            organizationId
+          );
+        } catch {
+          // Ignore duplicates
+        }
+      }
+
+      // Refetch cache
+      await refetchCache();
+      queryClient.invalidateQueries({ queryKey: ['satellite-stats-cache', parcelId] });
 
       setStatisticsResult(formattedResult);
     } catch (err) {
@@ -133,7 +263,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelId, parcelName, startDate, endDate, selectedIndices, cloudCoverage, scale]);
+  }, [boundary, parcelId, parcelName, farmId, startDate, endDate, selectedIndices, cloudCoverage, scale, organizationId, refetchCache, queryClient]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -253,23 +383,40 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {/* Cache indicator */}
+          {getCacheStats().fromCache && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <Database className="w-3 h-3" />
+              <span>{getCacheStats().indices} indices en cache</span>
+            </div>
+          )}
+
           <button
             onClick={checkCloudCoverage}
             disabled={isCheckingCloud || !boundary}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
           >
             <Cloud className="w-4 h-4" />
-            {isCheckingCloud ? 'Checking...' : 'Check Cloud Coverage'}
+            {isCheckingCloud ? 'Vérification...' : 'Vérifier couverture nuageuse'}
+          </button>
+
+          <button
+            onClick={() => refetchCache()}
+            disabled={isLoadingCache}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
+            Actualiser le cache
           </button>
 
           <button
             onClick={calculateStatistics}
             disabled={isLoading || !boundary || selectedIndices.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
           >
-            <TrendingUp className="w-4 h-4" />
-            {isLoading ? 'Calculating...' : 'Calculate Statistics'}
+            <Satellite className="w-4 h-4" />
+            {isLoading ? 'Calcul en cours...' : 'Récupérer depuis satellite'}
           </button>
         </div>
       </div>
@@ -328,102 +475,109 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
       )}
 
       {/* Statistics Results */}
-      {statisticsResult && (
+      {getDisplayStats() && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Database className="w-5 h-5" />
-            Statistics Results
+            {getCacheStats().fromCache ? 'Statistiques (depuis cache)' : 'Résultats des statistiques'}
           </h3>
 
           {/* Cloud Coverage Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-blue-600">Images Used:</span>
-                <div className="font-medium">{statisticsResult.cloud_coverage_info.images_found}</div>
-              </div>
-              <div>
-                <span className="text-blue-600">Avg Cloud Coverage:</span>
-                <div className="font-medium">{statisticsResult.cloud_coverage_info.avg_cloud_coverage.toFixed(1)}%</div>
-              </div>
-              <div>
-                <span className="text-blue-600">Best Date:</span>
-                <div className="font-medium">{statisticsResult.cloud_coverage_info.best_date}</div>
-              </div>
-              <div>
-                <span className="text-blue-600">Scale Used:</span>
-                <div className="font-medium">{statisticsResult.metadata.scale}m</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Statistics for each index */}
-          <div className="grid gap-4">
-            {Object.entries(statisticsResult.statistics).map(([index, stats]) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium" style={{ color: getIndexColor(index as VegetationIndexType) }}>
-                      {index}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType]}
-                    </p>
-                  </div>
-                  {statisticsResult.tiff_files?.[index as VegetationIndexType] && (
-                    <button
-                      onClick={() => downloadTiff(
-                        index as VegetationIndexType,
-                        statisticsResult.tiff_files![index as VegetationIndexType].url
-                      )}
-                      className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-sm"
-                    >
-                      <Download className="w-3 h-3" />
-                      Download TIFF
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Mean</div>
-                    <div className="font-medium">{stats.mean.toFixed(3)}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Min</div>
-                    <div className="font-medium">{stats.min.toFixed(3)}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Max</div>
-                    <div className="font-medium">{stats.max.toFixed(3)}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Std Dev</div>
-                    <div className="font-medium">{stats.std.toFixed(3)}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Median</div>
-                    <div className="font-medium">{stats.median.toFixed(3)}</div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <div className="text-gray-600">Pixels</div>
-                    <div className="font-medium">{stats.pixel_count.toLocaleString()}</div>
+          {(() => {
+            const displayStats = getDisplayStats();
+            if (!displayStats) return null;
+            return (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-600">Images utilisées:</span>
+                      <div className="font-medium">{displayStats.cloud_coverage_info.images_found}</div>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Couverture nuageuse moy.:</span>
+                      <div className="font-medium">{displayStats.cloud_coverage_info.avg_cloud_coverage.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Meilleure date:</span>
+                      <div className="font-medium">{displayStats.cloud_coverage_info.best_date}</div>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Échelle utilisée:</span>
+                      <div className="font-medium">{displayStats.metadata.scale}m</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
 
-          {/* TIFF Files Summary */}
-          {statisticsResult.tiff_files && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-medium text-green-800 mb-2">TIFF Files Generated</h4>
-              <div className="text-sm text-green-700">
-                {Object.keys(statisticsResult.tiff_files).length} TIFF files created and stored in database.
-                Files will expire on {new Date(Object.values(statisticsResult.tiff_files)[0].expires_at).toLocaleDateString()}.
-              </div>
-            </div>
-          )}
+                {/* Statistics for each index */}
+                <div className="grid gap-4">
+                  {Object.entries(displayStats.statistics).map(([index, stats]) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium" style={{ color: getIndexColor(index as VegetationIndexType) }}>
+                            {index}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType]}
+                          </p>
+                        </div>
+                        {displayStats.tiff_files?.[index as VegetationIndexType] && (
+                          <button
+                            onClick={() => downloadTiff(
+                              index as VegetationIndexType,
+                              displayStats.tiff_files![index as VegetationIndexType].url
+                            )}
+                            className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-sm"
+                          >
+                            <Download className="w-3 h-3" />
+                            Télécharger TIFF
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Moyenne</div>
+                          <div className="font-medium">{stats.mean.toFixed(3)}</div>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Min</div>
+                          <div className="font-medium">{stats.min.toFixed(3)}</div>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Max</div>
+                          <div className="font-medium">{stats.max.toFixed(3)}</div>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Écart-type</div>
+                          <div className="font-medium">{stats.std.toFixed(3)}</div>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Médiane</div>
+                          <div className="font-medium">{stats.median.toFixed(3)}</div>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <div className="text-gray-600">Pixels</div>
+                          <div className="font-medium">{stats.pixel_count.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* TIFF Files Summary */}
+                {displayStats.tiff_files && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-medium text-green-800 mb-2">Fichiers TIFF générés</h4>
+                    <div className="text-sm text-green-700">
+                      {Object.keys(displayStats.tiff_files).length} fichiers TIFF créés et stockés dans la base de données.
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 

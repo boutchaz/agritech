@@ -57,10 +57,12 @@ export const useFarms = (organizationId: string | undefined) => {
       if (!organizationId) return [];
       const farms = await farmsService.listFarms(organizationId);
       // Map to match expected Farm interface (convert undefined to null)
-      return farms.map(farm => ({
-        ...farm,
+      // Backend returns farm_id/farm_name in ListFarmsResponseDto
+      return farms.map((farm: any) => ({
+        id: farm.farm_id || farm.id,
+        name: farm.farm_name || farm.name,
         location: farm.location ?? null,
-        size: farm.size ?? null,
+        size: farm.farm_size ?? farm.size ?? null,
         manager_name: farm.manager_name ?? null,
       }));
     },
@@ -112,11 +114,11 @@ export const useParcelsByFarms = (farmIds: string[]) => {
     queryKey: parcelsKeys.byFarms(farmIds),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmIds.length) return [];
-      
+
       // Fetch all parcels for organization and filter by farm IDs
       const parcels = await parcelsService.listParcels();
       const filteredParcels = parcels.filter(p => farmIds.includes(p.farm_id));
-      
+
       return filteredParcels.map(parcel => ({
         ...parcel,
         farm_id: parcel.farm_id ?? null,
@@ -224,7 +226,7 @@ export const useAddParcel = () => {
         name: parcelData.name,
         area: parcelData.area ?? 0, // Required field, default to 0
       };
-      
+
       if (parcelData.description !== undefined) createData.description = parcelData.description || undefined;
       if (parcelData.area_unit) createData.area_unit = parcelData.area_unit;
       if (parcelData.soil_type) createData.soil_type = parcelData.soil_type;
@@ -233,12 +235,12 @@ export const useAddParcel = () => {
       if (parcelData.planting_date) createData.planting_date = parcelData.planting_date;
       if (parcelData.planting_year) createData.planting_year = parcelData.planting_year;
       if (parcelData.rootstock) createData.rootstock = parcelData.rootstock;
-      
+
       // Handle boundary separately if needed (it might need special handling)
       if (parcelData.boundary) {
         (createData as any).boundary = parcelData.boundary;
       }
-      
+
       return parcelsService.createParcel(createData);
     },
     onSuccess: (data) => {
@@ -259,7 +261,7 @@ export const useUpdateParcel = () => {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Parcel> }) => {
       // Convert null to undefined for the service (which expects undefined for optional fields)
       const updateData: Record<string, unknown> = {};
-      
+
       Object.entries(updates).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           updateData[key] = value;
@@ -268,7 +270,7 @@ export const useUpdateParcel = () => {
           updateData[key] = undefined;
         }
       });
-      
+
       return parcelsService.updateParcel(id, updateData);
     },
     onSuccess: (data) => {
