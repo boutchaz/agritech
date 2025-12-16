@@ -77,6 +77,9 @@ import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboa
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AccountingReportsTrialBalanceRouteImport } from './routes/accounting-reports.trial-balance'
+import { Route as AccountingReportsProfitLossRouteImport } from './routes/accounting-reports.profit-loss'
+import { Route as AccountingReportsBalanceSheetRouteImport } from './routes/accounting-reports.balance-sheet'
 import { Route as StockInventoryIndexRouteImport } from './routes/stock/inventory/index'
 import { Route as ParcelsParcelIdIndexRouteImport } from './routes/parcels.$parcelId.index'
 import { Route as StockInventoryStockRouteImport } from './routes/stock/inventory/stock'
@@ -426,6 +429,24 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountingReportsTrialBalanceRoute =
+  AccountingReportsTrialBalanceRouteImport.update({
+    id: '/trial-balance',
+    path: '/trial-balance',
+    getParentRoute: () => AccountingReportsRoute,
+  } as any)
+const AccountingReportsProfitLossRoute =
+  AccountingReportsProfitLossRouteImport.update({
+    id: '/profit-loss',
+    path: '/profit-loss',
+    getParentRoute: () => AccountingReportsRoute,
+  } as any)
+const AccountingReportsBalanceSheetRoute =
+  AccountingReportsBalanceSheetRouteImport.update({
+    id: '/balance-sheet',
+    path: '/balance-sheet',
+    getParentRoute: () => AccountingReportsRoute,
+  } as any)
 const StockInventoryIndexRoute = StockInventoryIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -484,7 +505,7 @@ export interface FileRoutesByFullPath {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRoute
+  '/accounting-reports': typeof AccountingReportsRouteWithChildren
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -517,6 +538,9 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
+  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
+  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
@@ -562,7 +586,7 @@ export interface FileRoutesByTo {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRoute
+  '/accounting-reports': typeof AccountingReportsRouteWithChildren
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -591,6 +615,9 @@ export interface FileRoutesByTo {
   '/soil-analysis': typeof SoilAnalysisRoute
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
+  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
+  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
@@ -636,7 +663,7 @@ export interface FileRoutesById {
   '/accounting-invoices': typeof AccountingInvoicesRoute
   '/accounting-journal': typeof AccountingJournalRoute
   '/accounting-payments': typeof AccountingPaymentsRoute
-  '/accounting-reports': typeof AccountingReportsRoute
+  '/accounting-reports': typeof AccountingReportsRouteWithChildren
   '/analyses': typeof AnalysesRoute
   '/billing-purchase-orders': typeof BillingPurchaseOrdersRoute
   '/billing-quotes': typeof BillingQuotesRoute
@@ -669,6 +696,9 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRouteWithChildren
   '/utilities': typeof UtilitiesRoute
   '/workers': typeof WorkersRouteWithChildren
+  '/accounting-reports/balance-sheet': typeof AccountingReportsBalanceSheetRoute
+  '/accounting-reports/profit-loss': typeof AccountingReportsProfitLossRoute
+  '/accounting-reports/trial-balance': typeof AccountingReportsTrialBalanceRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
@@ -749,6 +779,9 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/accounting-reports/balance-sheet'
+    | '/accounting-reports/profit-loss'
+    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
@@ -823,6 +856,9 @@ export interface FileRouteTypes {
     | '/soil-analysis'
     | '/utilities'
     | '/workers'
+    | '/accounting-reports/balance-sheet'
+    | '/accounting-reports/profit-loss'
+    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/settings/dashboard'
@@ -900,6 +936,9 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/utilities'
     | '/workers'
+    | '/accounting-reports/balance-sheet'
+    | '/accounting-reports/profit-loss'
+    | '/accounting-reports/trial-balance'
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
@@ -947,7 +986,7 @@ export interface RootRouteChildren {
   AccountingInvoicesRoute: typeof AccountingInvoicesRoute
   AccountingJournalRoute: typeof AccountingJournalRoute
   AccountingPaymentsRoute: typeof AccountingPaymentsRoute
-  AccountingReportsRoute: typeof AccountingReportsRoute
+  AccountingReportsRoute: typeof AccountingReportsRouteWithChildren
   AnalysesRoute: typeof AnalysesRoute
   BillingPurchaseOrdersRoute: typeof BillingPurchaseOrdersRoute
   BillingQuotesRoute: typeof BillingQuotesRoute
@@ -1461,6 +1500,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accounting-reports/trial-balance': {
+      id: '/accounting-reports/trial-balance'
+      path: '/trial-balance'
+      fullPath: '/accounting-reports/trial-balance'
+      preLoaderRoute: typeof AccountingReportsTrialBalanceRouteImport
+      parentRoute: typeof AccountingReportsRoute
+    }
+    '/accounting-reports/profit-loss': {
+      id: '/accounting-reports/profit-loss'
+      path: '/profit-loss'
+      fullPath: '/accounting-reports/profit-loss'
+      preLoaderRoute: typeof AccountingReportsProfitLossRouteImport
+      parentRoute: typeof AccountingReportsRoute
+    }
+    '/accounting-reports/balance-sheet': {
+      id: '/accounting-reports/balance-sheet'
+      path: '/balance-sheet'
+      fullPath: '/accounting-reports/balance-sheet'
+      preLoaderRoute: typeof AccountingReportsBalanceSheetRouteImport
+      parentRoute: typeof AccountingReportsRoute
+    }
     '/stock/inventory/': {
       id: '/stock/inventory/'
       path: '/'
@@ -1526,6 +1586,21 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AccountingReportsRouteChildren {
+  AccountingReportsBalanceSheetRoute: typeof AccountingReportsBalanceSheetRoute
+  AccountingReportsProfitLossRoute: typeof AccountingReportsProfitLossRoute
+  AccountingReportsTrialBalanceRoute: typeof AccountingReportsTrialBalanceRoute
+}
+
+const AccountingReportsRouteChildren: AccountingReportsRouteChildren = {
+  AccountingReportsBalanceSheetRoute: AccountingReportsBalanceSheetRoute,
+  AccountingReportsProfitLossRoute: AccountingReportsProfitLossRoute,
+  AccountingReportsTrialBalanceRoute: AccountingReportsTrialBalanceRoute,
+}
+
+const AccountingReportsRouteWithChildren =
+  AccountingReportsRoute._addFileChildren(AccountingReportsRouteChildren)
 
 interface BlogRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1687,7 +1762,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountingInvoicesRoute: AccountingInvoicesRoute,
   AccountingJournalRoute: AccountingJournalRoute,
   AccountingPaymentsRoute: AccountingPaymentsRoute,
-  AccountingReportsRoute: AccountingReportsRoute,
+  AccountingReportsRoute: AccountingReportsRouteWithChildren,
   AnalysesRoute: AnalysesRoute,
   BillingPurchaseOrdersRoute: BillingPurchaseOrdersRoute,
   BillingQuotesRoute: BillingQuotesRoute,

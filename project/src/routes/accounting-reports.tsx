@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -26,6 +26,7 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
+  const navigate = useNavigate();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
@@ -42,7 +43,8 @@ const AppContent: React.FC = () => {
       description: 'View your financial position with assets, liabilities, and equity',
       icon: Scale,
       iconBg: 'bg-blue-500',
-      available: false,
+      available: true,
+      path: '/accounting-reports/balance-sheet',
     },
     {
       id: 'profit-loss',
@@ -50,7 +52,8 @@ const AppContent: React.FC = () => {
       description: 'Analyze your revenue, expenses, and profitability over time',
       icon: TrendingUp,
       iconBg: 'bg-green-500',
-      available: false,
+      available: true,
+      path: '/accounting-reports/profit-loss',
     },
     {
       id: 'trial-balance',
@@ -58,7 +61,8 @@ const AppContent: React.FC = () => {
       description: 'Verify your general ledger with a complete list of account balances',
       icon: BookOpen,
       iconBg: 'bg-purple-500',
-      available: false,
+      available: true,
+      path: '/accounting-reports/trial-balance',
     },
     {
       id: 'general-ledger',
@@ -67,6 +71,7 @@ const AppContent: React.FC = () => {
       icon: FileSpreadsheet,
       iconBg: 'bg-orange-500',
       available: false,
+      path: '/accounting-reports/general-ledger',
     },
     {
       id: 'aged-receivables',
@@ -75,6 +80,7 @@ const AppContent: React.FC = () => {
       icon: Calendar,
       iconBg: 'bg-red-500',
       available: false,
+      path: '/accounting-reports/aged-receivables',
     },
     {
       id: 'aged-payables',
@@ -83,8 +89,13 @@ const AppContent: React.FC = () => {
       icon: Users,
       iconBg: 'bg-indigo-500',
       available: false,
+      path: '/accounting-reports/aged-payables',
     },
   ];
+
+  const handleViewReport = (path: string) => {
+    navigate({ to: path });
+  };
 
   if (!currentOrganization) {
     return (
@@ -126,17 +137,17 @@ const AppContent: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{reports.length}</div>
+                <div className="text-2xl font-bold">{reports.filter(r => r.available).length} / {reports.length}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Last Generated
+                  Report Types
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-400">-</div>
+                <div className="text-lg font-medium">Balance Sheet, P&L, Trial Balance</div>
               </CardContent>
             </Card>
             <Card>
@@ -146,7 +157,7 @@ const AppContent: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-medium">Current Fiscal Year</div>
+                <div className="text-lg font-medium">Customizable</div>
               </CardContent>
             </Card>
           </div>
@@ -158,14 +169,19 @@ const AppContent: React.FC = () => {
               return (
                 <Card
                   key={report.id}
-                  className="transition-all hover:shadow-lg cursor-pointer"
+                  className={`transition-all hover:shadow-lg ${report.available ? 'cursor-pointer' : ''}`}
+                  onClick={() => report.available && handleViewReport(report.path)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className={`p-3 rounded-lg ${report.iconBg}`}>
                         <Icon className="h-6 w-6 text-white" />
                       </div>
-                      {!report.available && (
+                      {report.available ? (
+                        <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full">
+                          Available
+                        </span>
+                      ) : (
                         <span className="px-2 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
                           Coming Soon
                         </span>
@@ -183,6 +199,10 @@ const AppContent: React.FC = () => {
                       variant={report.available ? "default" : "outline"}
                       className="w-full"
                       disabled={!report.available}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (report.available) handleViewReport(report.path);
+                      }}
                     >
                       {report.available ? 'View Report' : 'Coming Soon'}
                     </Button>
@@ -210,15 +230,15 @@ const AppContent: React.FC = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-0.5">•</span>
-                    <span><strong>Export options</strong> - Download as PDF, Excel, or CSV</span>
+                    <span><strong>Real-time data</strong> - Reports update automatically with posted entries</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-0.5">•</span>
-                    <span><strong>Drill-down capability</strong> - Click to view underlying transactions</span>
+                    <span><strong>Balance verification</strong> - Ensures debits equal credits</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-0.5">•</span>
-                    <span><strong>Comparative analysis</strong> - Compare across multiple periods</span>
+                    <span><strong>Account details</strong> - View breakdown by account type</span>
                   </li>
                 </ul>
               </CardContent>
@@ -231,24 +251,24 @@ const AppContent: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Financial reports will be available once the accounting module implementation is complete.
+                  Core financial reports are now available. More reports coming soon!
                 </p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Database Schema</span>
-                    <span className="font-medium">✓ Complete</span>
+                    <span className="text-gray-600 dark:text-gray-400">Database Functions</span>
+                    <span className="font-medium text-green-600">✓ Complete</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">API Client</span>
-                    <span className="font-medium">✓ Complete</span>
+                    <span className="text-gray-600 dark:text-gray-400">API Endpoints</span>
+                    <span className="font-medium text-green-600">✓ Complete</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Custom Hooks</span>
-                    <span>⏳ Pending</span>
+                    <span className="text-gray-600 dark:text-gray-400">React Hooks</span>
+                    <span className="font-medium text-green-600">✓ Complete</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">UI Components</span>
-                    <span>⏳ Pending</span>
+                    <span className="font-medium text-green-600">✓ Complete</span>
                   </div>
                 </div>
               </CardContent>
