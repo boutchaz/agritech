@@ -6,7 +6,7 @@ import ModernPageHeader from '../components/ModernPageHeader';
 import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
