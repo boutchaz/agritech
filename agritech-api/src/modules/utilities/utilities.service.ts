@@ -173,15 +173,26 @@ export class UtilitiesService {
     if ('invoice_url' in sanitizedData) sanitizedData.invoice_url = sanitizedData.invoice_url || null;
     if ('notes' in sanitizedData) sanitizedData.notes = sanitizedData.notes || null;
 
+    // Check if there's anything to update after sanitization
+    if (Object.keys(sanitizedData).length === 0) {
+      // Nothing to update, just return the existing utility
+      return this.findOne(userId, organizationId, farmId, utilityId);
+    }
+
     const { data: utility, error } = await client
       .from('utilities')
       .update(sanitizedData)
       .eq('id', utilityId)
+      .eq('farm_id', farmId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw new Error(`Failed to update utility: ${error.message}`);
+    }
+
+    if (!utility) {
+      throw new NotFoundException('Utility not found or update failed');
     }
 
     return utility;
