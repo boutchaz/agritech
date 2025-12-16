@@ -49,7 +49,7 @@ export class JournalEntriesService {
    * Get all journal entries with optional filters
    */
   async findAll(organizationId: string, filters?: any) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       let query = supabaseClient
@@ -115,7 +115,7 @@ export class JournalEntriesService {
    * Get a single journal entry by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -146,7 +146,7 @@ export class JournalEntriesService {
    * Create a new journal entry
    */
   async create(dto: CreateJournalEntryDto, organizationId: string, userId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Validate double-entry principle
@@ -227,7 +227,7 @@ export class JournalEntriesService {
    * Update a draft journal entry
    */
   async update(id: string, dto: UpdateJournalEntryDto, organizationId: string, userId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if entry exists and is draft
@@ -317,7 +317,7 @@ export class JournalEntriesService {
    * Post a journal entry
    */
   async post(id: string, organizationId: string, userId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const entry = await this.findOne(id, organizationId);
@@ -354,7 +354,7 @@ export class JournalEntriesService {
    * Cancel a journal entry
    */
   async cancel(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const entry = await this.findOne(id, organizationId);
@@ -387,7 +387,7 @@ export class JournalEntriesService {
    * Delete a draft journal entry
    */
   async delete(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const entry = await this.findOne(id, organizationId);
