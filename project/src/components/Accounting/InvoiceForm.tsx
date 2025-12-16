@@ -149,10 +149,17 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   // Calculate totals whenever items change
   useEffect(() => {
     const calculateTotals = async () => {
-      // Filter valid items
-      const validItems = watchItems.filter(
-        item => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
-      );
+      // Filter valid items and coerce values to numbers
+      // (watch() returns raw form values which may be strings)
+      const validItems = watchItems
+        .map(item => ({
+          ...item,
+          quantity: Number(item.quantity) || 0,
+          rate: Number(item.rate) || 0,
+        }))
+        .filter(
+          item => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
+        );
 
       if (validItems.length === 0) {
         setCalculatedTotals({
@@ -164,6 +171,16 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
         return;
       }
 
+      // Calculate simple subtotal first for immediate feedback
+      const simpleSubtotal = validItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+
+      // Update with simple subtotal immediately
+      setCalculatedTotals(prev => ({
+        ...prev,
+        subtotal: simpleSubtotal,
+        grand_total: simpleSubtotal + prev.tax_total,
+      }));
+
       try {
         const result = await calculateInvoiceTotals(validItems, watchInvoiceType);
         setCalculatedTotals({
@@ -173,7 +190,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           tax_breakdown: result.tax_breakdown,
         });
       } catch (error) {
-        console.error('Error calculating totals:', error);
+        console.error('Error calculating totals with taxes:', error);
+        // Keep the simple subtotal on error
+        setCalculatedTotals({
+          subtotal: simpleSubtotal,
+          tax_total: 0,
+          grand_total: simpleSubtotal,
+          tax_breakdown: [],
+        });
       }
     };
 

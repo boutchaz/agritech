@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -16,14 +23,16 @@ import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, PackagePlus } from 'lucide-react';
 import { useCreatePurchaseOrder, useUpdatePurchaseOrder, type PurchaseOrderWithItems, type PurchaseOrderItem } from '@/hooks/usePurchaseOrders';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { usePurchaseTaxes } from '@/hooks/useTaxes';
+import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
+import { QuickCreateItem } from './QuickCreateItem';
 
 const purchaseOrderSchema = z
   .object({
@@ -36,10 +45,12 @@ const purchaseOrderSchema = z
     items: z
       .array(
         z.object({
+          inventory_item_id: z.string().optional().nullable(),
           item_name: z.string().min(1, 'Item name is required'),
           description: z.string().optional(),
           quantity: z.number().min(0.01, 'Quantity must be positive'),
           rate: z.number().min(0, 'Rate must be non-negative'),
+          unit_of_measure: z.string().optional(),
           account_id: z.string().min(1, 'Account is required'),
           tax_id: z.string().optional().nullable(),
         })
@@ -80,6 +91,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   const { data: suppliers = [] } = useSuppliers();
   const { data: accounts = [] } = useAccounts();
   const { data: taxes = [] } = usePurchaseTaxes();
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({
+    is_purchase_item: true
+  });
+
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
 
   const [totals, setTotals] = React.useState<InvoiceTotals>({
     subtotal: 0,
@@ -94,6 +111,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<PurchaseOrderFormData>({
@@ -107,19 +125,23 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       notes: purchaseOrder.notes || '',
       items: purchaseOrder.items && purchaseOrder.items.length > 0
         ? purchaseOrder.items.map((item: PurchaseOrderItem) => ({
+            inventory_item_id: item.inventory_item_id || null,
             item_name: item.item_name,
             description: item.description || '',
             quantity: item.quantity,
             rate: item.unit_price,
+            unit_of_measure: item.unit_of_measure || '',
             account_id: item.account_id || '',
             tax_id: item.tax_id || null,
           }))
         : [
             {
+              inventory_item_id: null,
               item_name: '',
               description: '',
               quantity: 1,
               rate: 0,
+              unit_of_measure: '',
               account_id: '',
               tax_id: null,
             },
@@ -135,10 +157,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       notes: '',
       items: [
         {
+          inventory_item_id: null,
           item_name: '',
           description: '',
           quantity: 1,
           rate: 0,
+          unit_of_measure: '',
           account_id: '',
           tax_id: null,
         },
@@ -158,19 +182,23 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         notes: purchaseOrder.notes || '',
         items: purchaseOrder.items && purchaseOrder.items.length > 0
           ? purchaseOrder.items.map((item: PurchaseOrderItem) => ({
+              inventory_item_id: item.inventory_item_id || null,
               item_name: item.item_name,
               description: item.description || '',
               quantity: item.quantity,
               rate: item.unit_price,
+              unit_of_measure: item.unit_of_measure || '',
               account_id: item.account_id || '',
               tax_id: item.tax_id || null,
             }))
           : [
               {
+                inventory_item_id: null,
                 item_name: '',
                 description: '',
                 quantity: 1,
                 rate: 0,
+                unit_of_measure: '',
                 account_id: '',
                 tax_id: null,
               },
@@ -186,10 +214,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         notes: '',
         items: [
           {
+            inventory_item_id: null,
             item_name: '',
             description: '',
             quantity: 1,
             rate: 0,
+            unit_of_measure: '',
             account_id: '',
             tax_id: null,
           },
@@ -361,10 +391,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                   size="sm"
                   onClick={() =>
                     append({
+                      inventory_item_id: null,
                       item_name: '',
                       description: '',
                       quantity: 1,
                       rate: 0,
+                      unit_of_measure: '',
                       account_id: '',
                       tax_id: null,
                     })
@@ -383,11 +415,61 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                     className="grid grid-cols-12 gap-2 items-start border-b pb-4 last:border-0"
                   >
                     <div className="col-span-3">
-                      <label className="block text-xs font-medium mb-1">Item Name *</label>
-                      <Input
-                        {...register(`items.${index}.item_name`)}
-                        placeholder="Item name"
-                      />
+                      <label className="block text-xs font-medium mb-1">Item *</label>
+                      <Select
+                        value={watch(`items.${index}.inventory_item_id`) || ''}
+                        onValueChange={(itemId) => {
+                          const selectedItem = items.find(item => item.id === itemId);
+                          if (selectedItem) {
+                            setValue(`items.${index}.inventory_item_id`, itemId);
+                            setValue(`items.${index}.item_name`, selectedItem.item_name);
+                            setValue(`items.${index}.unit_of_measure`, selectedItem.default_unit || '');
+                            // Auto-fill rate from standard_rate if available
+                            if (selectedItem.standard_rate) {
+                              setValue(`items.${index}.rate`, selectedItem.standard_rate);
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select item" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setCurrentItemIndex(index);
+                                setShowItemModal(true);
+                              }}
+                            >
+                              <PackagePlus className="h-4 w-4 mr-2" />
+                              Add New Item
+                            </Button>
+                          </div>
+                          {itemsLoading ? (
+                            <SelectItem value="_loading" disabled>
+                              Loading items...
+                            </SelectItem>
+                          ) : items.length === 0 ? (
+                            <SelectItem value="_none" disabled>
+                              No purchase items found
+                            </SelectItem>
+                          ) : (
+                            items.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.item_code} - {item.item_name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {/* Hidden fields for form data */}
+                      <input type="hidden" {...register(`items.${index}.inventory_item_id`)} />
+                      <input type="hidden" {...register(`items.${index}.item_name`)} />
                       {errors.items?.[index]?.item_name && (
                         <p className="text-xs text-red-600 mt-1">
                           {errors.items[index]?.item_name?.message}
@@ -404,7 +486,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                     </div>
 
                     <div className="col-span-1">
-                      <label className="block text-xs font-medium mb-1">Quantity *</label>
+                      <label className="block text-xs font-medium mb-1">Qty *</label>
                       <Input
                         type="number"
                         step="0.01"
@@ -509,6 +591,21 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           </div>
         </form>
       </DialogContent>
+
+      {/* Quick Create Item Modal */}
+      <QuickCreateItem
+        open={showItemModal}
+        onOpenChange={setShowItemModal}
+        type="purchase"
+        onSuccess={(itemId, itemName) => {
+          if (currentItemIndex !== null) {
+            setValue(`items.${currentItemIndex}.inventory_item_id`, itemId);
+            setValue(`items.${currentItemIndex}.item_name`, itemName);
+          }
+          setShowItemModal(false);
+          setCurrentItemIndex(null);
+        }}
+      />
     </Dialog>
   );
 };

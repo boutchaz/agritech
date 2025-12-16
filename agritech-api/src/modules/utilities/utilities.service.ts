@@ -93,17 +93,22 @@ export class UtilitiesService {
     const { data: utility, error } = await client
       .from('utilities')
       .insert({
-        ...createUtilityDto,
+        farm_id: createUtilityDto.farm_id,
+        parcel_id: createUtilityDto.parcel_id || null,
+        type: createUtilityDto.type,
         provider: createUtilityDto.provider || null,
         account_number: createUtilityDto.account_number || null,
-        consumption_value: createUtilityDto.consumption_value || null,
-        consumption_unit: createUtilityDto.consumption_unit || null,
+        amount: createUtilityDto.amount,
+        billing_date: createUtilityDto.billing_date,
         due_date: createUtilityDto.due_date || null,
+        payment_status: createUtilityDto.payment_status || 'pending',
+        notes: createUtilityDto.notes || null,
         is_recurring: createUtilityDto.is_recurring || false,
         recurring_frequency: createUtilityDto.recurring_frequency || null,
+        consumption_value: createUtilityDto.consumption_value || null,
+        consumption_unit: createUtilityDto.consumption_unit || null,
         invoice_url: createUtilityDto.invoice_url || null,
-        notes: createUtilityDto.notes || null,
-        journal_entry_id: createUtilityDto.journal_entry_id || null,
+        cost_per_parcel: createUtilityDto.cost_per_parcel || null,
       })
       .select()
       .single();
@@ -156,6 +161,9 @@ export class UtilitiesService {
     // Sanitize data: convert empty strings to null
     const sanitizedData: any = { ...updateUtilityDto };
 
+    // Remove journal_entry_id if present (column doesn't exist in database)
+    delete sanitizedData.journal_entry_id;
+
     if ('provider' in sanitizedData) sanitizedData.provider = sanitizedData.provider || null;
     if ('account_number' in sanitizedData) sanitizedData.account_number = sanitizedData.account_number || null;
     if ('consumption_value' in sanitizedData) sanitizedData.consumption_value = sanitizedData.consumption_value || null;
@@ -164,7 +172,6 @@ export class UtilitiesService {
     if ('recurring_frequency' in sanitizedData) sanitizedData.recurring_frequency = sanitizedData.recurring_frequency || null;
     if ('invoice_url' in sanitizedData) sanitizedData.invoice_url = sanitizedData.invoice_url || null;
     if ('notes' in sanitizedData) sanitizedData.notes = sanitizedData.notes || null;
-    if ('journal_entry_id' in sanitizedData) sanitizedData.journal_entry_id = sanitizedData.journal_entry_id || null;
 
     const { data: utility, error } = await client
       .from('utilities')

@@ -103,11 +103,12 @@ export async function createInvoiceFromItems(
   const { subtotal, tax_total, grand_total, items_with_tax } = totals;
 
   // Prepare items for API
+  // Note: items_with_tax has `rate` field, we map it to `unit_price` for the API
   const apiItems = items_with_tax.map(item => ({
     item_name: item.item_name,
     description: item.description || undefined,
     quantity: Number(item.quantity),
-    unit_price: Number(item.unit_price),
+    unit_price: Number(item.rate), // Map rate to unit_price for backend
     amount: Number(item.amount),
     tax_id: item.tax_id || undefined,
     tax_rate: item.tax_rate || 0,

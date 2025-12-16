@@ -28,6 +28,11 @@ export class CreateUtilityDto {
   @IsString()
   farm_id: string;
 
+  @ApiPropertyOptional({ description: 'Parcel ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @IsOptional()
+  @IsString()
+  parcel_id?: string;
+
   @ApiProperty({ enum: UtilityType, description: 'Type of utility', example: 'electricity' })
   @IsEnum(UtilityType)
   type: UtilityType;
@@ -65,9 +70,10 @@ export class CreateUtilityDto {
   @IsDateString()
   due_date?: string;
 
-  @ApiProperty({ enum: PaymentStatus, description: 'Payment status', example: 'pending' })
+  @ApiPropertyOptional({ enum: PaymentStatus, description: 'Payment status', example: 'pending', default: 'pending' })
+  @IsOptional()
   @IsEnum(PaymentStatus)
-  payment_status: PaymentStatus;
+  payment_status?: PaymentStatus;
 
   @ApiPropertyOptional({ description: 'Is recurring', example: false })
   @IsOptional()
@@ -89,8 +95,8 @@ export class CreateUtilityDto {
   @IsString()
   notes?: string;
 
-  @ApiPropertyOptional({ description: 'Journal entry ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiPropertyOptional({ description: 'Cost per parcel', example: 50.00 })
   @IsOptional()
-  @IsString()
-  journal_entry_id?: string;
+  @IsNumber()
+  cost_per_parcel?: number;
 }

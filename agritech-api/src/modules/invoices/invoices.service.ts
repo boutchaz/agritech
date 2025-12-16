@@ -145,7 +145,6 @@ export class InvoicesService {
           notes: dto.notes || null,
           sales_order_id: dto.sales_order_id || null,
           purchase_order_id: dto.purchase_order_id || null,
-          quote_id: dto.quote_id || null,
           status: 'draft',
           created_by: userId,
         })
