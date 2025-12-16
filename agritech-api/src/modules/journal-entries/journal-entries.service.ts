@@ -170,15 +170,14 @@ export class JournalEntriesService {
       }
 
       // Create journal entry
+      // Note: entry_type and description columns don't exist in the database schema
       const { data: entry, error: entryError } = await supabaseClient
         .from('journal_entries')
         .insert({
           organization_id: organizationId,
           entry_number: entryNumber,
           entry_date: dto.entry_date,
-          entry_type: dto.entry_type || 'adjustment',
-          description: dto.description,
-          remarks: dto.remarks,
+          remarks: dto.remarks || dto.description || null,
           reference_type: dto.reference_type,
           reference_number: dto.reference_number,
           total_debit: totalDebit,
@@ -239,14 +238,14 @@ export class JournalEntriesService {
       }
 
       // Build update data
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
+      // Note: entry_type and description columns don't exist in the database schema
+      const updateData: any = {};
 
       if (dto.entry_date) updateData.entry_date = dto.entry_date;
-      if (dto.entry_type) updateData.entry_type = dto.entry_type;
-      if (dto.description !== undefined) updateData.description = dto.description;
       if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
+      if (dto.description !== undefined && dto.remarks === undefined) {
+        updateData.remarks = dto.description; // Map description to remarks
+      }
 
       // If items are provided, recalculate totals
       if (dto.items) {
