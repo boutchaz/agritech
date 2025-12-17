@@ -297,6 +297,53 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_org ON subscriptions(organization_id);
 
+-- Modules (Application modules that can be enabled/disabled per organization)
+CREATE TABLE IF NOT EXISTS modules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL UNIQUE,
+  icon VARCHAR(50),
+  category VARCHAR(50),
+  description TEXT,
+  required_plan VARCHAR(50), -- null = free, 'essential', 'professional', 'enterprise'
+  is_available BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Organization Modules (which modules are active for each organization)
+CREATE TABLE IF NOT EXISTS organization_modules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT false,
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_organization_modules_org ON organization_modules(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_modules_module ON organization_modules(module_id);
+
+-- Insert default modules
+INSERT INTO modules (name, icon, category, description, required_plan, is_available) VALUES
+  ('dashboard', 'LayoutDashboard', 'core', 'Main dashboard with overview metrics', NULL, true),
+  ('farms', 'Map', 'production', 'Farm and parcel management', NULL, true),
+  ('harvests', 'Wheat', 'production', 'Harvest tracking and management', NULL, true),
+  ('tasks', 'CheckSquare', 'operations', 'Task management and scheduling', NULL, true),
+  ('workers', 'Users', 'hr', 'Worker management', NULL, true),
+  ('stock', 'Package', 'inventory', 'Inventory and stock management', NULL, true),
+  ('customers', 'UserCheck', 'sales', 'Customer relationship management', NULL, true),
+  ('suppliers', 'Truck', 'purchasing', 'Supplier management', NULL, true),
+  ('quotes', 'FileText', 'sales', 'Quote management', 'essential', true),
+  ('sales_orders', 'ShoppingCart', 'sales', 'Sales order processing', 'essential', true),
+  ('purchase_orders', 'ClipboardList', 'purchasing', 'Purchase order management', 'essential', true),
+  ('invoices', 'Receipt', 'accounting', 'Invoice management', 'essential', true),
+  ('accounting', 'Calculator', 'accounting', 'Full accounting features', 'professional', true),
+  ('reports', 'BarChart3', 'analytics', 'Reports and analytics', 'professional', true),
+  ('satellite', 'Satellite', 'analytics', 'Satellite imagery analysis', 'enterprise', true)
+ON CONFLICT (name) DO NOTHING;
+
 -- =====================================================
 -- 5. FARM MANAGEMENT TABLES
 -- =====================================================

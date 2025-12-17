@@ -27,22 +27,10 @@ export class OrganizationModulesService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    // Get all modules with organization's activation status
-    const { data: modules, error: modulesError } = await client
+    // Get all available modules
+    const { data: allModules, error: modulesError } = await client
       .from('modules')
-      .select(`
-        id,
-        name,
-        icon,
-        category,
-        description,
-        required_plan,
-        organization_modules!inner(
-          is_active,
-          settings
-        )
-      `)
-      .eq('organization_modules.organization_id', organizationId)
+      .select('id, name, icon, category, description, required_plan')
       .eq('is_available', true)
       .order('category')
       .order('name');
@@ -52,17 +40,36 @@ export class OrganizationModulesService {
       throw new InternalServerErrorException('Failed to fetch modules');
     }
 
-    // Transform the response to flatten the structure
-    const transformedModules = modules?.map((module: any) => ({
-      id: module.id,
-      name: module.name,
-      icon: module.icon,
-      category: module.category,
-      description: module.description,
-      required_plan: module.required_plan,
-      is_active: module.organization_modules?.[0]?.is_active || false,
-      settings: module.organization_modules?.[0]?.settings || {},
-    })) || [];
+    // Get organization's module activations
+    const { data: orgModules, error: orgModulesError } = await client
+      .from('organization_modules')
+      .select('module_id, is_active, settings')
+      .eq('organization_id', organizationId);
+
+    if (orgModulesError) {
+      this.logger.error(`Failed to fetch organization modules: ${orgModulesError.message}`);
+      throw new InternalServerErrorException('Failed to fetch organization modules');
+    }
+
+    // Create a map of module_id -> activation status
+    const activationMap = new Map(
+      (orgModules || []).map((om: any) => [om.module_id, { is_active: om.is_active, settings: om.settings }])
+    );
+
+    // Transform the response to include activation status
+    const transformedModules = (allModules || []).map((module: any) => {
+      const activation = activationMap.get(module.id);
+      return {
+        id: module.id,
+        name: module.name,
+        icon: module.icon,
+        category: module.category,
+        description: module.description,
+        required_plan: module.required_plan,
+        is_active: activation?.is_active || false,
+        settings: activation?.settings || {},
+      };
+    });
 
     return transformedModules;
   }
@@ -101,10 +108,10 @@ export class OrganizationModulesService {
       throw new ForbiddenException('You do not have permission to update modules');
     }
 
-    // Verify module exists
+    // Verify module exists and get full details
     const { data: module, error: moduleError } = await client
       .from('modules')
-      .select('id, required_plan')
+      .select('id, name, icon, category, description, required_plan')
       .eq('id', moduleId)
       .eq('is_available', true)
       .maybeSingle();
@@ -133,49 +140,35 @@ export class OrganizationModulesService {
       }
     }
 
-    // Update the organization_modules record
-    const { data: updatedModule, error: updateError } = await client
+    // Upsert the organization_modules record (create if not exists, update if exists)
+    const { data: upsertedModule, error: upsertError } = await client
       .from('organization_modules')
-      .update({
-        ...updateDto,
+      .upsert({
+        organization_id: organizationId,
+        module_id: moduleId,
+        is_active: updateDto.is_active,
+        settings: updateDto.settings || {},
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'organization_id,module_id',
       })
-      .eq('organization_id', organizationId)
-      .eq('module_id', moduleId)
-      .select(`
-        module_id,
-        is_active,
-        settings,
-        modules!inner(
-          id,
-          name,
-          icon,
-          category,
-          description,
-          required_plan
-        )
-      `)
+      .select('module_id, is_active, settings')
       .single();
 
-    if (updateError) {
-      this.logger.error(`Failed to update module: ${updateError.message}`);
+    if (upsertError) {
+      this.logger.error(`Failed to update module: ${upsertError.message}`);
       throw new InternalServerErrorException('Failed to update module');
     }
 
-    // Transform response - modules is returned as array by Supabase
-    const moduleData = Array.isArray(updatedModule.modules)
-      ? updatedModule.modules[0]
-      : updatedModule.modules;
-
     return {
-      id: moduleData.id,
-      name: moduleData.name,
-      icon: moduleData.icon,
-      category: moduleData.category,
-      description: moduleData.description,
-      required_plan: moduleData.required_plan,
-      is_active: updatedModule.is_active,
-      settings: updatedModule.settings,
+      id: module.id,
+      name: module.name || '',
+      icon: module.icon || '',
+      category: module.category || '',
+      description: module.description || '',
+      required_plan: module.required_plan,
+      is_active: upsertedModule.is_active,
+      settings: upsertedModule.settings,
     };
   }
 }
