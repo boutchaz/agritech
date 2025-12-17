@@ -31,7 +31,8 @@ services:
     networks:
       - strapi-network
     depends_on:
-      - strapi-db
+      strapi-db:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.strapi.rule=Host(`cms-agritech-dashboard-g6sumg-2b12b9-5-75-154-125.traefik.me`)"
