@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, BarChart3, Check, Database, Satellite, RefreshCw } from 'lucide-react';
 import {
@@ -51,7 +51,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const syncedRef = useRef<Set<string>>(new Set());
 
   // Initialize with last 6 months
   useEffect(() => {
@@ -114,85 +113,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Auto-sync: fetch from API and cache if no data exists
-  const autoSync = useCallback(async () => {
-    if (!boundary || !organizationId || selectedIndices.length === 0 || !startDate || !endDate) return;
-
-    // Check which indices need syncing
-    const indicesToSync: VegetationIndexType[] = [];
-
-    for (const index of selectedIndices) {
-      const cacheKey = `${parcelId}-${index}-${startDate}-${endDate}`;
-      const cachedCount = cachedData?.[index]?.length || 0;
-
-      // Sync if no cached data and not already synced in this session
-      if (cachedCount === 0 && !syncedRef.current.has(cacheKey)) {
-        indicesToSync.push(index);
-        syncedRef.current.add(cacheKey);
-      }
-    }
-
-    if (indicesToSync.length === 0) return;
-
-    setIsSyncing(true);
-
-    try {
-      for (const index of indicesToSync) {
-        try {
-          const request: TimeSeriesRequest = {
-            aoi: {
-              geometry: convertBoundaryToGeoJSON(boundary),
-              name: parcelName || 'Parcel',
-            },
-            date_range: {
-              start_date: startDate,
-              end_date: endDate,
-            },
-            index,
-            interval,
-            cloud_coverage: 20,
-          };
-
-          const response = await satelliteApi.getTimeSeries(request);
-
-          // Save data points to database
-          if (response.data && response.data.length > 0) {
-            for (const point of response.data) {
-              try {
-                await satelliteIndicesApi.create(
-                  {
-                    parcel_id: parcelId,
-                    farm_id: farmId,
-                    index_name: index,
-                    date: point.date,
-                    mean_value: point.value,
-                  },
-                  organizationId
-                );
-              } catch {
-                // Ignore duplicates (unique constraint will reject them)
-              }
-            }
-          }
-        } catch (apiErr) {
-          console.error(`Failed to fetch ${index} from satellite API:`, apiErr);
-        }
-      }
-
-      // Refetch cache to display new data
-      await refetchCache();
-      queryClient.invalidateQueries({ queryKey: ['satellite-indices-cache', parcelId] });
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [boundary, organizationId, selectedIndices, startDate, endDate, interval, parcelId, farmId, parcelName, cachedData, refetchCache, queryClient]);
-
-  // Trigger auto-sync when cache is loaded but empty
-  useEffect(() => {
-    if (!isLoadingCache && cachedData && boundary) {
-      autoSync();
-    }
-  }, [isLoadingCache, cachedData, boundary, autoSync]);
 
   // Force sync: always fetch from satellite API (for manual refresh)
   const forceSync = useCallback(async () => {
