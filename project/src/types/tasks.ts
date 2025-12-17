@@ -314,6 +314,11 @@ export interface CreateTaskRequest {
   repeat_pattern?: RepeatPattern;
   cost_estimate?: number;
   notes?: string;
+  // Work Unit Payment fields (for piece-work tracking)
+  payment_type?: 'daily' | 'per_unit' | 'monthly' | 'metayage';
+  work_unit_id?: string;
+  units_required?: number;
+  rate_per_unit?: number;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {

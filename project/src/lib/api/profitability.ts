@@ -114,10 +114,12 @@ export interface ProfitabilityData {
 }
 
 export interface ParcelProfitabilityData {
+  // Combined totals (legacy + ledger)
   totalCosts: number;
   totalRevenue: number;
   netProfit: number;
   profitMargin: number;
+  // Legacy data
   costs: Cost[];
   revenues: Revenue[];
   categoryBreakdown: Array<{
@@ -143,8 +145,35 @@ export interface ParcelProfitabilityData {
     revenue: number;
     profit: number;
   }>;
-  ledgerExpenses: any[];
-  ledgerRevenues: any[];
+  // Ledger data from journal entries
+  ledgerExpenses: Array<{
+    id: string;
+    debit: number;
+    credit: number;
+    account_code: string;
+    account_name: string;
+    account_type: string;
+    entry_date: string;
+    entry_number: string;
+    cost_center_name?: string;
+    parcel_name?: string;
+    description?: string;
+  }>;
+  ledgerRevenues: Array<{
+    id: string;
+    debit: number;
+    credit: number;
+    account_code: string;
+    account_name: string;
+    account_type: string;
+    entry_date: string;
+    entry_number: string;
+    cost_center_name?: string;
+    parcel_name?: string;
+    description?: string;
+  }>;
+  ledgerExpenseTotal?: number;
+  ledgerRevenueTotal?: number;
   accountBreakdown: Array<{
     account_code: string;
     account_name: string;
@@ -268,4 +297,20 @@ export const profitabilityApi = {
     const url = `${BASE_URL}/parcel/${parcelId}/journal-entries?${queryString}`;
     return apiClient.get<any[]>(url, {}, organizationId);
   },
+
+  /**
+   * Get account mappings for profitability journal entries
+   * Returns mapped accounts for expense types, revenue types, and cash
+   */
+  async getAccountMappings(organizationId?: string): Promise<AccountMappings> {
+    return apiClient.get<AccountMappings>(`${BASE_URL}/account-mappings`, {}, organizationId);
+  },
 };
+
+export interface AccountMappings {
+  expense: Record<string, { id: string; code: string; name: string }>;
+  revenue: Record<string, { id: string; code: string; name: string }>;
+  cash: { id: string; code: string; name: string } | null;
+  defaultExpense: { id: string; code: string; name: string } | null;
+  defaultRevenue: { id: string; code: string; name: string } | null;
+}

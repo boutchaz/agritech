@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
 import { harvestsApi } from '../lib/api/harvests';
 import { deliveriesApi } from '../lib/api/deliveries';
 import { useAuth } from '../components/MultiTenantAuthProvider';
@@ -43,18 +42,32 @@ export function useHarvest(organizationId: string, harvestId: string | null) {
 }
 
 export function useHarvestStatistics(organizationId: string, filters?: { date_from?: string; date_to?: string }) {
-  return useQuery({
-    queryKey: ['harvest-statistics', organizationId, filters],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_harvest_statistics', {
-          p_organization_id: organizationId,
-          p_start_date: filters?.date_from || new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
-          p_end_date: filters?.date_to || new Date().toISOString().split('T')[0],
-        });
+  // Fetch harvests and compute statistics client-side
+  // This replaces the non-existent get_harvest_statistics RPC function
+  const { data: harvests = [] } = useHarvests(organizationId, {
+    date_from: filters?.date_from || new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+    date_to: filters?.date_to || new Date().toISOString().split('T')[0],
+  });
 
-      if (error) throw error;
-      return data as HarvestStatistics;
+  return useQuery({
+    queryKey: ['harvest-statistics', organizationId, filters, harvests.length],
+    queryFn: async (): Promise<HarvestStatistics> => {
+      // Compute statistics from harvests data
+      const totalHarvests = harvests.length;
+      const totalQuantity = harvests.reduce((sum, h) => sum + (h.quantity || 0), 0);
+      const totalRevenue = harvests.reduce((sum, h) => {
+        const quantity = h.quantity || 0;
+        const price = h.unit_price || 0;
+        return sum + (quantity * price);
+      }, 0);
+      const avgQuantityPerHarvest = totalHarvests > 0 ? totalQuantity / totalHarvests : 0;
+
+      return {
+        total_harvests: totalHarvests,
+        total_quantity: totalQuantity,
+        total_revenue: totalRevenue,
+        avg_quantity_per_harvest: avgQuantityPerHarvest,
+      };
     },
     enabled: !!organizationId,
   });

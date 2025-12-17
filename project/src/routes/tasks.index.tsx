@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import TasksList from '../components/Tasks/TasksList';
 import TaskForm from '../components/Tasks/TaskForm';
+import TaskDetailDialog from '../components/Tasks/TaskDetailDialog';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { useQuery } from '@tanstack/react-query';
 import { tasksApi } from '../lib/api/tasks';
@@ -11,6 +12,7 @@ import type { Task } from '../types/tasks';
 function TasksListPage() {
   const { currentOrganization } = useAuth();
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   // Fetch selected task data when selectedTaskId changes - now uses NestJS API
@@ -37,15 +39,21 @@ function TasksListPage() {
     enabled: !!currentOrganization?.id,
   });
 
-  // Open form when a task is selected
+  // Open detail dialog when a task is selected
   const handleSelectTask = (taskId: string) => {
     setSelectedTaskId(taskId);
-    setShowTaskForm(true);
+    setShowTaskDetail(true);
   };
 
   // Open form for creating new task
   const handleCreateTask = () => {
     setSelectedTaskId(null);
+    setShowTaskForm(true);
+  };
+
+  // Switch from detail view to edit view
+  const handleEditTask = () => {
+    setShowTaskDetail(false);
     setShowTaskForm(true);
   };
 
@@ -59,7 +67,20 @@ function TasksListPage() {
         onCreateTask={handleCreateTask}
       />
 
-      {/* Task Form Modal */}
+      {/* Task Detail Dialog */}
+      {showTaskDetail && selectedTask && (
+        <TaskDetailDialog
+          task={selectedTask}
+          organizationId={currentOrganization.id}
+          onClose={() => {
+            setShowTaskDetail(false);
+            setSelectedTaskId(null);
+          }}
+          onEdit={handleEditTask}
+        />
+      )}
+
+      {/* Task Form Modal (for editing) */}
       {showTaskForm && (
         <TaskForm
           task={selectedTask}

@@ -124,4 +124,31 @@ export class CreateTaskDto {
   @IsOptional()
   @IsNumber()
   location_lng?: number;
+
+  // Work Unit Payment fields (for piece-work tracking)
+  @ApiPropertyOptional({
+    description: 'Payment type',
+    enum: ['daily', 'per_unit', 'monthly', 'metayage'],
+    default: 'daily'
+  })
+  @IsOptional()
+  @IsIn(['daily', 'per_unit', 'monthly', 'metayage'])
+  payment_type?: string;
+
+  @ApiPropertyOptional({ description: 'Work unit ID for piece-work' })
+  @IsOptional()
+  @IsUUID()
+  work_unit_id?: string;
+
+  @ApiPropertyOptional({ description: 'Estimated units required' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  units_required?: number;
+
+  @ApiPropertyOptional({ description: 'Rate per unit (MAD)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  rate_per_unit?: number;
 }

@@ -214,4 +214,18 @@ export class ProfitabilityController {
       endDate,
     );
   }
+
+  @Get('account-mappings')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get account mappings for profitability journal entries' })
+  @ApiResponse({ status: 200, description: 'Account mappings retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Account'))
+  async getAccountMappings(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+    return this.profitabilityService.getAccountMappings(organizationId);
+  }
 }

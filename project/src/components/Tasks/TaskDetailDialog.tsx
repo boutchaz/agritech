@@ -1,0 +1,544 @@
+import React, { useState } from 'react';
+import {
+  X,
+  Play,
+  CheckCircle,
+  Pause,
+  Clock,
+  Calendar,
+  MapPin,
+  User,
+  Wheat,
+  Edit,
+  AlertCircle,
+} from 'lucide-react';
+import { useUpdateTask } from '../../hooks/useTasks';
+import { tasksApi } from '../../lib/api/tasks';
+import { cropsApi, type Crop } from '../../lib/api/crops';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
+import {
+  getTaskStatusLabel,
+  getTaskPriorityLabel,
+  getTaskTypeLabel,
+  TASK_STATUS_COLORS,
+  TASK_PRIORITY_COLORS,
+} from '../../types/tasks';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/radix-select';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface TaskDetailDialogProps {
+  task: TaskSummary | Task;
+  organizationId: string;
+  onClose: () => void;
+  onEdit?: () => void;
+}
+
+const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
+  task,
+  organizationId,
+  onClose,
+  onEdit,
+}) => {
+  const queryClient = useQueryClient();
+  const updateTask = useUpdateTask();
+  const [showHarvestForm, setShowHarvestForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch crops for the task's farm and parcel
+  const { data: crops = [] } = useQuery({
+    queryKey: ['crops', organizationId, task.farm_id, task.parcel_id],
+    queryFn: async () => {
+      return cropsApi.getAll(organizationId, task.farm_id, task.parcel_id);
+    },
+    enabled: !!organizationId,
+  });
+
+  // Harvest completion form data
+  const [harvestData, setHarvestData] = useState<Partial<CompleteHarvestTaskRequest>>({
+    crop_id: task.crop_id || '',
+    harvest_date: new Date().toISOString().split('T')[0],
+    quantity: 0,
+    unit: 'kg',
+    quality_grade: 'A',
+    workers: [],
+  });
+
+  const isHarvestingTask = task.task_type === 'harvesting';
+  const canStart = task.status === 'pending' || task.status === 'assigned';
+  const canPause = task.status === 'in_progress';
+  const canComplete = task.status === 'in_progress' || task.status === 'paused';
+
+  const handleStartTask = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        organizationId,
+        updates: {
+          status: 'in_progress',
+          actual_start: new Date().toISOString(),
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du démarrage de la tâche');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePauseTask = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        organizationId,
+        updates: { status: 'paused' },
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la pause de la tâche');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompleteTask = async () => {
+    if (isHarvestingTask) {
+      setShowHarvestForm(true);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      await tasksApi.complete(organizationId, task.id, {});
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompleteWithHarvest = async () => {
+    if (!harvestData.crop_id) {
+      setError('Veuillez sélectionner une culture');
+      return;
+    }
+    if (!harvestData.quantity || harvestData.quantity <= 0) {
+      setError('Veuillez entrer une quantité valide');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Call the complete with harvest endpoint
+      await tasksApi.completeWithHarvest(organizationId, task.id, {
+        ...harvestData,
+        crop_id: harvestData.crop_id,
+        harvest_date: harvestData.harvest_date || new Date().toISOString().split('T')[0],
+        quantity: harvestData.quantity || 0,
+        unit: harvestData.unit || 'kg',
+        workers: harvestData.workers || [],
+      } as CompleteHarvestTaskRequest);
+
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['harvests'] });
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${
+              task.task_type === 'harvesting' ? 'bg-amber-100 dark:bg-amber-900/30' :
+              task.task_type === 'irrigation' ? 'bg-blue-100 dark:bg-blue-900/30' :
+              'bg-green-100 dark:bg-green-900/30'
+            }`}>
+              {task.task_type === 'harvesting' ? (
+                <Wheat className="w-5 h-5 text-amber-600" />
+              ) : (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {task.title}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
+                  {getTaskPriorityLabel(task.priority, 'fr')}
+                </span>
+                <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
+                  {getTaskStatusLabel(task.status, 'fr')}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <Edit className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+
+          {/* Task Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Type de tâche</p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {getTaskTypeLabel(task.task_type, 'fr')}
+              </p>
+            </div>
+
+            {task.farm_name && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Ferme</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  {task.farm_name}
+                </p>
+              </div>
+            )}
+
+            {'parcel_name' in task && task.parcel_name && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Parcelle</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-green-600" />
+                  {task.parcel_name}
+                </p>
+              </div>
+            )}
+
+            {task.worker_name && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Assigné à</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {task.worker_name}
+                </p>
+              </div>
+            )}
+
+            {task.estimated_duration && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Durée estimée</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  {task.estimated_duration} heures
+                </p>
+              </div>
+            )}
+
+            {task.scheduled_start && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Date prévue</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {format(new Date(task.scheduled_start), 'PPP', { locale: fr })}
+                </p>
+              </div>
+            )}
+
+            {task.due_date && (
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Date limite</p>
+                <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {format(new Date(task.due_date), 'PPP', { locale: fr })}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {task.description && (
+            <div className="space-y-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
+              <p className="text-gray-900 dark:text-white">{task.description}</p>
+            </div>
+          )}
+
+          {/* Payment Info */}
+          {task.payment_type && (
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 space-y-2">
+              <h4 className="font-medium text-gray-900 dark:text-white">Informations de paiement</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Type de paiement</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {task.payment_type === 'per_unit' ? 'À l\'unité' :
+                     task.payment_type === 'daily' ? 'Journalier' :
+                     task.payment_type === 'monthly' ? 'Mensuel' : 'Métayage'}
+                  </p>
+                </div>
+                {task.units_required && (
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Unités estimées</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{task.units_required}</p>
+                  </div>
+                )}
+                {task.rate_per_unit && (
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">Tarif par unité</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{task.rate_per_unit} MAD</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Harvest Completion Form */}
+          {showHarvestForm && (
+            <div className="border-t dark:border-gray-700 pt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Wheat className="w-5 h-5 text-amber-600" />
+                Enregistrer la récolte
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Crop Selector */}
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="crop_id">Culture récoltée *</Label>
+                  <Select
+                    value={harvestData.crop_id || '__none__'}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, crop_id: value === '__none__' ? '' : value })}
+                  >
+                    <SelectTrigger id="crop_id">
+                      <SelectValue placeholder="Sélectionner une culture" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
+                      {crops.map((crop: Crop) => (
+                        <SelectItem key={crop.id} value={crop.id}>
+                          {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {crops.length === 0 && (
+                    <p className="text-sm text-amber-600">
+                      {task.parcel_id
+                        ? "Aucune culture trouvée pour cette parcelle. Veuillez d'abord créer une culture dans Agriculture > Cultures."
+                        : "Aucune parcelle assignée à cette tâche. Modifiez la tâche pour ajouter une parcelle, ou créez une culture dans Agriculture > Cultures."}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="harvest_date">Date de récolte *</Label>
+                  <Input
+                    id="harvest_date"
+                    type="date"
+                    value={harvestData.harvest_date}
+                    onChange={(e) => setHarvestData({ ...harvestData, harvest_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantité récoltée *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={harvestData.quantity || ''}
+                    onChange={(e) => setHarvestData({ ...harvestData, quantity: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ex: 500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unité</Label>
+                  <Select
+                    value={harvestData.unit}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as any })}
+                  >
+                    <SelectTrigger id="unit">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kg">Kilogrammes (kg)</SelectItem>
+                      <SelectItem value="tons">Tonnes</SelectItem>
+                      <SelectItem value="units">Unités</SelectItem>
+                      <SelectItem value="boxes">Caisses</SelectItem>
+                      <SelectItem value="crates">Cagettes</SelectItem>
+                      <SelectItem value="liters">Litres</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quality_grade">Grade de qualité</Label>
+                  <Select
+                    value={harvestData.quality_grade}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as any })}
+                  >
+                    <SelectTrigger id="quality_grade">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Extra">Extra</SelectItem>
+                      <SelectItem value="A">Grade A</SelectItem>
+                      <SelectItem value="First">Première qualité</SelectItem>
+                      <SelectItem value="B">Grade B</SelectItem>
+                      <SelectItem value="Second">Deuxième qualité</SelectItem>
+                      <SelectItem value="C">Grade C</SelectItem>
+                      <SelectItem value="Third">Troisième qualité</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="harvest_notes">Notes</Label>
+                <Textarea
+                  id="harvest_notes"
+                  value={harvestData.harvest_notes || ''}
+                  onChange={(e) => setHarvestData({ ...harvestData, harvest_notes: e.target.value })}
+                  rows={2}
+                  placeholder="Notes sur la récolte..."
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          {task.completion_percentage > 0 && task.status !== 'completed' && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Progression</span>
+                <span className="font-medium text-gray-900 dark:text-white">{task.completion_percentage}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full"
+                  style={{ width: `${task.completion_percentage}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={onClose}>
+              Fermer
+            </Button>
+
+            {canStart && (
+              <Button
+                onClick={handleStartTask}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Démarrer
+              </Button>
+            )}
+
+            {canPause && (
+              <Button
+                onClick={handlePauseTask}
+                disabled={isLoading}
+                variant="outline"
+              >
+                <Pause className="w-4 h-4 mr-2" />
+                Pause
+              </Button>
+            )}
+
+            {canComplete && !showHarvestForm && (
+              <Button
+                onClick={handleCompleteTask}
+                disabled={isLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isHarvestingTask ? (
+                  <>
+                    <Wheat className="w-4 h-4 mr-2" />
+                    Terminer avec récolte
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Terminer
+                  </>
+                )}
+              </Button>
+            )}
+
+            {showHarvestForm && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowHarvestForm(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleCompleteWithHarvest}
+                  disabled={isLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {isLoading ? 'Enregistrement...' : 'Enregistrer la récolte'}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TaskDetailDialog;

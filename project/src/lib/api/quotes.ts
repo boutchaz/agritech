@@ -44,12 +44,12 @@ function transformQuoteForApi(data: CreateQuoteInput) {
   return {
     ...data,
     items: data.items.map((item, index) => ({
-      line_number: index + 1,
+      line_number: item.line_number || index + 1,
       item_id: item.item_id,
       item_name: item.item_name,
       description: item.description,
-      quantity: item.quantity,
-      unit_price: item.rate, // Map rate to unit_price
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
       account_id: item.account_id,
       tax_id: item.tax_id || undefined,
     })),

@@ -113,7 +113,7 @@ export function useQuote(quoteId: string | null) {
  */
 export function useCreateQuote() {
   const queryClient = useQueryClient();
-  const { currentOrganization, _user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (quoteData: {
@@ -137,14 +137,15 @@ export function useCreateQuote() {
           customer_id: quoteData.customer_id,
           quote_date: quoteData.quote_date,
           valid_until: quoteData.valid_until,
-          items: quoteData.items.map(item => ({
-            item_id: item.item_id,
+          items: quoteData.items.map((item, index) => ({
+            line_number: index + 1,
+            item_id: (item as any).item_id,
             item_name: item.item_name,
             description: item.description,
-            quantity: item.quantity,
-            rate: item.rate,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.rate),
             account_id: item.account_id,
-            tax_id: item.tax_id || null,
+            tax_id: item.tax_id || undefined,
           })),
           payment_terms: quoteData.payment_terms,
           delivery_terms: quoteData.delivery_terms,

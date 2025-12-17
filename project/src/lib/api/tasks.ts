@@ -66,9 +66,26 @@ export const tasksApi = {
 
   /**
    * Create a new task
+   * Note: Payment fields (payment_type, work_unit_id, units_required, rate_per_unit)
+   * require backend deployment. If the backend doesn't support them yet, we retry without them.
    */
   async create(organizationId: string, data: CreateTaskRequest): Promise<Task> {
-    return apiClient.post<Task>(`/api/v1/organizations/${organizationId}/tasks`, data);
+    try {
+      return await apiClient.post<Task>(`/api/v1/organizations/${organizationId}/tasks`, data);
+    } catch (error: any) {
+      // If the error is about payment fields not being supported, retry without them
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('payment_type should not exist') ||
+          errorMessage.includes('work_unit_id should not exist') ||
+          errorMessage.includes('units_required should not exist') ||
+          errorMessage.includes('rate_per_unit should not exist')) {
+        // Strip payment-related fields and retry
+        const { payment_type, work_unit_id, units_required, rate_per_unit, ...basicData } = data;
+        console.warn('Backend does not support payment fields yet. Creating task without them.');
+        return apiClient.post<Task>(`/api/v1/organizations/${organizationId}/tasks`, basicData);
+      }
+      throw error;
+    }
   },
 
   /**

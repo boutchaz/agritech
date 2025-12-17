@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { X, UserCog } from 'lucide-react';
+import { X, UserCog, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
 import { workUnitsApi } from '../../lib/api/work-units';
+import { parcelsApi } from '../../lib/api/parcels';
 import type { Task, CreateTaskRequest, TaskType, TaskPriority } from '../../types/tasks';
 import { TASK_TYPE_LABELS } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
+import type { Parcel } from '../../types/parcels';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/label';
@@ -65,6 +67,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return units || [];
     },
     enabled: !!organizationId,
+  });
+
+  // Fetch parcels for the selected farm
+  const { data: parcels = [] } = useQuery({
+    queryKey: ['parcels', organizationId, formData.farm_id],
+    queryFn: async () => {
+      if (!organizationId || !formData.farm_id) return [];
+      const result = await parcelsApi.getAll({ farm_id: formData.farm_id }, organizationId);
+      return result || [];
+    },
+    enabled: !!organizationId && !!formData.farm_id,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,24 +193,56 @@ const TaskForm: React.FC<TaskFormProps> = ({
             />
           </div>
 
-          {/* Farm */}
-          <div className="space-y-2">
-            <Label htmlFor="farm_id">Ferme *</Label>
-            <Select
-              value={formData.farm_id}
-              onValueChange={(value) => setFormData({ ...formData, farm_id: value })}
-            >
-              <SelectTrigger id="farm_id">
-                <SelectValue placeholder="Sélectionnez une ferme" />
-              </SelectTrigger>
-              <SelectContent>
-                {farms.map(farm => (
-                  <SelectItem key={farm.id} value={farm.id}>
-                    {farm.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Farm & Parcel */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="farm_id">Ferme *</Label>
+              <Select
+                value={formData.farm_id}
+                onValueChange={(value) => setFormData({ ...formData, farm_id: value, parcel_id: undefined })}
+              >
+                <SelectTrigger id="farm_id">
+                  <SelectValue placeholder="Sélectionnez une ferme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {farms.map(farm => (
+                    <SelectItem key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Parcel - especially important for harvesting tasks */}
+            <div className="space-y-2">
+              <Label htmlFor="parcel_id" className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Parcelle {formData.task_type === 'harvesting' && '*'}
+              </Label>
+              <Select
+                value={formData.parcel_id || '__none__'}
+                onValueChange={(value) => setFormData({ ...formData, parcel_id: value === '__none__' ? undefined : value })}
+                disabled={!formData.farm_id}
+              >
+                <SelectTrigger id="parcel_id">
+                  <SelectValue placeholder={formData.farm_id ? "Sélectionner parcelle" : "Sélectionnez d'abord une ferme"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Aucune</SelectItem>
+                  {parcels.map((parcel: Parcel) => (
+                    <SelectItem key={parcel.id} value={parcel.id}>
+                      {parcel.parcel_name} {parcel.crop_type ? `(${parcel.crop_type})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formData.task_type === 'harvesting' && !formData.parcel_id && (
+                <p className="text-xs text-amber-600">
+                  Sélectionnez une parcelle pour les tâches de récolte
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Assigned To */}
@@ -315,30 +360,31 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {formData.payment_type === 'per_unit' && formData.work_unit_id && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="units_required">Unités requises *</Label>
+                  <Label htmlFor="units_required">Unités estimées</Label>
                   <Input
                     id="units_required"
                     type="number"
-                    required
                     min="0"
                     step="0.01"
                     value={formData.units_required || ''}
                     onChange={(e) => setFormData({ ...formData, units_required: parseFloat(e.target.value) || undefined })}
-                    placeholder="Ex: 100"
+                    placeholder="Ex: 100 (optionnel)"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Les unités réelles seront enregistrées à la fin de la tâche
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="rate_per_unit">Tarif par unité (MAD) *</Label>
+                  <Label htmlFor="rate_per_unit">Tarif par unité (MAD)</Label>
                   <Input
                     id="rate_per_unit"
                     type="number"
-                    required
                     min="0"
                     step="0.01"
                     value={formData.rate_per_unit || ''}
                     onChange={(e) => setFormData({ ...formData, rate_per_unit: parseFloat(e.target.value) || undefined })}
-                    placeholder="Ex: 5.00"
+                    placeholder="Ex: 5.00 (optionnel)"
                   />
                   {formData.units_required && formData.rate_per_unit && (
                     <p className="text-xs text-muted-foreground">

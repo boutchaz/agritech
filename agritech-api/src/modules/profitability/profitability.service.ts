@@ -286,9 +286,39 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to fetch revenues');
     }
 
-    // Calculate totals
-    const totalCosts = (costs || []).reduce((sum, cost) => sum + Number(cost.amount || 0), 0);
-    const totalRevenue = (revenues || []).reduce((sum, rev) => sum + Number(rev.amount || 0), 0);
+    // Find costs/revenues that have linked journal entries to avoid double counting
+    // Journal entries store reference_type='cost' or 'revenue' and reference_number=id
+    const costIds = (costs || []).map(c => c.id);
+    const revenueIds = (revenues || []).map(r => r.id);
+
+    // Get journal entries that reference these costs/revenues
+    const { data: linkedJournalEntries } = await supabase
+      .from('journal_entries')
+      .select('reference_type, reference_number')
+      .eq('organization_id', organizationId)
+      .eq('status', 'posted')
+      .in('reference_type', ['cost', 'revenue']);
+
+    // Build sets of cost/revenue IDs that have journal entries
+    const costsWithJournalEntry = new Set<string>();
+    const revenuesWithJournalEntry = new Set<string>();
+
+    (linkedJournalEntries || []).forEach((entry: any) => {
+      if (entry.reference_type === 'cost' && costIds.includes(entry.reference_number)) {
+        costsWithJournalEntry.add(entry.reference_number);
+      } else if (entry.reference_type === 'revenue' && revenueIds.includes(entry.reference_number)) {
+        revenuesWithJournalEntry.add(entry.reference_number);
+      }
+    });
+
+    // Calculate totals - exclude costs/revenues that have linked journal entries
+    // Those will be counted via the ledger data instead
+    const totalCosts = (costs || [])
+      .filter(cost => !costsWithJournalEntry.has(cost.id))
+      .reduce((sum, cost) => sum + Number(cost.amount || 0), 0);
+    const totalRevenue = (revenues || [])
+      .filter(rev => !revenuesWithJournalEntry.has(rev.id))
+      .reduce((sum, rev) => sum + Number(rev.amount || 0), 0);
     const netProfit = totalRevenue - totalCosts;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
@@ -395,37 +425,69 @@ export class ProfitabilityService {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // Fetch ledger data
+    // Fetch ledger data from journal_items with parcel filter
     let ledgerExpenses: any[] = [];
     let ledgerRevenues: any[] = [];
     let accountBreakdown: any[] = [];
     let costCenterBreakdown: any[] = [];
 
     try {
-      // Fetch ledger expenses
-      const { data: expensesData } = await supabase
-        .from('vw_ledger')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('account_type', 'Expense')
-        .gte('entry_date', startDate)
-        .lte('entry_date', endDate);
+      // Fetch journal items for this parcel with expense accounts
+      const { data: expenseItems } = await supabase
+        .from('journal_items')
+        .select(`
+          *,
+          accounts!inner(code, name, account_type),
+          journal_entries!inner(entry_date, entry_number, description, status),
+          cost_centers(name),
+          parcels(parcel_name)
+        `)
+        .eq('parcel_id', parcelId)
+        .eq('accounts.account_type', 'expense')
+        .eq('journal_entries.status', 'posted')
+        .gte('journal_entries.entry_date', startDate)
+        .lte('journal_entries.entry_date', endDate);
 
-      if (expensesData) {
-        ledgerExpenses = expensesData.filter((item: any) => item.parcel_name !== null);
+      if (expenseItems) {
+        ledgerExpenses = expenseItems.map((item: any) => ({
+          ...item,
+          account_code: item.accounts?.code,
+          account_name: item.accounts?.name,
+          account_type: 'Expense',
+          entry_date: item.journal_entries?.entry_date,
+          entry_number: item.journal_entries?.entry_number,
+          cost_center_name: item.cost_centers?.name,
+          parcel_name: item.parcels?.parcel_name,
+        }));
       }
 
-      // Fetch ledger revenues
-      const { data: revenuesData } = await supabase
-        .from('vw_ledger')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('account_type', 'Revenue')
-        .gte('entry_date', startDate)
-        .lte('entry_date', endDate);
+      // Fetch journal items for this parcel with revenue accounts
+      const { data: revenueItems } = await supabase
+        .from('journal_items')
+        .select(`
+          *,
+          accounts!inner(code, name, account_type),
+          journal_entries!inner(entry_date, entry_number, description, status),
+          cost_centers(name),
+          parcels(parcel_name)
+        `)
+        .eq('parcel_id', parcelId)
+        .eq('accounts.account_type', 'revenue')
+        .eq('journal_entries.status', 'posted')
+        .gte('journal_entries.entry_date', startDate)
+        .lte('journal_entries.entry_date', endDate);
 
-      if (revenuesData) {
-        ledgerRevenues = revenuesData.filter((item: any) => item.parcel_name !== null);
+      if (revenueItems) {
+        ledgerRevenues = revenueItems.map((item: any) => ({
+          ...item,
+          account_code: item.accounts?.code,
+          account_name: item.accounts?.name,
+          account_type: 'Revenue',
+          entry_date: item.journal_entries?.entry_date,
+          entry_number: item.journal_entries?.entry_number,
+          cost_center_name: item.cost_centers?.name,
+          parcel_name: item.parcels?.parcel_name,
+        }));
       }
 
       // Account breakdown
@@ -488,19 +550,42 @@ export class ProfitabilityService {
       this.logger.warn('Ledger data not available', error);
     }
 
+    // Calculate ledger totals
+    const ledgerExpenseTotal = ledgerExpenses.reduce(
+      (sum, item) => sum + (Number(item.debit || 0) - Number(item.credit || 0)),
+      0,
+    );
+    const ledgerRevenueTotal = ledgerRevenues.reduce(
+      (sum, item) => sum + (Number(item.credit || 0) - Number(item.debit || 0)),
+      0,
+    );
+
+    // Combine totals: legacy + ledger
+    // Note: Legacy totals already exclude costs/revenues that have linked journal entries
+    // so adding them together won't cause double counting
+    const combinedCosts = totalCosts + ledgerExpenseTotal;
+    const combinedRevenue = totalRevenue + ledgerRevenueTotal;
+    const combinedProfit = combinedRevenue - combinedCosts;
+    const combinedMargin = combinedRevenue > 0 ? (combinedProfit / combinedRevenue) * 100 : 0;
+
     return {
-      totalCosts,
-      totalRevenue,
-      netProfit,
-      profitMargin,
+      // Combined totals (legacy + ledger)
+      totalCosts: combinedCosts,
+      totalRevenue: combinedRevenue,
+      netProfit: combinedProfit,
+      profitMargin: combinedMargin,
+      // Legacy data for backward compatibility
       costs: costs || [],
       revenues: revenues || [],
       categoryBreakdown,
       costTypeBreakdown,
       revenueTypeBreakdown,
       monthlyData,
+      // Ledger data
       ledgerExpenses,
       ledgerRevenues,
+      ledgerExpenseTotal,
+      ledgerRevenueTotal,
       accountBreakdown,
       costCenterBreakdown,
     };
@@ -542,5 +627,108 @@ export class ProfitabilityService {
     );
 
     return filtered;
+  }
+
+  /**
+   * Get account mappings for profitability journal entries
+   * Returns the default expense, revenue, and cash accounts based on mappings
+   */
+  async getAccountMappings(organizationId: string) {
+    const supabase = this.databaseService.getAdminClient();
+
+    // Get mappings for common cost types and cash accounts
+    const { data: mappings, error: mappingsError } = await supabase
+      .from('account_mappings')
+      .select(`
+        mapping_type,
+        mapping_key,
+        account_id,
+        accounts (
+          id,
+          code,
+          name,
+          account_type
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (mappingsError) {
+      this.logger.warn('Error fetching account mappings', mappingsError);
+    }
+
+    // Build a structured response
+    const result = {
+      expense: {} as Record<string, { id: string; code: string; name: string }>,
+      revenue: {} as Record<string, { id: string; code: string; name: string }>,
+      cash: null as { id: string; code: string; name: string } | null,
+      defaultExpense: null as { id: string; code: string; name: string } | null,
+      defaultRevenue: null as { id: string; code: string; name: string } | null,
+    };
+
+    (mappings || []).forEach((mapping: any) => {
+      const account = mapping.accounts;
+      if (!account) return;
+
+      const accountInfo = {
+        id: account.id,
+        code: account.code,
+        name: account.name,
+      };
+
+      if (mapping.mapping_type === 'cost_type') {
+        result.expense[mapping.mapping_key] = accountInfo;
+      } else if (mapping.mapping_type === 'revenue_type') {
+        result.revenue[mapping.mapping_key] = accountInfo;
+      } else if (mapping.mapping_type === 'cash') {
+        result.cash = accountInfo;
+      }
+    });
+
+    // If no mappings found, try to get default accounts by account_type
+    if (!result.cash) {
+      const { data: cashAccounts } = await supabase
+        .from('accounts')
+        .select('id, code, name')
+        .eq('organization_id', organizationId)
+        .eq('account_type', 'Asset')
+        .eq('is_active', true)
+        .like('code', '51%') // Bank/cash accounts typically start with 51
+        .limit(1);
+
+      if (cashAccounts?.[0]) {
+        result.cash = cashAccounts[0];
+      }
+    }
+
+    if (Object.keys(result.expense).length === 0) {
+      const { data: expenseAccounts } = await supabase
+        .from('accounts')
+        .select('id, code, name')
+        .eq('organization_id', organizationId)
+        .eq('account_type', 'Expense')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (expenseAccounts?.[0]) {
+        result.defaultExpense = expenseAccounts[0];
+      }
+    }
+
+    if (Object.keys(result.revenue).length === 0) {
+      const { data: revenueAccounts } = await supabase
+        .from('accounts')
+        .select('id, code, name')
+        .eq('organization_id', organizationId)
+        .eq('account_type', 'Revenue')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (revenueAccounts?.[0]) {
+        result.defaultRevenue = revenueAccounts[0];
+      }
+    }
+
+    return result;
   }
 }

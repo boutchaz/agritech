@@ -122,6 +122,17 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   const costs = profitabilityData?.costs || [];
   const revenues = profitabilityData?.revenues || [];
 
+  // Fetch account mappings for journal entry creation
+  const { data: accountMappings } = useQuery({
+    queryKey: ['account-mappings', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization) return null;
+      return profitabilityApi.getAccountMappings(currentOrganization.id);
+    },
+    enabled: !!currentOrganization,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Add cost mutation
   const addCostMutation = useMutation({
     mutationFn: async (costData: typeof newCost) => {
@@ -138,52 +149,60 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       );
 
       // Create journal entry if enabled
-      if (createJournalEntry) {
+      if (createJournalEntry && accountMappings) {
         try {
-          const { supabase } = await import('../lib/supabase');
-          // Get expense account (you may need to adjust account codes based on your chart of accounts)
-          const { data: expenseAccounts } = await supabase
-            .from('accounts')
-            .select('id')
-            .eq('organization_id', currentOrganization.id)
-            .eq('type', 'expense')
-            .eq('code', '6000') // Farming expenses account
-            .limit(1);
+          // Use account mappings from API (no hardcoded account codes)
+          const expenseAccount =
+            accountMappings.expense[costData.cost_type] ||
+            accountMappings.defaultExpense;
+          const cashAccount = accountMappings.cash;
 
-          // Get cash/bank account
-          const { data: cashAccounts } = await supabase
-            .from('accounts')
-            .select('id')
-            .eq('organization_id', currentOrganization.id)
-            .eq('type', 'asset')
-            .eq('code', '1000') // Cash account
-            .limit(1);
-
-          if (expenseAccounts?.[0] && cashAccounts?.[0]) {
-            await accountingApi.createJournalEntry(
+          if (expenseAccount && cashAccount) {
+            console.log('Creating journal entry with accounts:', {
+              expense: expenseAccount,
+              cash: cashAccount,
+              amount: costData.amount
+            });
+            const journalEntry = await accountingApi.createJournalEntry(
               {
                 entry_date: new Date(costData.date),
-                posting_date: new Date(costData.date),
-                reference: `COST-${cost.id}`,
-                description: costData.description || `${costData.cost_type} cost`,
+                entry_type: 'expense',
+                remarks: costData.description || `${costData.cost_type} cost`,
+                reference_type: 'cost',
+                reference_number: cost.id,
                 items: [
                   {
-                    account_id: expenseAccounts[0].id,
+                    account_id: expenseAccount.id,
                     debit: costData.amount,
                     credit: 0,
-                    description: costData.description || `${costData.cost_type} cost`
+                    description: costData.description || `${costData.cost_type} cost`,
+                    parcel_id: parcelId,
                   },
                   {
-                    account_id: cashAccounts[0].id,
+                    account_id: cashAccount.id,
                     debit: 0,
                     credit: costData.amount,
-                    description: `Payment for ${costData.description || costData.cost_type}`
+                    description: `Payment for ${costData.description || costData.cost_type}`,
+                    parcel_id: parcelId,
                   }
                 ]
               },
               currentOrganization.id,
               user.id
             );
+            console.log('Journal entry created:', journalEntry);
+
+            // Post the journal entry so it appears in profitability reports
+            if (journalEntry?.id) {
+              await accountingApi.postJournalEntry(journalEntry.id, user.id);
+              console.log('Journal entry posted successfully');
+            }
+          } else {
+            console.warn('Could not find expense or cash account for journal entry. Please configure account mappings.', {
+              expenseAccount,
+              cashAccount,
+              costType: costData.cost_type
+            });
           }
         } catch (journalError) {
           console.error('Failed to create journal entry:', journalError);
@@ -225,52 +244,60 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       );
 
       // Create journal entry if enabled
-      if (createJournalEntry) {
+      if (createJournalEntry && accountMappings) {
         try {
-          const { supabase } = await import('../lib/supabase');
-          // Get revenue account
-          const { data: revenueAccounts } = await supabase
-            .from('accounts')
-            .select('id')
-            .eq('organization_id', currentOrganization.id)
-            .eq('type', 'revenue')
-            .eq('code', '4000') // Sales/Revenue account
-            .limit(1);
+          // Use account mappings from API (no hardcoded account codes)
+          const revenueAccount =
+            accountMappings.revenue[revenueData.revenue_type] ||
+            accountMappings.defaultRevenue;
+          const cashAccount = accountMappings.cash;
 
-          // Get cash/bank account
-          const { data: cashAccounts } = await supabase
-            .from('accounts')
-            .select('id')
-            .eq('organization_id', currentOrganization.id)
-            .eq('type', 'asset')
-            .eq('code', '1000') // Cash account
-            .limit(1);
-
-          if (revenueAccounts?.[0] && cashAccounts?.[0]) {
-            await accountingApi.createJournalEntry(
+          if (revenueAccount && cashAccount) {
+            console.log('Creating revenue journal entry with accounts:', {
+              revenue: revenueAccount,
+              cash: cashAccount,
+              amount: revenueData.amount
+            });
+            const journalEntry = await accountingApi.createJournalEntry(
               {
                 entry_date: new Date(revenueData.date),
-                posting_date: new Date(revenueData.date),
-                reference: `REV-${revenue.id}`,
-                description: revenueData.description || `${revenueData.revenue_type} revenue`,
+                entry_type: 'revenue',
+                remarks: revenueData.description || `${revenueData.revenue_type} revenue`,
+                reference_type: 'revenue',
+                reference_number: revenue.id,
                 items: [
                   {
-                    account_id: cashAccounts[0].id,
+                    account_id: cashAccount.id,
                     debit: revenueData.amount,
                     credit: 0,
-                    description: `Receipt from ${revenueData.description || revenueData.revenue_type}`
+                    description: `Receipt from ${revenueData.description || revenueData.revenue_type}`,
+                    parcel_id: parcelId,
                   },
                   {
-                    account_id: revenueAccounts[0].id,
+                    account_id: revenueAccount.id,
                     debit: 0,
                     credit: revenueData.amount,
-                    description: revenueData.description || `${revenueData.revenue_type} revenue`
+                    description: revenueData.description || `${revenueData.revenue_type} revenue`,
+                    parcel_id: parcelId,
                   }
                 ]
               },
               currentOrganization.id,
               user.id
             );
+            console.log('Revenue journal entry created:', journalEntry);
+
+            // Post the journal entry so it appears in profitability reports
+            if (journalEntry?.id) {
+              await accountingApi.postJournalEntry(journalEntry.id, user.id);
+              console.log('Revenue journal entry posted successfully');
+            }
+          } else {
+            console.warn('Could not find revenue or cash account for journal entry. Please configure account mappings.', {
+              revenueAccount,
+              cashAccount,
+              revenueType: revenueData.revenue_type
+            });
           }
         } catch (journalError) {
           console.error('Failed to create journal entry:', journalError);
@@ -473,13 +500,14 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   {t('profitability.recentTransactions.costs')}
                 </h3>
-                {costs.length === 0 ? (
+                {costs.length === 0 && (profitabilityData?.ledgerExpenses || []).length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
                     {t('profitability.recentTransactions.noCosts')}
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {costs.slice(0, 10).map((cost) => (
+                    {/* Legacy costs */}
+                    {costs.slice(0, 5).map((cost) => (
                       <div key={cost.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -494,6 +522,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                         </div>
                       </div>
                     ))}
+                    {/* Ledger expenses */}
+                    {(profitabilityData?.ledgerExpenses || []).slice(0, 5).map((expense: any) => (
+                      <div key={expense.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {expense.description || expense.account_name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(expense.entry_date).toLocaleDateString()} • {expense.entry_number}
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                          {formatCurrency(Number(expense.debit || 0) - Number(expense.credit || 0))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -505,13 +549,14 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   {t('profitability.recentTransactions.revenues')}
                 </h3>
-                {revenues.length === 0 ? (
+                {revenues.length === 0 && (profitabilityData?.ledgerRevenues || []).length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
                     {t('profitability.recentTransactions.noRevenues')}
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {revenues.slice(0, 10).map((revenue) => (
+                    {/* Legacy revenues */}
+                    {revenues.slice(0, 5).map((revenue) => (
                       <div key={revenue.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -524,6 +569,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                         </div>
                         <div className="text-sm font-medium text-green-600 dark:text-green-400">
                           {formatCurrency(revenue.amount)}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Ledger revenues */}
+                    {(profitabilityData?.ledgerRevenues || []).slice(0, 5).map((revenue: any) => (
+                      <div key={revenue.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {revenue.description || revenue.account_name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(revenue.entry_date).toLocaleDateString()} • {revenue.entry_number}
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {formatCurrency(Number(revenue.credit || 0) - Number(revenue.debit || 0))}
                         </div>
                       </div>
                     ))}

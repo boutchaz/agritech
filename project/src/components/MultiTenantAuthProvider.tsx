@@ -369,6 +369,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const finalOrg = orgToRestore || organizations[0];
       setCurrentOrganization(finalOrg);
 
+      // IMPORTANT: Also save to localStorage so services can read it immediately
+      // This fixes the bug where parcels don't load on first render
+      localStorage.setItem('currentOrganization', JSON.stringify(finalOrg));
+
       // Sync to Zustand store
       setOrganizationInStore({
         id: finalOrg.id,
