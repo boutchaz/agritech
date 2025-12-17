@@ -146,10 +146,16 @@ export class OrganizationsService {
     async updateOrganization(userId: string, organizationId: string, updateData: any) {
         this.logger.log(`Updating organization ${organizationId} for user ${userId}`);
 
-        // Verify user access
+        // Verify user access and get role through foreign key join
         const { data: orgUser, error: orgError } = await this.supabaseAdmin
             .from('organization_users')
-            .select('organization_id, role')
+            .select(`
+                organization_id,
+                role_id,
+                roles (
+                    name
+                )
+            `)
             .eq('organization_id', organizationId)
             .eq('user_id', userId)
             .eq('is_active', true)
@@ -160,8 +166,11 @@ export class OrganizationsService {
             throw new ForbiddenException('You do not have access to this organization');
         }
 
-        // Only admin and owner can update organization
-        if (orgUser.role !== 'admin' && orgUser.role !== 'owner') {
+        // Get role name from the joined roles table
+        const roleName = (orgUser.roles as any)?.name;
+
+        // Only organization_admin and system_admin can update organization
+        if (roleName !== 'organization_admin' && roleName !== 'system_admin') {
             throw new ForbiddenException('You do not have permission to update this organization');
         }
 

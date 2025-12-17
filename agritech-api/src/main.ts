@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -13,6 +14,14 @@ async function bootstrap() {
 
   // Get config service
   const configService = app.get(ConfigService);
+
+  // Security middleware - Helmet sets various HTTP headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: configService.get('NODE_ENV') === 'production' ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Enable validation
   app.useGlobalPipes(
@@ -108,6 +117,9 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   logger.log('Swagger docs available at /api/docs');
+
+  // Enable graceful shutdown hooks
+  app.enableShutdownHooks();
 
   // Start server
   const port = configService.get('PORT', 3000);

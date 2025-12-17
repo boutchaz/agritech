@@ -26,7 +26,7 @@ export class DeliveriesService {
   /**
    * Get all deliveries for an organization with optional filters
    */
-  async getAll(organizationId: string, filters?: {
+  async getAll(userId: string, organizationId: string, filters?: {
     status?: string; // comma-separated
     payment_status?: string; // comma-separated
     delivery_type?: string; // comma-separated
@@ -36,6 +36,7 @@ export class DeliveriesService {
     date_to?: string;
     customer_name?: string;
   }) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
     let query = client
@@ -92,7 +93,8 @@ export class DeliveriesService {
   /**
    * Get a single delivery by ID with items and tracking
    */
-  async getById(organizationId: string, deliveryId: string) {
+  async getById(userId: string, organizationId: string, deliveryId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
     // Get delivery
@@ -133,8 +135,21 @@ export class DeliveriesService {
   /**
    * Get delivery items for a specific delivery
    */
-  async getItems(deliveryId: string) {
+  async getItems(userId: string, organizationId: string, deliveryId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    // Verify delivery belongs to organization
+    const { data: delivery, error: deliveryError } = await client
+      .from('deliveries')
+      .select('id')
+      .eq('id', deliveryId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (deliveryError || !delivery) {
+      throw new NotFoundException('Delivery not found');
+    }
 
     const { data, error } = await client
       .from('delivery_items')
@@ -158,8 +173,21 @@ export class DeliveriesService {
   /**
    * Get delivery tracking records for a specific delivery
    */
-  async getTracking(deliveryId: string) {
+  async getTracking(userId: string, organizationId: string, deliveryId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    // Verify delivery belongs to organization
+    const { data: delivery, error: deliveryError } = await client
+      .from('deliveries')
+      .select('id')
+      .eq('id', deliveryId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (deliveryError || !delivery) {
+      throw new NotFoundException('Delivery not found');
+    }
 
     const { data, error } = await client
       .from('delivery_tracking')

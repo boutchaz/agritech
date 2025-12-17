@@ -23,6 +23,7 @@ export class DeliveriesController {
    */
   @Get()
   async getDeliveries(
+    @Request() req,
     @Param('organizationId') organizationId: string,
     @Query('status') status?: string,
     @Query('payment_status') paymentStatus?: string,
@@ -33,7 +34,7 @@ export class DeliveriesController {
     @Query('date_to') dateTo?: string,
     @Query('customer_name') customerName?: string,
   ) {
-    return this.deliveriesService.getAll(organizationId, {
+    return this.deliveriesService.getAll(req.user.userId, organizationId, {
       status,
       payment_status: paymentStatus,
       delivery_type: deliveryType,
@@ -51,10 +52,11 @@ export class DeliveriesController {
    */
   @Get(':deliveryId')
   async getDelivery(
+    @Request() req,
     @Param('organizationId') organizationId: string,
     @Param('deliveryId') deliveryId: string,
   ) {
-    return this.deliveriesService.getById(organizationId, deliveryId);
+    return this.deliveriesService.getById(req.user.userId, organizationId, deliveryId);
   }
 
   /**
@@ -62,8 +64,12 @@ export class DeliveriesController {
    * Get delivery items
    */
   @Get(':deliveryId/items')
-  async getDeliveryItems(@Param('deliveryId') deliveryId: string) {
-    return this.deliveriesService.getItems(deliveryId);
+  async getDeliveryItems(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('deliveryId') deliveryId: string,
+  ) {
+    return this.deliveriesService.getItems(req.user.userId, organizationId, deliveryId);
   }
 
   /**
@@ -71,8 +77,12 @@ export class DeliveriesController {
    * Get delivery tracking records
    */
   @Get(':deliveryId/tracking')
-  async getDeliveryTracking(@Param('deliveryId') deliveryId: string) {
-    return this.deliveriesService.getTracking(deliveryId);
+  async getDeliveryTracking(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('deliveryId') deliveryId: string,
+  ) {
+    return this.deliveriesService.getTracking(req.user.userId, organizationId, deliveryId);
   }
 
   /**
