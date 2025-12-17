@@ -53,10 +53,11 @@ services:
     networks:
       - strapi-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${STRAPI_DB_USER:-strapi}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
 
 networks:
   strapi-network:
