@@ -17,7 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/radix-select';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
 import { CheckCircle2, ShoppingCart, FileText, Truck, Clock, XCircle, Circle, AlertCircle, Loader2, Package } from 'lucide-react';
 import type { SalesOrder } from '@/hooks/useSalesOrders';
