@@ -151,4 +151,18 @@ export const salesOrdersApi = {
     const response = await apiClient.post(`${BASE_URL}/${id}/convert-to-invoice`, params || {}, {}, organizationId);
     return response;
   },
+
+  /**
+   * Issue stock for a sales order
+   * Creates a Material Issue stock entry and records COGS journal entry
+   */
+  async issueStock(id: string, warehouseId: string, organizationId?: string) {
+    const response = await apiClient.post(
+      `${BASE_URL}/${id}/issue-stock?warehouse_id=${encodeURIComponent(warehouseId)}`,
+      {},
+      {},
+      organizationId
+    );
+    return response;
+  },
 };

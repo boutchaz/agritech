@@ -221,7 +221,16 @@ export class QuotesService {
   }
 
   /**
-   * Update quote status
+   * Update quote status with validation for allowed transitions
+   *
+   * Valid status transitions:
+   * - draft -> sent, cancelled
+   * - sent -> accepted, rejected, cancelled
+   * - accepted -> converted, cancelled
+   * - rejected -> (no transitions allowed - terminal state)
+   * - converted -> (no transitions allowed - terminal state)
+   * - cancelled -> (no transitions allowed - terminal state)
+   * - expired -> (no transitions allowed - terminal state)
    */
   async updateStatus(
     id: string,
@@ -230,6 +239,46 @@ export class QuotesService {
     dto: UpdateQuoteStatusDto
   ): Promise<any> {
     const supabaseClient = this.databaseService.getAdminClient();
+
+    // Fetch current quote to validate status transition
+    const { data: currentQuote, error: fetchError } = await supabaseClient
+      .from('quotes')
+      .select('status, quote_number')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchError || !currentQuote) {
+      throw new NotFoundException('Quote not found');
+    }
+
+    // Define valid status transitions
+    const validTransitions: Record<string, string[]> = {
+      draft: ['sent', 'cancelled'],
+      sent: ['accepted', 'rejected', 'cancelled'],
+      accepted: ['converted', 'cancelled'],
+      rejected: [], // Terminal state
+      converted: [], // Terminal state
+      cancelled: [], // Terminal state
+      expired: [], // Terminal state
+    };
+
+    const currentStatus = currentQuote.status;
+    const newStatus = dto.status;
+
+    // Check if the transition is valid
+    const allowedTransitions = validTransitions[currentStatus] || [];
+    if (!allowedTransitions.includes(newStatus)) {
+      const terminalStates = ['rejected', 'converted', 'cancelled', 'expired'];
+      if (terminalStates.includes(currentStatus)) {
+        throw new BadRequestException(
+          `Cannot change status of a ${currentStatus} quote. This is a terminal state.`
+        );
+      }
+      throw new BadRequestException(
+        `Invalid status transition from '${currentStatus}' to '${newStatus}'. Allowed transitions: ${allowedTransitions.join(', ') || 'none'}`
+      );
+    }
 
     const updateData: any = {
       status: dto.status,
@@ -248,6 +297,11 @@ export class QuotesService {
     } else if (dto.status === 'converted') {
       updateData.converted_at = new Date().toISOString();
       updateData.converted_by = userId;
+    } else if (dto.status === 'cancelled') {
+      updateData.cancelled_at = new Date().toISOString();
+      updateData.cancelled_by = userId;
+    } else if (dto.status === 'rejected') {
+      updateData.rejected_at = new Date().toISOString();
     }
 
     const { data, error } = await supabaseClient
@@ -262,6 +316,8 @@ export class QuotesService {
       this.logger.error(`Failed to update quote status: ${error.message}`);
       throw new BadRequestException(`Failed to update quote status: ${error.message}`);
     }
+
+    this.logger.log(`Quote ${currentQuote.quote_number} status changed from '${currentStatus}' to '${newStatus}'`);
 
     return data;
   }

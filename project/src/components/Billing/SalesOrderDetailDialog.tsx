@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import {
@@ -11,10 +11,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
-import { CheckCircle2, ShoppingCart, FileText, Truck, Clock, XCircle, Circle, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, ShoppingCart, FileText, Truck, Clock, XCircle, Circle, AlertCircle, Loader2, Package } from 'lucide-react';
 import type { SalesOrder } from '@/hooks/useSalesOrders';
-import { useSalesOrder, useConvertOrderToInvoice } from '@/hooks/useSalesOrders';
+import { useSalesOrder, useConvertOrderToInvoice, useIssueStock } from '@/hooks/useSalesOrders';
+import { useWarehouses } from '@/hooks/useWarehouses';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { useAuth } from '../MultiTenantAuthProvider';
@@ -61,6 +69,9 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const { currentOrganization: _currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
+  const issueStockMutation = useIssueStock();
+  const { data: warehouses = [] } = useWarehouses();
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
 
   const salesOrderId = salesOrder?.id ?? null;
   const {
@@ -120,6 +131,26 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
 
   const handleMarkProcessing = () => updateStatus.mutate('processing');
   const handleMarkDelivered = () => updateStatus.mutate('delivered');
+
+  const handleIssueStock = () => {
+    if (!salesOrder || !selectedWarehouseId) return;
+
+    issueStockMutation.mutate(
+      {
+        orderId: salesOrder.id,
+        warehouseId: selectedWarehouseId,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Stock issued successfully. Inventory updated and COGS recorded.');
+          setSelectedWarehouseId('');
+        },
+        onError: (error) => {
+          toast.error('Failed to issue stock: ' + error.message);
+        },
+      }
+    );
+  };
 
   const getStatusColor = (status: SalesOrder['status']) => {
     switch (status) {
@@ -231,6 +262,8 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const canMarkProcessing = so.status === 'confirmed';
   const canMarkDelivered = ['processing', 'shipped'].includes(so.status);
   const canCreateInvoice = ['confirmed', 'processing', 'shipped', 'delivered', 'completed'].includes(so.status);
+  // Stock can be issued for confirmed/processing orders that haven't issued stock yet
+  const canIssueStock = ['confirmed', 'processing'].includes(so.status) && !so.stock_issued;
 
   const remainingToInvoice = Math.max(0, Number(so.grand_total) - Number(so.invoiced_amount));
 
@@ -355,6 +388,49 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
                     <Truck className="mr-2 h-4 w-4" />
                     Mark as Delivered
                   </Button>
+                )}
+                {/* Issue Stock Section */}
+                {canIssueStock && (
+                  <div className="flex flex-col gap-2 p-3 border rounded-md bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+                      <Package className="h-4 w-4" />
+                      Issue Stock
+                    </div>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Deduct inventory and record COGS journal entry.
+                    </p>
+                    <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select warehouse..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouses.map((wh) => (
+                          <SelectItem key={wh.id} value={wh.id}>
+                            {wh.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleIssueStock}
+                      disabled={!selectedWarehouseId || issueStockMutation.isPending}
+                      variant="default"
+                      className="w-full bg-amber-600 hover:bg-amber-700"
+                    >
+                      {issueStockMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Package className="mr-2 h-4 w-4" />
+                      )}
+                      Issue Stock
+                    </Button>
+                  </div>
+                )}
+                {so.stock_issued && (
+                  <div className="flex items-center gap-2 p-2 text-xs text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Stock issued on {so.stock_issued_date ? new Date(so.stock_issued_date).toLocaleDateString('fr-FR') : 'N/A'}
+                  </div>
                 )}
                 <div className="flex flex-col gap-1">
                   <Button

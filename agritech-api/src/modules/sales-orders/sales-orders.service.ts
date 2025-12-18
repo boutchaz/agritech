@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import {
   CreateSalesOrderDto,
   UpdateSalesOrderDto,
@@ -9,6 +10,10 @@ import {
   ConvertToInvoiceDto,
   SalesOrderStatus,
 } from './dto';
+import {
+  StockEntryType,
+  StockEntryStatus,
+} from '../stock-entries/dto/create-stock-entry.dto';
 
 @Injectable()
 export class SalesOrdersService {
@@ -17,6 +22,7 @@ export class SalesOrdersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly stockEntriesService: StockEntriesService,
   ) { }
 
   /**
@@ -611,5 +617,286 @@ export class SalesOrdersService {
     const date = new Date(invoiceDate);
     date.setDate(date.getDate() + daysToAdd);
     return date.toISOString().split('T')[0];
+  }
+
+  /**
+   * Issue stock for a sales order
+   * Creates a Material Issue stock entry to deduct inventory for the order items
+   * Also creates COGS journal entry (Dr. COGS, Cr. Inventory)
+   */
+  async issueStock(
+    salesOrderId: string,
+    organizationId: string,
+    userId: string,
+    warehouseId: string,
+  ): Promise<any> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    try {
+      // Fetch sales order with items
+      const { data: salesOrder, error: fetchError } = await supabaseClient
+        .from('sales_orders')
+        .select('*, items:sales_order_items(*)')
+        .eq('id', salesOrderId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (fetchError || !salesOrder) {
+        throw new NotFoundException('Sales order not found');
+      }
+
+      // Validate order status
+      if (salesOrder.status === SalesOrderStatus.CANCELLED) {
+        throw new BadRequestException('Cannot issue stock for a cancelled order');
+      }
+
+      if (salesOrder.status === SalesOrderStatus.DRAFT) {
+        throw new BadRequestException('Cannot issue stock for a draft order. Please confirm the order first.');
+      }
+
+      if (salesOrder.stock_issued) {
+        throw new BadRequestException('Stock has already been issued for this order');
+      }
+
+      // Validate warehouse exists
+      const { data: warehouse, error: warehouseError } = await supabaseClient
+        .from('warehouses')
+        .select('id, name, is_active')
+        .eq('id', warehouseId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (warehouseError || !warehouse) {
+        throw new BadRequestException('Warehouse not found');
+      }
+
+      if (!warehouse.is_active) {
+        throw new BadRequestException('Cannot issue stock from an inactive warehouse');
+      }
+
+      // Filter items that have item_id (only track stock for inventory items)
+      const stockableItems = salesOrder.items.filter((item: any) => item.item_id);
+
+      if (stockableItems.length === 0) {
+        // No stockable items, just mark as issued
+        await supabaseClient
+          .from('sales_orders')
+          .update({
+            stock_issued: true,
+            stock_issued_at: new Date().toISOString(),
+            stock_issued_by: userId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', salesOrderId);
+
+        this.logger.log(`No stockable items in order ${salesOrder.order_number}, marked as issued`);
+
+        return {
+          success: true,
+          message: 'No stockable items in order, marked as stock issued',
+          stock_entry_id: null,
+        };
+      }
+
+      // Prepare stock entry items
+      const stockEntryItems = stockableItems.map((item: any) => ({
+        item_id: item.item_id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit: item.unit_of_measure || 'unit',
+        source_warehouse_id: warehouseId,
+      }));
+
+      // Create Material Issue stock entry
+      const stockEntry = await this.stockEntriesService.createStockEntry({
+        organization_id: organizationId,
+        entry_type: StockEntryType.MATERIAL_ISSUE,
+        entry_date: new Date(),
+        from_warehouse_id: warehouseId,
+        reference_type: 'Sales Order',
+        reference_id: salesOrderId,
+        reference_number: salesOrder.order_number,
+        purpose: `Stock issue for Sales Order ${salesOrder.order_number}`,
+        notes: `Customer: ${salesOrder.customer_name}`,
+        status: StockEntryStatus.POSTED, // Post immediately
+        items: stockEntryItems,
+        created_by: userId,
+      });
+
+      // Update sales order to mark stock as issued
+      const { error: updateError } = await supabaseClient
+        .from('sales_orders')
+        .update({
+          stock_issued: true,
+          stock_issued_at: new Date().toISOString(),
+          stock_issued_by: userId,
+          stock_entry_id: stockEntry.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', salesOrderId);
+
+      if (updateError) {
+        this.logger.error('Error updating sales order after stock issue:', updateError);
+        throw new BadRequestException(`Failed to update sales order: ${updateError.message}`);
+      }
+
+      // Create COGS journal entry
+      await this.createCOGSJournalEntry(
+        salesOrder,
+        stockEntry,
+        organizationId,
+        userId,
+      );
+
+      this.logger.log(
+        `Stock issued for order ${salesOrder.order_number}: ` +
+        `${stockableItems.length} items from warehouse ${warehouse.name}`
+      );
+
+      return {
+        success: true,
+        message: 'Stock issued successfully',
+        stock_entry_id: stockEntry.id,
+        stock_entry_number: stockEntry.entry_number,
+      };
+
+    } catch (error) {
+      this.logger.error('Error issuing stock for sales order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create COGS (Cost of Goods Sold) journal entry when stock is issued
+   * Dr. Cost of Goods Sold (6xxx - expense account)
+   * Cr. Inventory (3xxx - asset account)
+   */
+  private async createCOGSJournalEntry(
+    salesOrder: any,
+    stockEntry: any,
+    organizationId: string,
+    userId: string,
+  ): Promise<void> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    try {
+      // Get the total cost from stock movements created by the stock entry
+      const { data: movements, error: movementsError } = await supabaseClient
+        .from('stock_movements')
+        .select('total_cost, item_id')
+        .eq('stock_entry_id', stockEntry.id)
+        .eq('movement_type', 'OUT');
+
+      if (movementsError) {
+        this.logger.error('Error fetching stock movements for COGS:', movementsError);
+        return; // Don't fail the whole operation
+      }
+
+      // Calculate total COGS
+      const totalCOGS = movements?.reduce(
+        (sum: number, m: any) => sum + Math.abs(Number(m.total_cost) || 0),
+        0
+      ) || 0;
+
+      if (totalCOGS <= 0) {
+        this.logger.warn('No COGS to record (zero cost movements)');
+        return;
+      }
+
+      // Get default accounts for COGS and Inventory
+      // COGS: 6115 (Achats d'emballages) or create a specific one
+      // For agricultural business, we use variation des stocks
+      const { data: cogsAccount } = await supabaseClient
+        .from('accounts')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('code', '6115') // Default: Achats d'emballages - adjust based on business
+        .single();
+
+      const { data: inventoryAccount } = await supabaseClient
+        .from('accounts')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('code', '3500') // Produits finis
+        .single();
+
+      if (!cogsAccount || !inventoryAccount) {
+        this.logger.warn('COGS or Inventory account not found, skipping journal entry');
+        return;
+      }
+
+      // Generate journal entry number
+      const { data: entryNumber } = await supabaseClient
+        .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
+
+      // Create journal entry
+      const { data: journalEntry, error: journalError } = await supabaseClient
+        .from('journal_entries')
+        .insert({
+          organization_id: organizationId,
+          entry_number: entryNumber,
+          entry_date: new Date().toISOString().split('T')[0],
+          posting_date: new Date().toISOString().split('T')[0],
+          reference_type: 'Sales Order',
+          reference_number: salesOrder.order_number,
+          remarks: `Cost of Goods Sold for ${salesOrder.order_number} - ${salesOrder.customer_name}`,
+          created_by: userId,
+          status: 'posted',
+          posted_by: userId,
+          posted_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (journalError) {
+        this.logger.error('Error creating COGS journal entry:', journalError);
+        return;
+      }
+
+      // Create journal items (Debit COGS, Credit Inventory)
+      const journalItems = [
+        {
+          journal_entry_id: journalEntry.id,
+          line_number: 1,
+          account_id: cogsAccount.id,
+          description: `COGS - ${salesOrder.order_number}`,
+          debit: totalCOGS,
+          credit: 0,
+        },
+        {
+          journal_entry_id: journalEntry.id,
+          line_number: 2,
+          account_id: inventoryAccount.id,
+          description: `Inventory reduction - ${salesOrder.order_number}`,
+          debit: 0,
+          credit: totalCOGS,
+        },
+      ];
+
+      const { error: itemsError } = await supabaseClient
+        .from('journal_items')
+        .insert(journalItems);
+
+      if (itemsError) {
+        this.logger.error('Error creating COGS journal items:', itemsError);
+        // Rollback journal entry
+        await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
+        return;
+      }
+
+      // Link stock entry to journal entry
+      await supabaseClient
+        .from('stock_entries')
+        .update({ journal_entry_id: journalEntry.id })
+        .eq('id', stockEntry.id);
+
+      this.logger.log(
+        `COGS journal entry ${entryNumber} created for ${salesOrder.order_number}: ${totalCOGS} MAD`
+      );
+
+    } catch (error) {
+      this.logger.error('Error creating COGS journal entry:', error);
+      // Don't throw - COGS journal is secondary to stock issuance
+    }
   }
 }

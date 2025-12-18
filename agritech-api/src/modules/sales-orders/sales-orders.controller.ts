@@ -215,4 +215,49 @@ export class SalesOrdersController {
       userId,
     );
   }
+
+  @Post(':id/issue-stock')
+  @ApiOperation({
+    summary: 'Issue stock for a sales order',
+    description: 'Creates a Material Issue stock entry to deduct inventory and records COGS journal entry',
+  })
+  @ApiParam({ name: 'id', description: 'Sales order UUID' })
+  @ApiQuery({
+    name: 'warehouse_id',
+    required: true,
+    description: 'Warehouse UUID to issue stock from',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Stock issued successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot issue stock (invalid status, stock already issued, or insufficient stock)',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async issueStock(
+    @Param('id') id: string,
+    @Query('warehouse_id') warehouseId: string,
+    @Request() req,
+  ) {
+    const organizationId = req.organizationId || req.user?.organizationId;
+    const userId = req.user?.userId || req.user?.id;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+    if (!warehouseId) {
+      throw new BadRequestException('Warehouse ID is required');
+    }
+    return this.salesOrdersService.issueStock(
+      id,
+      organizationId,
+      userId,
+      warehouseId,
+    );
+  }
 }

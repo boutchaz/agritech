@@ -254,3 +254,29 @@ export function useUpdateSalesOrderStatus() {
     },
   });
 }
+
+/**
+ * Hook to issue stock for a sales order
+ * Creates a Material Issue stock entry and records COGS journal entry
+ */
+export function useIssueStock() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ orderId, warehouseId }: {
+      orderId: string;
+      warehouseId: string;
+    }) => {
+      const data = await salesOrdersApi.issueStock(orderId, warehouseId, currentOrganization?.id);
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['sales_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['sales_order', variables.orderId] });
+      queryClient.invalidateQueries({ queryKey: ['stock_entries'] });
+      queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    },
+  });
+}
