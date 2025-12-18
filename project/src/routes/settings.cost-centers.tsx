@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CostCenterManagement } from '@/components/Settings/CostCenterManagement';
+import { CostCenterManagement } from '@/components/settings/CostCenterManagement';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 
 /**
