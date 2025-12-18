@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/radix-select';
-import { useCreateQuote } from '@/hooks/useQuotes';
+import { useCreateQuote, useUpdateQuote, useQuote } from '@/hooks/useQuotes';
 import type { Quote } from '@/hooks/useQuotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
@@ -45,12 +45,16 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createQuote = useCreateQuote();
+  const updateQuote = useUpdateQuote();
+  const { data: quoteWithItems, isLoading: quoteLoading } = useQuote(quote?.id || null);
   const { data: customers = [] } = useCustomers();
   const { data: accounts = [] } = useAccounts();
   const { data: taxes = [] } = useTaxes('sales');
-  const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
-    is_sales_item: true 
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({
+    is_sales_item: true
   });
+
+  const isEditMode = !!quote;
 
   const isRTL = i18n.language === 'ar';
 
@@ -136,8 +140,63 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
 
   const watchItems = watch('items');
 
+  // Populate form when editing and quote data is loaded
+  useEffect(() => {
+    if (isEditMode && quoteWithItems && !quoteLoading) {
+      const quoteItems = quoteWithItems.items || [];
+      reset({
+        customer_id: quoteWithItems.customer_id || '',
+        quote_date: quoteWithItems.quote_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+        valid_until: quoteWithItems.valid_until?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        items: quoteItems.length > 0 ? quoteItems.map((item: any) => ({
+          item_id: item.item_id || '',
+          item_name: item.item_name || '',
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          rate: item.unit_price || 0,
+          account_id: item.account_id || '',
+          tax_id: item.tax_id || '',
+        })) : [{
+          item_id: '',
+          item_name: '',
+          description: '',
+          quantity: 1,
+          rate: 0,
+          account_id: '',
+          tax_id: '',
+        }],
+        payment_terms: quoteWithItems.payment_terms || 'Net 30 days',
+        delivery_terms: quoteWithItems.delivery_terms || 'FOB Farm',
+        terms_and_conditions: quoteWithItems.terms_and_conditions || '',
+        notes: quoteWithItems.notes || '',
+        reference_number: quoteWithItems.reference_number || '',
+      });
+    } else if (!isEditMode && open) {
+      // Reset to defaults when opening for new quote
+      reset({
+        customer_id: '',
+        quote_date: new Date().toISOString().split('T')[0],
+        valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        items: [{
+          item_id: '',
+          item_name: '',
+          description: '',
+          quantity: 1,
+          rate: 0,
+          account_id: '',
+          tax_id: '',
+        }],
+        payment_terms: 'Net 30 days',
+        delivery_terms: 'FOB Farm',
+        terms_and_conditions: '',
+        notes: '',
+        reference_number: '',
+      });
+    }
+  }, [isEditMode, quoteWithItems, quoteLoading, open, reset]);
+
   // Calculate totals when items change
-  React.useEffect(() => {
+  useEffect(() => {
     const calculateTotals = async () => {
       const validItems = watchItems.filter(
         (item) => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
@@ -171,27 +230,42 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
 
   const onSubmit = async (data: z.infer<typeof quoteSchema>) => {
     try {
-      await createQuote.mutateAsync({
-        ...data,
-        items: data.items.map((item, index) => ({
-          line_number: index + 1,
-          item_id: item.item_id || undefined,
-          item_name: item.item_name,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.rate),
-          account_id: item.account_id,
-          tax_id: item.tax_id || null,
-        })),
-      });
+      const transformedItems = data.items.map((item, index) => ({
+        line_number: index + 1,
+        item_id: item.item_id || undefined,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.rate),
+        account_id: item.account_id,
+        tax_id: item.tax_id || null,
+      }));
 
-      toast.success(t('quotes.form.success.created'));
+      if (isEditMode && quote?.id) {
+        // Update existing quote
+        await updateQuote.mutateAsync({
+          quoteId: quote.id,
+          quoteData: {
+            ...data,
+            items: data.items,
+          },
+        });
+        toast.success(t('quotes.form.success.updated', 'Quote updated successfully'));
+      } else {
+        // Create new quote
+        await createQuote.mutateAsync({
+          ...data,
+          items: transformedItems,
+        });
+        toast.success(t('quotes.form.success.created'));
+      }
+
       reset();
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to create quote:', error);
-      toast.error(t('quotes.form.error.createFailed'));
+      console.error('Failed to save quote:', error);
+      toast.error(isEditMode ? t('quotes.form.error.updateFailed', 'Failed to update quote') : t('quotes.form.error.createFailed'));
     }
   };
 
@@ -686,9 +760,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('quotes.form.cancel')}
             </Button>
-            <Button type="submit" disabled={createQuote.isPending}>
-              {createQuote.isPending && <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />}
-              {quote ? t('quotes.form.updateQuote') : t('quotes.form.createQuote')}
+            <Button type="submit" disabled={createQuote.isPending || updateQuote.isPending || quoteLoading}>
+              {(createQuote.isPending || updateQuote.isPending) && <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />}
+              {isEditMode ? t('quotes.form.updateQuote', 'Update Quote') : t('quotes.form.createQuote')}
             </Button>
           </div>
         </form>

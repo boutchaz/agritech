@@ -18,7 +18,7 @@ export type Subject =
   | 'Dashboard'
   // Accounting subjects
   | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
-  | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport'
+  | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport' | 'AccountMapping'
   // Work units (piece-work payment)
   | 'WorkUnit' | 'PieceWork'
   // Harvest & Reception subjects
@@ -96,6 +96,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Invoice');
     can('manage', 'Payment');
     can('manage', 'CostCenter');
+    can('manage', 'AccountMapping');
     can('manage', 'Tax');
     can('manage', 'BankAccount');
     can('post', 'JournalEntry'); // Can post journals to GL
@@ -146,6 +147,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'JournalEntry');
     can('update', 'JournalEntry'); // Only draft entries
     can('read', 'CostCenter');
+    can('read', 'AccountMapping');
     can('read', 'Tax');
     can('read', 'BankAccount');
     can('read', 'AccountingReport');
@@ -230,6 +232,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Payment');
     can('read', 'JournalEntry');
     can('read', 'CostCenter');
+    can('read', 'AccountMapping');
     can('read', 'Tax');
     can('read', 'BankAccount');
     can('read', 'AccountingReport');

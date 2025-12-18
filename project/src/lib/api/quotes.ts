@@ -18,20 +18,34 @@ export interface UpdateQuoteStatusInput {
   remarks?: string;
 }
 
+export interface QuoteItemInput {
+  line_number?: number;
+  item_id?: string;
+  item_name: string;
+  description?: string;
+  quantity: number;
+  unit_price: number;
+  account_id: string;
+  tax_id?: string | null;
+}
+
 export interface CreateQuoteInput {
   customer_id: string;
   quote_date: string;
   valid_until: string;
-  items: Array<{
-    line_number: number;
-    item_id?: string;
-    item_name: string;
-    description?: string;
-    quantity: number;
-    unit_price: number;
-    account_id: string;
-    tax_id?: string | null;
-  }>;
+  items: QuoteItemInput[];
+  payment_terms?: string;
+  delivery_terms?: string;
+  terms_and_conditions?: string;
+  notes?: string;
+  reference_number?: string;
+}
+
+export interface UpdateQuoteInput {
+  customer_id?: string;
+  quote_date?: string;
+  valid_until?: string;
+  items?: QuoteItemInput[];
   payment_terms?: string;
   delivery_terms?: string;
   terms_and_conditions?: string;
@@ -48,8 +62,8 @@ function transformQuoteForApi(data: CreateQuoteInput) {
       item_id: item.item_id,
       item_name: item.item_name,
       description: item.description,
-      quantity: Number(item.quantity),
-      unit_price: Number(item.unit_price),
+      quantity: Number(item.quantity) || 1,
+      unit_price: Number(item.unit_price) || 0,
       account_id: item.account_id,
       tax_id: item.tax_id || undefined,
     })),
@@ -77,6 +91,14 @@ export const quotesApi = {
   async create(data: CreateQuoteInput, organizationId?: string) {
     const transformedData = transformQuoteForApi(data);
     return apiClient.post(BASE_URL, transformedData, {}, organizationId);
+  },
+
+  /**
+   * Update a quote (only drafts)
+   */
+  async update(id: string, data: UpdateQuoteInput, organizationId?: string) {
+    const transformedData = transformQuoteForApi(data as CreateQuoteInput);
+    return apiClient.patch(`${BASE_URL}/${id}`, transformedData, {}, organizationId);
   },
 
   /**

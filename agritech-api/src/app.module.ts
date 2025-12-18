@@ -54,6 +54,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { PieceWorkModule } from './modules/piece-work/piece-work.module';
 import { ProfitabilityModule } from './modules/profitability/profitability.module';
 import { ProductApplicationsModule } from './modules/product-applications/product-applications.module';
+import { AccountMappingsModule } from './modules/account-mappings/account-mappings.module';
 
 @Module({
   imports: [
@@ -122,6 +123,7 @@ import { ProductApplicationsModule } from './modules/product-applications/produc
     ReportsModule,
     ProfitabilityModule,
     ProductApplicationsModule,
+    AccountMappingsModule,
   ],
   controllers: [AppController],
   providers: [

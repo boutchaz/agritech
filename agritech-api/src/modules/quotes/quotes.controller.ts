@@ -21,7 +21,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { QuotesService } from './quotes.service';
-import { CreateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
+import { CreateQuoteDto, UpdateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -79,6 +79,25 @@ export class QuotesController {
     const organizationId = req.headers['x-organization-id'];
     const userId = req.user.sub;
     return this.quotesService.create(createQuoteDto, organizationId, userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a quote (only drafts)' })
+  @ApiParam({ name: 'id', description: 'Quote ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Quote updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Only draft quotes can be edited' })
+  @ApiResponse({ status: 404, description: 'Quote not found' })
+  async update(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateQuoteDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.quotesService.update(id, dto, organizationId, userId);
   }
 
   @Patch(':id/status')

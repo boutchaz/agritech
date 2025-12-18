@@ -142,8 +142,8 @@ export function useCreateQuote() {
             item_id: (item as any).item_id,
             item_name: item.item_name,
             description: item.description,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.rate),
+            quantity: Number(item.quantity) || 1,
+            unit_price: Number(item.rate) || 0,
             account_id: item.account_id,
             tax_id: item.tax_id || undefined,
           })),
@@ -157,6 +157,59 @@ export function useCreateQuote() {
       );
 
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
+    },
+  });
+}
+
+/**
+ * Hook to update a quote (only drafts)
+ */
+export function useUpdateQuote() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      quoteId,
+      quoteData,
+    }: {
+      quoteId: string;
+      quoteData: {
+        customer_id?: string;
+        quote_date?: string;
+        valid_until?: string;
+        items?: InvoiceItemInput[];
+        payment_terms?: string;
+        delivery_terms?: string;
+        terms_and_conditions?: string;
+        notes?: string;
+        reference_number?: string;
+      };
+    }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      // Transform items if provided
+      const transformedData = {
+        ...quoteData,
+        items: quoteData.items?.map((item, index) => ({
+          line_number: index + 1,
+          item_id: (item as any).item_id,
+          item_name: item.item_name,
+          description: item.description,
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.rate) || 0,
+          account_id: item.account_id,
+          tax_id: item.tax_id || undefined,
+        })),
+      };
+
+      const data = await quotesApi.update(quoteId, transformedData, currentOrganization.id);
+      return data as Quote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });

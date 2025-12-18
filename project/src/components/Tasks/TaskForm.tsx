@@ -80,8 +80,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
     enabled: !!organizationId && !!formData.farm_id,
   });
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
+
+    // Validate: harvesting tasks require a parcel_id for "Complete with Harvest" workflow
+    if (formData.task_type === 'harvesting' && !formData.parcel_id) {
+      setValidationError('Les tâches de récolte nécessitent une parcelle pour permettre l\'enregistrement de la récolte.');
+      return;
+    }
 
     try {
       // Clean up form data: convert empty strings to undefined for optional fields
@@ -128,6 +137,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Validation Error */}
+          {validationError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
+              {validationError}
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Titre *</Label>

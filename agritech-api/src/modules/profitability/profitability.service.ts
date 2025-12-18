@@ -440,7 +440,7 @@ export class ProfitabilityService {
           accounts!inner(code, name, account_type),
           journal_entries!inner(entry_date, entry_number, description, status),
           cost_centers(name),
-          parcels(parcel_name)
+          parcels(name)
         `)
         .eq('parcel_id', parcelId)
         .eq('accounts.account_type', 'expense')
@@ -457,7 +457,7 @@ export class ProfitabilityService {
           entry_date: item.journal_entries?.entry_date,
           entry_number: item.journal_entries?.entry_number,
           cost_center_name: item.cost_centers?.name,
-          parcel_name: item.parcels?.parcel_name,
+          parcel_name: item.parcels?.name,
         }));
       }
 
@@ -469,7 +469,7 @@ export class ProfitabilityService {
           accounts!inner(code, name, account_type),
           journal_entries!inner(entry_date, entry_number, description, status),
           cost_centers(name),
-          parcels(parcel_name)
+          parcels(name)
         `)
         .eq('parcel_id', parcelId)
         .eq('accounts.account_type', 'revenue')
@@ -486,7 +486,7 @@ export class ProfitabilityService {
           entry_date: item.journal_entries?.entry_date,
           entry_number: item.journal_entries?.entry_number,
           cost_center_name: item.cost_centers?.name,
-          parcel_name: item.parcels?.parcel_name,
+          parcel_name: item.parcels?.name,
         }));
       }
 

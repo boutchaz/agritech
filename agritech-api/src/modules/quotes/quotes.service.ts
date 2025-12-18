@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
-import { CreateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
+import { CreateQuoteDto, UpdateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
 
 @Injectable()
 export class QuotesService {
@@ -379,6 +379,155 @@ export class QuotesService {
       };
     } catch (error) {
       this.logger.error(`Error converting quote: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a quote (only drafts can be fully updated)
+   */
+  async update(
+    id: string,
+    updateQuoteDto: UpdateQuoteDto,
+    organizationId: string,
+    userId: string,
+  ): Promise<any> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    try {
+      // Fetch existing quote
+      const { data: existingQuote, error: fetchError } = await supabaseClient
+        .from('quotes')
+        .select('*')
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (fetchError || !existingQuote) {
+        throw new NotFoundException('Quote not found');
+      }
+
+      // Only draft quotes can be fully edited
+      if (existingQuote.status !== 'draft') {
+        throw new BadRequestException('Only draft quotes can be edited');
+      }
+
+      const { items, ...quoteData } = updateQuoteDto;
+
+      // If customer changed, fetch new customer details
+      let customerData = {};
+      if (quoteData.customer_id && quoteData.customer_id !== existingQuote.customer_id) {
+        const { data: customer } = await supabaseClient
+          .from('customers')
+          .select('name, contact_person, email, phone')
+          .eq('id', quoteData.customer_id)
+          .eq('organization_id', organizationId)
+          .single();
+
+        if (!customer) {
+          throw new BadRequestException('Customer not found');
+        }
+
+        customerData = {
+          customer_name: customer.name,
+          contact_person: customer.contact_person,
+          contact_email: customer.email,
+          contact_phone: customer.phone,
+        };
+      }
+
+      // Process items if provided
+      let totalsUpdate = {};
+      if (items && items.length > 0) {
+        // Delete existing items
+        await supabaseClient
+          .from('quote_items')
+          .delete()
+          .eq('quote_id', id);
+
+        // Calculate totals for new items
+        let subtotal = 0;
+        let taxTotal = 0;
+
+        const processedItems = items.map((item, index) => {
+          const amount = item.quantity * item.unit_price;
+          const discountAmount = item.discount_percent ? (amount * item.discount_percent) / 100 : 0;
+          const amountAfterDiscount = amount - discountAmount;
+          const taxAmount = item.tax_rate ? (amountAfterDiscount * item.tax_rate) / 100 : 0;
+          const lineTotal = amountAfterDiscount + taxAmount;
+
+          subtotal += amountAfterDiscount;
+          taxTotal += taxAmount;
+
+          return {
+            quote_id: id,
+            line_number: item.line_number || index + 1,
+            item_name: item.item_name,
+            description: item.description || null,
+            quantity: item.quantity,
+            unit_of_measure: item.unit_of_measure || 'unit',
+            unit_price: item.unit_price,
+            amount,
+            discount_percent: item.discount_percent || 0,
+            discount_amount: discountAmount,
+            tax_id: item.tax_id || null,
+            tax_rate: item.tax_rate || 0,
+            tax_amount: taxAmount,
+            line_total: lineTotal,
+            account_id: item.account_id || null,
+            item_id: item.item_id || null,
+          };
+        });
+
+        const grandTotal = subtotal + taxTotal;
+        totalsUpdate = {
+          subtotal,
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+        };
+
+        // Insert new items
+        const { error: itemsError } = await supabaseClient
+          .from('quote_items')
+          .insert(processedItems);
+
+        if (itemsError) {
+          throw new BadRequestException(`Failed to update quote items: ${itemsError.message}`);
+        }
+      }
+
+      // Update quote
+      const updateData: any = {
+        ...quoteData,
+        ...customerData,
+        ...totalsUpdate,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
+      const { data: updatedQuote, error: updateError } = await supabaseClient
+        .from('quotes')
+        .update(updateData)
+        .eq('id', id)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to update quote: ${updateError.message}`);
+      }
+
+      this.logger.log(`Quote ${id} updated successfully`);
+
+      return updatedQuote;
+    } catch (error) {
+      this.logger.error(`Error updating quote: ${error.message}`);
       throw error;
     }
   }

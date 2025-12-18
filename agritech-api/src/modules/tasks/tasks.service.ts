@@ -459,12 +459,9 @@ export class TasksService {
       throw new Error(`Failed to complete task: ${taskError.message}`);
     }
 
-    // Calculate estimated revenue if price provided
-    const estimated_revenue = completeDto.expected_price_per_unit
-      ? completeDto.quantity * completeDto.expected_price_per_unit
-      : undefined;
-
     // Create harvest record
+    // Note: estimated_revenue is a generated column (quantity * expected_price_per_unit)
+    // and will be calculated automatically by the database
     const { data: harvest, error: harvestError } = await client
       .from('harvest_records')
       .insert({
@@ -486,7 +483,6 @@ export class TasksService {
         humidity: completeDto.humidity,
         intended_for: completeDto.intended_for,
         expected_price_per_unit: completeDto.expected_price_per_unit,
-        estimated_revenue,
         status: 'stored',
         notes: completeDto.harvest_notes,
         created_by: userId,

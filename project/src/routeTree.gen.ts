@@ -77,6 +77,8 @@ import { Route as SettingsOrganizationRouteImport } from './routes/settings.orga
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
+import { Route as SettingsCostCentersRouteImport } from './routes/settings.cost-centers'
+import { Route as SettingsAccountMappingsRouteImport } from './routes/settings.account-mappings'
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -429,6 +431,16 @@ const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCostCentersRoute = SettingsCostCentersRouteImport.update({
+  id: '/cost-centers',
+  path: '/cost-centers',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAccountMappingsRoute = SettingsAccountMappingsRouteImport.update({
+  id: '/account-mappings',
+  path: '/account-mappings',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const ParcelsParcelIdRoute = ParcelsParcelIdRouteImport.update({
   id: '/$parcelId',
   path: '/$parcelId',
@@ -541,6 +553,8 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
+  '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -617,6 +631,8 @@ export interface FileRoutesByTo {
   '/workers': typeof WorkersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -699,6 +715,8 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
+  '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -782,6 +800,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
+    | '/settings/account-mappings'
+    | '/settings/cost-centers'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -858,6 +878,8 @@ export interface FileRouteTypes {
     | '/workers'
     | '/auth/callback'
     | '/blog/$slug'
+    | '/settings/account-mappings'
+    | '/settings/cost-centers'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -939,6 +961,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/parcels/$parcelId'
+    | '/settings/account-mappings'
+    | '/settings/cost-centers'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -1500,6 +1524,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsDashboardRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/cost-centers': {
+      id: '/settings/cost-centers'
+      path: '/cost-centers'
+      fullPath: '/settings/cost-centers'
+      preLoaderRoute: typeof SettingsCostCentersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/account-mappings': {
+      id: '/settings/account-mappings'
+      path: '/account-mappings'
+      fullPath: '/settings/account-mappings'
+      preLoaderRoute: typeof SettingsAccountMappingsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/parcels/$parcelId': {
       id: '/parcels/$parcelId'
       path: '/$parcelId'
@@ -1645,6 +1683,8 @@ const ParcelsRouteWithChildren =
   ParcelsRoute._addFileChildren(ParcelsRouteChildren)
 
 interface SettingsRouteChildren {
+  SettingsAccountMappingsRoute: typeof SettingsAccountMappingsRoute
+  SettingsCostCentersRoute: typeof SettingsCostCentersRoute
   SettingsDashboardRoute: typeof SettingsDashboardRoute
   SettingsDocumentsRoute: typeof SettingsDocumentsRoute
   SettingsModulesRoute: typeof SettingsModulesRoute
@@ -1658,6 +1698,8 @@ interface SettingsRouteChildren {
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAccountMappingsRoute: SettingsAccountMappingsRoute,
+  SettingsCostCentersRoute: SettingsCostCentersRoute,
   SettingsDashboardRoute: SettingsDashboardRoute,
   SettingsDocumentsRoute: SettingsDocumentsRoute,
   SettingsModulesRoute: SettingsModulesRoute,
