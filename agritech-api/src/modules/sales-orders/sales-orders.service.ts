@@ -508,6 +508,7 @@ export class SalesOrdersService {
       }
 
       // Prepare invoice items with remaining quantities
+      // Note: Using column names that match the database schema
       const invoiceItems = uninvoicedItems.map((item: any) => {
         const remainingQty = item.quantity - (item.invoiced_quantity || 0);
         const amount = remainingQty * item.unit_price;
@@ -524,8 +525,6 @@ export class SalesOrdersService {
           tax_rate: item.tax_rate || 0,
           tax_amount: taxAmount,
           line_total: amount + taxAmount,
-          income_account_id: item.account_id,
-          expense_account_id: null,
         };
       });
 
@@ -683,8 +682,7 @@ export class SalesOrdersService {
           .from('sales_orders')
           .update({
             stock_issued: true,
-            stock_issued_at: new Date().toISOString(),
-            stock_issued_by: userId,
+            stock_issued_date: new Date().toISOString().split('T')[0],
             updated_at: new Date().toISOString(),
           })
           .eq('id', salesOrderId);
@@ -728,8 +726,7 @@ export class SalesOrdersService {
         .from('sales_orders')
         .update({
           stock_issued: true,
-          stock_issued_at: new Date().toISOString(),
-          stock_issued_by: userId,
+          stock_issued_date: new Date().toISOString().split('T')[0],
           stock_entry_id: stockEntry.id,
           updated_at: new Date().toISOString(),
         })

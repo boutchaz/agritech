@@ -157,8 +157,10 @@ export class InvoicesService {
       }
 
       // Create invoice items
-      const itemsToInsert = dto.items.map((item) => ({
+      // Note: Only using columns that exist in the current database schema
+      const itemsToInsert = dto.items.map((item, index) => ({
         invoice_id: invoice.id,
+        line_number: index + 1,
         item_name: item.item_name,
         description: item.description || null,
         quantity: item.quantity,
@@ -168,9 +170,6 @@ export class InvoicesService {
         tax_rate: item.tax_rate || 0,
         tax_amount: item.tax_amount,
         line_total: item.line_total,
-        income_account_id: item.income_account_id || null,
-        expense_account_id: item.expense_account_id || null,
-        item_id: item.item_id || null,
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -268,8 +267,10 @@ export class InvoicesService {
       }
 
       // Insert new items
-      const itemsToInsert = dto.items.map((item) => ({
+      // Note: Only using columns that exist in the current database schema
+      const itemsToInsert = dto.items.map((item, index) => ({
         invoice_id: id,
+        line_number: index + 1,
         item_name: item.item_name,
         description: item.description || null,
         quantity: item.quantity,
@@ -279,9 +280,6 @@ export class InvoicesService {
         tax_rate: item.tax_rate || 0,
         tax_amount: item.tax_amount,
         line_total: item.line_total,
-        income_account_id: item.income_account_id || null,
-        expense_account_id: item.expense_account_id || null,
-        item_id: item.item_id || null,
       }));
 
       const { error: insertError } = await supabaseClient
@@ -352,6 +350,7 @@ export class InvoicesService {
     const supabaseClient = this.databaseService.getAdminClient();
 
     // Fetch invoice with items
+    // Note: Only selecting columns that exist in the current database schema
     const { data: invoice, error: invoiceError } = await supabaseClient
       .from('invoices')
       .select(`
@@ -361,10 +360,7 @@ export class InvoicesService {
           item_name,
           description,
           amount,
-          tax_amount,
-          income_account_id,
-          expense_account_id,
-          cost_center_id
+          tax_amount
         )
       `)
       .eq('id', invoiceId)
@@ -425,6 +421,8 @@ export class InvoicesService {
 
     try {
       // Build journal lines
+      // Note: income_account_id, expense_account_id, cost_center_id are optional
+      // and may not exist in the current database schema
       const lines = buildInvoiceLedgerLines(
         {
           id: invoice.id,
@@ -439,9 +437,9 @@ export class InvoicesService {
             description: item.description,
             amount: Number(item.amount),
             tax_amount: Number(item.tax_amount ?? 0),
-            income_account_id: item.income_account_id,
-            expense_account_id: item.expense_account_id,
-            cost_center_id: item.cost_center_id,
+            income_account_id: item.income_account_id || null,
+            expense_account_id: item.expense_account_id || null,
+            cost_center_id: item.cost_center_id || null,
           })),
         },
         journalEntry.id,

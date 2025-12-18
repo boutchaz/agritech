@@ -285,7 +285,7 @@ export default function StockReportsDashboard() {
                         {movement.movement_type}
                       </Badge>
                       <div>
-                        <p className="font-medium">{movement.item?.name || 'Unknown Item'}</p>
+                        <p className="font-medium">{movement.item?.item_name || 'Unknown Item'}</p>
                         <p className="text-sm text-gray-500">
                           {new Date(movement.movement_date).toLocaleString()}
                         </p>

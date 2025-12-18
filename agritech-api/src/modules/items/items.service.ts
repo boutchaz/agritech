@@ -791,7 +791,8 @@ export class ItemsService {
             default_unit: item?.default_unit || null,
             total_quantity: 0,
             total_value: 0,
-            warehouses: [],
+            warehouses: [], // Will be aggregated below
+            _warehouseMap: new Map(), // Temporary map for warehouse aggregation
           };
         }
 
@@ -800,21 +801,35 @@ export class ItemsService {
         acc[itemId].total_quantity += quantity;
         acc[itemId].total_value += value;
 
-        // Add warehouse info
+        // Aggregate warehouse info (multiple FIFO batches per warehouse should be combined)
         const warehouse = warehouseMap.get(val.warehouse_id);
         if (warehouse) {
-          acc[itemId].warehouses.push({
-            warehouse_id: warehouse.id,
-            warehouse_name: warehouse.name,
-            farm_id: warehouse.farm_id,
-            farm_name: (warehouse as any).farm?.name || null,
-            quantity,
-            value,
-          });
+          const existingWh = acc[itemId]._warehouseMap.get(warehouse.id);
+          if (existingWh) {
+            // Add to existing warehouse totals
+            existingWh.quantity += quantity;
+            existingWh.value += value;
+          } else {
+            // New warehouse entry
+            acc[itemId]._warehouseMap.set(warehouse.id, {
+              warehouse_id: warehouse.id,
+              warehouse_name: warehouse.name,
+              farm_id: warehouse.farm_id,
+              farm_name: (warehouse as any).farm?.name || null,
+              quantity,
+              value,
+            });
+          }
         }
 
         return acc;
       }, {});
+
+      // Convert warehouse maps to arrays and remove temporary _warehouseMap
+      Object.keys(aggregated).forEach((itemId) => {
+        aggregated[itemId].warehouses = Array.from(aggregated[itemId]._warehouseMap.values());
+        delete aggregated[itemId]._warehouseMap;
+      });
 
       return aggregated;
     } catch (error) {

@@ -1293,7 +1293,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date DESC);
 CREATE TABLE IF NOT EXISTS invoice_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
-  line_number INTEGER NOT NULL,
+  line_number INTEGER NOT NULL DEFAULT 1,
   item_name VARCHAR(255) NOT NULL,
   description TEXT,
   quantity DECIMAL(10, 3) NOT NULL,
@@ -2658,6 +2658,41 @@ CREATE TABLE IF NOT EXISTS payment_deductions (
 CREATE INDEX IF NOT EXISTS idx_payment_deductions_payment ON payment_deductions(payment_record_id);
 
 -- =====================================================
+-- 11b. WAREHOUSES (Moved here to resolve forward references)
+-- =====================================================
+
+-- Warehouses (defined before harvest_records which references it)
+CREATE TABLE IF NOT EXISTS warehouses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  location TEXT,
+  address TEXT,
+  city TEXT,
+  postal_code TEXT,
+  capacity NUMERIC,
+  capacity_unit TEXT DEFAULT 'm3',
+  temperature_controlled BOOLEAN DEFAULT false,
+  humidity_controlled BOOLEAN DEFAULT false,
+  security_level TEXT DEFAULT 'standard',
+  manager_name TEXT,
+  manager_phone TEXT,
+  is_active BOOLEAN DEFAULT true,
+  is_reception_center BOOLEAN DEFAULT false,
+  reception_type TEXT,
+  has_weighing_station BOOLEAN DEFAULT false,
+  has_quality_lab BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (reception_type IN ('general', 'olivier', 'viticole', 'laitier', 'fruiter', 'legumier'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_warehouses_org ON warehouses(organization_id);
+CREATE INDEX IF NOT EXISTS idx_warehouses_farm ON warehouses(farm_id);
+
+-- =====================================================
 -- 12. HARVEST & DELIVERY MANAGEMENT TABLES
 -- =====================================================
 
@@ -2864,36 +2899,7 @@ CREATE INDEX IF NOT EXISTS idx_delivery_tracking_delivery ON delivery_tracking(d
 -- 13. INVENTORY & STOCK MANAGEMENT TABLES
 -- =====================================================
 
--- Warehouses
-CREATE TABLE IF NOT EXISTS warehouses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
-  name TEXT NOT NULL,
-  description TEXT,
-  location TEXT,
-  address TEXT,
-  city TEXT,
-  postal_code TEXT,
-  capacity NUMERIC,
-  capacity_unit TEXT DEFAULT 'm3',
-  temperature_controlled BOOLEAN DEFAULT false,
-  humidity_controlled BOOLEAN DEFAULT false,
-  security_level TEXT DEFAULT 'standard',
-  manager_name TEXT,
-  manager_phone TEXT,
-  is_active BOOLEAN DEFAULT true,
-  is_reception_center BOOLEAN DEFAULT false,
-  reception_type TEXT,
-  has_weighing_station BOOLEAN DEFAULT false,
-  has_quality_lab BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (reception_type IN ('general', 'olivier', 'viticole', 'laitier', 'fruiter', 'legumier'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_warehouses_org ON warehouses(organization_id);
-CREATE INDEX IF NOT EXISTS idx_warehouses_farm ON warehouses(farm_id);
+-- Note: Warehouses table is defined earlier in section 11b to resolve forward references
 
 -- Item Groups (Hierarchical categorization for items)
 CREATE TABLE IF NOT EXISTS item_groups (
@@ -5076,17 +5082,22 @@ BEGIN
 END;
 $$;
 
--- Recreate trigger
+-- DISABLED: The trigger was causing duplicate stock movements because the backend
+-- (stock-entries.service.ts) already handles stock movement creation via processStockMovementsPg().
+-- Having both the trigger AND the backend code creates duplicate movements.
+--
+-- The trigger is now disabled - stock movements are created by the backend service only.
 DROP TRIGGER IF EXISTS stock_entry_posting_trigger ON stock_entries;
 
-CREATE TRIGGER stock_entry_posting_trigger
-  BEFORE UPDATE ON stock_entries
-  FOR EACH ROW
-  EXECUTE FUNCTION process_stock_entry_posting();
+-- DO NOT recreate the trigger - it's handled by backend
+-- CREATE TRIGGER stock_entry_posting_trigger
+--   BEFORE UPDATE ON stock_entries
+--   FOR EACH ROW
+--   EXECUTE FUNCTION process_stock_entry_posting();
 
--- Add comment
+-- Add comment explaining why the trigger is disabled
 COMMENT ON FUNCTION process_stock_entry_posting() IS
-  'Automatically creates stock movements and updates inventory when a stock entry is posted. Uses SECURITY DEFINER to bypass RLS.';
+  'DISABLED: Stock movement creation is now handled by the backend service (stock-entries.service.ts). This trigger was causing duplicate movements when both trigger and backend code created stock_movements.';
 
 -- =====================================================
 -- DATA SEEDING & FIXES
