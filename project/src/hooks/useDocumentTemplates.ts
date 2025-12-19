@@ -127,8 +127,8 @@ export function useCreateDocumentTemplate() {
       return data as DocumentTemplate;
     },
     onSuccess: (data) => {
-      // Invalidate all templates queries
-      queryClient.invalidateQueries({ queryKey: ['document-templates', currentOrganization?.id] });
+      // Invalidate all templates queries (with and without document type filter)
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
 
       // If this is set as default, invalidate the default query
       if (data.is_default) {
@@ -162,7 +162,7 @@ export function useUpdateDocumentTemplate() {
     },
     onSuccess: (data) => {
       // Invalidate all templates queries
-      queryClient.invalidateQueries({ queryKey: ['document-templates', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
 
       // Invalidate the specific template
       queryClient.invalidateQueries({ queryKey: ['document-template', data.id] });
@@ -196,7 +196,7 @@ export function useDeleteDocumentTemplate() {
     },
     onSuccess: () => {
       // Invalidate all templates queries
-      queryClient.invalidateQueries({ queryKey: ['document-templates', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
     },
   });
 }
@@ -223,7 +223,7 @@ export function useSetDefaultTemplate() {
     },
     onSuccess: (data) => {
       // Invalidate all templates queries
-      queryClient.invalidateQueries({ queryKey: ['document-templates', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
 
       // Invalidate the default query for this document type
       queryClient.invalidateQueries({
