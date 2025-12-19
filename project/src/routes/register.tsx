@@ -4,6 +4,7 @@ import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
+import { Checkbox } from '../components/ui/checkbox'
 import { authSupabase } from '../lib/auth-supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -18,6 +19,7 @@ function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [organizationName, setOrganizationName] = useState('')
+  const [includeDemoData, setIncludeDemoData] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -60,6 +62,7 @@ function RegisterPage() {
           firstName,
           lastName,
           organizationName,
+          includeDemoData,
         }),
       })
 
@@ -191,6 +194,26 @@ function RegisterPage() {
               className="rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
           </FormField>
+
+          <div className="flex items-start space-x-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+            <Checkbox
+              id="demo-data"
+              checked={includeDemoData}
+              onCheckedChange={(checked) => setIncludeDemoData(checked === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <label
+                htmlFor="demo-data"
+                className="text-sm font-medium text-slate-900 cursor-pointer"
+              >
+                Create with demo data to explore features
+              </label>
+              <p className="text-xs text-slate-600">
+                Pre-populate your account with sample farms, parcels, tasks, and invoices to quickly see how the platform works.
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (

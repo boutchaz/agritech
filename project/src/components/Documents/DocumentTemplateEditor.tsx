@@ -236,6 +236,17 @@ export function DocumentTemplateEditor({
   const footerEnabled = watch('footer_enabled');
   const watermarkEnabled = watch('watermark_enabled');
 
+  // Reset form when opening for a new template (not editing)
+  useEffect(() => {
+    if (isOpen && !templateId) {
+      // Reset to defaults with the current documentType
+      setValue('document_type', documentType);
+      setValue('name', '');
+      setValue('description', '');
+      setValue('is_default', false);
+    }
+  }, [isOpen, templateId, documentType, setValue]);
+
   // Load template data when editing
   useEffect(() => {
     if (template) {

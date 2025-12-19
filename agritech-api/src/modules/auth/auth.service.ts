@@ -10,6 +10,7 @@ import { DatabaseService } from '../database/database.service';
 import { SignupDto } from './dto/signup.dto';
 import { UsersService } from '../users/users.service';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { DemoDataService } from '../demo-data/demo-data.service';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
     private jwtService: JwtService,
     private usersService: UsersService,
     private organizationsService: OrganizationsService,
+    private demoDataService: DemoDataService,
   ) { }
 
   /**
@@ -303,9 +305,24 @@ export class AuthService {
           );
         }
         this.logger.log(`Successfully created organization_users record: ${JSON.stringify(orgUserData)}`);
+
+        // 5. Seed demo data if requested
+        if (signupDto.includeDemoData === true) {
+          this.logger.log(`Demo data requested, starting seeding for organization ${organizationId}`);
+          try {
+            await this.demoDataService.seedDemoData(organizationId, userId);
+            this.logger.log(`Demo data seeded successfully for organization ${organizationId}`);
+          } catch (demoError) {
+            // Log error but don't fail signup - organization creation succeeded
+            this.logger.error(
+              `Failed to seed demo data (non-critical): ${demoError.message}`,
+              demoError.stack,
+            );
+          }
+        }
       }
 
-      // 5. Return user info - frontend will handle the login
+      // 6. Return user info - frontend will handle the login
       // Note: Supabase admin API cannot generate sessions via signInWithPassword
       // The frontend should call Supabase directly to sign in after signup
       this.logger.log(`User ${userId} created successfully, frontend will handle session creation`);

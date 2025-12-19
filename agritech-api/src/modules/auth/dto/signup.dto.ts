@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -55,6 +56,15 @@ export class SignupDto {
   @IsUUID()
   @IsOptional()
   invitedWithRole?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether to seed demo data for showcasing application capabilities',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  includeDemoData?: boolean;
 }
 
 export class SignupResponseDto {
