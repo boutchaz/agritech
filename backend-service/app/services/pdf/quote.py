@@ -1,6 +1,6 @@
 """
 Quote PDF Generator
-Generates professional quote documents
+Generates professional quote documents with full template customization
 """
 
 from typing import Dict, List, Any
@@ -9,7 +9,7 @@ from reportlab.lib.units import mm
 
 
 class QuotePDFGenerator(ItemizedDocumentGenerator):
-    """Generate Quote PDF documents"""
+    """Generate Quote PDF documents with template customization"""
 
     def get_document_title(self) -> str:
         """Return the document title"""
@@ -28,12 +28,12 @@ class QuotePDFGenerator(ItemizedDocumentGenerator):
         # Helper to safely convert to string, handling None
         def safe_str(value, default=''):
             return str(value) if value is not None else default
-        
+
         customer_name = safe_str(self.document.get('customer_name'))
         customer_address = safe_str(self.document.get('customer_address'))
         customer_email = safe_str(self.document.get('customer_email'))
         customer_phone = safe_str(self.document.get('customer_phone'))
-        
+
         customer_info = [f"<b>{customer_name}</b>"] if customer_name else []
 
         if customer_address:
@@ -73,10 +73,9 @@ class QuotePDFGenerator(ItemizedDocumentGenerator):
 
         # Expiry date (specific to quotes)
         if self.document.get('expiry_date'):
-            from reportlab.platypus import Paragraph
+            from reportlab.platypus import Paragraph, Spacer
             expiry_text = f"<b>Valide jusqu'au / Valid until:</b> {PDFFormatter.format_date(self.document['expiry_date'])}"
             elements.append(Paragraph(expiry_text, self.styles['NormalText']))
-            from reportlab.platypus import Spacer
             elements.append(Spacer(1, 5*mm))
 
         # Items table
@@ -86,6 +85,12 @@ class QuotePDFGenerator(ItemizedDocumentGenerator):
 
         # Totals
         elements.extend(self.build_totals_section())
+
+        # Payment info (if enabled in template)
+        elements.extend(self.build_payment_info_section())
+
+        # Bank details (if enabled in template)
+        elements.extend(self.build_bank_details_section())
 
         # Terms and conditions
         elements.extend(self.build_terms_section())
