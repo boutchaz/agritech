@@ -25,30 +25,39 @@ async def fetch_organization(supabase, organization_id: str):
 async def fetch_template(supabase, organization_id: str, document_type: str):
     """
     Fetch optional custom template from document_templates table
-    
+
     Args:
         supabase: Supabase client
         organization_id: Organization UUID
         document_type: Document type ('quote', 'invoice', 'purchase_order', etc.)
-    
+
     Returns:
         Template dict or None if no default template found
     """
+    logger.info(f"Fetching template for org={organization_id}, type={document_type}")
+
     template_response = supabase.table("document_templates").select("*").eq(
         "organization_id", organization_id
     ).eq("document_type", document_type).eq("is_default", True).execute()
 
     if template_response.data and len(template_response.data) > 0:
-        return template_response.data[0]
-    
+        template = template_response.data[0]
+        logger.info(f"Found template: name={template.get('name')}, accent_color={template.get('accent_color')}, table_header_bg={template.get('table_header_bg_color')}")
+        return template
+
+    logger.info(f"No {document_type} template found, trying 'general'")
+
     # Fallback: try 'general' template if no specific template found
     general_template_response = supabase.table("document_templates").select("*").eq(
         "organization_id", organization_id
     ).eq("document_type", "general").eq("is_default", True).execute()
-    
+
     if general_template_response.data and len(general_template_response.data) > 0:
-        return general_template_response.data[0]
-    
+        template = general_template_response.data[0]
+        logger.info(f"Found general template: name={template.get('name')}, accent_color={template.get('accent_color')}")
+        return template
+
+    logger.info("No template found, using defaults")
     return None
 
 

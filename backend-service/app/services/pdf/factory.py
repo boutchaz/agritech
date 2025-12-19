@@ -4,10 +4,13 @@ Central factory for creating PDF generators for different document types
 """
 
 from typing import Dict, Any, Optional
+import logging
 from .base import BasePDFGenerator, DocumentTemplate
 from .quote import QuotePDFGenerator
 from .invoice import InvoicePDFGenerator
 from .purchase_order import PurchaseOrderPDFGenerator
+
+logger = logging.getLogger(__name__)
 
 
 class PDFGeneratorFactory:
@@ -59,6 +62,11 @@ class PDFGeneratorFactory:
 
         generator_class = cls._generators[document_type]
         template_obj = DocumentTemplate(template) if template else None
+
+        if template_obj:
+            logger.info(f"Creating {document_type} generator with template: accent_color={template_obj.accent_color}, table_header_bg={template_obj.table_header_bg_color}")
+        else:
+            logger.info(f"Creating {document_type} generator with default template")
 
         return generator_class(document_data, organization, template_obj)
 
