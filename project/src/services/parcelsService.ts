@@ -3,6 +3,7 @@ import { apiClient } from '../lib/api-client';
 export interface Parcel {
   id: string;
   farm_id: string;
+  organization_id?: string;
   name: string;
   description?: string;
   area: number;

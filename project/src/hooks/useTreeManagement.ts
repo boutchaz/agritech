@@ -13,6 +13,7 @@ export interface TreeCategoryWithTrees {
 export interface Tree {
   id: string;
   category_id: string;
+  organization_id?: string;
   name: string;
   created_at: string;
   updated_at: string;

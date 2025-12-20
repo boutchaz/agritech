@@ -68,6 +68,11 @@ export class CreateWorkerDto {
   @IsUUID()
   farm_id?: string;
 
+  @ApiPropertyOptional({ description: 'Organization ID (auto-populated from farm if not provided)' })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
+
   @ApiProperty({ description: 'Is declared to CNSS', default: false })
   @IsBoolean()
   is_cnss_declared: boolean;

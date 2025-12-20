@@ -7,6 +7,7 @@ export interface ParcelWithDetails {
   id: string;
   name: string;
   farm_id: string;
+  organization_id?: string | null;
   crop_category?: string | null;
   crop_type?: string | null;
   variety?: string | null;

@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 export interface Crop {
   id: string;
   farm_id: string;
+  organization_id?: string;
   parcel_id?: string;
   variety_id: string;
   name: string;

@@ -58,6 +58,16 @@ serve(async (req) => {
       return `<stop offset="${offset}%" stop-color="${color}" />`
     }).join('\n')
 
+    // Generate a deterministic seed from the input parameters
+    const seedString = `${aoi.name || 'default'}-${date_range.end_date}-${index}`;
+    let hash = 0;
+    for (let i = 0; i < seedString.length; i++) {
+      const char = seedString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const seed = Math.abs(hash) % 100;
+
     // Create a more sophisticated pattern that simulates field variation
     const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -65,7 +75,7 @@ serve(async (req) => {
       ${gradientStops}
     </linearGradient>
     <filter id="noise">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="5" seed="${Math.floor(Math.random() * 100)}" />
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="5" seed="${seed}" />
       <feColorMatrix type="saturate" values="0.3"/>
     </filter>
     <pattern id="field-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
@@ -84,17 +94,22 @@ serve(async (req) => {
     // Convert SVG to data URL
     const imageUrl = `data:image/svg+xml;base64,${btoa(svg)}`
 
-    // Simulate some variation in results
-    const hasImages = Math.random() > 0.1 // 90% success rate
-    const suitableImages = hasImages ? Math.floor(Math.random() * 5) + 1 : 0
+    // Use deterministic "randomness" for other properties based on the hash
+    const pseudoRandom = (offset: number) => {
+      const x = Math.sin(seed + offset) * 10000;
+      return x - Math.floor(x);
+    };
+
+    const hasImages = pseudoRandom(1) > 0.1 // 90% success rate
+    const suitableImages = hasImages ? Math.floor(pseudoRandom(2) * 5) + 1 : 0
 
     const response = {
       image_url: imageUrl,
       index: index,
       date: date_range.end_date,
-      cloud_coverage: cloud_coverage + Math.random() * 5, // Add some variation
+      cloud_coverage: cloud_coverage, // Keep requested coverage or use deterministic variation if needed
       metadata: {
-        available_images: hasImages ? Math.floor(Math.random() * 10) + suitableImages : 0,
+        available_images: hasImages ? Math.floor(pseudoRandom(3) * 10) + suitableImages : 0,
         suitable_images: suitableImages,
         demo_mode: true,
         message: "This is a demo visualization. Connect a real satellite service for actual imagery.",

@@ -5,6 +5,7 @@ import { farmsService } from '../services/farmsService';
 export interface Parcel {
   id: string;
   farm_id: string | null;
+  organization_id?: string | null;
   name: string;
   description: string | null;
   area: number | null;

@@ -33,6 +33,7 @@ export interface Parcel {
 export interface CreateParcelDto {
   name: string;
   farm_id: string;
+  organization_id?: string;
   description?: string;
   boundary?: number[][];
   area: number;

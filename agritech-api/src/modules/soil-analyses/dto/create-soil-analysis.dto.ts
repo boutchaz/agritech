@@ -9,6 +9,10 @@ export class CreateSoilAnalysisDto {
 
   @IsOptional()
   @IsUUID()
+  organization_id?: string;
+
+  @IsOptional()
+  @IsUUID()
   test_type_id?: string;
 
   @IsOptional()

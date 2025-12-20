@@ -383,6 +383,7 @@ CREATE INDEX IF NOT EXISTS idx_farms_org ON farms(organization_id);
 CREATE TABLE IF NOT EXISTS parcels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   boundary JSONB,
@@ -414,6 +415,7 @@ CREATE TABLE IF NOT EXISTS parcels (
 );
 
 CREATE INDEX IF NOT EXISTS idx_parcels_farm ON parcels(farm_id);
+CREATE INDEX IF NOT EXISTS idx_parcels_organization ON parcels(organization_id);
 CREATE INDEX IF NOT EXISTS idx_parcels_crop_type ON parcels(crop_type) WHERE crop_type IS NOT NULL;
 
 -- =====================================================
@@ -2305,6 +2307,7 @@ CREATE INDEX IF NOT EXISTS idx_work_units_code ON work_units(code);
 CREATE TABLE IF NOT EXISTS day_laborers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   phone TEXT,
@@ -2319,11 +2322,13 @@ CREATE TABLE IF NOT EXISTS day_laborers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_day_laborers_farm ON day_laborers(farm_id);
+CREATE INDEX IF NOT EXISTS idx_day_laborers_organization ON day_laborers(organization_id);
 
 -- Employees
 CREATE TABLE IF NOT EXISTS employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   employee_id TEXT UNIQUE,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
@@ -2340,6 +2345,7 @@ CREATE TABLE IF NOT EXISTS employees (
 );
 
 CREATE INDEX IF NOT EXISTS idx_employees_farm ON employees(farm_id);
+CREATE INDEX IF NOT EXISTS idx_employees_organization ON employees(organization_id);
 CREATE INDEX IF NOT EXISTS idx_employees_employee_id ON employees(employee_id);
 
 -- Tasks
@@ -2509,6 +2515,7 @@ CREATE INDEX IF NOT EXISTS idx_task_equipment_task ON task_equipment(task_id);
 CREATE TABLE IF NOT EXISTS work_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   worker_id UUID REFERENCES workers(id),
   worker_type TEXT NOT NULL,
   work_date DATE NOT NULL,
@@ -2525,6 +2532,7 @@ CREATE TABLE IF NOT EXISTS work_records (
 );
 
 CREATE INDEX IF NOT EXISTS idx_work_records_farm ON work_records(farm_id);
+CREATE INDEX IF NOT EXISTS idx_work_records_organization ON work_records(organization_id);
 CREATE INDEX IF NOT EXISTS idx_work_records_worker ON work_records(worker_id);
 CREATE INDEX IF NOT EXISTS idx_work_records_date ON work_records(work_date);
 
@@ -2533,6 +2541,7 @@ CREATE TABLE IF NOT EXISTS metayage_settlements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
@@ -2555,6 +2564,7 @@ CREATE TABLE IF NOT EXISTS metayage_settlements (
 
 CREATE INDEX IF NOT EXISTS idx_metayage_settlements_worker ON metayage_settlements(worker_id);
 CREATE INDEX IF NOT EXISTS idx_metayage_settlements_farm ON metayage_settlements(farm_id);
+CREATE INDEX IF NOT EXISTS idx_metayage_settlements_organization ON metayage_settlements(organization_id);
 CREATE INDEX IF NOT EXISTS idx_metayage_settlements_parcel ON metayage_settlements(parcel_id);
 
 -- Payment Records
@@ -3550,6 +3560,7 @@ CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_date ON cloud_coverage_chec
 CREATE TABLE IF NOT EXISTS analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   analysis_type analysis_type NOT NULL,
   analysis_date DATE NOT NULL,
   laboratory TEXT,
@@ -3560,6 +3571,7 @@ CREATE TABLE IF NOT EXISTS analyses (
 );
 
 CREATE INDEX IF NOT EXISTS idx_analyses_parcel ON analyses(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_analyses_organization ON analyses(organization_id);
 CREATE INDEX IF NOT EXISTS idx_analyses_type ON analyses(analysis_type);
 CREATE INDEX IF NOT EXISTS idx_analyses_date ON analyses(analysis_date DESC);
 
@@ -3585,6 +3597,7 @@ CREATE INDEX IF NOT EXISTS idx_analysis_recommendations_analysis ON analysis_rec
 CREATE TABLE IF NOT EXISTS soil_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   test_type_id UUID,
   analysis_date TIMESTAMPTZ DEFAULT NOW(),
   physical JSONB,
@@ -3596,6 +3609,7 @@ CREATE TABLE IF NOT EXISTS soil_analyses (
 );
 
 CREATE INDEX IF NOT EXISTS idx_soil_analyses_parcel ON soil_analyses(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_soil_analyses_organization ON soil_analyses(organization_id);
 
 -- Test Types
 CREATE TABLE IF NOT EXISTS test_types (
@@ -3611,6 +3625,7 @@ CREATE TABLE IF NOT EXISTS test_types (
 CREATE TABLE IF NOT EXISTS parcel_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   template_id TEXT NOT NULL,
   title TEXT NOT NULL,
   generated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3624,6 +3639,7 @@ CREATE TABLE IF NOT EXISTS parcel_reports (
 );
 
 CREATE INDEX IF NOT EXISTS idx_parcel_reports_parcel ON parcel_reports(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_parcel_reports_organization ON parcel_reports(organization_id);
 
 -- =====================================================
 -- 16. CROP MANAGEMENT TABLES
@@ -3667,6 +3683,7 @@ CREATE INDEX IF NOT EXISTS idx_crop_varieties_category ON crop_varieties(categor
 CREATE TABLE IF NOT EXISTS crops (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   variety_id UUID NOT NULL REFERENCES crop_varieties(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -3684,6 +3701,7 @@ CREATE TABLE IF NOT EXISTS crops (
 );
 
 CREATE INDEX IF NOT EXISTS idx_crops_farm ON crops(farm_id);
+CREATE INDEX IF NOT EXISTS idx_crops_organization ON crops(organization_id);
 CREATE INDEX IF NOT EXISTS idx_crops_parcel ON crops(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_crops_variety ON crops(variety_id);
 
@@ -3724,12 +3742,14 @@ CREATE INDEX IF NOT EXISTS idx_tree_categories_org ON tree_categories(organizati
 CREATE TABLE IF NOT EXISTS trees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id UUID NOT NULL REFERENCES tree_categories(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_trees_category ON trees(category_id);
+CREATE INDEX IF NOT EXISTS idx_trees_organization ON trees(organization_id);
 
 -- Plantation Types
 CREATE TABLE IF NOT EXISTS plantation_types (
@@ -3938,6 +3958,7 @@ CREATE INDEX IF NOT EXISTS idx_structures_farm ON structures(farm_id);
 CREATE TABLE IF NOT EXISTS utilities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   type TEXT NOT NULL,
   provider TEXT,
@@ -3959,6 +3980,7 @@ CREATE TABLE IF NOT EXISTS utilities (
 );
 
 CREATE INDEX IF NOT EXISTS idx_utilities_farm ON utilities(farm_id);
+CREATE INDEX IF NOT EXISTS idx_utilities_organization ON utilities(organization_id);
 CREATE INDEX IF NOT EXISTS idx_utilities_parcel ON utilities(parcel_id);
 
 -- =====================================================
@@ -4182,6 +4204,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_date ON audit_logs(created_at DESC);
 CREATE TABLE IF NOT EXISTS financial_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   category TEXT NOT NULL,
   subcategory TEXT,
@@ -4197,12 +4220,14 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_financial_transactions_farm ON financial_transactions(farm_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transactions_organization ON financial_transactions(organization_id);
 CREATE INDEX IF NOT EXISTS idx_financial_transactions_date ON financial_transactions(transaction_date DESC);
 
 -- Livestock
 CREATE TABLE IF NOT EXISTS livestock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   breed TEXT,
   count INTEGER DEFAULT 1,
@@ -4217,6 +4242,7 @@ CREATE TABLE IF NOT EXISTS livestock (
 );
 
 CREATE INDEX IF NOT EXISTS idx_livestock_farm ON livestock(farm_id);
+CREATE INDEX IF NOT EXISTS idx_livestock_organization ON livestock(organization_id);
 
 -- Dashboard Settings
 CREATE TABLE IF NOT EXISTS dashboard_settings (
@@ -4645,6 +4671,151 @@ CREATE TRIGGER trg_stock_entries_updated_at
   BEFORE UPDATE ON stock_entries
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 24. AUTO-POPULATE ORGANIZATION_ID TRIGGERS
+-- =====================================================
+-- These triggers automatically populate organization_id from parent tables
+-- to ensure data segregation for multi-tenant architecture
+
+-- Function to auto-populate organization_id from farm_id
+CREATE OR REPLACE FUNCTION populate_organization_id_from_farm()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- If organization_id is not set but farm_id is, populate it
+  IF NEW.organization_id IS NULL AND NEW.farm_id IS NOT NULL THEN
+    SELECT organization_id INTO NEW.organization_id
+    FROM farms
+    WHERE id = NEW.farm_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Function to auto-populate organization_id from parcel_id
+CREATE OR REPLACE FUNCTION populate_organization_id_from_parcel()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- If organization_id is not set but parcel_id is, populate it
+  IF NEW.organization_id IS NULL AND NEW.parcel_id IS NOT NULL THEN
+    SELECT f.organization_id INTO NEW.organization_id
+    FROM parcels p
+    JOIN farms f ON f.id = p.farm_id
+    WHERE p.id = NEW.parcel_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Function to auto-populate organization_id from category_id (for trees)
+CREATE OR REPLACE FUNCTION populate_organization_id_from_tree_category()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- If organization_id is not set but category_id is, populate it
+  IF NEW.organization_id IS NULL AND NEW.category_id IS NOT NULL THEN
+    SELECT organization_id INTO NEW.organization_id
+    FROM tree_categories
+    WHERE id = NEW.category_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Apply triggers for tables with farm_id
+DROP TRIGGER IF EXISTS trg_parcels_populate_org_id ON parcels;
+CREATE TRIGGER trg_parcels_populate_org_id
+  BEFORE INSERT OR UPDATE ON parcels
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_crops_populate_org_id ON crops;
+CREATE TRIGGER trg_crops_populate_org_id
+  BEFORE INSERT OR UPDATE ON crops
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_day_laborers_populate_org_id ON day_laborers;
+CREATE TRIGGER trg_day_laborers_populate_org_id
+  BEFORE INSERT OR UPDATE ON day_laborers
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_employees_populate_org_id ON employees;
+CREATE TRIGGER trg_employees_populate_org_id
+  BEFORE INSERT OR UPDATE ON employees
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_work_records_populate_org_id ON work_records;
+CREATE TRIGGER trg_work_records_populate_org_id
+  BEFORE INSERT OR UPDATE ON work_records
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_metayage_settlements_populate_org_id ON metayage_settlements;
+CREATE TRIGGER trg_metayage_settlements_populate_org_id
+  BEFORE INSERT OR UPDATE ON metayage_settlements
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_utilities_populate_org_id ON utilities;
+CREATE TRIGGER trg_utilities_populate_org_id
+  BEFORE INSERT OR UPDATE ON utilities
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_financial_transactions_populate_org_id ON financial_transactions;
+CREATE TRIGGER trg_financial_transactions_populate_org_id
+  BEFORE INSERT OR UPDATE ON financial_transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+DROP TRIGGER IF EXISTS trg_livestock_populate_org_id ON livestock;
+CREATE TRIGGER trg_livestock_populate_org_id
+  BEFORE INSERT OR UPDATE ON livestock
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_farm();
+
+-- Apply triggers for tables with parcel_id
+DROP TRIGGER IF EXISTS trg_analyses_populate_org_id ON analyses;
+CREATE TRIGGER trg_analyses_populate_org_id
+  BEFORE INSERT OR UPDATE ON analyses
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_parcel();
+
+DROP TRIGGER IF EXISTS trg_soil_analyses_populate_org_id ON soil_analyses;
+CREATE TRIGGER trg_soil_analyses_populate_org_id
+  BEFORE INSERT OR UPDATE ON soil_analyses
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_parcel();
+
+DROP TRIGGER IF EXISTS trg_parcel_reports_populate_org_id ON parcel_reports;
+CREATE TRIGGER trg_parcel_reports_populate_org_id
+  BEFORE INSERT OR UPDATE ON parcel_reports
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_parcel();
+
+-- Apply trigger for trees (uses category_id)
+DROP TRIGGER IF EXISTS trg_trees_populate_org_id ON trees;
+CREATE TRIGGER trg_trees_populate_org_id
+  BEFORE INSERT OR UPDATE ON trees
+  FOR EACH ROW
+  EXECUTE FUNCTION populate_organization_id_from_tree_category();
 
 -- =====================================================
 -- END OF SCHEMA
@@ -5584,53 +5755,32 @@ CREATE POLICY "org_delete_farm_roles" ON farm_management_roles
 -- =====================================================
 -- PARCELS RLS POLICIES
 -- =====================================================
--- Updated to check organization through farm relationship (parcels don't have organization_id)
--- Users can access parcels from farms they have access to
+-- Updated to use organization_id directly for better performance
 -- =====================================================
 DROP POLICY IF EXISTS "org_read_parcels" ON parcels;
 DROP POLICY IF EXISTS "org_write_parcels" ON parcels;
 DROP POLICY IF EXISTS "org_update_parcels" ON parcels;
 DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
 
--- Read: Users can see parcels from farms they have access to
 CREATE POLICY "org_read_parcels" ON parcels
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Insert: Authenticated users can create parcels for farms they have access to
 CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
--- Update: Users can update parcels from farms they have access to
 CREATE POLICY "org_update_parcels" ON parcels
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Delete: Users can delete parcels from farms they have access to
 CREATE POLICY "org_delete_parcels" ON parcels
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = parcels.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -5643,88 +5793,56 @@ CREATE POLICY "org_delete_parcels" ON parcels
 -- WORKER & TASK MANAGEMENT TABLES
 -- =====================================================
 
--- Day Laborers Policies (check through farm relationship)
+-- Day Laborers Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_day_laborers" ON day_laborers;
 CREATE POLICY "org_read_day_laborers" ON day_laborers
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = day_laborers.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_day_laborers" ON day_laborers;
 CREATE POLICY "org_write_day_laborers" ON day_laborers
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = day_laborers.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_day_laborers" ON day_laborers;
 CREATE POLICY "org_update_day_laborers" ON day_laborers
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = day_laborers.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_day_laborers" ON day_laborers;
 CREATE POLICY "org_delete_day_laborers" ON day_laborers
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = day_laborers.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Employees Policies (check through farm relationship)
+-- Employees Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_employees" ON employees;
 CREATE POLICY "org_read_employees" ON employees
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = employees.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_employees" ON employees;
 CREATE POLICY "org_write_employees" ON employees
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = employees.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_employees" ON employees;
 CREATE POLICY "org_update_employees" ON employees
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = employees.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_employees" ON employees;
 CREATE POLICY "org_delete_employees" ON employees
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = employees.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Task Categories Policies
@@ -5966,88 +6084,56 @@ CREATE POLICY "org_delete_task_equipment" ON task_equipment
     )
   );
 
--- Work Records Policies (check through farm relationship)
+-- Work Records Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_work_records" ON work_records;
 CREATE POLICY "org_read_work_records" ON work_records
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = work_records.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
 CREATE POLICY "org_write_work_records" ON work_records
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = work_records.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_work_records" ON work_records;
 CREATE POLICY "org_update_work_records" ON work_records
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = work_records.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_work_records" ON work_records;
 CREATE POLICY "org_delete_work_records" ON work_records
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = work_records.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Metayage Settlements Policies (check through farm relationship)
+-- Metayage Settlements Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = metayage_settlements.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = metayage_settlements.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_update_metayage_settlements" ON metayage_settlements
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = metayage_settlements.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_delete_metayage_settlements" ON metayage_settlements
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = metayage_settlements.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Payment Records Policies
@@ -6401,108 +6487,66 @@ CREATE POLICY "org_delete_stock_account_mappings" ON stock_account_mappings
 -- ANALYSES & REPORTS TABLES
 -- =====================================================
 
--- Analyses Policies (check through parcel relationship)
+-- Analyses Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_analyses" ON analyses;
 CREATE POLICY "org_read_analyses" ON analyses
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_analyses" ON analyses;
 CREATE POLICY "org_write_analyses" ON analyses
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_analyses" ON analyses;
 CREATE POLICY "org_update_analyses" ON analyses
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_analyses" ON analyses;
 CREATE POLICY "org_delete_analyses" ON analyses
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Analysis Recommendations Policies (check through analysis relationship)
+-- Analysis Recommendations Policies (check through analysis relationship - no org_id on this table)
 DROP POLICY IF EXISTS "org_access_analysis_recommendations" ON analysis_recommendations;
 CREATE POLICY "org_access_analysis_recommendations" ON analysis_recommendations
   FOR ALL USING (
     analysis_id IN (
       SELECT a.id FROM analyses a
-      JOIN parcels p ON p.id = a.parcel_id
-      JOIN farms f ON f.id = p.farm_id
-      WHERE (f.organization_id IS NULL OR is_organization_member(f.organization_id))
+      WHERE a.organization_id IS NULL OR is_organization_member(a.organization_id)
     )
   );
 
--- Soil Analyses Policies (check through parcel relationship)
+-- Soil Analyses Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_read_soil_analyses" ON soil_analyses
   FOR SELECT USING (
-    parcel_id IS NULL OR EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = soil_analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_write_soil_analyses" ON soil_analyses
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (parcel_id IS NULL OR EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = soil_analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    ))
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_update_soil_analyses" ON soil_analyses
   FOR UPDATE USING (
-    parcel_id IS NULL OR EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = soil_analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_delete_soil_analyses" ON soil_analyses
   FOR DELETE USING (
-    parcel_id IS NULL OR EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = soil_analyses.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Test Types Policies (no organization_id - allow all authenticated users to read)
@@ -6522,50 +6566,30 @@ DROP POLICY IF EXISTS "org_delete_test_types" ON test_types;
 CREATE POLICY "org_delete_test_types" ON test_types
   FOR DELETE USING (auth.uid() IS NOT NULL);
 
--- Parcel Reports Policies (check through parcel relationship)
+-- Parcel Reports Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_read_parcel_reports" ON parcel_reports
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = parcel_reports.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_write_parcel_reports" ON parcel_reports
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = parcel_reports.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_update_parcel_reports" ON parcel_reports
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = parcel_reports.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_delete_parcel_reports" ON parcel_reports
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM parcels p
-      JOIN farms f ON f.id = p.farm_id
-      WHERE p.id = parcel_reports.parcel_id
-        AND (f.organization_id IS NULL OR is_organization_member(f.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -6623,46 +6647,30 @@ DROP POLICY IF EXISTS "org_delete_crop_varieties" ON crop_varieties;
 CREATE POLICY "org_delete_crop_varieties" ON crop_varieties
   FOR DELETE USING (auth.uid() IS NOT NULL);
 
--- Crops Policies (check through farm relationship)
+-- Crops Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_crops" ON crops;
 CREATE POLICY "org_read_crops" ON crops
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = crops.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_crops" ON crops;
 CREATE POLICY "org_write_crops" ON crops
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = crops.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_crops" ON crops;
 CREATE POLICY "org_update_crops" ON crops
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = crops.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_crops" ON crops;
 CREATE POLICY "org_delete_crops" ON crops
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = crops.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Tree Categories Policies
@@ -6691,46 +6699,30 @@ CREATE POLICY "org_delete_tree_categories" ON tree_categories
     is_organization_member(organization_id)
   );
 
--- Trees Policies (check through tree_categories relationship)
+-- Trees Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_trees" ON trees;
 CREATE POLICY "org_read_trees" ON trees
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM tree_categories
-      WHERE tree_categories.id = trees.category_id
-        AND is_organization_member(tree_categories.organization_id)
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_trees" ON trees;
 CREATE POLICY "org_write_trees" ON trees
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM tree_categories
-      WHERE tree_categories.id = trees.category_id
-        AND is_organization_member(tree_categories.organization_id)
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_trees" ON trees;
 CREATE POLICY "org_update_trees" ON trees
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM tree_categories
-      WHERE tree_categories.id = trees.category_id
-        AND is_organization_member(tree_categories.organization_id)
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_trees" ON trees;
 CREATE POLICY "org_delete_trees" ON trees
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM tree_categories
-      WHERE tree_categories.id = trees.category_id
-        AND is_organization_member(tree_categories.organization_id)
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Plantation Types Policies
@@ -6983,46 +6975,30 @@ CREATE POLICY "org_delete_structures" ON structures
     is_organization_member(organization_id)
   );
 
--- Utilities Policies (check through farm relationship)
+-- Utilities Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_utilities" ON utilities;
 CREATE POLICY "org_read_utilities" ON utilities
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = utilities.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_utilities" ON utilities;
 CREATE POLICY "org_write_utilities" ON utilities
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = utilities.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_utilities" ON utilities;
 CREATE POLICY "org_update_utilities" ON utilities
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = utilities.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_utilities" ON utilities;
 CREATE POLICY "org_delete_utilities" ON utilities
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = utilities.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -7157,88 +7133,56 @@ DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
 CREATE POLICY "org_write_audit_logs" ON audit_logs
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- Financial Transactions Policies (check through farm relationship)
+-- Financial Transactions Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_read_financial_transactions" ON financial_transactions
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = financial_transactions.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_write_financial_transactions" ON financial_transactions
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = financial_transactions.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_update_financial_transactions" ON financial_transactions
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = financial_transactions.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_delete_financial_transactions" ON financial_transactions
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = financial_transactions.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
--- Livestock Policies (check through farm relationship)
+-- Livestock Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_livestock" ON livestock;
 CREATE POLICY "org_read_livestock" ON livestock
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = livestock.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_livestock" ON livestock;
 CREATE POLICY "org_write_livestock" ON livestock
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = livestock.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    (organization_id IS NULL OR is_organization_member(organization_id))
   );
 
 DROP POLICY IF EXISTS "org_update_livestock" ON livestock;
 CREATE POLICY "org_update_livestock" ON livestock
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = livestock.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_livestock" ON livestock;
 CREATE POLICY "org_delete_livestock" ON livestock
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM farms
-      WHERE farms.id = livestock.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
 
 -- Subscription Usage Policies

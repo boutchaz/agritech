@@ -9,6 +9,14 @@ export class CreateParcelDto {
   @IsUUID()
   farm_id: string;
 
+  @ApiPropertyOptional({
+    description: 'Organization ID (auto-populated from farm if not provided)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
+
   @ApiProperty({
     description: 'Parcel name',
     example: 'Parcelle Nord',

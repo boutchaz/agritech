@@ -5,6 +5,7 @@ export type AnalysisType = 'soil' | 'plant' | 'water';
 export interface BaseAnalysis {
   id: string;
   parcel_id: string;
+  organization_id?: string;
   analysis_type: AnalysisType;
   analysis_date: string;
   laboratory?: string;

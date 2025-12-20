@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional, IsObject, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, IsObject, IsDateString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum AnalysisType {
@@ -12,6 +12,11 @@ export class CreateAnalysisDto {
   @IsNotEmpty()
   @IsString()
   parcel_id: string;
+
+  @ApiPropertyOptional({ description: 'Organization ID (auto-populated from parcel if not provided)', example: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
 
   @ApiProperty({ description: 'Type of analysis', enum: AnalysisType })
   @IsNotEmpty()

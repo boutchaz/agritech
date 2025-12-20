@@ -89,6 +89,7 @@ export interface WorkRecord {
   id: string;
   worker_id: string;
   farm_id?: string;
+  organization_id?: string;
   parcel_id?: string;
 
   // Work Details
@@ -128,6 +129,7 @@ export interface MetayageSettlement {
   id: string;
   worker_id: string;
   farm_id: string;
+  organization_id?: string;
   parcel_id?: string;
 
   // Period
