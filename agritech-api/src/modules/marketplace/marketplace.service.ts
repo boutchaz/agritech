@@ -1,19 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { StrapiService } from '../strapi/strapi.service';
 
 @Injectable()
 export class MarketplaceService {
     private readonly logger = new Logger(MarketplaceService.name);
 
     constructor(
-        private readonly databaseService: DatabaseService,
-        private readonly strapiService: StrapiService
+        private readonly databaseService: DatabaseService
     ) { }
 
     /**
-     * Fetch public products.
-     * Fetches active listings from Supabase and merges with Strapi content.
+     * Fetch public products from Supabase.
+     * All content (descriptions, images, SEO) is now in marketplace_listings table.
      */
     async getPublicProducts(category?: string) {
         const supabase = this.databaseService.getAdminClient();
@@ -26,7 +24,7 @@ export class MarketplaceService {
             .order('created_at', { ascending: false });
 
         if (category) {
-            // TODO: Filter by category logic (might need to filter AFTER strapi fetch if category is only in strapi)
+            query = query.eq('product_category_id', category);
         }
 
         const { data: listings, error } = await query;
@@ -36,21 +34,7 @@ export class MarketplaceService {
             throw error;
         }
 
-        // Enhance listings with Strapi content
-        const enhancedListings = await Promise.all(
-            (listings || []).map(async (listing) => {
-                const content = await this.strapiService.getProductByListingId(listing.id);
-                return {
-                    ...listing,
-                    content: content || null,
-                    // Fallback for key fields if content missing
-                    title: content?.title || listing.title,
-                    image: content?.mainImage?.url || null // Map Strapi media URL
-                };
-            })
-        );
-
-        return enhancedListings;
+        return listings || [];
     }
 
     async getProduct(id: string) {
@@ -68,13 +52,7 @@ export class MarketplaceService {
             return null;
         }
 
-        // Fetch rich content from Strapi
-        const content = await this.strapiService.getProductByListingId(id);
-
-        return {
-            ...listing,
-            content: content || null
-        };
+        return listing;
     }
 
     /**
@@ -85,12 +63,6 @@ export class MarketplaceService {
     async getDashboardStats(token: string, organizationId?: string) {
         const supabase = this.databaseService.getClientWithAuth(token);
 
-        // 1. Get User Info to identify organization if not provided
-        // (In strict RLS, we don't even need orgId if the policy filters by auth.uid() -> org)
-        // However, our policy is: organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
-
-        // Let's rely on the Supabase Policy for security.
-
         const { count: listingsCount, error: listError } = await supabase
             .from('marketplace_listings')
             .select('*', { count: 'exact', head: true });
@@ -99,16 +71,8 @@ export class MarketplaceService {
             this.logger.error(`Error fetching listings stats: ${listError.message}`);
         }
 
-        // Determine organization ID for Orders query if needed (since orders might be shared)
-        // Actually, our RLS says: "Participants can view orders".
-        // So simple select count should work for "My Orders" (either buyer or seller).
-        // But specific "Pending Orders" usually implies "Orders I need to fulfill" (Seller).
-
-        // We might need to know WHICH org we are acting as to filter seller_organization_id = my_org.
-        // Let's fetch the user's org first.
         const { data: { user } } = await supabase.auth.getUser();
 
-        // We can query auth_users_view with the same token
         const { data: userData } = await supabase
             .from('auth_users_view')
             .select('organization_id')
@@ -117,7 +81,6 @@ export class MarketplaceService {
 
         const myOrgId = userData?.organization_id;
 
-        // Count pending orders where I am the seller
         let ordersCount = 0;
         if (myOrgId) {
             const { count, error: orderError } = await supabase
@@ -129,9 +92,7 @@ export class MarketplaceService {
             if (!orderError) ordersCount = count || 0;
         }
 
-        // Calculate generic revenue (completed or shipped orders)
         let revenue = 0;
-        // Calculation would go here (e.g., sum of total_amount for delivered orders)
 
         return {
             listingsCount: listingsCount || 0,

@@ -29,6 +29,7 @@ import { Route as ProfitabilityRouteImport } from './routes/profitability'
 import { Route as ProductionIntelligenceRouteImport } from './routes/production-intelligence'
 import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LabServicesRouteImport } from './routes/lab-services'
 import { Route as InfrastructureRouteImport } from './routes/infrastructure'
@@ -190,6 +191,11 @@ const ParcelsRoute = ParcelsRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -530,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
@@ -613,6 +620,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
@@ -692,6 +700,7 @@ export interface FileRoutesById {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
@@ -777,6 +786,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/login'
+    | '/marketplace'
     | '/onboarding'
     | '/parcels'
     | '/production-intelligence'
@@ -860,6 +870,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/login'
+    | '/marketplace'
     | '/parcels'
     | '/production-intelligence'
     | '/profitability'
@@ -938,6 +949,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/login'
+    | '/marketplace'
     | '/onboarding'
     | '/parcels'
     | '/production-intelligence'
@@ -1023,6 +1035,7 @@ export interface RootRouteChildren {
   InfrastructureRoute: typeof InfrastructureRoute
   LabServicesRoute: typeof LabServicesRoute
   LoginRoute: typeof LoginRoute
+  MarketplaceRoute: typeof MarketplaceRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
   ParcelsRoute: typeof ParcelsRouteWithChildren
   ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
@@ -1186,6 +1199,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1805,6 +1825,7 @@ const rootRouteChildren: RootRouteChildren = {
   InfrastructureRoute: InfrastructureRoute,
   LabServicesRoute: LabServicesRoute,
   LoginRoute: LoginRoute,
+  MarketplaceRoute: MarketplaceRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
   ParcelsRoute: ParcelsRouteWithChildren,
   ProductionIntelligenceRoute: ProductionIntelligenceRoute,

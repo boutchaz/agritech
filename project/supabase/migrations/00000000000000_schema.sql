@@ -10012,7 +10012,11 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  description TEXT,
+  description TEXT, -- Plain text description
+  rich_description TEXT, -- HTML/Markdown content
+  seo_title TEXT,
+  seo_description TEXT,
+  seo_keywords TEXT[],
   price NUMERIC(12, 2) NOT NULL,
   currency TEXT DEFAULT 'MAD',
   quantity_available NUMERIC(12, 2) NOT NULL DEFAULT 0,
