@@ -2285,7 +2285,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_user ON workers(user_id) WHERE user_id IS
 -- Work Units (for piece-work tracking)
 CREATE TABLE IF NOT EXISTS work_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   name_ar TEXT,
@@ -3744,7 +3744,7 @@ ALTER TABLE IF EXISTS reception_batches
 -- Tree Categories
 CREATE TABLE IF NOT EXISTS tree_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   category TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -3768,7 +3768,7 @@ CREATE INDEX IF NOT EXISTS idx_trees_organization ON trees(organization_id);
 -- Plantation Types
 CREATE TABLE IF NOT EXISTS plantation_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   spacing TEXT NOT NULL,
   trees_per_ha INTEGER NOT NULL,
