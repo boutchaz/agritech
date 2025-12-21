@@ -105,7 +105,8 @@ function OrganizationsPage() {
         searchPlaceholder="Search organizations..."
         actions={(row: any) => (
           <Link
-            to={`/analytics/organizations/${row.id}`}
+            to="/analytics/organizations/$orgId"
+            params={{ orgId: row.id }}
             className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
             title="View details"
           >
