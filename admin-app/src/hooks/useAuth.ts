@@ -33,19 +33,49 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      let isInternalAdmin = false;
-      if (session?.user) {
-        isInternalAdmin = await checkInternalAdmin(session.user.id);
+    let mounted = true;
+
+    // Get initial session with timeout to prevent hanging
+    const initSession = async () => {
+      try {
+        // Add timeout to prevent getSession from hanging indefinitely
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('getSession timeout')), 5000)
+        );
+
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<typeof sessionPromise>;
+
+        if (error) {
+          console.error('Error getting session:', error);
+          if (mounted) {
+            setState(prev => ({ ...prev, isLoading: false }));
+          }
+          return;
+        }
+
+        let isInternalAdmin = false;
+        if (session?.user) {
+          isInternalAdmin = await checkInternalAdmin(session.user.id);
+        }
+
+        if (mounted) {
+          setState({
+            user: session?.user ?? null,
+            session,
+            isLoading: false,
+            isInternalAdmin,
+          });
+        }
+      } catch {
+        // On timeout or error, just set loading to false so user can try to login
+        if (mounted) {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
       }
-      setState({
-        user: session?.user ?? null,
-        session,
-        isLoading: false,
-        isInternalAdmin,
-      });
-    });
+    };
+
+    initSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -54,16 +84,21 @@ export function useAuth() {
         if (session?.user) {
           isInternalAdmin = await checkInternalAdmin(session.user.id);
         }
-        setState({
-          user: session?.user ?? null,
-          session,
-          isLoading: false,
-          isInternalAdmin,
-        });
+        if (mounted) {
+          setState({
+            user: session?.user ?? null,
+            session,
+            isLoading: false,
+            isInternalAdmin,
+          });
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [checkInternalAdmin]);
 
   const signIn = async (email: string, password: string) => {
