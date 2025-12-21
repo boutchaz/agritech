@@ -51,37 +51,42 @@ For a **public marketplace with critical SEO** requirements, use a **hybrid arch
 
 ### Architecture Overview
 
+**Golden Rule:** No direct connection from Frontend to Strapi or Supabase. All traffic flows through NestJS API.
+
 ```mermaid
 graph TB
     subgraph "Public Marketplace Frontend"
-        NextJS[Next.js Frontend<br/>SSR/SSG for SEO]
-    end
-    
-    subgraph "Existing Platform"
-        ReactApp[React SPA<br/>Farm Management]
-    end
-    
-    subgraph "Content Layer"
-        Strapi[Strapi CMS<br/>Product Content & SEO]
-    end
-    
-    subgraph "Data Layer"
-        Supabase[(Supabase PostgreSQL<br/>Transactional Data)]
+        NextJS[Next.js Frontend]
     end
     
     subgraph "Services"
-        NestAPI[NestJS API<br/>Business Logic]
-        EdgeFn[Supabase Edge Functions]
+        NestAPI[NestJS API<br/>Business Logic & Aggregation]
     end
     
-    NextJS -->|Public API| Supabase
-    NextJS -->|Content API| Strapi
-    ReactApp -->|Auth API| Supabase
-    ReactApp -->|Business Logic| NestAPI
-    NestAPI -->|Data| Supabase
-    NextJS -->|Auth| Supabase
-    Strapi -->|Reference Data| Supabase
+    subgraph "Data Layer"
+        Strapi[Strapi CMS<br/>Content]
+        Supabase[(Supabase<br/>Transactional Data)]
+    end
+    
+    NextJS -->|Public/Auth API| NestAPI
+    NestAPI -->|Content API| Strapi
+    NestAPI -->|DB Connectivity| Supabase
 ```
+
+### Updated Integration Pattern
+
+1. **Frontend (Next.js)**
+   - Only talks to `https://api.agritech.com` (NestJS).
+   - No `@supabase/ssr` or direct `strapi-sdk` for data fetching in client components.
+   - Server Components in Next.js *could* theoretically talk to DB securely, but to strictly follow the rule, they should also call the NestJS API.
+
+2. **Backend (NestJS)**
+   - **MarketplaceModule**: Handles all marketplace logic.
+   - **StrapiService**: Internal service to fetch content from Strapi.
+   - **Supabase Integration**: Uses existing Prisma/TypeORM/Supabase client to query `marketplace_listings`.
+   - **Endpoints**:
+     - `GET /marketplace/products`: Aggregates DB data + Strapi content.
+     - `GET /marketplace/dashboard`: Aggregates stats.
 
 ## Recommended Solution: Option A (Recommended)
 

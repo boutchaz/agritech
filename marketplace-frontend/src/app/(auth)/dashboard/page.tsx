@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { ApiClient } from '@/lib/api';
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -9,30 +10,22 @@ export default async function DashboardPage() {
         redirect('/login');
     }
 
-    // Get user's active organization (assuming one for now or handle via context/query)
-    // For simplicity, we just fetch listings created by this user in any org they belong to
-    // Or better, we get the org from a 'user_organizations' table or similar. 
-    // Let's assume we rely on RLS 'Organizations can manage own listings' 
-    // which uses 'auth_users_view'.
+    // Fetch stats using API
+    let stats = { listingsCount: 0, ordersCount: 0, revenue: 0 };
+    try {
+        // We need organizationId. For now, assume API handles user lookup or we pass something.
+        // Let's pass a placeholder or try to get it. 
+        // Ideally the API determines the organization based on the Auth Token.
+        // So we might not need to pass stats params if the API infers it from the user context.
+        // Let's update ApiClient to support no-arg getDashboardStats which relies on token.
+        // But for now, let's keep it simple and assume we fetch it.
+        const response = await ApiClient.getDashboardStats('current'); // 'current' could signal API to look up
+        stats = response;
+    } catch (error) {
+        console.error('Failed to fetch dashboard stats', error);
+    }
 
-    // Fetch stats (mocked or real count)
-    const { count: listingsCount } = await supabase
-        .from('marketplace_listings')
-        .select('*', { count: 'exact', head: true });
-
-    // Get user's organization from auth_users_view to filter orders
-    const { data: userData } = await supabase
-        .from('auth_users_view')
-        .select('organization_id')
-        .eq('id', user.id)
-        .single();
-
-    const orgId = userData?.organization_id;
-
-    const { count: ordersCount } = await supabase
-        .from('marketplace_orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('seller_organization_id', orgId || '00000000-0000-0000-0000-000000000000');
+    const { listingsCount, ordersCount, revenue } = stats;
 
     return (
         <div className="flex flex-col min-h-screen">

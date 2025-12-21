@@ -1,25 +1,15 @@
-import { createClient } from '@/lib/supabase/client'; // Use client for now or server for SSR? 
-// For public pages, we can use server client in Server Component
-import { createClient as createServerClient } from '@/lib/supabase/server';
+import { ApiClient } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
 
 export const revalidate = 60; // ISR: Revalidate every 60 seconds
 
 async function getProducts() {
-    const supabase = await createServerClient();
-    const { data, error } = await supabase
-        .from('marketplace_listings')
-        .select('*')
-        .eq('is_public', true)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching products:', error);
+    try {
+        return await ApiClient.getProducts();
+    } catch (error) {
+        console.error('Failed to fetch products', error);
         return [];
     }
-
-    return data;
 }
 
 export default async function ProductsPage() {
