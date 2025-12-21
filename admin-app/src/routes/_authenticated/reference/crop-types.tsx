@@ -10,13 +10,21 @@ import { createFileRoute } from '@tanstack/react-router';
 
 const cropTypeSchema = z.object({
     name: z.string().min(1, 'Name is required'),
+    name_ar: z.string().optional(),
+    name_fr: z.string().optional(),
     description: z.string().optional(),
+    description_ar: z.string().optional(),
+    description_fr: z.string().optional(),
     template_version: z.string().default('1.0.0'),
 });
 
 const cropTypeFields: FieldDefinition[] = [
-    { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Wheat' },
-    { name: 'description', label: 'Description', type: 'textarea' },
+    { name: 'name', label: 'Name (EN)', type: 'text', required: true, placeholder: 'e.g. Wheat' },
+    { name: 'name_fr', label: 'Name (FR)', type: 'text' },
+    { name: 'name_ar', label: 'Name (AR)', type: 'text' },
+    { name: 'description', label: 'Description (EN)', type: 'textarea' },
+    { name: 'description_fr', label: 'Description (FR)', type: 'textarea' },
+    { name: 'description_ar', label: 'Description (AR)', type: 'textarea' },
     { name: 'template_version', label: 'Version', type: 'text', placeholder: '1.0.0' },
 ];
 

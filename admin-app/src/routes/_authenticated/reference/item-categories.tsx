@@ -10,16 +10,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 const itemCategorySchema = z.object({
     name: z.string().min(1, 'Name is required'),
+    name_ar: z.string().optional(),
+    name_fr: z.string().optional(),
     code: z.string().optional(),
     description: z.string().optional(),
+    description_ar: z.string().optional(),
+    description_fr: z.string().optional(),
     template_version: z.string().default('1.0.0'),
     is_active: z.boolean().default(true),
 });
 
 const itemCategoryFields: FieldDefinition[] = [
-    { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Fertilizers' },
+    { name: 'name', label: 'Name (EN)', type: 'text', required: true, placeholder: 'e.g. Fertilizers' },
+    { name: 'name_fr', label: 'Name (FR)', type: 'text' },
+    { name: 'name_ar', label: 'Name (AR)', type: 'text' },
     { name: 'code', label: 'Code', type: 'text', placeholder: 'FERT' },
-    { name: 'description', label: 'Description', type: 'textarea' },
+    { name: 'description', label: 'Description (EN)', type: 'textarea' },
+    { name: 'description_fr', label: 'Description (FR)', type: 'textarea' },
+    { name: 'description_ar', label: 'Description (AR)', type: 'textarea' },
     { name: 'is_active', label: 'Active', type: 'checkbox' },
     { name: 'template_version', label: 'Version', type: 'text', placeholder: '1.0.0' },
 ];

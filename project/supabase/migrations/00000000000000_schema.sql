@@ -3663,7 +3663,11 @@ CREATE INDEX IF NOT EXISTS idx_parcel_reports_organization ON parcel_reports(org
 CREATE TABLE IF NOT EXISTS crop_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3746,6 +3750,8 @@ CREATE TABLE IF NOT EXISTS tree_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   category TEXT NOT NULL,
+  category_ar TEXT,
+  category_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3783,7 +3789,11 @@ CREATE TABLE IF NOT EXISTS soil_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3797,7 +3807,11 @@ CREATE TABLE IF NOT EXISTS irrigation_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   efficiency NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3812,7 +3826,11 @@ CREATE TABLE IF NOT EXISTS rootstocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3826,7 +3844,11 @@ CREATE TABLE IF NOT EXISTS plantation_systems (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3843,7 +3865,11 @@ CREATE INDEX IF NOT EXISTS idx_plantation_systems_org ON plantation_systems(orga
 CREATE TABLE IF NOT EXISTS product_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
+  name_ar TEXT,
+  name_fr TEXT,
   description TEXT,
+  description_ar TEXT,
+  description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -9886,3 +9912,43 @@ FROM (VALUES
 WHERE NOT EXISTS (
   SELECT 1 FROM product_categories WHERE name = v.name AND organization_id IS NULL
 );
+-- Soil Types
+ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
+
+-- Irrigation Types
+ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
+
+-- Rootstocks
+ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS description_fr TEXT;
+
+-- Plantation Systems
+ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS description_fr TEXT;
+
+-- Tree Categories
+ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS category_ar TEXT;
+ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS category_fr TEXT;
+-- Note: trees doesn't have description, just adding category translations
+
+-- Crop Types
+ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
+
+-- Product Categories
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_fr TEXT;
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_ar TEXT;
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_fr TEXT;

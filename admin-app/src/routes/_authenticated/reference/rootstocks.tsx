@@ -8,23 +8,38 @@ import { Check, X, Edit, Eye, Plus } from 'lucide-react';
 import { z } from 'zod';
 import { createFileRoute } from '@tanstack/react-router';
 
-const treeCategorySchema = z.object({
-    category: z.string().min(1, 'Category is required'),
-    category_ar: z.string().optional(),
-    category_fr: z.string().optional(),
+// Generic Schema reuse
+const genericSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    name_ar: z.string().optional(),
+    name_fr: z.string().optional(),
     description: z.string().optional(),
+    description_ar: z.string().optional(),
+    description_fr: z.string().optional(),
     template_version: z.string().default('1.0.0'),
 });
 
-const treeCategoryFields: FieldDefinition[] = [
-    { name: 'category', label: 'Category (EN)', type: 'text', required: true, placeholder: 'e.g. Citrus' },
-    { name: 'category_fr', label: 'Category (FR)', type: 'text' },
-    { name: 'category_ar', label: 'Category (AR)', type: 'text' },
-    { name: 'description', label: 'Description', type: 'textarea' },
+const genericFields: FieldDefinition[] = [
+    { name: 'name', label: 'Name (EN)', type: 'text', required: true },
+    { name: 'name_fr', label: 'Name (FR)', type: 'text' },
+    { name: 'name_ar', label: 'Name (AR)', type: 'text' },
+    { name: 'description', label: 'Description (EN)', type: 'textarea' },
+    { name: 'description_fr', label: 'Description (FR)', type: 'textarea' },
+    { name: 'description_ar', label: 'Description (AR)', type: 'textarea' },
     { name: 'template_version', label: 'Version', type: 'text', placeholder: '1.0.0' },
 ];
 
-function TreeCategoriesPage() {
+function GenericReferencePage({
+    title,
+    table,
+    schema = genericSchema,
+    fields = genericFields
+}: {
+    title: string;
+    table: string;
+    schema?: any;
+    fields?: FieldDefinition[]
+}) {
     const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
@@ -33,9 +48,9 @@ function TreeCategoriesPage() {
     const pageSize = 20;
 
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['tree-categories', page, search],
+        queryKey: [table, page, search],
         queryFn: () =>
-            adminApi.getReferenceData('tree_categories', {
+            adminApi.getReferenceData(table, {
                 limit: String(pageSize),
                 offset: String((page - 1) * pageSize),
                 search,
@@ -45,7 +60,7 @@ function TreeCategoriesPage() {
     const saveMutation = useMutation({
         mutationFn: (formData: any) => {
             return adminApi.importReferenceData({
-                table: 'tree_categories',
+                table,
                 rows: [{ data: formData }],
                 updateExisting: !!formData.id,
                 version: formData.template_version || '1.0.0',
@@ -53,15 +68,15 @@ function TreeCategoriesPage() {
         },
         onSuccess: (result) => {
             if (result.success) {
-                queryClient.invalidateQueries({ queryKey: ['tree-categories'] });
-                toast.success(selectedItem ? 'Tree Category updated' : 'Tree Category created');
+                queryClient.invalidateQueries({ queryKey: [table] });
+                toast.success(selectedItem ? `${title} updated` : `${title} created`);
                 setIsModalOpen(false);
             } else {
-                toast.error('Failed to save category: ' + (result.errors?.[0]?.error || 'Unknown error'));
+                toast.error(`Failed to save ${title}: ` + (result.errors?.[0]?.error || 'Unknown error'));
             }
         },
         onError: (error: any) => {
-            toast.error(error.message || 'Failed to save category');
+            toast.error(error.message || `Failed to save ${title}`);
         },
     });
 
@@ -76,7 +91,7 @@ function TreeCategoriesPage() {
     };
 
     const columns = [
-        { key: 'category', header: 'Category' },
+        { key: 'name', header: 'Name' },
         { key: 'description', header: 'Description' },
         { key: 'template_version', header: 'Version', render: (row: any) => row.template_version || '1.0.0' },
     ];
@@ -85,15 +100,15 @@ function TreeCategoriesPage() {
         <div className="p-6">
             <div className="mb-6 flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Tree Categories</h1>
-                    <p className="text-gray-600">Manage tree categories</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+                    <p className="text-gray-600">Manage {title.toLowerCase()}</p>
                 </div>
                 <button
                     onClick={handleAdd}
                     className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gray-900 text-gray-50 hover:bg-gray-900/90 h-10 px-4 py-2"
                 >
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Category
+                    Add {title}
                 </button>
             </div>
 
@@ -107,7 +122,7 @@ function TreeCategoriesPage() {
                 onSearch={setSearch}
                 onRefresh={() => refetch()}
                 isLoading={isLoading}
-                searchPlaceholder="Search categories..."
+                searchPlaceholder={`Search ${title.toLowerCase()}...`}
                 actions={(row: any) => (
                     <div className="flex items-center gap-2 justify-end">
                         <button
@@ -126,15 +141,16 @@ function TreeCategoriesPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSave={async (data) => saveMutation.mutateAsync(data)}
                 initialData={selectedItem}
-                title="Tree Category"
-                schema={treeCategorySchema}
-                fields={treeCategoryFields}
+                title={title}
+                schema={schema}
+                fields={fields}
                 isLoading={saveMutation.isPending}
             />
         </div>
     );
 }
 
-export const Route = createFileRoute('/_authenticated/reference/tree-categories')({
-    component: TreeCategoriesPage,
+// Rootstocks Route
+export const Route = createFileRoute('/_authenticated/reference/rootstocks')({
+    component: () => <GenericReferencePage title="Rootstocks" table="rootstocks" />,
 });

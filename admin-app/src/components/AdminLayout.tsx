@@ -39,6 +39,10 @@ const navItems: NavItem[] = [
       { label: 'Tree Categories', href: '/reference/tree-categories' },
       { label: 'Crop Types', href: '/reference/crop-types' },
       { label: 'Item Categories', href: '/reference/item-categories' },
+      { label: 'Soil Types', href: '/reference/soil-types' },
+      { label: 'Irrigation Types', href: '/reference/irrigation-types' },
+      { label: 'Rootstocks', href: '/reference/rootstocks' },
+      { label: 'Plantation Systems', href: '/reference/plantation-systems' },
     ],
   },
   {

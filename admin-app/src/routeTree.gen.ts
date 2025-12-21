@@ -15,10 +15,14 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedJobsRouteImport } from './routes/_authenticated/jobs'
 import { Route as AuthenticatedReferenceWorkUnitsRouteImport } from './routes/_authenticated/reference/work-units'
 import { Route as AuthenticatedReferenceTreeCategoriesRouteImport } from './routes/_authenticated/reference/tree-categories'
+import { Route as AuthenticatedReferenceSoilTypesRouteImport } from './routes/_authenticated/reference/soil-types'
+import { Route as AuthenticatedReferenceRootstocksRouteImport } from './routes/_authenticated/reference/rootstocks'
 import { Route as AuthenticatedReferenceRolesRouteImport } from './routes/_authenticated/reference/roles'
+import { Route as AuthenticatedReferencePlantationSystemsRouteImport } from './routes/_authenticated/reference/plantation-systems'
 import { Route as AuthenticatedReferencePermissionsRouteImport } from './routes/_authenticated/reference/permissions'
 import { Route as AuthenticatedReferenceModulesRouteImport } from './routes/_authenticated/reference/modules'
 import { Route as AuthenticatedReferenceItemCategoriesRouteImport } from './routes/_authenticated/reference/item-categories'
+import { Route as AuthenticatedReferenceIrrigationTypesRouteImport } from './routes/_authenticated/reference/irrigation-types'
 import { Route as AuthenticatedReferenceCurrenciesRouteImport } from './routes/_authenticated/reference/currencies'
 import { Route as AuthenticatedReferenceCropTypesRouteImport } from './routes/_authenticated/reference/crop-types'
 import { Route as AuthenticatedReferenceAccountTemplatesRouteImport } from './routes/_authenticated/reference/account-templates'
@@ -60,10 +64,28 @@ const AuthenticatedReferenceTreeCategoriesRoute =
     path: '/reference/tree-categories',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedReferenceSoilTypesRoute =
+  AuthenticatedReferenceSoilTypesRouteImport.update({
+    id: '/reference/soil-types',
+    path: '/reference/soil-types',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReferenceRootstocksRoute =
+  AuthenticatedReferenceRootstocksRouteImport.update({
+    id: '/reference/rootstocks',
+    path: '/reference/rootstocks',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedReferenceRolesRoute =
   AuthenticatedReferenceRolesRouteImport.update({
     id: '/reference/roles',
     path: '/reference/roles',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReferencePlantationSystemsRoute =
+  AuthenticatedReferencePlantationSystemsRouteImport.update({
+    id: '/reference/plantation-systems',
+    path: '/reference/plantation-systems',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReferencePermissionsRoute =
@@ -82,6 +104,12 @@ const AuthenticatedReferenceItemCategoriesRoute =
   AuthenticatedReferenceItemCategoriesRouteImport.update({
     id: '/reference/item-categories',
     path: '/reference/item-categories',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReferenceIrrigationTypesRoute =
+  AuthenticatedReferenceIrrigationTypesRouteImport.update({
+    id: '/reference/irrigation-types',
+    path: '/reference/irrigation-types',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReferenceCurrenciesRoute =
@@ -151,10 +179,14 @@ export interface FileRoutesByFullPath {
   '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
   '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
   '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/reference/modules': typeof AuthenticatedReferenceModulesRoute
   '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
+  '/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
   '/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
+  '/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
   '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
@@ -171,10 +203,14 @@ export interface FileRoutesByTo {
   '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
   '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
   '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/reference/modules': typeof AuthenticatedReferenceModulesRoute
   '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
+  '/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
   '/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
+  '/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
   '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
@@ -193,10 +229,14 @@ export interface FileRoutesById {
   '/_authenticated/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
   '/_authenticated/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/_authenticated/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/_authenticated/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
   '/_authenticated/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/_authenticated/reference/modules': typeof AuthenticatedReferenceModulesRoute
   '/_authenticated/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
+  '/_authenticated/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
   '/_authenticated/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/_authenticated/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
+  '/_authenticated/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
   '/_authenticated/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/_authenticated/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/_authenticated/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
@@ -215,10 +255,14 @@ export interface FileRouteTypes {
     | '/reference/account-templates'
     | '/reference/crop-types'
     | '/reference/currencies'
+    | '/reference/irrigation-types'
     | '/reference/item-categories'
     | '/reference/modules'
     | '/reference/permissions'
+    | '/reference/plantation-systems'
     | '/reference/roles'
+    | '/reference/rootstocks'
+    | '/reference/soil-types'
     | '/reference/tree-categories'
     | '/reference/work-units'
     | '/analytics/organizations/$orgId'
@@ -235,10 +279,14 @@ export interface FileRouteTypes {
     | '/reference/account-templates'
     | '/reference/crop-types'
     | '/reference/currencies'
+    | '/reference/irrigation-types'
     | '/reference/item-categories'
     | '/reference/modules'
     | '/reference/permissions'
+    | '/reference/plantation-systems'
     | '/reference/roles'
+    | '/reference/rootstocks'
+    | '/reference/soil-types'
     | '/reference/tree-categories'
     | '/reference/work-units'
     | '/analytics/organizations/$orgId'
@@ -256,10 +304,14 @@ export interface FileRouteTypes {
     | '/_authenticated/reference/account-templates'
     | '/_authenticated/reference/crop-types'
     | '/_authenticated/reference/currencies'
+    | '/_authenticated/reference/irrigation-types'
     | '/_authenticated/reference/item-categories'
     | '/_authenticated/reference/modules'
     | '/_authenticated/reference/permissions'
+    | '/_authenticated/reference/plantation-systems'
     | '/_authenticated/reference/roles'
+    | '/_authenticated/reference/rootstocks'
+    | '/_authenticated/reference/soil-types'
     | '/_authenticated/reference/tree-categories'
     | '/_authenticated/reference/work-units'
     | '/_authenticated/analytics/organizations/$orgId'
@@ -314,11 +366,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReferenceTreeCategoriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reference/soil-types': {
+      id: '/_authenticated/reference/soil-types'
+      path: '/reference/soil-types'
+      fullPath: '/reference/soil-types'
+      preLoaderRoute: typeof AuthenticatedReferenceSoilTypesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reference/rootstocks': {
+      id: '/_authenticated/reference/rootstocks'
+      path: '/reference/rootstocks'
+      fullPath: '/reference/rootstocks'
+      preLoaderRoute: typeof AuthenticatedReferenceRootstocksRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/reference/roles': {
       id: '/_authenticated/reference/roles'
       path: '/reference/roles'
       fullPath: '/reference/roles'
       preLoaderRoute: typeof AuthenticatedReferenceRolesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reference/plantation-systems': {
+      id: '/_authenticated/reference/plantation-systems'
+      path: '/reference/plantation-systems'
+      fullPath: '/reference/plantation-systems'
+      preLoaderRoute: typeof AuthenticatedReferencePlantationSystemsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reference/permissions': {
@@ -340,6 +413,13 @@ declare module '@tanstack/react-router' {
       path: '/reference/item-categories'
       fullPath: '/reference/item-categories'
       preLoaderRoute: typeof AuthenticatedReferenceItemCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reference/irrigation-types': {
+      id: '/_authenticated/reference/irrigation-types'
+      path: '/reference/irrigation-types'
+      fullPath: '/reference/irrigation-types'
+      preLoaderRoute: typeof AuthenticatedReferenceIrrigationTypesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reference/currencies': {
@@ -434,10 +514,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReferenceAccountTemplatesRoute: typeof AuthenticatedReferenceAccountTemplatesRoute
   AuthenticatedReferenceCropTypesRoute: typeof AuthenticatedReferenceCropTypesRoute
   AuthenticatedReferenceCurrenciesRoute: typeof AuthenticatedReferenceCurrenciesRoute
+  AuthenticatedReferenceIrrigationTypesRoute: typeof AuthenticatedReferenceIrrigationTypesRoute
   AuthenticatedReferenceItemCategoriesRoute: typeof AuthenticatedReferenceItemCategoriesRoute
   AuthenticatedReferenceModulesRoute: typeof AuthenticatedReferenceModulesRoute
   AuthenticatedReferencePermissionsRoute: typeof AuthenticatedReferencePermissionsRoute
+  AuthenticatedReferencePlantationSystemsRoute: typeof AuthenticatedReferencePlantationSystemsRoute
   AuthenticatedReferenceRolesRoute: typeof AuthenticatedReferenceRolesRoute
+  AuthenticatedReferenceRootstocksRoute: typeof AuthenticatedReferenceRootstocksRoute
+  AuthenticatedReferenceSoilTypesRoute: typeof AuthenticatedReferenceSoilTypesRoute
   AuthenticatedReferenceTreeCategoriesRoute: typeof AuthenticatedReferenceTreeCategoriesRoute
   AuthenticatedReferenceWorkUnitsRoute: typeof AuthenticatedReferenceWorkUnitsRoute
 }
@@ -457,12 +541,18 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedReferenceAccountTemplatesRoute,
   AuthenticatedReferenceCropTypesRoute: AuthenticatedReferenceCropTypesRoute,
   AuthenticatedReferenceCurrenciesRoute: AuthenticatedReferenceCurrenciesRoute,
+  AuthenticatedReferenceIrrigationTypesRoute:
+    AuthenticatedReferenceIrrigationTypesRoute,
   AuthenticatedReferenceItemCategoriesRoute:
     AuthenticatedReferenceItemCategoriesRoute,
   AuthenticatedReferenceModulesRoute: AuthenticatedReferenceModulesRoute,
   AuthenticatedReferencePermissionsRoute:
     AuthenticatedReferencePermissionsRoute,
+  AuthenticatedReferencePlantationSystemsRoute:
+    AuthenticatedReferencePlantationSystemsRoute,
   AuthenticatedReferenceRolesRoute: AuthenticatedReferenceRolesRoute,
+  AuthenticatedReferenceRootstocksRoute: AuthenticatedReferenceRootstocksRoute,
+  AuthenticatedReferenceSoilTypesRoute: AuthenticatedReferenceSoilTypesRoute,
   AuthenticatedReferenceTreeCategoriesRoute:
     AuthenticatedReferenceTreeCategoriesRoute,
   AuthenticatedReferenceWorkUnitsRoute: AuthenticatedReferenceWorkUnitsRoute,
