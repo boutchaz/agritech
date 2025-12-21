@@ -33,6 +33,9 @@ const ParcelWeatherPage = () => {
           <WeatherAnalyticsView
             parcelBoundary={parcel.boundary}
             parcelName={parcel.name}
+            cropType={parcel.planting_type}
+            treeType={parcel.tree_type}
+            variety={parcel.variety}
           />
         </Suspense>
       ) : (

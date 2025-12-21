@@ -268,6 +268,18 @@ export function useReceptionBatchStats(filters: ReceptionBatchFilters = {}) {
 }
 
 /**
+ * Generate a unique batch code
+ */
+function generateBatchCode(): string {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2);
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `REC-${year}${month}${day}-${random}`;
+}
+
+/**
  * Create a new reception batch
  */
 export function useCreateReceptionBatch() {
@@ -280,12 +292,39 @@ export function useCreateReceptionBatch() {
         throw new Error('No organization selected');
       }
 
+      // Generate batch_code if not provided
+      const batch_code = generateBatchCode();
+
+      // Build insert data with all valid fields
+      const insertData = {
+        organization_id: currentOrganization.id,
+        batch_code,
+        warehouse_id: data.warehouse_id,
+        parcel_id: data.parcel_id,
+        harvest_id: data.harvest_id || null,
+        crop_id: data.crop_id || null,
+        culture_type: data.culture_type || null,
+        reception_date: data.reception_date,
+        reception_time: data.reception_time || null,
+        weight: data.weight,
+        weight_unit: data.weight_unit || 'kg',
+        quantity: data.quantity || null,
+        quantity_unit: data.quantity_unit || null,
+        quality_grade: data.quality_grade || null,
+        quality_score: data.quality_score || null,
+        quality_notes: data.quality_notes || null,
+        humidity_percentage: data.humidity_percentage || null,
+        maturity_level: data.maturity_level || null,
+        temperature: data.temperature || null,
+        moisture_content: data.moisture_content || null,
+        producer_name: data.producer_name || null,
+        supplier_id: data.supplier_id || null,
+        // received_by requires worker ID, not user ID - skip for now
+      };
+
       const { data: batch, error } = await supabase
         .from('reception_batches')
-        .insert({
-          organization_id: currentOrganization.id,
-          ...data,
-        })
+        .insert(insertData)
         .select()
         .single();
 

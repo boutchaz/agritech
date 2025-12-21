@@ -56,7 +56,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const { data: workers = [] } = useWorkers(organizationId);
+
+  // Filter workers by selected farm - workers are linked to specific farms
+  const { data: workers = [] } = useWorkers(organizationId, formData.farm_id || null);
 
   // Fetch work units for piece-work selection - now uses NestJS API
   const { data: workUnits = [] } = useQuery({
@@ -215,7 +217,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Label htmlFor="farm_id">Ferme *</Label>
               <Select
                 value={formData.farm_id}
-                onValueChange={(value) => setFormData({ ...formData, farm_id: value, parcel_id: undefined })}
+                onValueChange={(value) => setFormData({ ...formData, farm_id: value, parcel_id: undefined, assigned_to: undefined })}
               >
                 <SelectTrigger id="farm_id">
                   <SelectValue placeholder="Sélectionnez une ferme" />
@@ -270,21 +272,26 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <Select
               value={formData.assigned_to || '__none__'}
               onValueChange={(value) => setFormData({ ...formData, assigned_to: value === '__none__' ? undefined : value })}
+              disabled={!formData.farm_id}
             >
               <SelectTrigger id="assigned_to">
-                <SelectValue placeholder="Non assigné" />
+                <SelectValue placeholder={formData.farm_id ? "Non assigné" : "Sélectionnez d'abord une ferme"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Non assigné</SelectItem>
                 {workers.map(worker => (
                   <SelectItem key={worker.id} value={worker.id}>
-                    {worker.first_name} {worker.last_name} - {worker.position}
+                    {worker.first_name} {worker.last_name} {worker.position ? `- ${worker.position}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Sélectionnez un travailleur pour assigner cette tâche
+              {formData.farm_id
+                ? workers.length > 0
+                  ? 'Sélectionnez un travailleur de cette ferme'
+                  : 'Aucun travailleur trouvé pour cette ferme'
+                : 'Sélectionnez une ferme pour voir les travailleurs disponibles'}
             </p>
           </div>
 

@@ -18,6 +18,7 @@
 -- =====================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- =====================================================
@@ -1212,6 +1213,8 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   entry_number VARCHAR(100) NOT NULL,
   entry_date DATE NOT NULL,
+  entry_type VARCHAR(50), -- Type of entry: 'invoice', 'payment', 'adjustment', 'cost', 'revenue', etc.
+  description TEXT, -- Description of the journal entry
   reference_number VARCHAR(100),
   reference_type VARCHAR(50),
   reference_id UUID,
@@ -2394,6 +2397,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   units_required NUMERIC,
   units_completed NUMERIC DEFAULT 0,
   rate_per_unit NUMERIC,
+  created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
@@ -3338,6 +3342,8 @@ CREATE TABLE IF NOT EXISTS reception_batches (
   moisture_content NUMERIC,
   received_by UUID REFERENCES workers(id),
   quality_checked_by UUID REFERENCES workers(id),
+  producer_name TEXT,
+  supplier_id UUID REFERENCES suppliers(id),
   decision TEXT DEFAULT 'pending',
   destination_warehouse_id UUID REFERENCES warehouses(id),
   transformation_order_id UUID,
@@ -4005,7 +4011,7 @@ CREATE TABLE IF NOT EXISTS roles (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (name IN ('system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
+  CHECK (name IN ('internal_admin', 'system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
 );
 
 -- Permissions
@@ -7814,6 +7820,8 @@ RETURNS TABLE(
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_count INTEGER := 0;
+  v_parent_2300 UUID;
+  v_parent_2800 UUID;
 BEGIN
   -- Verify organization exists
   IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = p_org_id) THEN
@@ -7821,49 +7829,65 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Check if already seeded (has accounts)
+  IF EXISTS (SELECT 1 FROM accounts WHERE organization_id = p_org_id LIMIT 1) THEN
+    SELECT COUNT(*)::INTEGER INTO v_count FROM accounts WHERE organization_id = p_org_id;
+    RETURN QUERY SELECT v_count, true, 'Chart of accounts already exists'::TEXT;
+    RETURN;
+  END IF;
+
   -- =====================================================
   -- CLASS 1: FIXED ASSETS (IMMOBILISATIONS)
   -- =====================================================
 
-  -- Main Groups
-  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code, description_fr, description_ar)
+  -- Main Groups (descriptions in French stored in description column)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code, description)
   VALUES
-    (p_org_id, '2100', 'Immobilisations en non-valeurs', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Frais préliminaires et charges à répartir', 'أصول غير ملموسة'),
-    (p_org_id, '2200', 'Immobilisations incorporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Brevets, marques, fonds commercial', 'أصول غير ملموسة'),
-    (p_org_id, '2300', 'Immobilisations corporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Terrains, constructions, matériel', 'أصول ملموسة'),
-    (p_org_id, '2400', 'Immobilisations financières', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Titres de participation, prêts', 'استثمارات مالية')
+    (p_org_id, '2100', 'Immobilisations en non-valeurs', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Frais préliminaires et charges à répartir'),
+    (p_org_id, '2200', 'Immobilisations incorporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Brevets, marques, fonds commercial'),
+    (p_org_id, '2300', 'Immobilisations corporelles', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Terrains, constructions, matériel'),
+    (p_org_id, '2400', 'Immobilisations financières', 'Asset', 'Fixed Asset', true, true, 'MAD', 'Titres de participation, prêts')
   ON CONFLICT (organization_id, code) DO NOTHING;
 
-  -- Fixed Assets Detail
-  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_code, currency_code)
+  -- Get parent IDs for child accounts
+  SELECT id INTO v_parent_2300 FROM accounts WHERE organization_id = p_org_id AND code = '2300';
+
+  -- Fixed Assets Detail (using parent_id instead of parent_code)
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_id, currency_code)
   VALUES
     -- Land and Buildings
-    (p_org_id, '2310', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2311', 'Terrains bâtis', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2321', 'Bâtiments agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2323', 'Installations agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2310', 'Terrains agricoles', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2311', 'Terrains bâtis', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2321', 'Bâtiments agricoles', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2323', 'Installations agricoles', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
 
     -- Equipment and Machinery
-    (p_org_id, '2330', 'Matériel et outillage', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2331', 'Tracteurs et machines agricoles', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2332', 'Système d''irrigation', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2340', 'Matériel de transport', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2350', 'Mobilier, matériel de bureau', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2355', 'Matériel informatique', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
+    (p_org_id, '2330', 'Matériel et outillage', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2331', 'Tracteurs et machines agricoles', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2332', 'Système d''irrigation', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2340', 'Matériel de transport', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2350', 'Mobilier, matériel de bureau', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2355', 'Matériel informatique', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
 
     -- Biological Assets
-    (p_org_id, '2361', 'Cheptel (animaux d''élevage)', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD'),
-    (p_org_id, '2362', 'Plantations permanentes', 'Asset', 'Fixed Asset', false, true, '2300', 'MAD')
+    (p_org_id, '2361', 'Cheptel (animaux d''élevage)', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD'),
+    (p_org_id, '2362', 'Plantations permanentes', 'Asset', 'Fixed Asset', false, true, v_parent_2300, 'MAD')
   ON CONFLICT (organization_id, code) DO NOTHING;
 
-  -- Depreciation Accounts
-  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_code, currency_code)
+  -- Depreciation Parent Account
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
+  VALUES (p_org_id, '2800', 'Amortissements', 'Asset', 'Accumulated Depreciation', true, true, 'MAD')
+  ON CONFLICT (organization_id, code) DO NOTHING;
+
+  SELECT id INTO v_parent_2800 FROM accounts WHERE organization_id = p_org_id AND code = '2800';
+
+  -- Depreciation Detail Accounts
+  INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, parent_id, currency_code)
   VALUES
-    (p_org_id, '2800', 'Amortissements', 'Asset', 'Accumulated Depreciation', true, true, NULL, 'MAD'),
-    (p_org_id, '2832', 'Amortissements bâtiments', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
-    (p_org_id, '2833', 'Amortissements installations', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
-    (p_org_id, '2834', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD'),
-    (p_org_id, '2835', 'Amortissements transport', 'Asset', 'Accumulated Depreciation', false, true, '2800', 'MAD')
+    (p_org_id, '2832', 'Amortissements bâtiments', 'Asset', 'Accumulated Depreciation', false, true, v_parent_2800, 'MAD'),
+    (p_org_id, '2833', 'Amortissements installations', 'Asset', 'Accumulated Depreciation', false, true, v_parent_2800, 'MAD'),
+    (p_org_id, '2834', 'Amortissements matériel', 'Asset', 'Accumulated Depreciation', false, true, v_parent_2800, 'MAD'),
+    (p_org_id, '2835', 'Amortissements transport', 'Asset', 'Accumulated Depreciation', false, true, v_parent_2800, 'MAD')
   ON CONFLICT (organization_id, code) DO NOTHING;
 
   -- =====================================================
@@ -7901,7 +7925,7 @@ BEGIN
 
   INSERT INTO accounts (organization_id, code, name, account_type, account_subtype, is_group, is_active, currency_code)
   VALUES
-    -- Suppliers
+    -- Suppliers (unique codes - fixed duplicates)
     (p_org_id, '4410', 'Fournisseurs', 'Liability', 'Payable', false, true, 'MAD'),
     (p_org_id, '4411', 'Fournisseurs - intrants agricoles', 'Liability', 'Payable', false, true, 'MAD'),
     (p_org_id, '4412', 'Fournisseurs - équipements', 'Liability', 'Payable', false, true, 'MAD'),
@@ -7916,13 +7940,13 @@ BEGIN
     (p_org_id, '3427', 'Clients - retenues de garantie', 'Asset', 'Receivable', false, true, 'MAD'),
     (p_org_id, '3428', 'Clients douteux', 'Asset', 'Receivable', false, true, 'MAD'),
 
-    -- Advances
+    -- Advances (fixed duplicate code 4410 -> 3491)
     (p_org_id, '3490', 'Avances aux employés', 'Asset', 'Receivable', false, true, 'MAD'),
-    (p_org_id, '4410', 'Avances aux fournisseurs', 'Asset', 'Receivable', false, true, 'MAD'),
+    (p_org_id, '3491', 'Avances aux fournisseurs', 'Asset', 'Receivable', false, true, 'MAD'),
 
-    -- Social Security and Taxes
+    -- Social Security and Taxes (fixed duplicate codes)
     (p_org_id, '4430', 'Sécurité sociale (CNSS)', 'Liability', 'Payable', false, true, 'MAD'),
-    (p_org_id, '4432', 'Retraite (RCAR/CMR)', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4431', 'Retraite (RCAR/CMR)', 'Liability', 'Payable', false, true, 'MAD'),
     (p_org_id, '4433', 'Assurance maladie (AMO)', 'Liability', 'Payable', false, true, 'MAD'),
     (p_org_id, '4441', 'État - Impôt sur les sociétés (IS)', 'Liability', 'Payable', false, true, 'MAD'),
     (p_org_id, '4443', 'Retenue à la source', 'Liability', 'Payable', false, true, 'MAD'),
@@ -7930,9 +7954,9 @@ BEGIN
     (p_org_id, '4456', 'TVA déductible', 'Asset', 'Receivable', false, true, 'MAD'),
     (p_org_id, '4457', 'TVA collectée', 'Liability', 'Payable', false, true, 'MAD'),
 
-    -- Personnel
-    (p_org_id, '4430', 'Rémunérations dues au personnel', 'Liability', 'Payable', false, true, 'MAD'),
-    (p_org_id, '4432', 'Saisies et oppositions', 'Liability', 'Payable', false, true, 'MAD')
+    -- Personnel (fixed duplicate codes 4430, 4432 -> 4434, 4435)
+    (p_org_id, '4434', 'Rémunérations dues au personnel', 'Liability', 'Payable', false, true, 'MAD'),
+    (p_org_id, '4435', 'Saisies et oppositions', 'Liability', 'Payable', false, true, 'MAD')
   ON CONFLICT (organization_id, code) DO NOTHING;
 
   -- =====================================================
@@ -8136,8 +8160,12 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Clear existing accounts for this org
-  DELETE FROM accounts WHERE organization_id = p_org_id;
+  -- Check if accounts already exist for this organization (avoid data loss)
+  IF EXISTS (SELECT 1 FROM accounts WHERE organization_id = p_org_id LIMIT 1) THEN
+    SELECT COUNT(*)::INTEGER INTO v_accounts_created FROM accounts WHERE organization_id = p_org_id;
+    RETURN QUERY SELECT v_accounts_created, true, 'Chart of accounts already exists - skipping to prevent data loss'::TEXT;
+    RETURN;
+  END IF;
 
   -- Insert accounts from template in correct order (parents first)
   FOR v_template_rec IN
@@ -9127,3 +9155,552 @@ GRANT EXECUTE ON FUNCTION get_account_summary TO service_role;
 
 COMMENT ON FUNCTION get_account_summary IS
 'Returns summary of account balances grouped by account type';
+
+-- ============================================================================
+-- ADMIN APP: PROVENANCE COLUMNS
+-- ============================================================================
+-- Purpose: Track version, source, publication status, and authorship for admin management
+
+-- Add provenance columns to account_templates
+ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
+
+-- Add provenance columns to account_mappings
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
+
+-- Add provenance columns to modules
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+-- Add provenance columns to currencies
+ALTER TABLE currencies ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+ALTER TABLE currencies ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+ALTER TABLE currencies ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Add provenance columns to roles (role_templates equivalent)
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
+
+-- Add provenance columns to work_units (if exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'work_units') THEN
+    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
+    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
+    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
+  END IF;
+END $$;
+
+-- Create indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_account_templates_source ON account_templates(source);
+CREATE INDEX IF NOT EXISTS idx_account_templates_published ON account_templates(published_at) WHERE published_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_source ON account_mappings(source);
+CREATE INDEX IF NOT EXISTS idx_currencies_source ON currencies(source);
+CREATE INDEX IF NOT EXISTS idx_roles_source ON roles(source);
+CREATE INDEX IF NOT EXISTS idx_modules_source ON modules(source);
+
+COMMENT ON COLUMN account_templates.template_version IS 'Semantic version of the template (e.g., 1.0.0)';
+COMMENT ON COLUMN account_templates.source IS 'Origin: system, import, manual';
+COMMENT ON COLUMN account_templates.published_at IS 'When template was published for use';
+COMMENT ON COLUMN account_templates.created_by IS 'User who created this template';
+COMMENT ON COLUMN account_templates.updated_by IS 'User who last updated this template';
+
+-- ============================================================================
+-- ADMIN APP: ANALYTICS TABLES
+-- ============================================================================
+-- Purpose: Track organization usage, events, and admin job logs
+
+-- Daily usage aggregates per organization
+CREATE TABLE IF NOT EXISTS organization_usage_daily (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  active_users_7d INTEGER DEFAULT 0,
+  active_users_30d INTEGER DEFAULT 0,
+  farms_count INTEGER DEFAULT 0,
+  parcels_count INTEGER DEFAULT 0,
+  invoices_created INTEGER DEFAULT 0,
+  quotes_created INTEGER DEFAULT 0,
+  tasks_completed INTEGER DEFAULT 0,
+  harvests_recorded INTEGER DEFAULT 0,
+  storage_bytes BIGINT DEFAULT 0,
+  api_calls INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_org_usage_daily_org ON organization_usage_daily(organization_id);
+CREATE INDEX IF NOT EXISTS idx_org_usage_daily_date ON organization_usage_daily(date);
+
+COMMENT ON TABLE organization_usage_daily IS 'Daily aggregated usage metrics per organization for analytics';
+
+-- Event tracking for funnels/retention
+CREATE TABLE IF NOT EXISTS events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_type VARCHAR(100) NOT NULL,
+  event_data JSONB DEFAULT '{}',
+  source VARCHAR(50) DEFAULT 'app',
+  ip_address INET,
+  user_agent TEXT,
+  session_id VARCHAR(100),
+  occurred_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_org_date ON events(organization_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
+CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_events_occurred ON events(occurred_at);
+
+COMMENT ON TABLE events IS 'Event tracking for user actions, funnels, and retention analysis';
+
+-- Extend subscription_usage with additional metrics
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS mrr NUMERIC(12,2);
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS arr NUMERIC(12,2);
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS modules_enabled TEXT[];
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS last_calculated_at TIMESTAMPTZ;
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS churn_risk_score INTEGER;
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ;
+ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS storage_used_mb NUMERIC(12,2) DEFAULT 0;
+
+-- Job log for imports/seeds/admin operations
+CREATE TABLE IF NOT EXISTS admin_job_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_type VARCHAR(50) NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending',
+  input_data JSONB,
+  result_data JSONB,
+  records_processed INTEGER DEFAULT 0,
+  records_created INTEGER DEFAULT 0,
+  records_updated INTEGER DEFAULT 0,
+  records_skipped INTEGER DEFAULT 0,
+  errors JSONB,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  duration_ms INTEGER,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_job_logs_type ON admin_job_logs(job_type);
+CREATE INDEX IF NOT EXISTS idx_admin_job_logs_status ON admin_job_logs(status);
+CREATE INDEX IF NOT EXISTS idx_admin_job_logs_created ON admin_job_logs(created_at);
+
+COMMENT ON TABLE admin_job_logs IS 'Audit log for admin operations like imports, seeds, and bulk updates';
+
+-- SaaS metrics snapshot table (for historical tracking)
+CREATE TABLE IF NOT EXISTS saas_metrics_daily (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL UNIQUE,
+  total_organizations INTEGER DEFAULT 0,
+  active_organizations_7d INTEGER DEFAULT 0,
+  active_organizations_30d INTEGER DEFAULT 0,
+  new_organizations INTEGER DEFAULT 0,
+  churned_organizations INTEGER DEFAULT 0,
+  total_users INTEGER DEFAULT 0,
+  dau INTEGER DEFAULT 0,
+  wau INTEGER DEFAULT 0,
+  mau INTEGER DEFAULT 0,
+  total_mrr NUMERIC(12,2) DEFAULT 0,
+  total_arr NUMERIC(12,2) DEFAULT 0,
+  arpu NUMERIC(12,2) DEFAULT 0,
+  churn_rate NUMERIC(5,4) DEFAULT 0,
+  activation_rate NUMERIC(5,4) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saas_metrics_date ON saas_metrics_daily(date);
+
+COMMENT ON TABLE saas_metrics_daily IS 'Daily snapshot of key SaaS metrics for trend analysis';
+
+-- Enable RLS on new tables
+ALTER TABLE organization_usage_daily ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_job_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saas_metrics_daily ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================================
+-- ADMIN APP: INTERNAL ADMIN ROLE & RLS POLICIES
+-- ============================================================================
+-- Purpose: Enable platform-wide admin access for reference data management and analytics
+
+-- Internal admins table (platform-level, not organization-bound)
+CREATE TABLE IF NOT EXISTS internal_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_internal_admins_user ON internal_admins(user_id);
+
+COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access to admin app and reference data management';
+
+-- Enable RLS on internal_admins
+ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
+
+-- Only service_role or existing internal_admins can manage internal_admins
+CREATE POLICY "service_manage_internal_admins" ON internal_admins
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+  );
+
+-- Function to check if current user is internal_admin
+CREATE OR REPLACE FUNCTION is_internal_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM internal_admins
+    WHERE user_id = auth.uid()
+      AND is_active = true
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
+
+-- RLS Policies for reference data tables
+
+-- Account Templates: internal_admin can manage, others can read published
+DROP POLICY IF EXISTS "admin_manage_account_templates" ON account_templates;
+CREATE POLICY "admin_manage_account_templates" ON account_templates
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+DROP POLICY IF EXISTS "read_published_account_templates" ON account_templates;
+CREATE POLICY "read_published_account_templates" ON account_templates
+  FOR SELECT USING (
+    published_at IS NOT NULL
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Account Mappings: internal_admin can manage
+DROP POLICY IF EXISTS "admin_manage_account_mappings" ON account_mappings;
+CREATE POLICY "admin_manage_account_mappings" ON account_mappings
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+-- Modules: internal_admin can manage, others can read active
+DROP POLICY IF EXISTS "admin_manage_modules" ON modules;
+CREATE POLICY "admin_manage_modules" ON modules
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+DROP POLICY IF EXISTS "read_active_modules" ON modules;
+CREATE POLICY "read_active_modules" ON modules
+  FOR SELECT USING (
+    is_active = true
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Currencies: internal_admin can manage, others can read active
+DROP POLICY IF EXISTS "admin_manage_currencies" ON currencies;
+CREATE POLICY "admin_manage_currencies" ON currencies
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+DROP POLICY IF EXISTS "read_active_currencies" ON currencies;
+CREATE POLICY "read_active_currencies" ON currencies
+  FOR SELECT USING (
+    is_active = true
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Roles: internal_admin can manage, others can read active
+DROP POLICY IF EXISTS "admin_manage_roles" ON roles;
+CREATE POLICY "admin_manage_roles" ON roles
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+DROP POLICY IF EXISTS "read_active_roles" ON roles;
+CREATE POLICY "read_active_roles" ON roles
+  FOR SELECT USING (
+    is_active = true
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Events: internal_admin sees all, others see own org only
+DROP POLICY IF EXISTS "events_read_policy" ON events;
+CREATE POLICY "events_read_policy" ON events
+  FOR SELECT USING (
+    is_internal_admin()
+    OR (organization_id IS NOT NULL AND is_organization_member(organization_id))
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "events_insert_policy" ON events;
+CREATE POLICY "events_insert_policy" ON events
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+-- Organization Usage Daily: internal_admin sees all, org members see own
+DROP POLICY IF EXISTS "org_usage_daily_read_policy" ON organization_usage_daily;
+CREATE POLICY "org_usage_daily_read_policy" ON organization_usage_daily
+  FOR SELECT USING (
+    is_internal_admin()
+    OR is_organization_member(organization_id)
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "org_usage_daily_write_policy" ON organization_usage_daily;
+CREATE POLICY "org_usage_daily_write_policy" ON organization_usage_daily
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+-- Admin Job Logs: internal_admin only
+DROP POLICY IF EXISTS "admin_job_logs_policy" ON admin_job_logs;
+CREATE POLICY "admin_job_logs_policy" ON admin_job_logs
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+-- SaaS Metrics Daily: internal_admin only
+DROP POLICY IF EXISTS "saas_metrics_daily_policy" ON saas_metrics_daily;
+CREATE POLICY "saas_metrics_daily_policy" ON saas_metrics_daily
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
+
+-- Grant internal_admin read access to all organizations for analytics
+DROP POLICY IF EXISTS "admin_read_all_organizations" ON organizations;
+CREATE POLICY "admin_read_all_organizations" ON organizations
+  FOR SELECT USING (
+    is_internal_admin()
+    OR is_organization_member(id)
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Grant internal_admin read access to subscription data for analytics
+DROP POLICY IF EXISTS "admin_read_subscriptions" ON subscriptions;
+CREATE POLICY "admin_read_subscriptions" ON subscriptions
+  FOR SELECT USING (
+    is_internal_admin()
+    OR is_organization_member(organization_id)
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "admin_read_subscription_usage" ON subscription_usage;
+CREATE POLICY "admin_read_subscription_usage" ON subscription_usage
+  FOR SELECT USING (
+    is_internal_admin()
+    OR is_organization_member(organization_id)
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- ============================================================================
+-- ADMIN APP: ANALYTICS VIEWS
+-- ============================================================================
+-- Purpose: Pre-computed views for efficient admin dashboard queries
+
+-- Materialized view for organization summary (refreshed periodically)
+CREATE MATERIALIZED VIEW IF NOT EXISTS admin_org_summary AS
+SELECT
+  o.id,
+  o.name,
+  o.country_code,
+  o.created_at,
+  o.is_active,
+  s.plan_type,
+  s.status as subscription_status,
+  s.current_period_start,
+  s.current_period_end,
+  su.mrr,
+  su.arr,
+  su.farms_count,
+  su.parcels_count,
+  su.users_count,
+  su.storage_used_mb,
+  su.last_activity_at,
+  (SELECT COUNT(*) FROM events WHERE organization_id = o.id AND occurred_at > NOW() - INTERVAL '7 days') as events_7d,
+  (SELECT COUNT(*) FROM events WHERE organization_id = o.id AND occurred_at > NOW() - INTERVAL '30 days') as events_30d,
+  (SELECT MAX(occurred_at) FROM events WHERE organization_id = o.id) as last_event_at
+FROM organizations o
+LEFT JOIN subscriptions s ON s.organization_id = o.id
+LEFT JOIN subscription_usage su ON su.organization_id = o.id;
+
+-- Create unique index for refresh
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_org_summary_id ON admin_org_summary(id);
+CREATE INDEX IF NOT EXISTS idx_admin_org_summary_created ON admin_org_summary(created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_org_summary_plan ON admin_org_summary(plan_type);
+
+-- Function to refresh the materialized view
+CREATE OR REPLACE FUNCTION refresh_admin_org_summary()
+RETURNS void AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW CONCURRENTLY admin_org_summary;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- View for daily organization growth
+CREATE OR REPLACE VIEW admin_org_growth AS
+SELECT
+  date_trunc('day', created_at)::date as date,
+  COUNT(*) as new_orgs,
+  SUM(COUNT(*)) OVER (ORDER BY date_trunc('day', created_at)) as cumulative_orgs
+FROM organizations
+GROUP BY date_trunc('day', created_at)
+ORDER BY date DESC;
+
+-- View for subscription breakdown
+CREATE OR REPLACE VIEW admin_subscription_breakdown AS
+SELECT
+  plan_type,
+  status,
+  COUNT(*) as count,
+  SUM(COALESCE(su.mrr, 0)) as total_mrr
+FROM subscriptions s
+LEFT JOIN subscription_usage su ON su.organization_id = s.organization_id
+GROUP BY plan_type, status
+ORDER BY plan_type, status;
+
+-- View for event type distribution
+CREATE OR REPLACE VIEW admin_event_distribution AS
+SELECT
+  event_type,
+  DATE(occurred_at) as date,
+  COUNT(*) as count
+FROM events
+WHERE occurred_at > NOW() - INTERVAL '30 days'
+GROUP BY event_type, DATE(occurred_at)
+ORDER BY date DESC, count DESC;
+
+-- View for top organizations by activity
+CREATE OR REPLACE VIEW admin_top_orgs_by_activity AS
+SELECT
+  o.id,
+  o.name,
+  COUNT(e.id) as event_count,
+  MAX(e.occurred_at) as last_activity
+FROM organizations o
+LEFT JOIN events e ON e.organization_id = o.id AND e.occurred_at > NOW() - INTERVAL '30 days'
+GROUP BY o.id, o.name
+ORDER BY event_count DESC
+LIMIT 100;
+
+-- View for churn risk organizations
+CREATE OR REPLACE VIEW admin_churn_risk AS
+SELECT
+  o.id,
+  o.name,
+  o.created_at,
+  su.last_activity_at,
+  su.churn_risk_score,
+  s.plan_type,
+  s.current_period_end,
+  EXTRACT(days FROM s.current_period_end - NOW()) as days_until_renewal
+FROM organizations o
+LEFT JOIN subscriptions s ON s.organization_id = o.id
+LEFT JOIN subscription_usage su ON su.organization_id = o.id
+WHERE
+  su.last_activity_at < NOW() - INTERVAL '14 days'
+  OR su.churn_risk_score >= 70
+  OR (s.current_period_end IS NOT NULL AND s.current_period_end < NOW() + INTERVAL '7 days')
+ORDER BY su.churn_risk_score DESC NULLS LAST;
+
+-- Aggregated reference data stats view
+CREATE OR REPLACE VIEW admin_reference_data_stats AS
+SELECT
+  'account_templates' as table_name,
+  COUNT(*) as total_count,
+  COUNT(*) as active_count,
+  1 as version_count,
+  MAX(created_at) as last_updated
+FROM account_templates
+UNION ALL
+SELECT
+  'account_mappings',
+  COUNT(*),
+  COUNT(*),
+  1,
+  MAX(created_at)
+FROM account_mappings
+UNION ALL
+SELECT
+  'modules',
+  COUNT(*),
+  COUNT(*) FILTER (WHERE is_active = true),
+  1,
+  MAX(updated_at)
+FROM modules
+UNION ALL
+SELECT
+  'currencies',
+  COUNT(*),
+  COUNT(*) FILTER (WHERE is_active = true),
+  1,
+  MAX(created_at)
+FROM currencies
+UNION ALL
+SELECT
+  'roles',
+  COUNT(*),
+  COUNT(*) FILTER (WHERE is_active = true),
+  1,
+  MAX(updated_at)
+FROM roles;
+
+-- View for recent admin job logs
+CREATE OR REPLACE VIEW admin_recent_jobs AS
+SELECT
+  id,
+  job_type,
+  status,
+  records_processed,
+  records_created,
+  records_updated,
+  records_skipped,
+  duration_ms,
+  created_by,
+  created_at,
+  completed_at
+FROM admin_job_logs
+ORDER BY created_at DESC
+LIMIT 100;
+
+COMMENT ON MATERIALIZED VIEW admin_org_summary IS 'Summary of all organizations with subscription and usage data';
+COMMENT ON VIEW admin_org_growth IS 'Daily new organization signups with cumulative totals';
+COMMENT ON VIEW admin_subscription_breakdown IS 'Breakdown of subscriptions by plan type and status';
+COMMENT ON VIEW admin_event_distribution IS 'Distribution of events by type over the last 30 days';
+COMMENT ON VIEW admin_top_orgs_by_activity IS 'Top 100 organizations by recent activity';
+COMMENT ON VIEW admin_churn_risk IS 'Organizations at risk of churning';
+COMMENT ON VIEW admin_reference_data_stats IS 'Statistics for all reference data tables';
+COMMENT ON VIEW admin_recent_jobs IS 'Recent admin job logs';

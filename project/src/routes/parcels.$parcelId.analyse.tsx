@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '../hooks/useParcelsQuery'
 import { useAnalyses } from '../hooks/useAnalyses'
-import { FlaskRound as Flask, Plus, Leaf, Droplets } from 'lucide-react'
+import { FlaskRound as Flask, Plus, Leaf, Droplets, X } from 'lucide-react'
 import SoilAnalysisForm from '../components/Analysis/SoilAnalysisForm'
 import PlantAnalysisForm from '../components/Analysis/PlantAnalysisForm'
 import WaterAnalysisForm from '../components/Analysis/WaterAnalysisForm'
@@ -15,6 +15,8 @@ const ParcelSoilAnalysis = () => {
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const [analysisTab, setAnalysisTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedFormType, setSelectedFormType] = useState<AnalysisType | null>(null);
   
   // Fetch real analyses data
   const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil');
@@ -45,6 +47,8 @@ const ParcelSoilAnalysis = () => {
     try {
       await addSoilAnalysis(parcelId, 'soil', analysisDate, data, laboratory, notes);
       setShowForm(false);
+      setSelectedFormType(null);
+      setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
     } catch (error) {
       console.error('Error saving soil analysis:', error);
       alert(t('farmHierarchy.parcel.soil.saveError'));
@@ -60,6 +64,8 @@ const ParcelSoilAnalysis = () => {
     try {
       await addPlantAnalysis(parcelId, 'plant', analysisDate, data, laboratory, notes);
       setShowForm(false);
+      setSelectedFormType(null);
+      setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
     } catch (error) {
       console.error('Error saving plant analysis:', error);
       alert(t('farmHierarchy.parcel.plant.saveError', 'Error saving plant analysis'));
@@ -75,6 +81,8 @@ const ParcelSoilAnalysis = () => {
     try {
       await addWaterAnalysis(parcelId, 'water', analysisDate, data, laboratory, notes);
       setShowForm(false);
+      setSelectedFormType(null);
+      setAnalysisTab('water'); // Switch to water tab to show the new analysis
     } catch (error) {
       console.error('Error saving water analysis:', error);
       alert(t('farmHierarchy.parcel.water.saveError', 'Error saving water analysis'));
@@ -99,14 +107,27 @@ const ParcelSoilAnalysis = () => {
     }
   };
 
-  // Render the correct form based on the selected tab
+  // Handle type selection and show form
+  const handleTypeSelect = (type: AnalysisType) => {
+    setSelectedFormType(type);
+    setShowTypeSelector(false);
+    setShowForm(true);
+  };
+
+  // Handle form cancel - reset both form and type selection
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setSelectedFormType(null);
+  };
+
+  // Render the correct form based on the selected type
   const renderForm = () => {
-    switch (analysisTab) {
+    switch (selectedFormType) {
       case 'soil':
         return (
           <SoilAnalysisForm
             onSave={handleSaveSoilAnalysis}
-            onCancel={() => setShowForm(false)}
+            onCancel={handleFormCancel}
             selectedParcel={parcel}
           />
         );
@@ -114,7 +135,7 @@ const ParcelSoilAnalysis = () => {
         return (
           <PlantAnalysisForm
             onSave={handleSavePlantAnalysis}
-            onCancel={() => setShowForm(false)}
+            onCancel={handleFormCancel}
             selectedParcel={parcel}
           />
         );
@@ -122,7 +143,7 @@ const ParcelSoilAnalysis = () => {
         return (
           <WaterAnalysisForm
             onSave={handleSaveWaterAnalysis}
-            onCancel={() => setShowForm(false)}
+            onCancel={handleFormCancel}
             selectedParcel={parcel}
           />
         );
@@ -131,8 +152,79 @@ const ParcelSoilAnalysis = () => {
     }
   };
 
+  // Render the analysis type selection modal
+  const renderTypeSelector = () => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {t('farmHierarchy.parcel.soil.selectAnalysisType', 'Select Analysis Type')}
+          </h3>
+          <button
+            onClick={() => setShowTypeSelector(false)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-3">
+          <button
+            onClick={() => handleTypeSelect('soil')}
+            className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
+          >
+            <div className="flex-shrink-0 w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center mr-4">
+              <Flask className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="text-left">
+              <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
+                {t('farmHierarchy.parcel.soil.tabs.soil', 'Soil Analysis')}
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('farmHierarchy.parcel.soil.soilDescription', 'Analyze pH, nutrients, organic matter, and soil composition')}
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleTypeSelect('plant')}
+            className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
+          >
+            <div className="flex-shrink-0 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mr-4">
+              <Leaf className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="text-left">
+              <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
+                {t('farmHierarchy.parcel.soil.tabs.plant', 'Plant Analysis')}
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('farmHierarchy.parcel.soil.plantDescription', 'Analyze leaf tissue, nutrient content, and plant health')}
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleTypeSelect('water')}
+            className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
+          >
+            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mr-4">
+              <Droplets className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-left">
+              <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                {t('farmHierarchy.parcel.soil.tabs.water', 'Water Analysis')}
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('farmHierarchy.parcel.soil.waterDescription', 'Analyze irrigation water quality, pH, and mineral content')}
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // Show form if needed
-  if (showForm) {
+  if (showForm && selectedFormType) {
     return (
       <div className="space-y-6">
         {renderForm()}
@@ -142,13 +234,16 @@ const ParcelSoilAnalysis = () => {
 
   return (
     <div className="space-y-6">
+      {/* Type Selection Modal */}
+      {showTypeSelector && renderTypeSelector()}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
           {t('farmHierarchy.parcel.soil.title')}
         </h3>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowTypeSelector(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
@@ -215,7 +310,10 @@ const ParcelSoilAnalysis = () => {
                 {t('farmHierarchy.parcel.soil.noAnalyses')}
               </p>
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => {
+                  setSelectedFormType(analysisTab);
+                  setShowForm(true);
+                }}
                 className={`px-4 py-2 text-white rounded-lg transition-colors ${
                   analysisTab === 'water'
                     ? 'bg-blue-600 hover:bg-blue-700'

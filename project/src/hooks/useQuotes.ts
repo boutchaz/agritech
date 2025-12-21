@@ -132,6 +132,7 @@ export function useCreateQuote() {
       }
 
       // Use the NestJS API to create the quote
+      // Items can have either 'rate' (from form) or 'unit_price' (from transformed data)
       const data = await quotesApi.create(
         {
           customer_id: quoteData.customer_id,
@@ -143,7 +144,7 @@ export function useCreateQuote() {
             item_name: item.item_name,
             description: item.description,
             quantity: Number(item.quantity) || 1,
-            unit_price: Number(item.rate) || 0,
+            unit_price: Number((item as any).unit_price || item.rate) || 0,
             account_id: item.account_id,
             tax_id: item.tax_id || undefined,
           })),
@@ -194,6 +195,7 @@ export function useUpdateQuote() {
       }
 
       // Transform items if provided
+      // Items can have either 'rate' (from form) or 'unit_price' (from transformed data)
       const transformedData = {
         ...quoteData,
         items: quoteData.items?.map((item, index) => ({
@@ -202,7 +204,7 @@ export function useUpdateQuote() {
           item_name: item.item_name,
           description: item.description,
           quantity: Number(item.quantity) || 1,
-          unit_price: Number(item.rate) || 0,
+          unit_price: Number((item as any).unit_price || item.rate) || 0,
           account_id: item.account_id,
           tax_id: item.tax_id || undefined,
         })),

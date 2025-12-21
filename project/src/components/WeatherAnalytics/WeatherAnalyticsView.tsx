@@ -4,16 +4,23 @@ import { useWeatherAnalytics, TimeRange } from '../../hooks/useWeatherAnalytics'
 import TemperatureCharts from './TemperatureCharts';
 import PrecipitationChart from './PrecipitationChart';
 import DryWetConditionsCharts from './DryWetConditionsCharts';
+import PhenologicalTemperatureCounters from './PhenologicalTemperatureCounters';
 import WeatherForecast from '../WeatherForecast';
 
 interface WeatherAnalyticsViewProps {
   parcelBoundary: number[][];
   parcelName: string;
+  cropType?: string | null;
+  treeType?: string | null;
+  variety?: string | null;
 }
 
 const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   parcelBoundary,
   parcelName,
+  cropType,
+  treeType,
+  variety,
 }) => {
   const [timeRange, setTimeRange] = useState<TimeRange>('last-12-months');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -297,6 +304,14 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             </h3>
             <TemperatureCharts data={data.temperature_series} />
           </div>
+
+          {/* Phenological Temperature Counters Section */}
+          <PhenologicalTemperatureCounters
+            temperatureData={data.temperature_series}
+            cropType={cropType}
+            treeType={treeType}
+            variety={variety}
+          />
 
           {/* Precipitation Analysis Section */}
           <div>

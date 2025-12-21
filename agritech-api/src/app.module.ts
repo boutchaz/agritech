@@ -55,6 +55,8 @@ import { PieceWorkModule } from './modules/piece-work/piece-work.module';
 import { ProfitabilityModule } from './modules/profitability/profitability.module';
 import { ProductApplicationsModule } from './modules/product-applications/product-applications.module';
 import { AccountMappingsModule } from './modules/account-mappings/account-mappings.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -124,6 +126,10 @@ import { AccountMappingsModule } from './modules/account-mappings/account-mappin
     ProfitabilityModule,
     ProductApplicationsModule,
     AccountMappingsModule,
+
+    // Admin & Analytics
+    AdminModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [

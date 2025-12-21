@@ -88,7 +88,7 @@ export const paymentsApi = {
    * Create a new payment
    */
   async create(data: CreatePaymentDto, organizationId?: string): Promise<Payment> {
-    return apiClient.post(BASE_URL, data, organizationId);
+    return apiClient.post(BASE_URL, data, {}, organizationId);
   },
 
   /**
@@ -96,14 +96,14 @@ export const paymentsApi = {
    * Replaces Supabase Edge Function call
    */
   async allocate(id: string, data: AllocatePaymentDto, organizationId?: string): Promise<AllocatePaymentResponse> {
-    return apiClient.post(`${BASE_URL}/${id}/allocate`, data, organizationId);
+    return apiClient.post(`${BASE_URL}/${id}/allocate`, data, {}, organizationId);
   },
 
   /**
    * Update payment status
    */
   async updateStatus(id: string, data: UpdatePaymentStatusDto, organizationId?: string): Promise<Payment> {
-    return apiClient.patch(`${BASE_URL}/${id}/status`, data, organizationId);
+    return apiClient.patch(`${BASE_URL}/${id}/status`, data, {}, organizationId);
   },
 
   /**

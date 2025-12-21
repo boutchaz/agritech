@@ -394,6 +394,10 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                           if (selectedItem) {
                             setValue(`items.${index}.item_id`, itemId);
                             setValue(`items.${index}.item_name`, selectedItem.item_name);
+                            // Auto-populate rate from standard_rate if available
+                            if (selectedItem.standard_rate) {
+                              setValue(`items.${index}.rate`, selectedItem.standard_rate);
+                            }
                           }
                         }}
                       >
@@ -550,8 +554,10 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 if (selectedItem) {
                                   setValue(`items.${index}.item_id`, itemId);
                                   setValue(`items.${index}.item_name`, selectedItem.item_name);
-                                  // Optionally populate rate from item_prices if available
-                                  // For now, user can still enter rate manually
+                                  // Auto-populate rate from standard_rate if available
+                                  if (selectedItem.standard_rate) {
+                                    setValue(`items.${index}.rate`, selectedItem.standard_rate);
+                                  }
                                 }
                               }}
                             >

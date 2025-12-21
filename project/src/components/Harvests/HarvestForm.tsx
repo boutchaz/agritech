@@ -195,13 +195,23 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                   <option value="">
                     {!formData.farm_id ? 'Sélectionnez d\'abord une ferme' : 'Sélectionner une parcelle'}
                   </option>
-                  {parcels.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {parcels.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{(p.tree_type || p.planting_type) && ` - ${p.tree_type || p.planting_type}`}
+                    </option>
+                  ))}
                 </select>
                 {selectedParcel && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    {selectedParcel.variety && `Variété: ${selectedParcel.variety}`}
-                    {selectedParcel.area && ` • ${selectedParcel.area} ${selectedParcel.area_unit || 'ha'}`}
-                  </p>
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                      {selectedParcel.tree_type || selectedParcel.planting_type || 'Culture non spécifiée'}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                      {selectedParcel.variety && `Variété: ${selectedParcel.variety}`}
+                      {selectedParcel.variety && selectedParcel.area && ' • '}
+                      {selectedParcel.area && `${selectedParcel.area} ${selectedParcel.area_unit || 'ha'}`}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

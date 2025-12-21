@@ -11,22 +11,32 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
+import {
+  Select as RadixSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useTaxes } from '@/hooks/useTaxes';
+import { useItemSelection } from '@/hooks/useItems';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, PackagePlus } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { QuickCreateItem } from '../Billing/QuickCreateItem';
 
 // Invoice item schema
 const invoiceItemSchema = z.object({
+  item_id: z.string().optional(),
   item_name: z.string().min(1, 'Item name is required'),
   description: z.string().optional(),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
@@ -81,6 +91,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   const { data: suppliers = [] } = useSuppliers();
   const { data: customers = [] } = useCustomers();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
 
   // State for calculated totals
   const [calculatedTotals, setCalculatedTotals] = useState<{
@@ -102,11 +114,20 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   const expenseAccounts = accounts.filter(acc => acc.account_type === 'Expense' && !acc.is_group);
   const revenueAccounts = accounts.filter(acc => acc.account_type === 'Revenue' && !acc.is_group);
 
+  // Fetch items for selection based on invoice type
+  const { data: salesItems = [], isLoading: salesItemsLoading } = useItemSelection({
+    is_sales_item: true
+  });
+  const { data: purchaseItems = [], isLoading: purchaseItemsLoading } = useItemSelection({
+    is_purchase_item: true
+  });
+
   const {
     register,
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<InvoiceFormData>({
@@ -119,6 +140,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
       parcel_id: null,
       items: [
         {
+          item_id: '',
           item_name: '',
           description: '',
           quantity: 1,
@@ -137,6 +159,10 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
   const watchItems = watch('items');
   const watchInvoiceType = watch('invoice_type');
+
+  // Get items based on invoice type
+  const availableItems = watchInvoiceType === 'sales' ? salesItems : purchaseItems;
+  const itemsLoading = watchInvoiceType === 'sales' ? salesItemsLoading : purchaseItemsLoading;
 
   // Get taxes based on invoice type
   const { data: allTaxes = [] } = useTaxes(watchInvoiceType);
@@ -216,6 +242,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
         parcel_id: existingInvoice.parcel_id || null,
         remarks: existingInvoice.remarks || '',
         items: existingInvoice.items?.map(item => ({
+          item_id: (item as any).item_id || '',
           item_name: item.item_name,
           description: item.description || '',
           quantity: item.quantity,
@@ -223,6 +250,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           account_id: item.account_id,
           tax_id: item.tax_id || undefined,
         })) || [{
+          item_id: '',
           item_name: '',
           description: '',
           quantity: 1,
@@ -236,6 +264,16 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   const onSubmit = async (data: InvoiceFormData) => {
     setIsSubmitting(true);
     try {
+      // Transform items to ensure proper number types
+      const transformedItems = data.items.map((item, index) => ({
+        item_name: item.item_name,
+        description: item.description || undefined,
+        quantity: Number(item.quantity),
+        rate: Number(item.rate),
+        account_id: item.account_id,
+        tax_id: item.tax_id || undefined,
+      }));
+
       if (isEditMode && editInvoiceId) {
         // Update existing invoice
         await updateInvoice.mutateAsync({
@@ -247,7 +285,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           invoice_date: data.invoice_date,
           due_date: data.due_date,
           notes: data.remarks,
-          items: data.items.map(item => ({
+          items: transformedItems.map(item => ({
             item_name: item.item_name,
             description: item.description,
             quantity: item.quantity,
@@ -261,8 +299,17 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
         });
         toast.success('Invoice updated successfully');
       } else {
-        // Create new invoice
-        await createInvoice.mutateAsync(data);
+        // Create new invoice with transformed items
+        await createInvoice.mutateAsync({
+          invoice_type: data.invoice_type,
+          party_id: data.party_id,
+          invoice_date: data.invoice_date,
+          due_date: data.due_date,
+          items: transformedItems,
+          remarks: data.remarks,
+          farm_id: data.farm_id,
+          parcel_id: data.parcel_id,
+        });
         toast.success('Invoice created successfully');
       }
       reset();
@@ -454,6 +501,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 size="sm"
                 onClick={() =>
                   append({
+                    item_id: '',
                     item_name: '',
                     description: '',
                     quantity: 1,
@@ -501,11 +549,57 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                   {fields.map((field, index) => (
                     <tr key={field.id}>
                       <td className="px-3 py-2">
-                        <Input
-                          {...register(`items.${index}.item_name`)}
-                          placeholder="Item name"
-                          className="h-9"
-                        />
+                        <RadixSelect
+                          value={watch(`items.${index}.item_id`) || ''}
+                          onValueChange={(itemId) => {
+                            const selectedItem = availableItems.find(item => item.id === itemId);
+                            if (selectedItem) {
+                              setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
+                              setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
+                              // Auto-populate rate from standard_rate if available
+                              if (selectedItem.standard_rate) {
+                                setValue(`items.${index}.rate`, selectedItem.standard_rate, { shouldValidate: true });
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-9">
+                            <SelectValue placeholder="Select item" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => {
+                                  setCurrentItemIndex(index);
+                                  setShowItemModal(true);
+                                }}
+                              >
+                                <PackagePlus className="h-4 w-4 mr-2" />
+                                Add New Item
+                              </Button>
+                            </div>
+                            {itemsLoading ? (
+                              <SelectItem value="_loading" disabled>
+                                Loading items...
+                              </SelectItem>
+                            ) : availableItems.length === 0 ? (
+                              <SelectItem value="_none" disabled>
+                                No items found
+                              </SelectItem>
+                            ) : (
+                              availableItems.map((item) => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.item_code} - {item.item_name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </RadixSelect>
+                        {/* Note: item_id and item_name are controlled via setValue from RadixSelect */}
                         {errors.items?.[index]?.item_name && (
                           <p className="text-xs text-red-600 mt-1">
                             {errors.items[index]?.item_name?.message}
@@ -665,6 +759,21 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
         </form>
         )}
       </DialogContent>
+
+      {/* Quick Create Item Modal */}
+      <QuickCreateItem
+        open={showItemModal}
+        onOpenChange={setShowItemModal}
+        type={watchInvoiceType === 'sales' ? 'sales' : 'purchase'}
+        onSuccess={(itemId, itemName) => {
+          if (currentItemIndex !== null) {
+            setValue(`items.${currentItemIndex}.item_id`, itemId, { shouldValidate: true });
+            setValue(`items.${currentItemIndex}.item_name`, itemName, { shouldValidate: true });
+          }
+          setShowItemModal(false);
+          setCurrentItemIndex(null);
+        }}
+      />
     </Dialog>
   );
 };

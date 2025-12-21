@@ -1,0 +1,25 @@
+services:
+  admin-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-https://agritech.thebzlab.online}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0OTE1NTIsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.ok7p9M-b444e7aBbIF0tGIogkN2hX-g2o1XaDH9bwzA}
+        - VITE_API_URL=${VITE_API_URL:-https://agritech-api.thebzlab.online}
+    container_name: agritech-admin
+    ports:
+      - "3003:80"
+    restart: unless-stopped
+    networks:
+      - agritech-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  agritech-network:
+    driver: bridge
