@@ -34,7 +34,11 @@ const navItems: NavItem[] = [
       { label: 'Modules', href: '/reference/modules' },
       { label: 'Currencies', href: '/reference/currencies' },
       { label: 'Roles', href: '/reference/roles' },
+      { label: 'Permissions', href: '/reference/permissions' },
       { label: 'Work Units', href: '/reference/work-units' },
+      { label: 'Tree Categories', href: '/reference/tree-categories' },
+      { label: 'Crop Types', href: '/reference/crop-types' },
+      { label: 'Item Categories', href: '/reference/item-categories' },
     ],
   },
   {
@@ -90,20 +94,18 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                   <div>
                     <button
                       onClick={() => toggleExpand(item.label)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        isParentActive(item.children)
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors ${isParentActive(item.children)
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       <span className="flex items-center gap-3">
                         <item.icon className="h-5 w-5" />
                         {item.label}
                       </span>
                       <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          expandedItems.includes(item.label) ? 'rotate-180' : ''
-                        }`}
+                        className={`h-4 w-4 transition-transform ${expandedItems.includes(item.label) ? 'rotate-180' : ''
+                          }`}
                       />
                     </button>
                     {expandedItems.includes(item.label) && (
@@ -112,11 +114,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                           <li key={child.href}>
                             <Link
                               to={child.href}
-                              className={`block px-3 py-2 rounded-md text-sm transition-colors ${
-                                isActive(child.href)
-                                  ? 'bg-primary/10 text-primary font-medium'
-                                  : 'text-gray-600 hover:bg-gray-100'
-                              }`}
+                              className={`block px-3 py-2 rounded-md text-sm transition-colors ${isActive(child.href)
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
                             >
                               {child.label}
                             </Link>
@@ -128,11 +129,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 ) : (
                   <Link
                     to={item.href!}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive(item.href!)
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive(item.href!)
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                   >
                     <item.icon className="h-5 w-5" />
                     {item.label}

@@ -14,9 +14,13 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedJobsRouteImport } from './routes/_authenticated/jobs'
 import { Route as AuthenticatedReferenceWorkUnitsRouteImport } from './routes/_authenticated/reference/work-units'
+import { Route as AuthenticatedReferenceTreeCategoriesRouteImport } from './routes/_authenticated/reference/tree-categories'
 import { Route as AuthenticatedReferenceRolesRouteImport } from './routes/_authenticated/reference/roles'
+import { Route as AuthenticatedReferencePermissionsRouteImport } from './routes/_authenticated/reference/permissions'
 import { Route as AuthenticatedReferenceModulesRouteImport } from './routes/_authenticated/reference/modules'
+import { Route as AuthenticatedReferenceItemCategoriesRouteImport } from './routes/_authenticated/reference/item-categories'
 import { Route as AuthenticatedReferenceCurrenciesRouteImport } from './routes/_authenticated/reference/currencies'
+import { Route as AuthenticatedReferenceCropTypesRouteImport } from './routes/_authenticated/reference/crop-types'
 import { Route as AuthenticatedReferenceAccountTemplatesRouteImport } from './routes/_authenticated/reference/account-templates'
 import { Route as AuthenticatedReferenceAccountMappingsRouteImport } from './routes/_authenticated/reference/account-mappings'
 import { Route as AuthenticatedAnalyticsSubscriptionsRouteImport } from './routes/_authenticated/analytics/subscriptions'
@@ -50,10 +54,22 @@ const AuthenticatedReferenceWorkUnitsRoute =
     path: '/reference/work-units',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedReferenceTreeCategoriesRoute =
+  AuthenticatedReferenceTreeCategoriesRouteImport.update({
+    id: '/reference/tree-categories',
+    path: '/reference/tree-categories',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedReferenceRolesRoute =
   AuthenticatedReferenceRolesRouteImport.update({
     id: '/reference/roles',
     path: '/reference/roles',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReferencePermissionsRoute =
+  AuthenticatedReferencePermissionsRouteImport.update({
+    id: '/reference/permissions',
+    path: '/reference/permissions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReferenceModulesRoute =
@@ -62,10 +78,22 @@ const AuthenticatedReferenceModulesRoute =
     path: '/reference/modules',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedReferenceItemCategoriesRoute =
+  AuthenticatedReferenceItemCategoriesRouteImport.update({
+    id: '/reference/item-categories',
+    path: '/reference/item-categories',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedReferenceCurrenciesRoute =
   AuthenticatedReferenceCurrenciesRouteImport.update({
     id: '/reference/currencies',
     path: '/reference/currencies',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReferenceCropTypesRoute =
+  AuthenticatedReferenceCropTypesRouteImport.update({
+    id: '/reference/crop-types',
+    path: '/reference/crop-types',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReferenceAccountTemplatesRoute =
@@ -121,9 +149,13 @@ export interface FileRoutesByFullPath {
   '/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
   '/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
   '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
+  '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/reference/modules': typeof AuthenticatedReferenceModulesRoute
+  '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
   '/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
 }
@@ -137,9 +169,13 @@ export interface FileRoutesByTo {
   '/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
   '/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
   '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
+  '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/reference/modules': typeof AuthenticatedReferenceModulesRoute
+  '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
   '/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
 }
@@ -155,9 +191,13 @@ export interface FileRoutesById {
   '/_authenticated/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
   '/_authenticated/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
   '/_authenticated/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
+  '/_authenticated/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
   '/_authenticated/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
+  '/_authenticated/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
   '/_authenticated/reference/modules': typeof AuthenticatedReferenceModulesRoute
+  '/_authenticated/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
   '/_authenticated/reference/roles': typeof AuthenticatedReferenceRolesRoute
+  '/_authenticated/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
   '/_authenticated/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
   '/_authenticated/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
 }
@@ -173,9 +213,13 @@ export interface FileRouteTypes {
     | '/analytics/subscriptions'
     | '/reference/account-mappings'
     | '/reference/account-templates'
+    | '/reference/crop-types'
     | '/reference/currencies'
+    | '/reference/item-categories'
     | '/reference/modules'
+    | '/reference/permissions'
     | '/reference/roles'
+    | '/reference/tree-categories'
     | '/reference/work-units'
     | '/analytics/organizations/$orgId'
   fileRoutesByTo: FileRoutesByTo
@@ -189,9 +233,13 @@ export interface FileRouteTypes {
     | '/analytics/subscriptions'
     | '/reference/account-mappings'
     | '/reference/account-templates'
+    | '/reference/crop-types'
     | '/reference/currencies'
+    | '/reference/item-categories'
     | '/reference/modules'
+    | '/reference/permissions'
     | '/reference/roles'
+    | '/reference/tree-categories'
     | '/reference/work-units'
     | '/analytics/organizations/$orgId'
   id:
@@ -206,9 +254,13 @@ export interface FileRouteTypes {
     | '/_authenticated/analytics/subscriptions'
     | '/_authenticated/reference/account-mappings'
     | '/_authenticated/reference/account-templates'
+    | '/_authenticated/reference/crop-types'
     | '/_authenticated/reference/currencies'
+    | '/_authenticated/reference/item-categories'
     | '/_authenticated/reference/modules'
+    | '/_authenticated/reference/permissions'
     | '/_authenticated/reference/roles'
+    | '/_authenticated/reference/tree-categories'
     | '/_authenticated/reference/work-units'
     | '/_authenticated/analytics/organizations/$orgId'
   fileRoutesById: FileRoutesById
@@ -255,11 +307,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReferenceWorkUnitsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reference/tree-categories': {
+      id: '/_authenticated/reference/tree-categories'
+      path: '/reference/tree-categories'
+      fullPath: '/reference/tree-categories'
+      preLoaderRoute: typeof AuthenticatedReferenceTreeCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/reference/roles': {
       id: '/_authenticated/reference/roles'
       path: '/reference/roles'
       fullPath: '/reference/roles'
       preLoaderRoute: typeof AuthenticatedReferenceRolesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reference/permissions': {
+      id: '/_authenticated/reference/permissions'
+      path: '/reference/permissions'
+      fullPath: '/reference/permissions'
+      preLoaderRoute: typeof AuthenticatedReferencePermissionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reference/modules': {
@@ -269,11 +335,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReferenceModulesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reference/item-categories': {
+      id: '/_authenticated/reference/item-categories'
+      path: '/reference/item-categories'
+      fullPath: '/reference/item-categories'
+      preLoaderRoute: typeof AuthenticatedReferenceItemCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/reference/currencies': {
       id: '/_authenticated/reference/currencies'
       path: '/reference/currencies'
       fullPath: '/reference/currencies'
       preLoaderRoute: typeof AuthenticatedReferenceCurrenciesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reference/crop-types': {
+      id: '/_authenticated/reference/crop-types'
+      path: '/reference/crop-types'
+      fullPath: '/reference/crop-types'
+      preLoaderRoute: typeof AuthenticatedReferenceCropTypesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reference/account-templates': {
@@ -352,9 +432,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAnalyticsSubscriptionsRoute: typeof AuthenticatedAnalyticsSubscriptionsRoute
   AuthenticatedReferenceAccountMappingsRoute: typeof AuthenticatedReferenceAccountMappingsRoute
   AuthenticatedReferenceAccountTemplatesRoute: typeof AuthenticatedReferenceAccountTemplatesRoute
+  AuthenticatedReferenceCropTypesRoute: typeof AuthenticatedReferenceCropTypesRoute
   AuthenticatedReferenceCurrenciesRoute: typeof AuthenticatedReferenceCurrenciesRoute
+  AuthenticatedReferenceItemCategoriesRoute: typeof AuthenticatedReferenceItemCategoriesRoute
   AuthenticatedReferenceModulesRoute: typeof AuthenticatedReferenceModulesRoute
+  AuthenticatedReferencePermissionsRoute: typeof AuthenticatedReferencePermissionsRoute
   AuthenticatedReferenceRolesRoute: typeof AuthenticatedReferenceRolesRoute
+  AuthenticatedReferenceTreeCategoriesRoute: typeof AuthenticatedReferenceTreeCategoriesRoute
   AuthenticatedReferenceWorkUnitsRoute: typeof AuthenticatedReferenceWorkUnitsRoute
 }
 
@@ -371,9 +455,16 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedReferenceAccountMappingsRoute,
   AuthenticatedReferenceAccountTemplatesRoute:
     AuthenticatedReferenceAccountTemplatesRoute,
+  AuthenticatedReferenceCropTypesRoute: AuthenticatedReferenceCropTypesRoute,
   AuthenticatedReferenceCurrenciesRoute: AuthenticatedReferenceCurrenciesRoute,
+  AuthenticatedReferenceItemCategoriesRoute:
+    AuthenticatedReferenceItemCategoriesRoute,
   AuthenticatedReferenceModulesRoute: AuthenticatedReferenceModulesRoute,
+  AuthenticatedReferencePermissionsRoute:
+    AuthenticatedReferencePermissionsRoute,
   AuthenticatedReferenceRolesRoute: AuthenticatedReferenceRolesRoute,
+  AuthenticatedReferenceTreeCategoriesRoute:
+    AuthenticatedReferenceTreeCategoriesRoute,
   AuthenticatedReferenceWorkUnitsRoute: AuthenticatedReferenceWorkUnitsRoute,
 }
 

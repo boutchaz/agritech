@@ -19,18 +19,35 @@ export function useAuth() {
 
   const checkInternalAdmin = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      console.log('Checking internal admin status for:', userId);
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('checkInternalAdmin timeout')), 5000)
+      );
+
+      const queryPromise = supabase
         .from('internal_admins')
         .select('id')
         .eq('user_id', userId)
         .eq('is_active', true)
         .limit(1);
 
-      return !error && data && data.length > 0;
-    } catch {
+      const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+      const { data, error } = result;
+
+      if (error) {
+        console.error('Error checking internal admin:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Failed to check internal admin:', error);
       return false;
     }
   }, []);
+
 
   useEffect(() => {
     let mounted = true;
@@ -79,11 +96,15 @@ export function useAuth() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         let isInternalAdmin = false;
         if (session?.user) {
+          console.log('Checking internal admin for:', session.user.id);
           isInternalAdmin = await checkInternalAdmin(session.user.id);
+          console.log('Is internal admin:', isInternalAdmin);
         }
+
         if (mounted) {
           setState({
             user: session?.user ?? null,
@@ -100,6 +121,7 @@ export function useAuth() {
       subscription.unsubscribe();
     };
   }, [checkInternalAdmin]);
+
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
