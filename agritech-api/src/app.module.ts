@@ -58,6 +58,7 @@ import { AccountMappingsModule } from './modules/account-mappings/account-mappin
 import { AdminModule } from './modules/admin/admin.module';
 import { EventsModule } from './modules/events/events.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+import { StrapiModule } from './modules/strapi/strapi.module';
 
 @Module({
   imports: [
@@ -132,6 +133,7 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
     AdminModule,
     EventsModule,
     MarketplaceModule,
+    StrapiModule,
   ],
   controllers: [AppController],
   providers: [

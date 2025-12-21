@@ -1,16 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { StrapiService } from '../strapi/strapi.service';
 
 @Injectable()
 export class MarketplaceService {
     private readonly logger = new Logger(MarketplaceService.name);
 
-    constructor(private readonly databaseService: DatabaseService) { }
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly strapiService: StrapiService
+    ) { }
 
     /**
      * Fetch public products.
-     * Leverages Supabase Admin Client to fetch 'active' and 'public' listings.
-     * In a future step, this would also aggregate data from Strapi.
+     * Fetches active listings from Supabase and merges with Strapi content.
      */
     async getPublicProducts(category?: string) {
         const supabase = this.databaseService.getAdminClient();
@@ -23,25 +26,37 @@ export class MarketplaceService {
             .order('created_at', { ascending: false });
 
         if (category) {
-            // Assuming we have a category relation or column. 
-            // For now, let's keep it simple.
-            // query = query.eq('category', category);
+            // TODO: Filter by category logic (might need to filter AFTER strapi fetch if category is only in strapi)
         }
 
-        const { data, error } = await query;
+        const { data: listings, error } = await query;
 
         if (error) {
             this.logger.error(`Error fetching public products: ${error.message}`);
             throw error;
         }
 
-        return data;
+        // Enhance listings with Strapi content
+        const enhancedListings = await Promise.all(
+            (listings || []).map(async (listing) => {
+                const content = await this.strapiService.getProductByListingId(listing.id);
+                return {
+                    ...listing,
+                    content: content || null,
+                    // Fallback for key fields if content missing
+                    title: content?.title || listing.title,
+                    image: content?.mainImage?.url || null // Map Strapi media URL
+                };
+            })
+        );
+
+        return enhancedListings;
     }
 
     async getProduct(id: string) {
         const supabase = this.databaseService.getAdminClient();
 
-        const { data, error } = await supabase
+        const { data: listing, error } = await supabase
             .from('marketplace_listings')
             .select('*')
             .eq('id', id)
@@ -53,7 +68,13 @@ export class MarketplaceService {
             return null;
         }
 
-        return data;
+        // Fetch rich content from Strapi
+        const content = await this.strapiService.getProductByListingId(id);
+
+        return {
+            ...listing,
+            content: content || null
+        };
     }
 
     /**
