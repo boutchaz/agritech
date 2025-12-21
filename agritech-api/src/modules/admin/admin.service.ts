@@ -103,7 +103,7 @@ export class AdminService {
         result.recordsProcessed++;
 
         try {
-          const rowData = {
+          const rowData: Record<string, any> = {
             ...row.data,
             template_version: dto.version || '1.0.0',
             source: 'import',
