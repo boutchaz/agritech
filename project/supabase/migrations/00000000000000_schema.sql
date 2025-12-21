@@ -3662,15 +3662,19 @@ CREATE INDEX IF NOT EXISTS idx_parcel_reports_organization ON parcel_reports(org
 -- Crop Types
 CREATE TABLE IF NOT EXISTS crop_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
   name_ar TEXT,
   name_fr TEXT,
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, name)
 );
+
+CREATE INDEX IF NOT EXISTS idx_crop_types_org ON crop_types(organization_id);
 
 -- Crop Categories
 CREATE TABLE IF NOT EXISTS crop_categories (
@@ -3864,15 +3868,19 @@ CREATE INDEX IF NOT EXISTS idx_plantation_systems_org ON plantation_systems(orga
 -- Product Categories
 CREATE TABLE IF NOT EXISTS product_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
   name_ar TEXT,
   name_fr TEXT,
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, name)
 );
+
+CREATE INDEX IF NOT EXISTS idx_product_categories_org ON product_categories(organization_id);
 
 -- Product Subcategories
 CREATE TABLE IF NOT EXISTS product_subcategories (
@@ -9952,3 +9960,46 @@ ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_ar TEXT;
 ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_fr TEXT;
 ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_ar TEXT;
 ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_fr TEXT;
+-- Add organization_id to crop_types
+ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE crop_types DROP CONSTRAINT IF EXISTS crop_types_name_key;
+ALTER TABLE crop_types ADD CONSTRAINT crop_types_org_name_key UNIQUE (organization_id, name);
+CREATE INDEX IF NOT EXISTS idx_crop_types_org ON crop_types(organization_id);
+
+-- Add organization_id to product_categories
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE product_categories DROP CONSTRAINT IF EXISTS product_categories_name_key;
+ALTER TABLE product_categories ADD CONSTRAINT product_categories_org_name_key UNIQUE (organization_id, name);
+CREATE INDEX IF NOT EXISTS idx_product_categories_org ON product_categories(organization_id);
+
+-- Seed default Crop Types (Retry)
+INSERT INTO crop_types (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Wheat', 'Cereal grain.'),
+  ('Barley', 'Cereal grain.'),
+  ('Corn', 'Maize.'),
+  ('Tomato', 'Vegetable crop.'),
+  ('Potato', 'Tuber crop.'),
+  ('Onion', 'Bulb vegetable.'),
+  ('Carrot', 'Root vegetable.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM crop_types WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Product Categories (Retry)
+INSERT INTO product_categories (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Fertilizers', 'Nutrients for plants.'),
+  ('Pesticides', 'Chemicals for pest control.'),
+  ('Seeds', 'Planting material.'),
+  ('Fuel', 'Diesel, gasoline, etc.'),
+  ('Spare Parts', 'Parts for machinery.'),
+  ('Tools', 'Hand tools and equipment.'),
+  ('Packaging', 'Boxes, crates, bags.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM product_categories WHERE name = v.name AND organization_id IS NULL
+);
