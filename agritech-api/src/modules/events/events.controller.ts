@@ -9,7 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 import { EventsService, EventFiltersDto } from './events.service';
 
-@Controller('api/v1/admin/events')
+@Controller('admin/events')
 @UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}

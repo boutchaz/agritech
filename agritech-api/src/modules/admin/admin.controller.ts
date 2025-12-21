@@ -21,7 +21,7 @@ import {
   OrgUsageQueryDto,
 } from './dto';
 
-@Controller('api/v1/admin')
+@Controller('admin')
 @UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
