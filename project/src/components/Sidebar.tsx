@@ -28,6 +28,7 @@ import {
   ChevronRight,
   BookOpen,
   ShoppingCart,
+  ShoppingBag,
   Wheat,
   Bell,
   BarChart3,
@@ -622,6 +623,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </>
               )}
             </div>
+
+            {/* ========== MARKETPLACE ========== */}
+            <Separator className="my-3" />
+            <ProtectedNavItem action="read" subject="Dashboard">
+              <Button
+                variant="ghost"
+                className={getButtonClassName(currentPath === '/marketplace')}
+                onClick={(e) => handleNavigation('/marketplace', e)}
+              >
+                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                  {renderIcon(ShoppingBag)}
+                  {renderText("Marketplace")}
+                </div>
+              </Button>
+            </ProtectedNavItem>
 
             {/* ========== AGRICULTURE MODULES ========== */}
             {agricultureModules.length > 0 && (
