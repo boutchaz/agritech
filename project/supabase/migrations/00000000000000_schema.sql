@@ -2388,13 +2388,20 @@ CREATE TABLE IF NOT EXISTS tasks (
   attachments JSONB,
   checklist JSONB,
   notes TEXT,
+  -- Work Unit Payment fields (for piece-work tracking)
+  payment_type TEXT DEFAULT NULL,
+  work_unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  units_required NUMERIC,
+  units_completed NUMERIC DEFAULT 0,
+  rate_per_unit NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   CHECK (status IN ('pending', 'assigned', 'in_progress', 'paused', 'completed', 'cancelled', 'overdue')),
   CHECK (task_type IN ('planting', 'harvesting', 'irrigation', 'fertilization', 'maintenance', 'general', 'pest_control', 'pruning', 'soil_preparation')),
   CHECK (completion_percentage >= 0 AND completion_percentage <= 100),
-  CHECK (quality_rating IS NULL OR (quality_rating >= 1 AND quality_rating <= 5))
+  CHECK (quality_rating IS NULL OR (quality_rating >= 1 AND quality_rating <= 5)),
+  CHECK (payment_type IS NULL OR payment_type IN ('daily', 'per_unit', 'monthly', 'metayage'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_org ON tasks(organization_id);
@@ -2402,6 +2409,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_farm ON tasks(farm_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_parcel ON tasks(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_work_unit ON tasks(work_unit_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(task_type);
 
 -- Task Categories
@@ -4816,6 +4824,262 @@ CREATE TRIGGER trg_trees_populate_org_id
   BEFORE INSERT OR UPDATE ON trees
   FOR EACH ROW
   EXECUTE FUNCTION populate_organization_id_from_tree_category();
+
+-- =====================================================
+-- 25. DOCUMENT TEMPLATES TABLE
+-- =====================================================
+-- Stores customizable PDF document templates per organization
+
+DROP TABLE IF EXISTS document_templates CASCADE;
+
+CREATE TABLE IF NOT EXISTS document_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    document_type VARCHAR(50) NOT NULL CHECK (document_type IN ('invoice', 'quote', 'sales_order', 'purchase_order', 'report', 'general')),
+    is_default BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    -- Header configuration
+    header_enabled BOOLEAN DEFAULT true,
+    header_height NUMERIC(10,2) DEFAULT 80,
+    header_logo_url TEXT,
+    header_logo_position VARCHAR(20) DEFAULT 'left' CHECK (header_logo_position IN ('left', 'center', 'right')),
+    header_logo_width NUMERIC(10,2) DEFAULT 50,
+    header_logo_height NUMERIC(10,2) DEFAULT 30,
+    header_company_name BOOLEAN DEFAULT true,
+    header_company_info BOOLEAN DEFAULT true,
+    header_custom_text TEXT,
+    header_background_color VARCHAR(20) DEFAULT '#ffffff',
+    header_text_color VARCHAR(20) DEFAULT '#000000',
+    header_border_bottom BOOLEAN DEFAULT true,
+    header_border_color VARCHAR(20) DEFAULT '#e5e7eb',
+    -- Footer configuration
+    footer_enabled BOOLEAN DEFAULT true,
+    footer_height NUMERIC(10,2) DEFAULT 60,
+    footer_text TEXT DEFAULT 'Thank you for your business!',
+    footer_position VARCHAR(20) DEFAULT 'center' CHECK (footer_position IN ('left', 'center', 'right')),
+    footer_include_company_info BOOLEAN DEFAULT true,
+    footer_custom_text TEXT,
+    footer_background_color VARCHAR(20) DEFAULT '#f9fafb',
+    footer_text_color VARCHAR(20) DEFAULT '#6b7280',
+    footer_border_top BOOLEAN DEFAULT true,
+    footer_border_color VARCHAR(20) DEFAULT '#e5e7eb',
+    footer_font_size NUMERIC(10,2) DEFAULT 9,
+    -- Page margins (in mm)
+    page_margin_top NUMERIC(10,2) DEFAULT 20,
+    page_margin_bottom NUMERIC(10,2) DEFAULT 20,
+    page_margin_left NUMERIC(10,2) DEFAULT 15,
+    page_margin_right NUMERIC(10,2) DEFAULT 15,
+    -- Document styling
+    accent_color VARCHAR(20) DEFAULT '#10B981',
+    secondary_color VARCHAR(20) DEFAULT '#6B7280',
+    font_family VARCHAR(100) DEFAULT 'Helvetica',
+    title_font_size NUMERIC(10,2) DEFAULT 24,
+    heading_font_size NUMERIC(10,2) DEFAULT 14,
+    body_font_size NUMERIC(10,2) DEFAULT 10,
+    -- Table styling
+    table_header_bg_color VARCHAR(20) DEFAULT '#10B981',
+    table_header_text_color VARCHAR(20) DEFAULT '#ffffff',
+    table_row_alt_color VARCHAR(20) DEFAULT '#f9fafb',
+    table_border_color VARCHAR(20) DEFAULT '#e5e7eb',
+    -- Content display options
+    show_tax_id BOOLEAN DEFAULT true,
+    show_terms BOOLEAN DEFAULT true,
+    show_notes BOOLEAN DEFAULT true,
+    show_payment_info BOOLEAN DEFAULT true,
+    show_bank_details BOOLEAN DEFAULT false,
+    show_qr_code BOOLEAN DEFAULT false,
+    -- Custom sections
+    terms_content TEXT,
+    payment_terms_content TEXT,
+    bank_details_content TEXT,
+    -- Watermark
+    watermark_enabled BOOLEAN DEFAULT false,
+    watermark_text VARCHAR(100),
+    watermark_opacity NUMERIC(3,2) DEFAULT 0.1,
+    -- Metadata
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES auth.users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_templates_organization ON document_templates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_document_templates_type ON document_templates(document_type);
+CREATE INDEX IF NOT EXISTS idx_document_templates_default ON document_templates(organization_id, document_type, is_default) WHERE is_default = true;
+
+ALTER TABLE document_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view templates in their organization" ON document_templates;
+CREATE POLICY "Users can view templates in their organization"
+    ON document_templates FOR SELECT
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can create templates in their organization" ON document_templates;
+CREATE POLICY "Users can create templates in their organization"
+    ON document_templates FOR INSERT
+    WITH CHECK (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can update templates in their organization" ON document_templates;
+CREATE POLICY "Users can update templates in their organization"
+    ON document_templates FOR UPDATE
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can delete templates in their organization" ON document_templates;
+CREATE POLICY "Users can delete templates in their organization"
+    ON document_templates FOR DELETE
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+
+CREATE OR REPLACE FUNCTION ensure_single_default_template()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_default = true THEN
+        UPDATE document_templates
+        SET is_default = false, updated_at = NOW()
+        WHERE organization_id = NEW.organization_id
+          AND document_type = NEW.document_type
+          AND id != NEW.id
+          AND is_default = true;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ensure_single_default_template ON document_templates;
+CREATE TRIGGER trg_ensure_single_default_template
+    BEFORE INSERT OR UPDATE ON document_templates
+    FOR EACH ROW
+    EXECUTE FUNCTION ensure_single_default_template();
+
+CREATE OR REPLACE FUNCTION update_document_templates_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_document_templates_updated_at ON document_templates;
+CREATE TRIGGER trg_document_templates_updated_at
+    BEFORE UPDATE ON document_templates
+    FOR EACH ROW
+    EXECUTE FUNCTION update_document_templates_timestamp();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON document_templates TO authenticated;
+GRANT SELECT ON document_templates TO anon;
+
+-- =====================================================
+-- 26. BACKFILL ORGANIZATION_ID FOR EXISTING DATA
+-- =====================================================
+-- These UPDATE statements populate organization_id for records
+-- that existed before the multi-tenant columns were added
+
+-- Backfill parcels
+UPDATE parcels p
+SET organization_id = f.organization_id
+FROM farms f
+WHERE p.farm_id = f.id
+  AND p.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill crops
+UPDATE crops c
+SET organization_id = f.organization_id
+FROM farms f
+WHERE c.farm_id = f.id
+  AND c.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill day_laborers
+UPDATE day_laborers d
+SET organization_id = f.organization_id
+FROM farms f
+WHERE d.farm_id = f.id
+  AND d.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill employees
+UPDATE employees e
+SET organization_id = f.organization_id
+FROM farms f
+WHERE e.farm_id = f.id
+  AND e.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill work_records
+UPDATE work_records w
+SET organization_id = f.organization_id
+FROM farms f
+WHERE w.farm_id = f.id
+  AND w.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill metayage_settlements
+UPDATE metayage_settlements m
+SET organization_id = f.organization_id
+FROM farms f
+WHERE m.farm_id = f.id
+  AND m.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill utilities
+UPDATE utilities u
+SET organization_id = f.organization_id
+FROM farms f
+WHERE u.farm_id = f.id
+  AND u.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill financial_transactions
+UPDATE financial_transactions ft
+SET organization_id = f.organization_id
+FROM farms f
+WHERE ft.farm_id = f.id
+  AND ft.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill livestock
+UPDATE livestock l
+SET organization_id = f.organization_id
+FROM farms f
+WHERE l.farm_id = f.id
+  AND l.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill analyses (via parcel -> farm)
+UPDATE analyses a
+SET organization_id = f.organization_id
+FROM parcels p
+JOIN farms f ON f.id = p.farm_id
+WHERE a.parcel_id = p.id
+  AND a.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill soil_analyses (via parcel -> farm)
+UPDATE soil_analyses sa
+SET organization_id = f.organization_id
+FROM parcels p
+JOIN farms f ON f.id = p.farm_id
+WHERE sa.parcel_id = p.id
+  AND sa.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill parcel_reports (via parcel -> farm)
+UPDATE parcel_reports pr
+SET organization_id = f.organization_id
+FROM parcels p
+JOIN farms f ON f.id = p.farm_id
+WHERE pr.parcel_id = p.id
+  AND pr.organization_id IS NULL
+  AND f.organization_id IS NOT NULL;
+
+-- Backfill trees (via tree_categories)
+UPDATE trees t
+SET organization_id = tc.organization_id
+FROM tree_categories tc
+WHERE t.category_id = tc.id
+  AND t.organization_id IS NULL
+  AND tc.organization_id IS NOT NULL;
 
 -- =====================================================
 -- END OF SCHEMA

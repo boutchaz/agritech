@@ -94,8 +94,10 @@ export const parcelsApi = {
    */
   async getAll(filters: ParcelFilters, organizationId?: string): Promise<Parcel[]> {
     const params = new URLSearchParams();
-    if (filters.organization_id) {
-      params.append('organization_id', filters.organization_id);
+    // Use organizationId param first, then fall back to filters.organization_id
+    const orgId = organizationId || filters.organization_id;
+    if (orgId) {
+      params.append('organization_id', orgId);
     }
     if (filters.farm_id) {
       params.append('farm_id', filters.farm_id);
