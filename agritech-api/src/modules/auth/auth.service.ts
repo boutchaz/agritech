@@ -307,7 +307,8 @@ export class AuthService {
         this.logger.log(`Successfully created organization_users record: ${JSON.stringify(orgUserData)}`);
 
         // 5. Seed demo data if requested
-        if (signupDto.includeDemoData === true) {
+        this.logger.log(`includeDemoData value: ${signupDto.includeDemoData} (type: ${typeof signupDto.includeDemoData})`);
+        if (signupDto.includeDemoData) {
           this.logger.log(`Demo data requested, starting seeding for organization ${organizationId}`);
           try {
             await this.demoDataService.seedDemoData(organizationId, userId);
@@ -319,6 +320,8 @@ export class AuthService {
               demoError.stack,
             );
           }
+        } else {
+          this.logger.log(`Demo data not requested, skipping seeding`);
         }
       }
 

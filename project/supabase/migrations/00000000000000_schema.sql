@@ -4969,7 +4969,165 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON document_templates TO authenticated;
 GRANT SELECT ON document_templates TO anon;
 
 -- =====================================================
--- 26. BACKFILL ORGANIZATION_ID FOR EXISTING DATA
+-- 26. ONBOARDING HELPER FUNCTIONS
+-- =====================================================
+
+-- Function to handle new user signup - creates user profile automatically
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, email, full_name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger to auto-create user profile on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- Function to create organization with farm atomically during onboarding
+CREATE OR REPLACE FUNCTION public.create_organization_with_farm(
+  p_user_id UUID,
+  p_user_email TEXT,
+  p_first_name TEXT,
+  p_last_name TEXT,
+  p_organization_name TEXT,
+  p_organization_slug TEXT,
+  p_organization_phone TEXT DEFAULT NULL,
+  p_organization_email TEXT DEFAULT NULL,
+  p_farm_name TEXT DEFAULT NULL,
+  p_farm_location TEXT DEFAULT NULL,
+  p_farm_size NUMERIC DEFAULT NULL,
+  p_farm_size_unit TEXT DEFAULT 'hectares',
+  p_farm_description TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_organization_id UUID;
+  v_farm_id UUID;
+  v_role_id UUID;
+BEGIN
+  -- 1. Upsert user profile
+  INSERT INTO user_profiles (id, email, first_name, last_name, full_name, updated_at)
+  VALUES (
+    p_user_id,
+    p_user_email,
+    p_first_name,
+    p_last_name,
+    p_first_name || ' ' || p_last_name,
+    NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    full_name = EXCLUDED.full_name,
+    updated_at = NOW();
+
+  -- 2. Create organization
+  INSERT INTO organizations (name, slug, phone, email, is_active, created_at, updated_at)
+  VALUES (
+    p_organization_name,
+    p_organization_slug,
+    p_organization_phone,
+    COALESCE(p_organization_email, p_user_email),
+    true,
+    NOW(),
+    NOW()
+  )
+  RETURNING id INTO v_organization_id;
+
+  -- 3. Get organization_admin role ID
+  SELECT id INTO v_role_id FROM roles WHERE name = 'organization_admin' LIMIT 1;
+
+  -- Fallback: if role doesn't exist, try to find any admin role
+  IF v_role_id IS NULL THEN
+    SELECT id INTO v_role_id FROM roles WHERE name LIKE '%admin%' ORDER BY level LIMIT 1;
+  END IF;
+
+  -- Last fallback: use any role
+  IF v_role_id IS NULL THEN
+    SELECT id INTO v_role_id FROM roles ORDER BY level LIMIT 1;
+  END IF;
+
+  -- 4. Add user to organization as admin
+  INSERT INTO organization_users (organization_id, user_id, role_id, is_active, created_at)
+  VALUES (v_organization_id, p_user_id, v_role_id, true, NOW());
+
+  -- 5. Create farm if details provided
+  IF p_farm_name IS NOT NULL AND p_farm_name != '' THEN
+    INSERT INTO farms (
+      organization_id,
+      name,
+      location,
+      size,
+      size_unit,
+      description,
+      manager_name,
+      manager_email,
+      is_active,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_organization_id,
+      p_farm_name,
+      p_farm_location,
+      p_farm_size,
+      p_farm_size_unit,
+      p_farm_description,
+      p_first_name || ' ' || p_last_name,
+      p_user_email,
+      true,
+      NOW(),
+      NOW()
+    )
+    RETURNING id INTO v_farm_id;
+
+    -- 6. Add user as farm manager
+    INSERT INTO farm_management_roles (farm_id, user_id, role, assigned_by, created_at)
+    VALUES (v_farm_id, p_user_id, 'main_manager', p_user_id, NOW())
+    ON CONFLICT DO NOTHING;
+  END IF;
+
+  -- Return success with IDs
+  RETURN jsonb_build_object(
+    'success', true,
+    'organization_id', v_organization_id,
+    'farm_id', v_farm_id
+  );
+
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object(
+    'success', false,
+    'error', SQLERRM
+  );
+END;
+$$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION public.create_organization_with_farm TO authenticated;
+
+-- =====================================================
+-- 27. BACKFILL ORGANIZATION_ID FOR EXISTING DATA
 -- =====================================================
 -- These UPDATE statements populate organization_id for records
 -- that existed before the multi-tenant columns were added

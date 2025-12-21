@@ -111,7 +111,7 @@ export class DemoDataService {
   /**
    * Create demo parcels
    */
-  private async createDemoParcels(organizationId: string, farmId: string) {
+  private async createDemoParcels(organizationId: string, farmId: string): Promise<any[]> {
     const client = this.databaseService.getAdminClient();
 
     // Base coordinates for Berkane, Morocco (approximately)
@@ -154,6 +154,7 @@ export class DemoDataService {
 
     const parcels = [
       {
+        organization_id: organizationId,
         farm_id: farmId,
         name: 'Parcelle Olives',
         description: 'Parcelle principale d\'oliviers',
@@ -171,6 +172,7 @@ export class DemoDataService {
         is_active: true,
       },
       {
+        organization_id: organizationId,
         farm_id: farmId,
         name: 'Parcelle Agrumes',
         description: 'Parcelle d\'agrumes variés',
@@ -188,6 +190,7 @@ export class DemoDataService {
         is_active: true,
       },
       {
+        organization_id: organizationId,
         farm_id: farmId,
         name: 'Parcelle Légumes',
         description: 'Parcelle de légumes de saison',
@@ -462,7 +465,7 @@ export class DemoDataService {
         parcel_id: parcels[2].id,
         title: 'Désherbage Manuel',
         description: 'Désherbage manuel de la parcelle de légumes',
-        task_type: 'weeding',
+        task_type: 'maintenance',
         priority: 'low',
         status: 'assigned',
         assigned_to: workers[1].id,
