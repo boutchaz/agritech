@@ -41,17 +41,16 @@ export class InternalAdminGuard implements CanActivate {
   }
 
   /**
-   * Check if user has internal_admin role in any organization
+   * Check if user is in internal_admins table
    */
   private async checkInternalAdmin(userId: string): Promise<boolean> {
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
-      .from('organization_users')
-      .select('id, roles!inner(name)')
+      .from('internal_admins')
+      .select('id')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .eq('roles.name', 'internal_admin')
       .limit(1);
 
     if (error) {

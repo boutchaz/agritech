@@ -9360,11 +9360,15 @@ COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access t
 -- Enable RLS on internal_admins
 ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
 
--- Only service_role or existing internal_admins can manage internal_admins
+-- Only service_role can manage internal_admins
 CREATE POLICY "service_manage_internal_admins" ON internal_admins
   FOR ALL USING (
     current_setting('role', true) = 'service_role'
   );
+
+-- Allow users to check if they are internal admins (for auth check)
+CREATE POLICY "users_read_own_internal_admin" ON internal_admins
+  FOR SELECT USING (user_id = auth.uid());
 
 -- Function to check if current user is internal_admin
 CREATE OR REPLACE FUNCTION is_internal_admin()
