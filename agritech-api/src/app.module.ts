@@ -57,6 +57,7 @@ import { ProductApplicationsModule } from './modules/product-applications/produc
 import { AccountMappingsModule } from './modules/account-mappings/account-mappings.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EventsModule } from './modules/events/events.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -130,6 +131,7 @@ import { EventsModule } from './modules/events/events.module';
     // Admin & Analytics
     AdminModule,
     EventsModule,
+    MarketplaceModule,
   ],
   controllers: [AppController],
   providers: [
