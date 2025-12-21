@@ -20,11 +20,10 @@ export function useAuth() {
   const checkInternalAdmin = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('organization_users')
-        .select('id, roles!inner(name)')
+        .from('internal_admins')
+        .select('id')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .eq('roles.name', 'internal_admin')
         .limit(1);
 
       return !error && data && data.length > 0;
