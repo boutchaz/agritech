@@ -10003,3 +10003,123 @@ FROM (VALUES
 WHERE NOT EXISTS (
   SELECT 1 FROM product_categories WHERE name = v.name AND organization_id IS NULL
 );
+-- =====================================================
+-- MARKETPLACE TABLES
+-- =====================================================
+
+-- Marketplace Listings
+CREATE TABLE IF NOT EXISTS marketplace_listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(12, 2) NOT NULL,
+  currency TEXT DEFAULT 'MAD',
+  quantity_available NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  unit TEXT, -- e.g., 'kg', 'ton', 'unit'
+  product_category_id UUID REFERENCES product_categories(id),
+  status TEXT DEFAULT 'draft', -- 'draft', 'active', 'sold_out', 'archived'
+  is_public BOOLEAN DEFAULT false,
+  images JSONB DEFAULT '[]',
+  location_lat NUMERIC,
+  location_lng NUMERIC,
+  location_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  CHECK (status IN ('draft', 'active', 'sold_out', 'archived'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_listings_org ON marketplace_listings(organization_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_listings_status ON marketplace_listings(status);
+CREATE INDEX IF NOT EXISTS idx_marketplace_listings_category ON marketplace_listings(product_category_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_listings_public ON marketplace_listings(is_public) WHERE is_public = true;
+
+-- Marketplace Orders
+CREATE TABLE IF NOT EXISTS marketplace_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  buyer_organization_id UUID NOT NULL REFERENCES organizations(id),
+  seller_organization_id UUID NOT NULL REFERENCES organizations(id),
+  status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'disputed'
+  total_amount NUMERIC(12, 2) NOT NULL,
+  currency TEXT DEFAULT 'MAD',
+  notes TEXT,
+  shipping_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'disputed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_buyer ON marketplace_orders(buyer_organization_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_seller ON marketplace_orders(seller_organization_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_status ON marketplace_orders(status);
+
+-- Marketplace Order Items
+CREATE TABLE IF NOT EXISTS marketplace_order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES marketplace_orders(id) ON DELETE CASCADE,
+  listing_id UUID REFERENCES marketplace_listings(id) ON DELETE SET NULL,
+  title TEXT NOT NULL, -- Snapshot of listing title
+  quantity NUMERIC(12, 2) NOT NULL,
+  unit_price NUMERIC(12, 2) NOT NULL,
+  total_price NUMERIC(12, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_order ON marketplace_order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_listing ON marketplace_order_items(listing_id);
+
+-- Marketplace Reviews
+CREATE TABLE IF NOT EXISTS marketplace_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES marketplace_orders(id) ON DELETE CASCADE,
+  reviewer_organization_id UUID NOT NULL REFERENCES organizations(id),
+  reviewee_organization_id UUID NOT NULL REFERENCES organizations(id),
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(order_id, reviewer_organization_id) -- One review per order side
+);
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_reviews_reviewee ON marketplace_reviews(reviewee_organization_id);
+
+-- RLS POLICIES
+
+-- Enable RLS
+ALTER TABLE marketplace_listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_reviews ENABLE ROW LEVEL SECURITY;
+
+-- Listings Policies
+CREATE POLICY "Public can view active published listings" ON marketplace_listings
+  FOR SELECT USING (is_public = true AND status = 'active');
+
+CREATE POLICY "Organizations can manage own listings" ON marketplace_listings
+  FOR ALL USING (organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()));
+
+-- Orders Policies
+CREATE POLICY "Participants can view orders" ON marketplace_orders
+  FOR SELECT USING (
+    buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()) OR
+    seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Buyers can create orders" ON marketplace_orders
+  FOR INSERT WITH CHECK (
+    buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+  );
+
+-- Order Items Policies
+CREATE POLICY "Participants can view order items" ON marketplace_order_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM marketplace_orders o 
+      WHERE o.id = marketplace_order_items.order_id 
+      AND (
+        o.buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()) OR
+        o.seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+      )
+    )
+  );
