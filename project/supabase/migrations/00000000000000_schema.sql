@@ -3778,6 +3778,63 @@ CREATE TABLE IF NOT EXISTS plantation_types (
 
 CREATE INDEX IF NOT EXISTS idx_plantation_types_org ON plantation_types(organization_id);
 
+-- Soil Types
+CREATE TABLE IF NOT EXISTS soil_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_soil_types_org ON soil_types(organization_id);
+
+-- Irrigation Types
+CREATE TABLE IF NOT EXISTS irrigation_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  efficiency NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_irrigation_types_org ON irrigation_types(organization_id);
+
+-- Rootstocks
+CREATE TABLE IF NOT EXISTS rootstocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rootstocks_org ON rootstocks(organization_id);
+
+-- Plantation Systems
+CREATE TABLE IF NOT EXISTS plantation_systems (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plantation_systems_org ON plantation_systems(organization_id);
+
 -- =====================================================
 -- 17. PRODUCT & INVENTORY CATEGORIES TABLES
 -- =====================================================
@@ -9708,3 +9765,124 @@ COMMENT ON VIEW admin_top_orgs_by_activity IS 'Top 100 organizations by recent a
 COMMENT ON VIEW admin_churn_risk IS 'Organizations at risk of churning';
 COMMENT ON VIEW admin_reference_data_stats IS 'Statistics for all reference data tables';
 COMMENT ON VIEW admin_recent_jobs IS 'Recent admin job logs';
+-- Seed default Soil Types
+INSERT INTO soil_types (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Clay', 'Heavy soil with high nutrient retention but poor drainage.'),
+  ('Sandy', 'Light, warm, dry and tends to be acidic and low in nutrients.'),
+  ('Silty', 'Slippery when wet, retains water effectively.'),
+  ('Peaty', 'High in organic matter and retains a large amount of moisture.'),
+  ('Chalky', 'Can be either light or heavy but is highly alkaline due to calcium carbonate.'),
+  ('Loamy', 'Mixture of sand, silt, and clay that are combined to avoid the negative effects of each type.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM soil_types WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Irrigation Types
+INSERT INTO irrigation_types (name, description, efficiency, organization_id)
+SELECT name, description, efficiency, NULL
+FROM (VALUES 
+  ('Drip', 'Water is delivered directly to the root zone of plants.', 95),
+  ('Sprinkler', 'Water is sprayed into the air and falls on the ground surface somewhat like rainfall.', 75),
+  ('Flood', 'Water is delivered to the field by ditch, pipe, or some other means and simply flows over the ground.', 50),
+  ('Micro-sprinkler', 'Low pressure and low volume irrigation.', 85),
+  ('Pivot', 'Center pivot irrigation.', 80)
+) AS v(name, description, efficiency)
+WHERE NOT EXISTS (
+  SELECT 1 FROM irrigation_types WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Rootstocks
+INSERT INTO rootstocks (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('GF677', 'Peach x Almond hybrid. Vigorous, adapted to calcareous soils.'),
+  ('Nemaguard', 'Resistant to root-knot nematodes. Good for sandy soils.'),
+  ('Lovell', 'Standard peach rootstock. Good anchorage.'),
+  ('Marianna 2624', 'Plum rootstock. Tolerant to wet soils.'),
+  ('M9', 'Dwarfing apple rootstock.'),
+  ('MM106', 'Semi-dwarfing apple rootstock.'),
+  ('Citruelo', 'Citrus rootstock. Cold hardy and disease resistant.'),
+  ('Sour Orange', 'Traditional citrus rootstock. Adapted to many soil types.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM rootstocks WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Plantation Systems
+INSERT INTO plantation_systems (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Traditional', 'Standard spacing with larger trees.'),
+  ('Intensive', 'Higher density planting.'),
+  ('Super High Density', 'Very high density, often for mechanical harvesting.'),
+  ('Semi-Intensive', 'Intermediate spacing.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM plantation_systems WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Tree Categories
+INSERT INTO tree_categories (category, organization_id)
+SELECT category, NULL
+FROM (VALUES 
+  ('Olive'),
+  ('Citrus'),
+  ('Stone Fruit'),
+  ('Pome Fruit'),
+  ('Nut Trees'),
+  ('Vines')
+) AS v(category)
+WHERE NOT EXISTS (
+  SELECT 1 FROM tree_categories WHERE category = v.category AND organization_id IS NULL
+);
+
+-- Seed default Crop Types
+INSERT INTO crop_types (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Wheat', 'Cereal grain.'),
+  ('Barley', 'Cereal grain.'),
+  ('Corn', 'Maize.'),
+  ('Tomato', 'Vegetable crop.'),
+  ('Potato', 'Tuber crop.'),
+  ('Onion', 'Bulb vegetable.'),
+  ('Carrot', 'Root vegetable.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM crop_types WHERE name = v.name AND organization_id IS NULL
+);
+
+-- Seed default Work Units
+INSERT INTO work_units (code, name, unit_category, base_unit, conversion_factor, organization_id)
+SELECT code, name, unit_category, base_unit, conversion_factor, NULL
+FROM (VALUES 
+  ('HR', 'Hour', 'count', NULL, 1.0, 0), -- unit_category must be one of the enum values: 'count', 'weight', 'volume', 'area', 'length'
+  ('DAY', 'Day', 'count', 'HR', 8.0, 0),
+  ('KG', 'Kilogram', 'weight', NULL, 1.0, 0),
+  ('TON', 'Ton', 'weight', 'KG', 1000.0, 0),
+  ('HA', 'Hectare', 'area', NULL, 1.0, 0),
+  ('L', 'Liter', 'volume', NULL, 1.0, 0),
+  ('PCS', 'Piece', 'count', NULL, 1.0, 0)
+) AS v(code, name, unit_category, base_unit, conversion_factor, is_dummy)
+WHERE NOT EXISTS (
+  SELECT 1 FROM work_units WHERE code = v.code AND organization_id IS NULL
+);
+
+-- Seed default Product Categories
+INSERT INTO product_categories (name, description, organization_id)
+SELECT name, description, NULL
+FROM (VALUES 
+  ('Fertilizers', 'Nutrients for plants.'),
+  ('Pesticides', 'Chemicals for pest control.'),
+  ('Seeds', 'Planting material.'),
+  ('Fuel', 'Diesel, gasoline, etc.'),
+  ('Spare Parts', 'Parts for machinery.'),
+  ('Tools', 'Hand tools and equipment.'),
+  ('Packaging', 'Boxes, crates, bags.')
+) AS v(name, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM product_categories WHERE name = v.name AND organization_id IS NULL
+);
