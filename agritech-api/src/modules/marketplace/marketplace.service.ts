@@ -50,6 +50,7 @@ export class MarketplaceService {
                 crop_type,
                 variety,
                 is_active,
+                is_sales_item,
                 created_at,
                 updated_at,
                 item_groups (
@@ -64,6 +65,8 @@ export class MarketplaceService {
         if (itemsError) {
             this.logger.error(`Error fetching sales items: ${itemsError.message}`);
         }
+
+        this.logger.log(`Marketplace: Found ${listings?.length || 0} listings and ${salesItems?.length || 0} sales items`);
 
         // Transform sales items to match marketplace listing format
         const transformedItems = (salesItems || []).map(item => ({
