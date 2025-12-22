@@ -569,11 +569,12 @@ export class DemoDataService {
   private async createDemoParties(organizationId: string, userId: string): Promise<{ customers: any[]; suppliers: any[] }> {
     const client = this.databaseService.getAdminClient();
 
+    // Note: DB schema uses 'name' not 'customer_name', and customer_type must be one of: individual, business, government, other
     const customersData = [
       {
         organization_id: organizationId,
         customer_code: 'CUST-001',
-        customer_name: 'Marché Central de Casablanca',
+        name: 'Marché Central de Casablanca',
         customer_type: 'business',
         email: 'contact@marche-casa.ma',
         phone: '+212522123456',
@@ -589,8 +590,8 @@ export class DemoDataService {
       {
         organization_id: organizationId,
         customer_code: 'CUST-002',
-        customer_name: 'Coopérative Agricole Berkane',
-        customer_type: 'cooperative',
+        name: 'Coopérative Agricole Berkane',
+        customer_type: 'business', // Changed from 'cooperative' to valid value
         email: 'info@coop-berkane.ma',
         phone: '+212536789012',
         address: 'Route de Nador, Berkane',
@@ -605,7 +606,7 @@ export class DemoDataService {
       {
         organization_id: organizationId,
         customer_code: 'CUST-003',
-        customer_name: 'Restaurant Le Jardin',
+        name: 'Restaurant Le Jardin',
         customer_type: 'business',
         email: 'commandes@lejardin.ma',
         phone: '+212537456789',
@@ -630,12 +631,12 @@ export class DemoDataService {
       throw error;
     }
 
-    // Create suppliers
+    // Create suppliers - Note: DB schema uses 'name' not 'supplier_name'
     const suppliersData = [
       {
         organization_id: organizationId,
         supplier_code: 'SUP-001',
-        supplier_name: 'AgriSupply Maroc',
+        name: 'AgriSupply Maroc',
         supplier_type: 'wholesaler',
         email: 'contact@agrisupply.ma',
         phone: '+212522654321',
@@ -650,7 +651,7 @@ export class DemoDataService {
       {
         organization_id: organizationId,
         supplier_code: 'SUP-002',
-        supplier_name: 'Engrais & Semences du Maroc',
+        name: 'Engrais & Semences du Maroc',
         supplier_type: 'manufacturer',
         email: 'ventes@esmaroc.ma',
         phone: '+212528987654',
@@ -671,6 +672,7 @@ export class DemoDataService {
 
     if (supplierError) {
       this.logger.error(`Failed to create demo suppliers: ${supplierError.message}`);
+      throw supplierError;
     }
 
     return {
@@ -708,7 +710,7 @@ export class DemoDataService {
         quote_date: lastWeek.toISOString().split('T')[0],
         valid_until: nextMonth.toISOString().split('T')[0],
         customer_id: customers[0]?.id,
-        customer_name: customers[0]?.customer_name || 'Client Demo',
+        customer_name: customers[0]?.name || 'Client Demo',
         status: 'sent',
         subtotal: 25000,
         tax_total: 4500,
@@ -724,7 +726,7 @@ export class DemoDataService {
         quote_date: twoWeeksAgo.toISOString().split('T')[0],
         valid_until: inTwoWeeks.toISOString().split('T')[0],
         customer_id: customers[1]?.id,
-        customer_name: customers[1]?.customer_name || 'Client Demo 2',
+        customer_name: customers[1]?.name || 'Client Demo 2',
         status: 'accepted',
         subtotal: 12000,
         tax_total: 2160,
@@ -740,7 +742,7 @@ export class DemoDataService {
         quote_date: now.toISOString().split('T')[0],
         valid_until: nextMonth.toISOString().split('T')[0],
         customer_id: customers[2]?.id || customers[0]?.id,
-        customer_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        customer_name: customers[2]?.name || customers[0]?.name || 'Client Demo',
         status: 'draft',
         subtotal: 8500,
         tax_total: 1530,
@@ -864,7 +866,7 @@ export class DemoDataService {
         order_date: lastMonth.toISOString().split('T')[0],
         expected_delivery_date: new Date(lastMonth.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         customer_id: customers[0]?.id,
-        customer_name: customers[0]?.customer_name || 'Client Demo',
+        customer_name: customers[0]?.name || 'Client Demo',
         customer_address: customers[0]?.address,
         status: 'delivered',
         subtotal: 15000,
@@ -880,7 +882,7 @@ export class DemoDataService {
         order_date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         expected_delivery_date: nextWeek.toISOString().split('T')[0],
         customer_id: customers[1]?.id,
-        customer_name: customers[1]?.customer_name || 'Client Demo 2',
+        customer_name: customers[1]?.name || 'Client Demo 2',
         customer_address: customers[1]?.address,
         status: 'confirmed',
         subtotal: 8500,
@@ -896,7 +898,7 @@ export class DemoDataService {
         order_date: now.toISOString().split('T')[0],
         expected_delivery_date: inTwoWeeks.toISOString().split('T')[0],
         customer_id: customers[2]?.id || customers[0]?.id,
-        customer_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        customer_name: customers[2]?.name || customers[0]?.name || 'Client Demo',
         customer_address: customers[2]?.address || customers[0]?.address,
         status: 'draft',
         subtotal: 20000,
@@ -1013,7 +1015,7 @@ export class DemoDataService {
         order_date: lastMonth.toISOString().split('T')[0],
         expected_delivery_date: new Date(lastMonth.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         supplier_id: suppliers[0]?.id,
-        supplier_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_name: suppliers[0]?.name || 'Fournisseur Demo',
         supplier_contact: suppliers[0]?.email,
         status: 'received',
         subtotal: 12500,
@@ -1030,7 +1032,7 @@ export class DemoDataService {
         order_date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         expected_delivery_date: nextWeek.toISOString().split('T')[0],
         supplier_id: suppliers[1]?.id || suppliers[0]?.id,
-        supplier_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_name: suppliers[1]?.name || suppliers[0]?.name || 'Fournisseur Demo',
         supplier_contact: suppliers[1]?.email || suppliers[0]?.email,
         status: 'confirmed',
         subtotal: 8000,
@@ -1046,7 +1048,7 @@ export class DemoDataService {
         order_date: now.toISOString().split('T')[0],
         expected_delivery_date: inThreeWeeks.toISOString().split('T')[0],
         supplier_id: suppliers[0]?.id,
-        supplier_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_name: suppliers[0]?.name || 'Fournisseur Demo',
         supplier_contact: suppliers[0]?.email,
         status: 'draft',
         subtotal: 15000,
@@ -1181,7 +1183,7 @@ export class DemoDataService {
         invoice_date: lastMonth.toISOString().split('T')[0],
         invoice_type: 'sales',
         party_id: customers[0]?.id,
-        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_name: customers[0]?.name || 'Client Demo',
         party_type: 'customer',
         subtotal: 15000,
         tax_total: 2700,
@@ -1200,7 +1202,7 @@ export class DemoDataService {
         invoice_date: twoWeeksAgo.toISOString().split('T')[0],
         invoice_type: 'sales',
         party_id: customers[0]?.id,
-        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_name: customers[0]?.name || 'Client Demo',
         party_type: 'customer',
         subtotal: 8500,
         tax_total: 1530,
@@ -1219,7 +1221,7 @@ export class DemoDataService {
         invoice_date: now.toISOString().split('T')[0],
         invoice_type: 'sales',
         party_id: customers[1]?.id,
-        party_name: customers[1]?.customer_name || 'Client Demo 2',
+        party_name: customers[1]?.name || 'Client Demo 2',
         party_type: 'customer',
         subtotal: 12000,
         tax_total: 2160,
@@ -1238,7 +1240,7 @@ export class DemoDataService {
         invoice_date: now.toISOString().split('T')[0],
         invoice_type: 'sales',
         party_id: customers[2]?.id || customers[0]?.id,
-        party_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        party_name: customers[2]?.name || customers[0]?.name || 'Client Demo',
         party_type: 'customer',
         subtotal: 6500,
         tax_total: 1170,
@@ -1257,7 +1259,7 @@ export class DemoDataService {
         invoice_date: lastMonth.toISOString().split('T')[0],
         invoice_type: 'purchase',
         party_id: suppliers[0]?.id,
-        party_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_name: suppliers[0]?.name || 'Fournisseur Demo',
         party_type: 'supplier',
         subtotal: 12500,
         tax_total: 2250,
@@ -1276,7 +1278,7 @@ export class DemoDataService {
         invoice_date: twoWeeksAgo.toISOString().split('T')[0],
         invoice_type: 'purchase',
         party_id: suppliers[1]?.id || suppliers[0]?.id,
-        party_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_name: suppliers[1]?.name || suppliers[0]?.name || 'Fournisseur Demo',
         party_type: 'supplier',
         subtotal: 8000,
         tax_total: 1440,
@@ -1422,7 +1424,7 @@ export class DemoDataService {
         payment_date: lastMonth.toISOString().split('T')[0],
         amount: 17700,
         party_id: customers[0]?.id,
-        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_name: customers[0]?.name || 'Client Demo',
         party_type: 'customer',
         reference_number: 'VIR-12345',
         currency_code: 'MAD',
@@ -1438,7 +1440,7 @@ export class DemoDataService {
         payment_date: oneWeekAgo.toISOString().split('T')[0],
         amount: 5000,
         party_id: customers[0]?.id,
-        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_name: customers[0]?.name || 'Client Demo',
         party_type: 'customer',
         reference_number: 'CHQ-789456',
         currency_code: 'MAD',
@@ -1454,7 +1456,7 @@ export class DemoDataService {
         payment_date: now.toISOString().split('T')[0],
         amount: 3000,
         party_id: customers[1]?.id,
-        party_name: customers[1]?.customer_name || 'Client Demo 2',
+        party_name: customers[1]?.name || 'Client Demo 2',
         party_type: 'customer',
         currency_code: 'MAD',
         status: 'draft',
@@ -1470,7 +1472,7 @@ export class DemoDataService {
         payment_date: lastMonth.toISOString().split('T')[0],
         amount: 14750,
         party_id: suppliers[0]?.id,
-        party_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_name: suppliers[0]?.name || 'Fournisseur Demo',
         party_type: 'supplier',
         reference_number: 'VIR-OUT-001',
         currency_code: 'MAD',
@@ -1486,7 +1488,7 @@ export class DemoDataService {
         payment_date: twoWeeksAgo.toISOString().split('T')[0],
         amount: 5000,
         party_id: suppliers[1]?.id || suppliers[0]?.id,
-        party_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_name: suppliers[1]?.name || suppliers[0]?.name || 'Fournisseur Demo',
         party_type: 'supplier',
         reference_number: 'CHQ-OUT-456',
         currency_code: 'MAD',
