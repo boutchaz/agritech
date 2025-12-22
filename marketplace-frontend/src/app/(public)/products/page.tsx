@@ -1,21 +1,31 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { ApiClient } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
 import Link from 'next/link';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 
-export const revalidate = 60;
+export default function ProductsPage() {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-async function getProducts() {
-    try {
-        return await ApiClient.getProducts();
-    } catch (error) {
-        console.error('Failed to fetch products', error);
-        return [];
-    }
-}
-
-export default async function ProductsPage() {
-    const products = await getProducts();
+    useEffect(() => {
+        async function fetchProducts() {
+            try {
+                setLoading(true);
+                const data = await ApiClient.getProducts();
+                setProducts(data);
+            } catch (err) {
+                console.error('Failed to fetch products', err);
+                setError('Failed to load products');
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchProducts();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -128,7 +138,26 @@ export default async function ProductsPage() {
                         </div>
 
                         {/* Products Grid */}
-                        {products.length > 0 ? (
+                        {loading ? (
+                            <div className="bg-white rounded-lg shadow p-12 text-center">
+                                <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+                                <p className="text-gray-600">Loading products...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="bg-white rounded-lg shadow p-12 text-center">
+                                <div className="text-6xl mb-4">⚠️</div>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                                    Error loading products
+                                </h3>
+                                <p className="text-gray-600 mb-6">{error}</p>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        ) : products.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {products.map((product) => (
                                     <ProductCard key={product.id} product={product} />
