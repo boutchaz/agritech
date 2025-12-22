@@ -13,6 +13,10 @@ import { ValuationMethod } from './create-item.dto';
 export class UpdateItemDto {
   @IsString()
   @IsOptional()
+  item_code?: string;
+
+  @IsString()
+  @IsOptional()
   item_name?: string;
 
   @IsUUID()
@@ -26,6 +30,18 @@ export class UpdateItemDto {
   @IsString()
   @IsOptional()
   default_unit?: string;
+
+  @IsString()
+  @IsOptional()
+  unit_of_measure?: string;
+
+  @IsNumber()
+  @IsOptional()
+  sales_rate?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  is_inventory_item?: boolean;
 
   @IsString()
   @IsOptional()
@@ -54,6 +70,14 @@ export class UpdateItemDto {
   @IsEnum(ValuationMethod)
   @IsOptional()
   valuation_method?: ValuationMethod;
+
+  @IsNumber()
+  @IsOptional()
+  opening_stock?: number;
+
+  @IsNumber()
+  @IsOptional()
+  minimum_stock_level?: number;
 
   @IsNumber()
   @IsOptional()
