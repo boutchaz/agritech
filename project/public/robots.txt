@@ -1,0 +1,44 @@
+# AgriTech - Robots.txt
+# https://agritech-dashboard.thebzlab.online
+
+User-agent: *
+Allow: /
+Allow: /blog
+Allow: /register
+Allow: /login
+
+# Disallow private/authenticated areas for crawlers
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /accounting*
+Disallow: /workers
+Disallow: /tasks
+Disallow: /harvests
+Disallow: /parcels
+Disallow: /stock
+Disallow: /billing*
+Disallow: /api/
+
+# Allow search engines to index the landing and auth pages
+Allow: /$
+Allow: /blog$
+Allow: /register$
+Allow: /login$
+
+# Sitemap location
+Sitemap: https://agritech-dashboard.thebzlab.online/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
+
+# Bing specific
+User-agent: Bingbot
+Allow: /
+Disallow: /dashboard
+Disallow: /api/

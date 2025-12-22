@@ -50,70 +50,94 @@ const LandingPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Structured data for SEO - moved before useEffect
+  const structuredData = useMemo(() => {
+    const name = t('app.name', { defaultValue: 'AgriTech' });
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      'applicationCategory': 'BusinessApplication',
+      name,
+      url: `${siteOrigin}/`,
+      description: t('landing.seo.description', {
+        defaultValue:
+          'AgriTech: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité.',
+      }),
+      image: `${siteOrigin}/og-image.png`,
+      sameAs: ['https://marketplace.thebzlab.online'],
+      offers: {
+        '@type': 'Offer',
+        price: '25',
+        priceCurrency: 'USD',
+      },
+      featureList: [
+        t('landing.features.parcelManagement', { defaultValue: 'Gestion des parcelles agricoles' }),
+        t('landing.features.teamManagement', { defaultValue: 'Gestion des équipes et tâches' }),
+        t('landing.features.satelliteAnalysis', { defaultValue: 'Analyses satellite NDVI/NDWI' }),
+        t('landing.features.profitability', { defaultValue: 'Comptabilité intégrée' }),
+        t('landing.features.stockManagement', { defaultValue: 'Gestion des stocks' }),
+      ],
+    };
+  }, [siteOrigin, t]);
+
   useEffect(() => {
     const pageTitle = t('landing.seo.title', {
-      defaultValue: 'Agritech Suite — Pilotez vos fermes de la parcelle à la comptabilité',
+      defaultValue: 'AgriTech - Plateforme de Gestion Agricole Intelligente | Maroc',
     });
     const description = t('landing.seo.description', {
       defaultValue:
-        'Centralisez la gestion agricole : parcelles, main-d’œuvre, analyses satellite, comptabilité et ventes dans une même plateforme.',
+        'AgriTech: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité. Optimisez votre exploitation avec l\'agriculture de précision.',
     });
 
     document.title = pageTitle;
 
-    const ensureMeta = (name: string, content: string) => {
-      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+    const ensureMeta = (nameOrProperty: string, content: string, isProperty = false) => {
+      const attr = isProperty ? 'property' : 'name';
+      let tag = document.querySelector(`meta[${attr}="${nameOrProperty}"]`) as HTMLMetaElement | null;
       if (!tag) {
         tag = document.createElement('meta');
-        tag.setAttribute('name', name);
+        tag.setAttribute(attr, nameOrProperty);
         document.head.appendChild(tag);
       }
       tag.setAttribute('content', content);
     };
 
+    // Primary meta tags
     ensureMeta('description', description);
-    ensureMeta('og:title', pageTitle);
-    ensureMeta('og:description', description);
+    ensureMeta('keywords', 'gestion agricole, agriculture maroc, logiciel agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, exploitation agricole, agritech');
+
+    // Open Graph meta tags
+    ensureMeta('og:type', 'website', true);
+    ensureMeta('og:url', siteOrigin, true);
+    ensureMeta('og:title', pageTitle, true);
+    ensureMeta('og:description', description, true);
+    ensureMeta('og:image', `${siteOrigin}/og-image.png`, true);
+    ensureMeta('og:site_name', 'AgriTech', true);
+
+    // Twitter meta tags
+    ensureMeta('twitter:card', 'summary_large_image');
     ensureMeta('twitter:title', pageTitle);
     ensureMeta('twitter:description', description);
-  }, [t]);
+    ensureMeta('twitter:image', `${siteOrigin}/og-image.png`);
 
-  const structuredData = useMemo(() => {
-    const name = t('app.name', { defaultValue: 'Agritech Suite' });
-    return {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name,
-      url: `${siteOrigin}/`,
-      description: t('landing.seo.description', {
-        defaultValue:
-          'Centralisez la gestion agricole : parcelles, main-d’œuvre, analyses satellite, comptabilité et ventes dans une même plateforme.',
-      }),
-      sameAs: [],
-      hasPart: [
-        {
-          '@type': 'Service',
-          name: t('landing.features.parcelManagement', { defaultValue: 'Gestion des parcelles' }),
-          url: `${siteOrigin}/parcels`,
-        },
-        {
-          '@type': 'Service',
-          name: t('landing.features.teamManagement', { defaultValue: 'Gestion des équipes' }),
-          url: `${siteOrigin}/tasks`,
-        },
-        {
-          '@type': 'Service',
-          name: t('landing.features.profitability', { defaultValue: 'Suivi de la rentabilité' }),
-          url: `${siteOrigin}/accounting`,
-        },
-        {
-          '@type': 'Service',
-          name: t('landing.features.satelliteAnalysis', { defaultValue: 'Analyses satellite' }),
-          url: `${siteOrigin}/satellite-analysis`,
-        },
-      ],
+    // Inject structured data
+    const existingScript = document.querySelector('script[data-landing-schema]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-landing-schema', 'true');
+      script.textContent = JSON.stringify(structuredData);
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      const script = document.querySelector('script[data-landing-schema]');
+      if (script) {
+        script.remove();
+      }
     };
-  }, [siteOrigin, t]);
+  }, [t, siteOrigin, structuredData]);
+
   const features = [
     {
       icon: MapPin,

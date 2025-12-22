@@ -32,6 +32,7 @@ import {
   Wheat,
   Bell,
   BarChart3,
+  ExternalLink,
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -626,18 +627,23 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== MARKETPLACE ========== */}
             <Separator className="my-3" />
-            <ProtectedNavItem action="read" subject="Dashboard">
+            <a
+              href="https://marketplace.thebzlab.online"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
               <Button
                 variant="ghost"
-                className={getButtonClassName(currentPath === '/marketplace')}
-                onClick={(e) => handleNavigation('/marketplace', e)}
+                className={getButtonClassName(false, "group")}
               >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
                   {renderIcon(ShoppingBag)}
-                  {renderText("Marketplace")}
+                  <span className="flex-1">{renderText("Marketplace")}</span>
+                  <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                 </div>
               </Button>
-            </ProtectedNavItem>
+            </a>
 
             {/* ========== AGRICULTURE MODULES ========== */}
             {agricultureModules.length > 0 && (
