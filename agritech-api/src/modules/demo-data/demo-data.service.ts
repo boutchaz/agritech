@@ -15,6 +15,11 @@ export class DemoDataService {
     this.logger.log(`Starting demo data seeding for organization ${organizationId}`);
 
     try {
+      // Clear existing data first to avoid conflicts on re-seeding
+      this.logger.log('Clearing existing data before seeding...');
+      await this.clearDemoData(organizationId);
+      this.logger.log('✅ Existing data cleared');
+
       // 1. Seed Farm
       const farm = await this.createDemoFarm(organizationId, userId);
       this.logger.log(`✅ Created demo farm: ${farm.name}`);
