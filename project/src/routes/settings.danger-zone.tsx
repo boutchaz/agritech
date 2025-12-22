@@ -41,6 +41,7 @@ const STAT_LABELS: Record<string, { label: string; icon: React.ElementType }> = 
   invoices: { label: 'Factures', icon: FileText },
   payments: { label: 'Paiements', icon: DollarSign },
   journal_entries: { label: 'Écritures comptables', icon: FileText },
+  utilities: { label: 'Charges fixes', icon: DollarSign },
   costs: { label: 'Coûts', icon: DollarSign },
   revenues: { label: 'Revenus', icon: DollarSign },
   structures: { label: 'Infrastructures', icon: Warehouse },
