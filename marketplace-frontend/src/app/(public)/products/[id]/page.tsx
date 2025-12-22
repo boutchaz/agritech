@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
+import { useCart } from '@/contexts/CartContext';
+import { CartIcon } from '@/components/CartIcon';
 import {
     ArrowLeft,
     ArrowRight,
@@ -13,6 +15,7 @@ import {
     MapPin,
     Package,
     ShoppingBag,
+    ShoppingCart,
     Calendar,
     User,
     Phone,
@@ -21,7 +24,9 @@ import {
     Heart,
     Check,
     X,
-    Menu
+    Menu,
+    Minus,
+    Plus
 } from 'lucide-react';
 
 interface Product {
@@ -55,6 +60,10 @@ export default function ProductDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [quantity, setQuantity] = useState(1);
+    const [addingToCart, setAddingToCart] = useState(false);
+    const [addedToCart, setAddedToCart] = useState(false);
+    const { addToCart } = useCart();
 
     useEffect(() => {
         async function fetchProduct() {
@@ -75,6 +84,28 @@ export default function ProductDetailPage() {
 
         fetchProduct();
     }, [productId]);
+
+    const handleAddToCart = async () => {
+        if (!product || addingToCart) return;
+
+        // Check if user is logged in
+        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+            router.push('/login?redirect=' + encodeURIComponent(`/products/${productId}`));
+            return;
+        }
+
+        setAddingToCart(true);
+        try {
+            const source = product.source === 'marketplace_listing' ? 'listing' : 'item';
+            await addToCart(product.id, quantity, source);
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 3000);
+        } catch (error) {
+            console.error('Failed to add to cart:', error);
+        } finally {
+            setAddingToCart(false);
+        }
+    };
 
     const formatPrice = (price: number, currency: string) => {
         return new Intl.NumberFormat('fr-MA', {
@@ -172,8 +203,9 @@ export default function ProductDetailPage() {
                             </Link>
                         </div>
 
-                        {/* Auth Buttons */}
+                        {/* Cart & Auth Buttons */}
                         <div className="hidden md:flex items-center gap-4">
+                            <CartIcon />
                             <Link href="/login" className="text-gray-600 hover:text-gray-900 transition">
                                 Connexion
                             </Link>
@@ -380,11 +412,54 @@ export default function ProductDetailPage() {
                             </div>
                         )}
 
+                        {/* Quantity Selector */}
+                        <div className="flex items-center gap-4 pt-4">
+                            <span className="text-gray-700 font-medium">Quantite:</span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    disabled={quantity <= 1}
+                                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="w-12 text-center font-medium text-lg">{quantity}</span>
+                                <button
+                                    onClick={() => setQuantity(quantity + 1)}
+                                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </button>
+                            </div>
+                            {product.unit && (
+                                <span className="text-gray-500">{product.unit}</span>
+                            )}
+                        </div>
+
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                            <button className="flex-1 px-6 py-4 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition font-medium text-lg flex items-center justify-center gap-2">
-                                <Phone className="w-5 h-5" />
-                                Contacter le vendeur
+                            <button
+                                onClick={handleAddToCart}
+                                disabled={addingToCart}
+                                className={`flex-1 px-6 py-4 rounded-xl transition font-medium text-lg flex items-center justify-center gap-2 ${
+                                    addedToCart
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                } disabled:opacity-50`}
+                            >
+                                {addingToCart ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : addedToCart ? (
+                                    <>
+                                        <Check className="w-5 h-5" />
+                                        Ajoute au panier!
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShoppingCart className="w-5 h-5" />
+                                        Ajouter au panier
+                                    </>
+                                )}
                             </button>
                             <button className="px-6 py-4 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2">
                                 <Heart className="w-5 h-5" />

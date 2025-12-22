@@ -106,4 +106,125 @@ export class ApiClient {
     static async getCategoryBySlug(slug: string, locale: string = 'fr') {
         return this.request<any>(`/marketplace/categories/${slug}?locale=${locale}`);
     }
+
+    // CART METHODS
+    static async getCart() {
+        return this.request<Cart>('/marketplace/cart');
+    }
+
+    static async addToCart(data: { listing_id?: string; item_id?: string; quantity: number }) {
+        return this.request<Cart>('/marketplace/cart/items', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    static async updateCartItem(cartItemId: string, quantity: number) {
+        return this.request<Cart>(`/marketplace/cart/items/${cartItemId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ quantity }),
+        });
+    }
+
+    static async removeFromCart(cartItemId: string) {
+        return this.request<Cart>(`/marketplace/cart/items/${cartItemId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    static async clearCart() {
+        return this.request<{ message: string }>('/marketplace/cart/clear', {
+            method: 'DELETE',
+        });
+    }
+
+    // ORDER METHODS
+    static async createOrder(data: CreateOrderDto) {
+        return this.request<Order>('/marketplace/orders', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    static async getOrders() {
+        return this.request<Order[]>('/marketplace/orders');
+    }
+
+    static async getOrder(orderId: string) {
+        return this.request<Order>(`/marketplace/orders/${orderId}`);
+    }
+
+    static async cancelOrder(orderId: string) {
+        return this.request<Order>(`/marketplace/orders/${orderId}/cancel`, {
+            method: 'POST',
+        });
+    }
+}
+
+// Types
+export interface CartItem {
+    id: string;
+    listing_id?: string;
+    item_id?: string;
+    seller_organization_id: string;
+    title: string;
+    quantity: number;
+    unit_price: number;
+    unit?: string;
+    image_url?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Cart {
+    id: string | null;
+    user_id: string;
+    items: CartItem[];
+    total: number;
+    item_count: number;
+}
+
+export interface CreateOrderDto {
+    shipping_details: {
+        name: string;
+        phone: string;
+        email?: string;
+        address: string;
+        city: string;
+        postal_code?: string;
+    };
+    payment_method: 'cod' | 'online';
+    notes?: string;
+}
+
+export interface OrderItem {
+    id: string;
+    product_id: string;
+    title: string;
+    quantity: number;
+    unit_price: number;
+    unit?: string;
+}
+
+export interface Order {
+    id: string;
+    buyer_organization_id: string;
+    seller_organization_id: string;
+    status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'disputed';
+    total_amount: number;
+    currency: string;
+    shipping_details: {
+        name: string;
+        phone: string;
+        email?: string;
+        address: string;
+        city: string;
+        postal_code?: string;
+    };
+    payment_method: string;
+    payment_status: string;
+    items: OrderItem[];
+    notes?: string;
+    created_at: string;
+    updated_at: string;
 }
