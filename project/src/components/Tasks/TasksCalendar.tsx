@@ -3,7 +3,6 @@ import {
   CalendarBody,
   CalendarDate,
   CalendarDatePagination,
-  CalendarDatePicker,
   CalendarHeader,
   CalendarItem,
   CalendarMonthPicker,
@@ -20,7 +19,7 @@ import { Plus, Clock, User, MapPin } from 'lucide-react';
 import { useTasks } from '../../hooks/useTasks';
 import TaskForm from './TaskForm';
 import type { Task } from '../../types/tasks';
-import { format, parseISO, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface TasksCalendarProps {
@@ -91,12 +90,23 @@ const CalendarContent: React.FC<{
       });
   }, [tasks]);
 
-  // Get tasks for selected date
+  // Get tasks for selected date - show tasks that span across the selected date
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
+    const selectedDateNormalized = new Date(selectedDate);
+    selectedDateNormalized.setHours(0, 0, 0, 0);
+
     return tasks.filter(task => {
       if (!task.scheduled_start) return false;
-      return isSameDay(parseISO(task.scheduled_start), selectedDate);
+
+      const startDate = parseISO(task.scheduled_start);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = task.due_date ? parseISO(task.due_date) : startDate;
+      endDate.setHours(23, 59, 59, 999);
+
+      // Check if selected date falls within the task's date range
+      return selectedDateNormalized >= startDate && selectedDateNormalized <= endDate;
     });
   }, [selectedDate, tasks]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { getDay, getDaysInMonth, isSameDay } from "date-fns";
+import { getDay, getDaysInMonth } from "date-fns";
 import { atom, useAtom } from "jotai";
 import {
   Check,
@@ -235,11 +235,21 @@ export const CalendarBody = ({ features, children }: CalendarBodyProps) => {
   }, [month, year]);
 
   // Memoize features filtering by day to avoid recalculating on every render
+  // Show features on ALL days between startAt and endAt (inclusive)
   const featuresByDay = useMemo(() => {
     const result: { [day: number]: Feature[] } = {};
     for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month, day);
+      currentDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
       result[day] = features.filter((feature) => {
-        return isSameDay(new Date(feature.endAt), new Date(year, month, day));
+        const startDate = new Date(feature.startAt);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(feature.endAt);
+        endDate.setHours(23, 59, 59, 999); // End of day for end date
+
+        // Check if current date falls within the feature's date range
+        return currentDate >= startDate && currentDate <= endDate;
       });
     }
     return result;
