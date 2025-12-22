@@ -65,6 +65,15 @@ export class SignupDto {
   @IsOptional()
   @IsBoolean()
   includeDemoData?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'full_access',
+    description: 'Account type: full_access (can use main app + marketplace) or marketplace_only (can only use marketplace)',
+    default: 'full_access',
+  })
+  @IsOptional()
+  @IsString()
+  accountType?: 'full_access' | 'marketplace_only';
 }
 
 export class SignupResponseDto {

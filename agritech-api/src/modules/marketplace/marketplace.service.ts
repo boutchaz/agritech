@@ -11,12 +11,13 @@ export class MarketplaceService {
 
     /**
      * Fetch public products from Supabase.
-     * All content (descriptions, images, SEO) is now in marketplace_listings table.
+     * Combines marketplace_listings AND items marked as is_sales_item.
      */
     async getPublicProducts(category?: string) {
         const supabase = this.databaseService.getAdminClient();
 
-        let query = supabase
+        // Fetch marketplace listings
+        let listingsQuery = supabase
             .from('marketplace_listings')
             .select('*')
             .eq('is_public', true)
@@ -24,35 +25,157 @@ export class MarketplaceService {
             .order('created_at', { ascending: false });
 
         if (category) {
-            query = query.eq('product_category_id', category);
+            listingsQuery = listingsQuery.eq('product_category_id', category);
         }
 
-        const { data: listings, error } = await query;
+        const { data: listings, error: listingsError } = await listingsQuery;
 
-        if (error) {
-            this.logger.error(`Error fetching public products: ${error.message}`);
-            throw error;
+        if (listingsError) {
+            this.logger.error(`Error fetching marketplace listings: ${listingsError.message}`);
         }
 
-        return listings || [];
+        // Fetch items marked as sales items (from stock/items)
+        const { data: salesItems, error: itemsError } = await supabase
+            .from('items')
+            .select(`
+                id,
+                organization_id,
+                item_code,
+                item_name,
+                description,
+                standard_rate,
+                default_unit,
+                image_url,
+                images,
+                crop_type,
+                variety,
+                is_active,
+                created_at,
+                updated_at,
+                item_groups (
+                    id,
+                    group_name
+                )
+            `)
+            .eq('is_sales_item', true)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (itemsError) {
+            this.logger.error(`Error fetching sales items: ${itemsError.message}`);
+        }
+
+        // Transform sales items to match marketplace listing format
+        const transformedItems = (salesItems || []).map(item => ({
+            id: item.id,
+            organization_id: item.organization_id,
+            title: item.item_name,
+            description: item.description,
+            price: item.standard_rate || 0,
+            currency: 'MAD',
+            quantity_available: null, // Stock level would need separate query
+            unit: item.default_unit,
+            product_category_id: (item.item_groups as any)?.id || null,
+            category_name: (item.item_groups as any)?.group_name || null,
+            status: 'active',
+            is_public: true,
+            images: item.images || (item.image_url ? [item.image_url] : []),
+            item_code: item.item_code,
+            crop_type: item.crop_type,
+            variety: item.variety,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            source: 'inventory_item', // Mark source for frontend to distinguish
+        }));
+
+        // Combine and return both sources
+        const combinedProducts = [
+            ...(listings || []).map(l => ({ ...l, source: 'marketplace_listing' })),
+            ...transformedItems,
+        ];
+
+        // Sort by created_at descending
+        combinedProducts.sort((a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        return combinedProducts;
     }
 
+    /**
+     * Get a single product by ID
+     * First checks marketplace_listings, then falls back to items table
+     */
     async getProduct(id: string) {
         const supabase = this.databaseService.getAdminClient();
 
-        const { data: listing, error } = await supabase
+        // Try marketplace_listings first
+        const { data: listing, error: listingError } = await supabase
             .from('marketplace_listings')
             .select('*')
             .eq('id', id)
             .eq('is_public', true)
             .single();
 
-        if (error) {
-            this.logger.error(`Error fetching product ${id}: ${error.message}`);
+        if (!listingError && listing) {
+            return { ...listing, source: 'marketplace_listing' };
+        }
+
+        // Fall back to items table
+        const { data: item, error: itemError } = await supabase
+            .from('items')
+            .select(`
+                id,
+                organization_id,
+                item_code,
+                item_name,
+                description,
+                standard_rate,
+                default_unit,
+                image_url,
+                images,
+                crop_type,
+                variety,
+                is_active,
+                created_at,
+                updated_at,
+                item_groups (
+                    id,
+                    group_name
+                )
+            `)
+            .eq('id', id)
+            .eq('is_sales_item', true)
+            .eq('is_active', true)
+            .single();
+
+        if (itemError || !item) {
+            this.logger.error(`Product not found: ${id}`);
             return null;
         }
 
-        return listing;
+        // Transform to marketplace format
+        return {
+            id: item.id,
+            organization_id: item.organization_id,
+            title: item.item_name,
+            description: item.description,
+            price: item.standard_rate || 0,
+            currency: 'MAD',
+            quantity_available: null,
+            unit: item.default_unit,
+            product_category_id: (item.item_groups as any)?.id || null,
+            category_name: (item.item_groups as any)?.group_name || null,
+            status: 'active',
+            is_public: true,
+            images: item.images || (item.image_url ? [item.image_url] : []),
+            item_code: item.item_code,
+            crop_type: item.crop_type,
+            variety: item.variety,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            source: 'inventory_item',
+        };
     }
 
     /**
@@ -63,12 +186,24 @@ export class MarketplaceService {
     async getDashboardStats(token: string, organizationId?: string) {
         const supabase = this.databaseService.getClientWithAuth(token);
 
+        // Get listings count from marketplace_listings
         const { count: listingsCount, error: listError } = await supabase
             .from('marketplace_listings')
             .select('*', { count: 'exact', head: true });
 
         if (listError) {
             this.logger.error(`Error fetching listings stats: ${listError.message}`);
+        }
+
+        // Get sales items count
+        const { count: salesItemsCount, error: itemsError } = await supabase
+            .from('items')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_sales_item', true)
+            .eq('is_active', true);
+
+        if (itemsError) {
+            this.logger.error(`Error fetching sales items stats: ${itemsError.message}`);
         }
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -95,7 +230,9 @@ export class MarketplaceService {
         let revenue = 0;
 
         return {
-            listingsCount: listingsCount || 0,
+            listingsCount: (listingsCount || 0) + (salesItemsCount || 0),
+            salesItemsCount: salesItemsCount || 0,
+            marketplaceListingsCount: listingsCount || 0,
             ordersCount: ordersCount,
             revenue
         };
