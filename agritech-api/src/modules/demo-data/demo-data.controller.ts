@@ -17,7 +17,7 @@ import { Response } from 'express';
 import { DemoDataService } from './demo-data.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('api/v1/organizations/:organizationId/demo-data')
+@Controller('organizations/:organizationId/demo-data')
 @UseGuards(JwtAuthGuard)
 export class DemoDataController {
   constructor(private readonly demoDataService: DemoDataService) {}
