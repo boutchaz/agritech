@@ -252,6 +252,9 @@ CREATE TABLE IF NOT EXISTS organizations (
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 
+-- Add account_type column for existing databases (safe migration)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_type VARCHAR(20) DEFAULT 'business' CHECK (account_type IN ('individual', 'business', 'farm'));
+
 -- Organization Users
 CREATE TABLE IF NOT EXISTS organization_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
