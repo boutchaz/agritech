@@ -16,11 +16,16 @@ import {
 import { Response } from 'express';
 import { DemoDataService } from './demo-data.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { DatabaseService } from '../database/database.service';
 
 @Controller('organizations/:organizationId/demo-data')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class DemoDataController {
-  constructor(private readonly demoDataService: DemoDataService) {}
+  constructor(
+    private readonly demoDataService: DemoDataService,
+    private readonly databaseService: DatabaseService,
+  ) {}
 
   /**
    * Get data statistics for an organization
@@ -28,11 +33,7 @@ export class DemoDataController {
   @Get('stats')
   async getDataStats(
     @Param('organizationId') organizationId: string,
-    @Request() req: any,
   ) {
-    // Verify user has access to this organization
-    this.verifyOrganizationAccess(req.user, organizationId);
-
     const stats = await this.demoDataService.getDataStats(organizationId);
     return {
       organizationId,
@@ -50,8 +51,8 @@ export class DemoDataController {
     @Param('organizationId') organizationId: string,
     @Request() req: any,
   ) {
-    // Verify user has admin access to this organization
-    this.verifyAdminAccess(req.user, organizationId);
+    // Verify user has admin access
+    await this.verifyAdminAccess(req.user.id, organizationId);
 
     await this.demoDataService.seedDemoData(organizationId, req.user.id);
     const stats = await this.demoDataService.getDataStats(organizationId);
@@ -72,8 +73,8 @@ export class DemoDataController {
     @Param('organizationId') organizationId: string,
     @Request() req: any,
   ) {
-    // Verify user has admin access to this organization
-    this.verifyAdminAccess(req.user, organizationId);
+    // Verify user has admin access
+    await this.verifyAdminAccess(req.user.id, organizationId);
 
     const result = await this.demoDataService.clearDemoData(organizationId);
 
@@ -95,8 +96,8 @@ export class DemoDataController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    // Verify user has admin access to this organization
-    this.verifyAdminAccess(req.user, organizationId);
+    // Verify user has admin access
+    await this.verifyAdminAccess(req.user.id, organizationId);
 
     const exportData = await this.demoDataService.exportOrganizationData(organizationId);
 
@@ -116,8 +117,8 @@ export class DemoDataController {
     @Request() req: any,
     @Body() importData: any,
   ) {
-    // Verify user has admin access to this organization
-    this.verifyAdminAccess(req.user, organizationId);
+    // Verify user has admin access
+    await this.verifyAdminAccess(req.user.id, organizationId);
 
     const result = await this.demoDataService.importOrganizationData(
       organizationId,
@@ -134,26 +135,27 @@ export class DemoDataController {
   }
 
   /**
-   * Verify user has access to the organization
-   */
-  private verifyOrganizationAccess(user: any, organizationId: string): void {
-    // Check if user belongs to this organization
-    const userOrgId = user.organization_id || user.organizationId;
-    if (userOrgId !== organizationId) {
-      throw new ForbiddenException('You do not have access to this organization');
-    }
-  }
-
-  /**
    * Verify user has admin access to the organization
    */
-  private verifyAdminAccess(user: any, organizationId: string): void {
-    this.verifyOrganizationAccess(user, organizationId);
+  private async verifyAdminAccess(userId: string, organizationId: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
 
-    // Check if user has admin role
-    const role = user.role || user.role_name;
+    const { data, error } = await client
+      .from('organization_users')
+      .select('role_id, roles(name, level)')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    const roleName = (data.roles as any)?.name;
     const adminRoles = ['system_admin', 'organization_admin'];
-    if (!adminRoles.includes(role)) {
+
+    if (!adminRoles.includes(roleName)) {
       throw new ForbiddenException('Only administrators can perform this action');
     }
   }
