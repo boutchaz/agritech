@@ -64,10 +64,18 @@ export class DemoDataService {
       this.logger.log(`✅ Created ${purchaseOrders.length} demo purchase orders`);
 
       // 12. Seed Invoices
-      await this.createDemoInvoices(organizationId, parcels, customers, userId);
-      this.logger.log(`✅ Created demo invoices`);
+      const invoices = await this.createDemoInvoices(organizationId, parcels, customers, suppliers, userId);
+      this.logger.log(`✅ Created ${invoices.length} demo invoices`);
 
-      // 11. Seed Harvest Records (linked to harvest tasks)
+      // 13. Seed Payments
+      const payments = await this.createDemoPayments(organizationId, customers, suppliers, invoices, userId);
+      this.logger.log(`✅ Created ${payments.length} demo payments`);
+
+      // 14. Seed Journal Entries
+      const journalEntries = await this.createDemoJournalEntries(organizationId, parcels, userId);
+      this.logger.log(`✅ Created ${journalEntries.length} demo journal entries`);
+
+      // 15. Seed Harvest Records (linked to harvest tasks)
       const harvests = await this.createDemoHarvests(organizationId, farm.id, parcels, workers, tasks, userId);
       this.logger.log(`✅ Created ${harvests.length} demo harvest records`);
 
@@ -1136,12 +1144,13 @@ export class DemoDataService {
   }
 
   /**
-   * Create demo invoices
+   * Create demo invoices (sales and purchase)
    */
   private async createDemoInvoices(
     organizationId: string,
     parcels: any[],
     customers: any[],
+    suppliers: any[],
     userId: string,
   ) {
     const client = this.databaseService.getAdminClient();
@@ -1149,71 +1158,126 @@ export class DemoDataService {
     const now = new Date();
     const lastMonth = new Date(now);
     lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const dueDate = new Date(now);
     dueDate.setDate(dueDate.getDate() + 15);
-
-    // Get expense account for cost center linking
-    const { data: expenseAccounts } = await client
-      .from('accounts')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('account_type', 'Expense')
-      .limit(1);
+    const dueDateNextMonth = new Date(now);
+    dueDateNextMonth.setMonth(dueDateNextMonth.getMonth() + 1);
 
     const invoices = [
+      // Sales Invoices
       {
         organization_id: organizationId,
-        invoice_number: 'INV-2024-001',
+        invoice_number: 'FAC-2024-001',
         invoice_date: lastMonth.toISOString().split('T')[0],
         invoice_type: 'sales',
-        party_id: customers[0].id,
-        party_name: customers[0].customer_name,
+        party_id: customers[0]?.id,
+        party_name: customers[0]?.customer_name || 'Client Demo',
         party_type: 'customer',
-        subtotal: 1000,
-        tax_total: 180,
-        grand_total: 1180,
-        paid_amount: 1180,
+        subtotal: 15000,
+        tax_total: 2700,
+        grand_total: 17700,
+        paid_amount: 17700,
         outstanding_amount: 0,
         currency_code: 'MAD',
         status: 'paid',
         due_date: lastMonth.toISOString().split('T')[0],
+        notes: 'Facture payée - Vente huile olive',
         created_by: userId,
       },
       {
         organization_id: organizationId,
-        invoice_number: 'INV-2024-002',
-        invoice_date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        invoice_number: 'FAC-2024-002',
+        invoice_date: twoWeeksAgo.toISOString().split('T')[0],
         invoice_type: 'sales',
-        party_id: customers[0].id,
-        party_name: customers[0].customer_name,
+        party_id: customers[0]?.id,
+        party_name: customers[0]?.customer_name || 'Client Demo',
         party_type: 'customer',
-        subtotal: 2500,
-        tax_total: 450,
-        grand_total: 2950,
-        paid_amount: 0,
-        outstanding_amount: 2950,
+        subtotal: 8500,
+        tax_total: 1530,
+        grand_total: 10030,
+        paid_amount: 5000,
+        outstanding_amount: 5030,
         currency_code: 'MAD',
         status: 'submitted',
         due_date: dueDate.toISOString().split('T')[0],
+        notes: 'Facture partiellement payée',
         created_by: userId,
       },
       {
         organization_id: organizationId,
-        invoice_number: 'INV-2024-003',
+        invoice_number: 'FAC-2024-003',
         invoice_date: now.toISOString().split('T')[0],
         invoice_type: 'sales',
-        party_id: customers[1].id,
-        party_name: customers[1].customer_name,
+        party_id: customers[1]?.id,
+        party_name: customers[1]?.customer_name || 'Client Demo 2',
         party_type: 'customer',
-        subtotal: 1500,
-        tax_total: 270,
-        grand_total: 1770,
+        subtotal: 12000,
+        tax_total: 2160,
+        grand_total: 14160,
         paid_amount: 0,
-        outstanding_amount: 1770,
+        outstanding_amount: 14160,
+        currency_code: 'MAD',
+        status: 'submitted',
+        due_date: dueDateNextMonth.toISOString().split('T')[0],
+        notes: 'Facture en attente de paiement',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        invoice_number: 'FAC-2024-004',
+        invoice_date: now.toISOString().split('T')[0],
+        invoice_type: 'sales',
+        party_id: customers[2]?.id || customers[0]?.id,
+        party_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        party_type: 'customer',
+        subtotal: 6500,
+        tax_total: 1170,
+        grand_total: 7670,
+        paid_amount: 0,
+        outstanding_amount: 7670,
         currency_code: 'MAD',
         status: 'draft',
+        notes: 'Brouillon de facture',
+        created_by: userId,
+      },
+      // Purchase Invoices (from suppliers)
+      {
+        organization_id: organizationId,
+        invoice_number: 'FACF-2024-001',
+        invoice_date: lastMonth.toISOString().split('T')[0],
+        invoice_type: 'purchase',
+        party_id: suppliers[0]?.id,
+        party_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_type: 'supplier',
+        subtotal: 12500,
+        tax_total: 2250,
+        grand_total: 14750,
+        paid_amount: 14750,
+        outstanding_amount: 0,
+        currency_code: 'MAD',
+        status: 'paid',
+        due_date: lastMonth.toISOString().split('T')[0],
+        notes: 'Facture fournisseur payée - Engrais',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        invoice_number: 'FACF-2024-002',
+        invoice_date: twoWeeksAgo.toISOString().split('T')[0],
+        invoice_type: 'purchase',
+        party_id: suppliers[1]?.id || suppliers[0]?.id,
+        party_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_type: 'supplier',
+        subtotal: 8000,
+        tax_total: 1440,
+        grand_total: 9440,
+        paid_amount: 0,
+        outstanding_amount: 9440,
+        currency_code: 'MAD',
+        status: 'submitted',
+        due_date: dueDate.toISOString().split('T')[0],
+        notes: 'Facture fournisseur en attente',
         created_by: userId,
       },
     ];
@@ -1225,11 +1289,443 @@ export class DemoDataService {
 
     if (error) {
       this.logger.error(`Failed to create demo invoices: ${error.message}`);
-      // Don't throw - invoices are optional
       return [];
     }
 
+    // Create invoice items
+    if (createdInvoices && createdInvoices.length > 0) {
+      const invoiceItems = [
+        // Items for FAC-2024-001
+        {
+          invoice_id: createdInvoices[0].id,
+          line_number: 1,
+          item_name: 'Huile d\'Olive Extra Vierge',
+          description: 'Huile olive pressée à froid',
+          quantity: 500,
+          unit_of_measure: 'L',
+          unit_price: 30,
+          amount: 15000,
+          tax_rate: 18,
+          tax_amount: 2700,
+        },
+        // Items for FAC-2024-002
+        {
+          invoice_id: createdInvoices[1].id,
+          line_number: 1,
+          item_name: 'Clémentines',
+          description: 'Clémentines fraîches',
+          quantity: 300,
+          unit_of_measure: 'kg',
+          unit_price: 28.33,
+          amount: 8500,
+          tax_rate: 18,
+          tax_amount: 1530,
+        },
+        // Items for FAC-2024-003
+        {
+          invoice_id: createdInvoices[2].id,
+          line_number: 1,
+          item_name: 'Huile d\'Olive Extra Vierge',
+          description: 'Huile olive premium',
+          quantity: 300,
+          unit_of_measure: 'L',
+          unit_price: 40,
+          amount: 12000,
+          tax_rate: 18,
+          tax_amount: 2160,
+        },
+        // Items for FAC-2024-004
+        {
+          invoice_id: createdInvoices[3].id,
+          line_number: 1,
+          item_name: 'Oranges Navel',
+          description: 'Oranges pour jus',
+          quantity: 250,
+          unit_of_measure: 'kg',
+          unit_price: 26,
+          amount: 6500,
+          tax_rate: 18,
+          tax_amount: 1170,
+        },
+        // Items for FACF-2024-001 (purchase)
+        {
+          invoice_id: createdInvoices[4].id,
+          line_number: 1,
+          item_name: 'Engrais NPK 20-20-20',
+          description: 'Engrais équilibré',
+          quantity: 500,
+          unit_of_measure: 'kg',
+          unit_price: 25,
+          amount: 12500,
+          tax_rate: 18,
+          tax_amount: 2250,
+        },
+        // Items for FACF-2024-002 (purchase)
+        {
+          invoice_id: createdInvoices[5].id,
+          line_number: 1,
+          item_name: 'Semences Bio',
+          description: 'Semences certifiées',
+          quantity: 50,
+          unit_of_measure: 'kg',
+          unit_price: 160,
+          amount: 8000,
+          tax_rate: 18,
+          tax_amount: 1440,
+        },
+      ];
+
+      await client.from('invoice_items').insert(invoiceItems);
+    }
+
     return createdInvoices || [];
+  }
+
+  /**
+   * Create demo payments
+   */
+  private async createDemoPayments(
+    organizationId: string,
+    customers: any[],
+    suppliers: any[],
+    invoices: any[],
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Find invoices by type
+    const salesInvoices = invoices.filter(i => i.invoice_type === 'sales');
+    const purchaseInvoices = invoices.filter(i => i.invoice_type === 'purchase');
+
+    const payments = [
+      // Payment received from customers
+      {
+        organization_id: organizationId,
+        payment_number: 'PAY-2024-001',
+        payment_type: 'receive',
+        payment_method: 'bank_transfer',
+        payment_date: lastMonth.toISOString().split('T')[0],
+        amount: 17700,
+        party_id: customers[0]?.id,
+        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_type: 'customer',
+        reference_number: 'VIR-12345',
+        currency_code: 'MAD',
+        status: 'reconciled',
+        remarks: 'Paiement intégral facture FAC-2024-001',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        payment_number: 'PAY-2024-002',
+        payment_type: 'receive',
+        payment_method: 'check',
+        payment_date: oneWeekAgo.toISOString().split('T')[0],
+        amount: 5000,
+        party_id: customers[0]?.id,
+        party_name: customers[0]?.customer_name || 'Client Demo',
+        party_type: 'customer',
+        reference_number: 'CHQ-789456',
+        currency_code: 'MAD',
+        status: 'submitted',
+        remarks: 'Acompte facture FAC-2024-002',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        payment_number: 'PAY-2024-003',
+        payment_type: 'receive',
+        payment_method: 'cash',
+        payment_date: now.toISOString().split('T')[0],
+        amount: 3000,
+        party_id: customers[1]?.id,
+        party_name: customers[1]?.customer_name || 'Client Demo 2',
+        party_type: 'customer',
+        currency_code: 'MAD',
+        status: 'draft',
+        remarks: 'Paiement en espèces - en attente',
+        created_by: userId,
+      },
+      // Payments to suppliers
+      {
+        organization_id: organizationId,
+        payment_number: 'PAY-2024-004',
+        payment_type: 'pay',
+        payment_method: 'bank_transfer',
+        payment_date: lastMonth.toISOString().split('T')[0],
+        amount: 14750,
+        party_id: suppliers[0]?.id,
+        party_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_type: 'supplier',
+        reference_number: 'VIR-OUT-001',
+        currency_code: 'MAD',
+        status: 'reconciled',
+        remarks: 'Paiement fournisseur engrais',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        payment_number: 'PAY-2024-005',
+        payment_type: 'pay',
+        payment_method: 'check',
+        payment_date: twoWeeksAgo.toISOString().split('T')[0],
+        amount: 5000,
+        party_id: suppliers[1]?.id || suppliers[0]?.id,
+        party_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        party_type: 'supplier',
+        reference_number: 'CHQ-OUT-456',
+        currency_code: 'MAD',
+        status: 'submitted',
+        remarks: 'Acompte semences',
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdPayments, error } = await client
+      .from('payments')
+      .insert(payments)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to create demo payments: ${error.message}`);
+      return [];
+    }
+
+    // Create payment allocations for reconciled payments
+    if (createdPayments && createdPayments.length > 0 && salesInvoices.length > 0) {
+      const allocations = [];
+
+      // Allocate first payment to first sales invoice (fully paid)
+      if (createdPayments[0] && salesInvoices[0]) {
+        allocations.push({
+          payment_id: createdPayments[0].id,
+          invoice_id: salesInvoices[0].id,
+          amount: 17700,
+        });
+      }
+
+      // Allocate second payment as partial to second invoice
+      if (createdPayments[1] && salesInvoices[1]) {
+        allocations.push({
+          payment_id: createdPayments[1].id,
+          invoice_id: salesInvoices[1].id,
+          amount: 5000,
+        });
+      }
+
+      // Allocate supplier payment
+      if (createdPayments[3] && purchaseInvoices[0]) {
+        allocations.push({
+          payment_id: createdPayments[3].id,
+          invoice_id: purchaseInvoices[0].id,
+          amount: 14750,
+        });
+      }
+
+      if (allocations.length > 0) {
+        await client.from('payment_allocations').insert(allocations);
+      }
+    }
+
+    return createdPayments || [];
+  }
+
+  /**
+   * Create demo journal entries
+   */
+  private async createDemoJournalEntries(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const twoMonthsAgo = new Date(now);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+    // Get accounts for journal entries
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, code, name, account_type')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (!accounts || accounts.length === 0) {
+      this.logger.warn('No accounts found for journal entries');
+      return [];
+    }
+
+    // Find relevant accounts
+    const cashAccount = accounts.find(a => a.code?.startsWith('514') || a.name?.toLowerCase().includes('caisse'));
+    const bankAccount = accounts.find(a => a.code?.startsWith('511') || a.name?.toLowerCase().includes('banque'));
+    const salesAccount = accounts.find(a => a.code?.startsWith('711') || a.account_type === 'Income');
+    const expenseAccount = accounts.find(a => a.code?.startsWith('61') || a.account_type === 'Expense');
+    const supplierAccount = accounts.find(a => a.code?.startsWith('441') || a.name?.toLowerCase().includes('fournisseur'));
+    const customerAccount = accounts.find(a => a.code?.startsWith('342') || a.name?.toLowerCase().includes('client'));
+
+    // Use first available accounts if specific ones not found
+    const defaultAsset = accounts.find(a => a.account_type === 'Asset') || accounts[0];
+    const defaultLiability = accounts.find(a => a.account_type === 'Liability') || accounts[1];
+    const defaultIncome = salesAccount || accounts.find(a => a.account_type === 'Income') || accounts[2];
+    const defaultExpense = expenseAccount || accounts.find(a => a.account_type === 'Expense') || accounts[3];
+
+    const journalEntries = [
+      {
+        organization_id: organizationId,
+        entry_number: 'JE-2024-001',
+        entry_date: twoMonthsAgo.toISOString().split('T')[0],
+        entry_type: 'revenue',
+        description: 'Vente de produits agricoles - Huile d\'olive',
+        total_debit: 17700,
+        total_credit: 17700,
+        status: 'posted',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        entry_number: 'JE-2024-002',
+        entry_date: lastMonth.toISOString().split('T')[0],
+        entry_type: 'expense',
+        description: 'Achat d\'engrais et intrants agricoles',
+        total_debit: 14750,
+        total_credit: 14750,
+        status: 'posted',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        entry_number: 'JE-2024-003',
+        entry_date: lastMonth.toISOString().split('T')[0],
+        entry_type: 'expense',
+        description: 'Charges de main d\'œuvre - Récolte',
+        total_debit: 8500,
+        total_credit: 8500,
+        status: 'posted',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        entry_number: 'JE-2024-004',
+        entry_date: now.toISOString().split('T')[0],
+        entry_type: 'transfer',
+        description: 'Virement interne caisse vers banque',
+        total_debit: 5000,
+        total_credit: 5000,
+        status: 'draft',
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdEntries, error } = await client
+      .from('journal_entries')
+      .insert(journalEntries)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to create demo journal entries: ${error.message}`);
+      return [];
+    }
+
+    // Create journal items for each entry
+    if (createdEntries && createdEntries.length > 0) {
+      const journalItems = [];
+
+      // JE-2024-001: Revenue entry (Debit: Bank/Cash, Credit: Sales)
+      if (createdEntries[0]) {
+        journalItems.push(
+          {
+            journal_entry_id: createdEntries[0].id,
+            account_id: bankAccount?.id || defaultAsset?.id,
+            debit: 17700,
+            credit: 0,
+            description: 'Encaissement vente huile olive',
+          },
+          {
+            journal_entry_id: createdEntries[0].id,
+            account_id: defaultIncome?.id,
+            debit: 0,
+            credit: 17700,
+            description: 'Vente huile olive',
+          }
+        );
+      }
+
+      // JE-2024-002: Expense entry (Debit: Expense, Credit: Bank/Supplier)
+      if (createdEntries[1]) {
+        journalItems.push(
+          {
+            journal_entry_id: createdEntries[1].id,
+            account_id: defaultExpense?.id,
+            debit: 14750,
+            credit: 0,
+            description: 'Achat engrais',
+          },
+          {
+            journal_entry_id: createdEntries[1].id,
+            account_id: bankAccount?.id || defaultAsset?.id,
+            debit: 0,
+            credit: 14750,
+            description: 'Paiement fournisseur',
+          }
+        );
+      }
+
+      // JE-2024-003: Labor expense
+      if (createdEntries[2]) {
+        journalItems.push(
+          {
+            journal_entry_id: createdEntries[2].id,
+            account_id: defaultExpense?.id,
+            debit: 8500,
+            credit: 0,
+            description: 'Charges personnel récolte',
+            parcel_id: parcels[0]?.id,
+          },
+          {
+            journal_entry_id: createdEntries[2].id,
+            account_id: cashAccount?.id || defaultAsset?.id,
+            debit: 0,
+            credit: 8500,
+            description: 'Paiement main d\'œuvre',
+          }
+        );
+      }
+
+      // JE-2024-004: Internal transfer
+      if (createdEntries[3] && cashAccount && bankAccount) {
+        journalItems.push(
+          {
+            journal_entry_id: createdEntries[3].id,
+            account_id: bankAccount.id,
+            debit: 5000,
+            credit: 0,
+            description: 'Versement en banque',
+          },
+          {
+            journal_entry_id: createdEntries[3].id,
+            account_id: cashAccount.id,
+            debit: 0,
+            credit: 5000,
+            description: 'Retrait caisse',
+          }
+        );
+      }
+
+      if (journalItems.length > 0) {
+        await client.from('journal_items').insert(journalItems);
+      }
+    }
+
+    return createdEntries || [];
   }
 
   /**
@@ -1897,6 +2393,36 @@ export class DemoDataService {
         .eq('organization_id', organizationId);
       deletedCounts['harvest_records'] = harvestsCount || 0;
 
+      // Journal items then journal entries
+      const { data: journalEntries } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (journalEntries && journalEntries.length > 0) {
+        const journalEntryIds = journalEntries.map(je => je.id);
+        await client.from('journal_items').delete().in('journal_entry_id', journalEntryIds);
+      }
+      const { count: journalEntriesCount } = await client
+        .from('journal_entries')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['journal_entries'] = journalEntriesCount || 0;
+
+      // Payment allocations then payments (payments reference invoices, so delete first)
+      const { data: payments } = await client
+        .from('payments')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (payments && payments.length > 0) {
+        const paymentIds = payments.map(p => p.id);
+        await client.from('payment_allocations').delete().in('payment_id', paymentIds);
+      }
+      const { count: paymentsCount } = await client
+        .from('payments')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['payments'] = paymentsCount || 0;
+
       // Invoice items then invoices
       const { data: invoices } = await client
         .from('invoices')
@@ -2066,6 +2592,7 @@ export class DemoDataService {
       'farms', 'parcels', 'workers', 'tasks', 'harvest_records',
       'reception_batches', 'warehouses', 'items', 'item_groups',
       'customers', 'suppliers', 'quotes', 'sales_orders', 'purchase_orders', 'invoices',
+      'payments', 'journal_entries',
       'costs', 'revenues', 'structures', 'cost_centers', 'stock_entries'
     ];
 
