@@ -1077,7 +1077,7 @@ export class DemoDataService {
         {
           purchase_order_id: createdOrders[0].id,
           line_number: 1,
-          item_id: fertilizerItem?.id,
+          inventory_item_id: fertilizerItem?.id,
           item_name: 'Engrais NPK 20-20-20',
           description: 'Engrais équilibré pour cultures',
           quantity: 500,
@@ -1092,7 +1092,7 @@ export class DemoDataService {
         {
           purchase_order_id: createdOrders[1].id,
           line_number: 1,
-          item_id: seedItem?.id,
+          inventory_item_id: seedItem?.id,
           item_name: 'Semences Tomate Bio',
           description: 'Semences certifiées biologiques',
           quantity: 50,
@@ -1106,7 +1106,7 @@ export class DemoDataService {
         {
           purchase_order_id: createdOrders[1].id,
           line_number: 2,
-          item_id: fertilizerItem?.id,
+          inventory_item_id: fertilizerItem?.id,
           item_name: 'Compost Organique',
           description: 'Compost naturel enrichi',
           quantity: 100,
@@ -1121,7 +1121,7 @@ export class DemoDataService {
         {
           purchase_order_id: createdOrders[2].id,
           line_number: 1,
-          item_id: fertilizerItem?.id,
+          inventory_item_id: fertilizerItem?.id,
           item_name: 'Engrais Phosphaté',
           description: 'Engrais riche en phosphore pour fruitiers',
           quantity: 300,
@@ -1135,7 +1135,7 @@ export class DemoDataService {
         {
           purchase_order_id: createdOrders[2].id,
           line_number: 2,
-          item_id: seedItem?.id,
+          inventory_item_id: seedItem?.id,
           item_name: 'Plants d\'Olivier',
           description: 'Jeunes plants d\'olivier certifiés',
           quantity: 50,

@@ -11,36 +11,40 @@ export interface PurchaseOrder {
   expected_delivery_date: string | null;
   supplier_id: string | null;
   supplier_name: string;
-  delivery_address: string | null;
-  delivery_city: string | null;
-  delivery_postal_code: string | null;
-  delivery_country: string | null;
-  contact_person: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
+  supplier_contact: string | null;
   subtotal: number;
-  tax_total: number;
-  discount_amount: number;
-  shipping_charges: number;
+  tax_amount: number;
+  total_amount: number;
+  // Computed/aliased fields for UI compatibility
   grand_total: number;
-  received_amount: number;
   billed_amount: number;
-  outstanding_amount: number;
   currency_code: string;
-  exchange_rate: number;
   status: 'draft' | 'submitted' | 'confirmed' | 'partially_received' | 'received' | 'partially_billed' | 'billed' | 'cancelled';
-  payment_terms: string | null;
-  delivery_terms: string | null;
   notes: string | null;
-  supplier_quote_ref: string | null;
-  farm_id: string | null;
-  parcel_id: string | null;
+  terms_and_conditions: string | null;
+  stock_entry_id: string | null;
+  stock_received: boolean;
+  stock_received_date: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
-  submitted_at: string | null;
-  submitted_by: string | null;
-  confirmed_at: string | null;
+}
+
+/**
+ * Normalize API response to ensure consistent field names
+ */
+function normalizePurchaseOrder(po: any): PurchaseOrder {
+  return {
+    ...po,
+    // Map total_amount to grand_total for UI compatibility
+    grand_total: Number(po.grand_total ?? po.total_amount ?? 0),
+    total_amount: Number(po.total_amount ?? po.grand_total ?? 0),
+    subtotal: Number(po.subtotal ?? 0),
+    tax_amount: Number(po.tax_amount ?? 0),
+    billed_amount: Number(po.billed_amount ?? 0),
+    // Default currency if not set
+    currency_code: po.currency_code || 'MAD',
+  };
 }
 
 export interface PurchaseOrderItem {
@@ -88,7 +92,8 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
         limit: 1000, // TODO: Add pagination support
       }, currentOrganization.id);
 
-      return (response.data || []) as PurchaseOrderWithItems[];
+      // Normalize each purchase order to ensure consistent field names
+      return (response.data || []).map((po: any) => normalizePurchaseOrder(po)) as PurchaseOrderWithItems[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -107,7 +112,7 @@ export function usePurchaseOrder(poId: string | null) {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
       const data = await purchaseOrdersApi.getPurchaseOrder(poId, currentOrganization.id);
-      return data as PurchaseOrderWithItems;
+      return normalizePurchaseOrder(data) as PurchaseOrderWithItems;
     },
     enabled: !!poId && !!currentOrganization?.id,
   });
