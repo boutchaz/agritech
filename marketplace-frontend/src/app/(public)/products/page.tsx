@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
 import { ProductCard } from '@/components/ProductCard';
@@ -8,7 +8,7 @@ import { Category } from '@/components/CategoryCard';
 import Link from 'next/link';
 import { Search, SlidersHorizontal, Loader2, X, ChevronRight } from 'lucide-react';
 
-export default function ProductsPage() {
+function ProductsPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -311,5 +311,24 @@ export default function ProductsPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+function ProductsPageLoading() {
+    return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+                <p className="text-gray-600">Chargement...</p>
+            </div>
+        </div>
+    );
+}
+
+export default function ProductsPage() {
+    return (
+        <Suspense fallback={<ProductsPageLoading />}>
+            <ProductsPageContent />
+        </Suspense>
     );
 }
