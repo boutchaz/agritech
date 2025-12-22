@@ -10116,6 +10116,15 @@ CREATE TABLE IF NOT EXISTS marketplace_reviews (
 
 CREATE INDEX IF NOT EXISTS idx_marketplace_reviews_reviewee ON marketplace_reviews(reviewee_organization_id);
 
+-- Create auth_users_view for RLS policies
+-- This view provides the organization_id for the current authenticated user
+CREATE OR REPLACE VIEW auth_users_view AS
+SELECT
+  ou.user_id as id,
+  ou.organization_id
+FROM organization_users ou
+WHERE ou.is_active = true;
+
 -- RLS POLICIES
 
 -- Enable RLS
