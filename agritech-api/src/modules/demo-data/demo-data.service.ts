@@ -40,8 +40,12 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo infrastructure`);
 
       // 7. Seed Warehouses and Items
-      await this.createDemoItems(organizationId, farm.id, userId);
+      const { warehouse, items } = await this.createDemoItems(organizationId, farm.id, userId);
       this.logger.log(`✅ Created demo items and warehouses`);
+
+      // 7b. Seed Stock Entries
+      await this.createDemoStockEntries(organizationId, warehouse, items, userId);
+      this.logger.log(`✅ Created demo stock entries`);
 
       // 8. Seed Customers/Suppliers
       const customers = await this.createDemoParties(organizationId, userId);
@@ -1383,6 +1387,21 @@ export class DemoDataService {
         .eq('organization_id', organizationId);
       deletedCounts['suppliers'] = suppliersCount || 0;
 
+      // Stock entry items and stock entries
+      const { data: stockEntries } = await client
+        .from('stock_entries')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (stockEntries && stockEntries.length > 0) {
+        const entryIds = stockEntries.map(e => e.id);
+        await client.from('stock_entry_items').delete().in('stock_entry_id', entryIds);
+      }
+      const { count: stockEntriesCount } = await client
+        .from('stock_entries')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['stock_entries'] = stockEntriesCount || 0;
+
       // Items and item groups
       const { count: itemsCount } = await client
         .from('items')
@@ -1464,7 +1483,7 @@ export class DemoDataService {
       'farms', 'parcels', 'workers', 'tasks', 'harvest_records',
       'reception_batches', 'warehouses', 'items', 'item_groups',
       'customers', 'suppliers', 'sales_orders', 'invoices',
-      'costs', 'revenues', 'structures', 'cost_centers'
+      'costs', 'revenues', 'structures', 'cost_centers', 'stock_entries'
     ];
 
     for (const table of tables) {
@@ -1729,11 +1748,294 @@ export class DemoDataService {
       },
     ];
 
-    const { error: itemsError } = await client.from('items').insert(items);
+    const { data: createdItems, error: itemsError } = await client
+      .from('items')
+      .insert(items)
+      .select();
 
     if (itemsError) {
       this.logger.error(`Failed to create demo items: ${itemsError.message}`);
       // Don't throw - items are optional
+      return { warehouse, items: [] };
+    }
+
+    return { warehouse, items: createdItems || [] };
+  }
+
+  /**
+   * Create demo stock entries
+   */
+  private async createDemoStockEntries(
+    organizationId: string,
+    warehouse: any,
+    items: any[],
+    userId: string,
+  ) {
+    if (!warehouse || !items || items.length === 0) {
+      this.logger.warn('Cannot create stock entries: missing warehouse or items');
+      return;
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const twoWeeksAgo = new Date(now);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const threeDaysAgo = new Date(now);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    // Create stock entries with various types
+    const stockEntries = [
+      // Material Receipt - Initial stock (1 month ago)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-001',
+        entry_type: 'Material Receipt',
+        entry_date: lastMonth.toISOString().split('T')[0],
+        to_warehouse_id: warehouse.id,
+        reference_type: 'Purchase Order',
+        reference_number: 'PO-2024-001',
+        status: 'Posted',
+        purpose: 'Approvisionnement initial en engrais',
+        notes: 'Stock initial pour la saison',
+        posted_at: lastMonth.toISOString(),
+        posted_by: userId,
+        created_by: userId,
+      },
+      // Material Receipt - Additional stock (2 weeks ago)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-002',
+        entry_type: 'Material Receipt',
+        entry_date: twoWeeksAgo.toISOString().split('T')[0],
+        to_warehouse_id: warehouse.id,
+        reference_type: 'Purchase Order',
+        reference_number: 'PO-2024-002',
+        status: 'Posted',
+        purpose: 'Réapprovisionnement produits phytosanitaires',
+        notes: 'Commande urgente suite à épuisement',
+        posted_at: twoWeeksAgo.toISOString(),
+        posted_by: userId,
+        created_by: userId,
+      },
+      // Material Issue - Usage for tasks (1 week ago)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-003',
+        entry_type: 'Material Issue',
+        entry_date: oneWeekAgo.toISOString().split('T')[0],
+        from_warehouse_id: warehouse.id,
+        reference_type: 'Task',
+        reference_number: 'TSK-2024-001',
+        status: 'Posted',
+        purpose: 'Sortie pour traitement phytosanitaire',
+        notes: 'Utilisé pour traitement préventif parcelle olives',
+        posted_at: oneWeekAgo.toISOString(),
+        posted_by: userId,
+        created_by: userId,
+      },
+      // Material Issue - Another usage (3 days ago)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-004',
+        entry_type: 'Material Issue',
+        entry_date: threeDaysAgo.toISOString().split('T')[0],
+        from_warehouse_id: warehouse.id,
+        reference_type: 'Task',
+        reference_number: 'TSK-2024-002',
+        status: 'Posted',
+        purpose: 'Sortie pour fertilisation',
+        notes: 'Application engrais parcelle agrumes',
+        posted_at: threeDaysAgo.toISOString(),
+        posted_by: userId,
+        created_by: userId,
+      },
+      // Stock Reconciliation (yesterday)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-005',
+        entry_type: 'Stock Reconciliation',
+        entry_date: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        to_warehouse_id: warehouse.id,
+        status: 'Posted',
+        purpose: 'Inventaire mensuel',
+        notes: 'Réconciliation après comptage physique',
+        posted_at: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+        posted_by: userId,
+        created_by: userId,
+      },
+      // Draft entry (today)
+      {
+        organization_id: organizationId,
+        entry_number: 'SE-2024-006',
+        entry_type: 'Material Receipt',
+        entry_date: now.toISOString().split('T')[0],
+        to_warehouse_id: warehouse.id,
+        reference_type: 'Purchase Order',
+        reference_number: 'PO-2024-003',
+        status: 'Draft',
+        purpose: 'Nouvelle livraison en attente',
+        notes: 'En attente de vérification',
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdEntries, error: entriesError } = await client
+      .from('stock_entries')
+      .insert(stockEntries)
+      .select();
+
+    if (entriesError) {
+      this.logger.error(`Failed to create demo stock entries: ${entriesError.message}`);
+      return;
+    }
+
+    if (!createdEntries || createdEntries.length === 0) {
+      return;
+    }
+
+    // Create stock entry items for each entry
+    const stockEntryItems: any[] = [];
+
+    // Entry 1: Material Receipt - Initial stock
+    if (items[0]) { // NPK
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[0].id,
+        line_number: 1,
+        item_id: items[0].id,
+        item_name: items[0].item_name,
+        quantity: 500,
+        unit: 'kg',
+        target_warehouse_id: warehouse.id,
+        cost_per_unit: 12.5,
+        total_cost: 6250,
+        notes: 'Lot initial NPK',
+      });
+    }
+    if (items[1]) { // Engrais Organique
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[0].id,
+        line_number: 2,
+        item_id: items[1].id,
+        item_name: items[1].item_name,
+        quantity: 30,
+        unit: 'sac',
+        target_warehouse_id: warehouse.id,
+        cost_per_unit: 85,
+        total_cost: 2550,
+        notes: 'Lot initial engrais organique',
+      });
+    }
+
+    // Entry 2: Material Receipt - Phytosanitary products
+    if (items[4]) { // Fongicide
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[1].id,
+        line_number: 1,
+        item_id: items[4].id,
+        item_name: items[4].item_name,
+        quantity: 20,
+        unit: 'litre',
+        target_warehouse_id: warehouse.id,
+        batch_number: 'LOT-FONG-2024-001',
+        expiry_date: new Date(now.getFullYear() + 2, now.getMonth(), 1).toISOString().split('T')[0],
+        cost_per_unit: 120,
+        total_cost: 2400,
+        notes: 'Fongicide avec date d\'expiration',
+      });
+    }
+    if (items[5]) { // Insecticide
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[1].id,
+        line_number: 2,
+        item_id: items[5].id,
+        item_name: items[5].item_name,
+        quantity: 15,
+        unit: 'bouteille',
+        target_warehouse_id: warehouse.id,
+        batch_number: 'LOT-INS-2024-001',
+        expiry_date: new Date(now.getFullYear() + 1, now.getMonth() + 6, 1).toISOString().split('T')[0],
+        cost_per_unit: 95,
+        total_cost: 1425,
+        notes: 'Insecticide avec numéro de lot',
+      });
+    }
+
+    // Entry 3: Material Issue - Phytosanitary treatment
+    if (items[4]) { // Fongicide
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[2].id,
+        line_number: 1,
+        item_id: items[4].id,
+        item_name: items[4].item_name,
+        quantity: 5,
+        unit: 'litre',
+        source_warehouse_id: warehouse.id,
+        batch_number: 'LOT-FONG-2024-001',
+        cost_per_unit: 120,
+        total_cost: 600,
+        notes: 'Utilisé pour traitement préventif',
+      });
+    }
+
+    // Entry 4: Material Issue - Fertilization
+    if (items[0]) { // NPK
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[3].id,
+        line_number: 1,
+        item_id: items[0].id,
+        item_name: items[0].item_name,
+        quantity: 100,
+        unit: 'kg',
+        source_warehouse_id: warehouse.id,
+        cost_per_unit: 12.5,
+        total_cost: 1250,
+        notes: 'Application engrais NPK',
+      });
+    }
+
+    // Entry 5: Stock Reconciliation
+    if (items[0]) { // NPK
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[4].id,
+        line_number: 1,
+        item_id: items[0].id,
+        item_name: items[0].item_name,
+        quantity: 395, // Adjusted quantity
+        unit: 'kg',
+        target_warehouse_id: warehouse.id,
+        system_quantity: 400, // What system showed
+        physical_quantity: 395, // What was counted
+        variance: -5, // Small loss
+        notes: 'Légère perte due à manipulation',
+      });
+    }
+
+    // Entry 6: Draft entry items
+    if (items[2]) { // Semences Tomates
+      stockEntryItems.push({
+        stock_entry_id: createdEntries[5].id,
+        line_number: 1,
+        item_id: items[2].id,
+        item_name: items[2].item_name,
+        quantity: 50,
+        unit: 'paquet',
+        target_warehouse_id: warehouse.id,
+        cost_per_unit: 25,
+        total_cost: 1250,
+        notes: 'Nouvelle commande semences',
+      });
+    }
+
+    const { error: itemsError } = await client
+      .from('stock_entry_items')
+      .insert(stockEntryItems);
+
+    if (itemsError) {
+      this.logger.error(`Failed to create demo stock entry items: ${itemsError.message}`);
     }
   }
 }

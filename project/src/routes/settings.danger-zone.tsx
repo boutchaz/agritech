@@ -39,11 +39,12 @@ const STAT_LABELS: Record<string, { label: string; icon: React.ElementType }> = 
   revenues: { label: 'Revenus', icon: DollarSign },
   structures: { label: 'Infrastructures', icon: Warehouse },
   cost_centers: { label: 'Centres de coût', icon: DollarSign },
+  stock_entries: { label: 'Mouvements de stock', icon: Package },
 };
 
 function DangerZonePage() {
   const { currentOrganization, userRole } = useAuth();
-  const { t } = useTranslation();
+  const _t = useTranslation();
   const queryClient = useQueryClient();
   const [confirmText, setConfirmText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -52,16 +53,24 @@ function DangerZonePage() {
   // Check if user is admin
   const isAdmin = userRole?.role_name === 'system_admin' || userRole?.role_name === 'organization_admin';
 
+  const organizationId = currentOrganization?.id;
+
   // Fetch data stats
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ['demo-data-stats', currentOrganization?.id],
-    queryFn: () => demoDataApi.getStats(currentOrganization!.id),
-    enabled: !!currentOrganization?.id && isAdmin,
+    queryKey: ['demo-data-stats', organizationId],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization');
+      return demoDataApi.getStats(organizationId);
+    },
+    enabled: !!organizationId && isAdmin,
   });
 
   // Seed demo data mutation
   const seedMutation = useMutation({
-    mutationFn: () => demoDataApi.seedDemoData(currentOrganization!.id),
+    mutationFn: () => {
+      if (!organizationId) throw new Error('No organization');
+      return demoDataApi.seedDemoData(organizationId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries();
       refetchStats();
@@ -71,7 +80,10 @@ function DangerZonePage() {
 
   // Clear data mutation
   const clearMutation = useMutation({
-    mutationFn: () => demoDataApi.clearData(currentOrganization!.id),
+    mutationFn: () => {
+      if (!organizationId) throw new Error('No organization');
+      return demoDataApi.clearData(organizationId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries();
       refetchStats();
