@@ -5,13 +5,15 @@ import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
+import { SellersController } from './sellers.controller';
+import { SellersService } from './sellers.service';
 import { DatabaseModule } from '../database/database.module';
 import { StrapiModule } from '../strapi/strapi.module';
 
 @Module({
     imports: [DatabaseModule, StrapiModule],
-    controllers: [MarketplaceController, CartController, OrdersController],
-    providers: [MarketplaceService, CartService, OrdersService],
-    exports: [MarketplaceService, CartService, OrdersService],
+    controllers: [MarketplaceController, CartController, OrdersController, SellersController],
+    providers: [MarketplaceService, CartService, OrdersService, SellersService],
+    exports: [MarketplaceService, CartService, OrdersService, SellersService],
 })
 export class MarketplaceModule { }

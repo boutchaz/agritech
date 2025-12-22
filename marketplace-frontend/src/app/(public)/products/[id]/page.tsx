@@ -26,8 +26,23 @@ import {
     X,
     Menu,
     Minus,
-    Plus
+    Plus,
+    Building2,
+    BadgeCheck,
+    ExternalLink
 } from 'lucide-react';
+
+interface Seller {
+    id: string;
+    name: string;
+    slug?: string;
+    description?: string;
+    logo_url?: string;
+    city?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+}
 
 interface Product {
     id: string;
@@ -48,6 +63,7 @@ interface Product {
     quantity_available?: number;
     organization_id?: string;
     source?: string;
+    seller?: Seller;
 }
 
 export default function ProductDetailPage() {
@@ -408,6 +424,64 @@ export default function ProductDetailPage() {
                                 <div>
                                     <span className="text-sm text-gray-500">Localisation</span>
                                     <p className="font-medium text-gray-900">{product.location_address}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Seller Info */}
+                        {product.seller && (
+                            <div className="bg-white rounded-xl border border-gray-100 p-6">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Vendu par</h2>
+                                <Link
+                                    href={`/sellers/${product.seller.slug || product.seller.id}`}
+                                    className="flex items-center gap-4 group"
+                                >
+                                    <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        {product.seller.logo_url ? (
+                                            <img
+                                                src={product.seller.logo_url}
+                                                alt={product.seller.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <Building2 className="h-7 w-7 text-emerald-600" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-semibold text-gray-900 group-hover:text-emerald-600 transition">
+                                                {product.seller.name}
+                                            </p>
+                                            <BadgeCheck className="h-4 w-4 text-blue-500" />
+                                        </div>
+                                        {product.seller.city && (
+                                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                                                <MapPin className="h-3 w-3" />
+                                                {product.seller.city}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <ExternalLink className="h-5 w-5 text-gray-400 group-hover:text-emerald-500" />
+                                </Link>
+
+                                {/* Seller Contact Buttons */}
+                                <div className="flex gap-3 mt-4 pt-4 border-t">
+                                    {product.seller.phone && (
+                                        <a
+                                            href={`tel:${product.seller.phone}`}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition text-sm font-medium"
+                                        >
+                                            <Phone className="h-4 w-4" />
+                                            Appeler
+                                        </a>
+                                    )}
+                                    <Link
+                                        href={`/sellers/${product.seller.slug || product.seller.id}`}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
+                                    >
+                                        <Package className="h-4 w-4" />
+                                        Voir les produits
+                                    </Link>
                                 </div>
                             </div>
                         )}

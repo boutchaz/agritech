@@ -159,9 +159,74 @@ export class ApiClient {
             method: 'POST',
         });
     }
+
+    // SELLER/PARTNER METHODS
+    static async getSellers(params?: { city?: string; category?: string; search?: string; page?: number; limit?: number }) {
+        const searchParams = new URLSearchParams();
+        if (params?.city) searchParams.set('city', params.city);
+        if (params?.category) searchParams.set('category', params.category);
+        if (params?.search) searchParams.set('search', params.search);
+        if (params?.page) searchParams.set('page', params.page.toString());
+        if (params?.limit) searchParams.set('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<{ sellers: Seller[]; total: number }>(`/marketplace/sellers${query ? `?${query}` : ''}`);
+    }
+
+    static async getSellerCities() {
+        return this.request<string[]>('/marketplace/sellers/cities');
+    }
+
+    static async getSeller(slug: string) {
+        return this.request<Seller>(`/marketplace/sellers/${slug}`);
+    }
+
+    static async getSellerProducts(slug: string, page?: number, limit?: number) {
+        const params = new URLSearchParams();
+        if (page) params.set('page', page.toString());
+        if (limit) params.set('limit', limit.toString());
+        const query = params.toString();
+        return this.request<{ products: any[]; total: number }>(`/marketplace/sellers/${slug}/products${query ? `?${query}` : ''}`);
+    }
+
+    static async getSellerReviews(slug: string, page?: number, limit?: number) {
+        const params = new URLSearchParams();
+        if (page) params.set('page', page.toString());
+        if (limit) params.set('limit', limit.toString());
+        const query = params.toString();
+        return this.request<{ reviews: SellerReview[]; total: number }>(`/marketplace/sellers/${slug}/reviews${query ? `?${query}` : ''}`);
+    }
 }
 
 // Types
+export interface Seller {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    logo_url?: string;
+    address?: string;
+    city?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    is_verified?: boolean;
+    created_at: string;
+    product_count: number;
+    average_rating?: number;
+    review_count: number;
+}
+
+export interface SellerReview {
+    id: string;
+    rating: number;
+    comment?: string;
+    created_at: string;
+    reviewer: {
+        id: string;
+        name: string;
+        logo_url?: string;
+    };
+}
 export interface CartItem {
     id: string;
     listing_id?: string;

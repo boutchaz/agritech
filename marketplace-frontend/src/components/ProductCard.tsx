@@ -1,5 +1,13 @@
 import Link from 'next/link';
-import { ShoppingBag, MapPin, Calendar } from 'lucide-react';
+import { ShoppingBag, MapPin, Calendar, Building2 } from 'lucide-react';
+
+interface Seller {
+    id: string;
+    name: string;
+    slug?: string;
+    logo_url?: string;
+    city?: string;
+}
 
 interface Product {
     id: string;
@@ -10,6 +18,7 @@ interface Product {
     unit?: string;
     location_address?: string;
     created_at?: string;
+    seller?: Seller;
 }
 
 interface ProductCardProps {
@@ -18,15 +27,15 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
     const formatPrice = (price: number, currency: string) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('fr-MA', {
             style: 'currency',
-            currency: currency,
+            currency: currency || 'MAD',
         }).format(price);
     };
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '';
-        return new Date(dateString).toLocaleDateString('en-US', {
+        return new Date(dateString).toLocaleDateString('fr-FR', {
             month: 'short',
             day: 'numeric'
         });
@@ -52,13 +61,13 @@ export function ProductCard({ product }: ProductCardProps) {
                 ) : (
                     <div className="flex flex-col items-center justify-center text-gray-300">
                         <ShoppingBag className="h-16 w-16 mb-2" />
-                        <span className="text-sm">No image</span>
+                        <span className="text-sm">Pas d'image</span>
                     </div>
                 )}
                 {/* Badge */}
                 {product.created_at && (
                     <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-                        New
+                        Nouveau
                     </div>
                 )}
             </div>
@@ -69,11 +78,29 @@ export function ProductCard({ product }: ProductCardProps) {
                     {product.title}
                 </h3>
 
+                {/* Seller Tag */}
+                {product.seller && (
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                            {product.seller.logo_url ? (
+                                <img
+                                    src={product.seller.logo_url}
+                                    alt={product.seller.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <Building2 className="h-3 w-3 text-emerald-600" />
+                            )}
+                        </div>
+                        <span className="text-xs text-gray-600 truncate">{product.seller.name}</span>
+                    </div>
+                )}
+
                 {/* Location */}
-                {product.location_address && (
+                {(product.location_address || product.seller?.city) && (
                     <div className="flex items-center text-sm text-gray-500 mb-2">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span className="truncate">{product.location_address}</span>
+                        <MapPin className="h-4 w-4 mr-1 shrink-0" />
+                        <span className="truncate">{product.location_address || product.seller?.city}</span>
                     </div>
                 )}
 
@@ -81,7 +108,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 {product.created_at && (
                     <div className="flex items-center text-xs text-gray-400 mb-3">
                         <Calendar className="h-3 w-3 mr-1" />
-                        <span>Listed {formatDate(product.created_at)}</span>
+                        <span>Publie le {formatDate(product.created_at)}</span>
                     </div>
                 )}
 
@@ -96,7 +123,7 @@ export function ProductCard({ product }: ProductCardProps) {
                         )}
                     </div>
                     <button className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition opacity-0 group-hover:opacity-100">
-                        View
+                        Voir
                     </button>
                 </div>
             </div>

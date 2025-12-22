@@ -12,14 +12,24 @@ export class MarketplaceService {
     /**
      * Fetch public products from Supabase.
      * Combines marketplace_listings AND items marked as is_sales_item.
+     * Now includes seller info for each product.
      */
     async getPublicProducts(category?: string) {
         const supabase = this.databaseService.getAdminClient();
 
-        // Fetch marketplace listings
+        // Fetch marketplace listings with seller info
         let listingsQuery = supabase
             .from('marketplace_listings')
-            .select('*')
+            .select(`
+                *,
+                seller:organizations!marketplace_listings_organization_id_fkey(
+                    id,
+                    name,
+                    slug,
+                    logo_url,
+                    city
+                )
+            `)
             .eq('is_public', true)
             .eq('status', 'active')
             .order('created_at', { ascending: false });
@@ -58,6 +68,13 @@ export class MarketplaceService {
                 item_groups (
                     id,
                     name
+                ),
+                seller:organizations!items_organization_id_fkey(
+                    id,
+                    name,
+                    slug,
+                    logo_url,
+                    city
                 )
             `)
             .eq('is_sales_item', true)
@@ -93,6 +110,7 @@ export class MarketplaceService {
             created_at: item.created_at,
             updated_at: item.updated_at,
             source: 'inventory_item', // Mark source for frontend to distinguish
+            seller: (item as any).seller || null,
         }));
 
         // Combine and return both sources
@@ -112,14 +130,28 @@ export class MarketplaceService {
     /**
      * Get a single product by ID
      * First checks marketplace_listings, then falls back to items table
+     * Includes seller info for the product
      */
     async getProduct(id: string) {
         const supabase = this.databaseService.getAdminClient();
 
-        // Try marketplace_listings first
+        // Try marketplace_listings first with seller info
         const { data: listing, error: listingError } = await supabase
             .from('marketplace_listings')
-            .select('*')
+            .select(`
+                *,
+                seller:organizations!marketplace_listings_organization_id_fkey(
+                    id,
+                    name,
+                    slug,
+                    description,
+                    logo_url,
+                    city,
+                    phone,
+                    email,
+                    website
+                )
+            `)
             .eq('id', id)
             .eq('is_public', true)
             .single();
@@ -128,7 +160,7 @@ export class MarketplaceService {
             return { ...listing, source: 'marketplace_listing' };
         }
 
-        // Fall back to items table
+        // Fall back to items table with seller info
         const { data: item, error: itemError } = await supabase
             .from('items')
             .select(`
@@ -151,6 +183,17 @@ export class MarketplaceService {
                 item_groups (
                     id,
                     name
+                ),
+                seller:organizations!items_organization_id_fkey(
+                    id,
+                    name,
+                    slug,
+                    description,
+                    logo_url,
+                    city,
+                    phone,
+                    email,
+                    website
                 )
             `)
             .eq('id', id)
@@ -186,6 +229,7 @@ export class MarketplaceService {
             created_at: item.created_at,
             updated_at: item.updated_at,
             source: 'inventory_item',
+            seller: (item as any).seller || null,
         };
     }
 
