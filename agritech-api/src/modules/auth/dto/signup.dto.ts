@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -21,15 +22,23 @@ export class SignupDto {
   @MinLength(8)
   password: string;
 
-  @ApiProperty({ example: 'John' })
+  @ApiPropertyOptional({ example: 'John' })
   @IsString()
-  @IsNotEmpty()
-  firstName: string;
+  @IsOptional()
+  firstName?: string;
 
-  @ApiProperty({ example: 'Doe' })
+  @ApiPropertyOptional({ example: 'Doe' })
   @IsString()
-  @IsNotEmpty()
-  lastName: string;
+  @IsOptional()
+  lastName?: string;
+
+  @ApiPropertyOptional({
+    example: 'John Doe',
+    description: 'Display name - used as alternative to firstName/lastName for marketplace users',
+  })
+  @IsString()
+  @IsOptional()
+  displayName?: string;
 
   @ApiPropertyOptional({ example: '+212612345678' })
   @IsString()
@@ -74,6 +83,15 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   accountType?: 'full_access' | 'marketplace_only';
+
+  @ApiPropertyOptional({
+    example: 'individual',
+    description: 'Seller type: individual (person), business (company), or farm',
+    default: 'individual',
+  })
+  @IsOptional()
+  @IsIn(['individual', 'business', 'farm'])
+  sellerType?: 'individual' | 'business' | 'farm';
 }
 
 export class SignupResponseDto {

@@ -10,6 +10,7 @@ export interface CreateOrganizationDto {
     currencyCode?: string;
     timezone?: string;
     isActive?: boolean;
+    accountType?: 'individual' | 'business' | 'farm';
 }
 
 @Injectable()
@@ -72,6 +73,7 @@ export class OrganizationsService {
                     currency_code: dto.currencyCode || 'MAD',
                     timezone: dto.timezone || 'Africa/Casablanca',
                     is_active: dto.isActive ?? true,
+                    account_type: dto.accountType || 'business',
                 })
                 .select()
                 .single();

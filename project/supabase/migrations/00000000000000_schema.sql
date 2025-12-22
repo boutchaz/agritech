@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   timezone VARCHAR(50) DEFAULT 'Africa/Casablanca',
   logo_url TEXT,
   is_active BOOLEAN DEFAULT true,
+  account_type VARCHAR(20) DEFAULT 'business' CHECK (account_type IN ('individual', 'business', 'farm')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

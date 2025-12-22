@@ -56,10 +56,22 @@ export class ApiClient {
         return response;
     }
 
-    static async signup(email: string, password: string, organizationName: string) {
-        return this.request<{ access_token: string; user: any }>('/auth/signup', {
+    static async signup(data: {
+        email: string;
+        password: string;
+        displayName: string;
+        sellerType: 'individual' | 'business' | 'farm';
+    }) {
+        return this.request<{ user: any; organization: any; requiresLogin: boolean }>('/auth/signup', {
             method: 'POST',
-            body: JSON.stringify({ email, password, organizationName }),
+            body: JSON.stringify({
+                email: data.email,
+                password: data.password,
+                displayName: data.displayName,
+                organizationName: data.sellerType !== 'individual' ? data.displayName : undefined,
+                sellerType: data.sellerType,
+                accountType: 'marketplace_only',
+            }),
         });
     }
 
