@@ -707,6 +707,96 @@ export interface ApiTreeTree extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiMarketplaceCategoryMarketplaceCategory
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'marketplace_categories';
+  info: {
+    description: 'Categories for marketplace listings';
+    displayName: 'Marketplace Category';
+    pluralName: 'marketplace-categories';
+    singularName: 'marketplace-category';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  pluginOptions: {
+    i18n: {
+      localized: true;
+    };
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    icon: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images'>;
+    is_featured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::marketplace-category.marketplace-category'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    products: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::marketplace-product.marketplace-product'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
+    sort_order: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMarketplaceProductMarketplaceProduct
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'marketplace_products';
+  info: {
+    description: 'Rich content for marketplace listings';
+    displayName: 'Marketplace Product';
+    pluralName: 'marketplace-products';
+    singularName: 'marketplace-product';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  pluginOptions: {
+    i18n: {
+      localized: true;
+    };
+  };
+  attributes: {
+    categories: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::marketplace-category.marketplace-category'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.RichText & Schema.Attribute.Required;
+    gallery: Schema.Attribute.Media<'images', true>;
+    listing_id: Schema.Attribute.String & Schema.Attribute.Unique;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::marketplace-product.marketplace-product'
+    > &
+      Schema.Attribute.Private;
+    mainImage: Schema.Attribute.Media<'images'> & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    seo: Schema.Attribute.Component<'shared.seo'>;
+    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface PluginContentReleasesRelease
   extends Struct.CollectionTypeSchema {
   collectionName: 'strapi_releases';
@@ -1225,6 +1315,8 @@ declare module '@strapi/strapi' {
       'api::test-type.test-type': ApiTestTypeTestType;
       'api::tree-category.tree-category': ApiTreeCategoryTreeCategory;
       'api::tree.tree': ApiTreeTree;
+      'api::marketplace-category.marketplace-category': ApiMarketplaceCategoryMarketplaceCategory;
+      'api::marketplace-product.marketplace-product': ApiMarketplaceProductMarketplaceProduct;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;
