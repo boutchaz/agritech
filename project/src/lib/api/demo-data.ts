@@ -19,6 +19,22 @@ export interface ClearResult {
   totalDeleted: number;
 }
 
+export interface ExportData {
+  metadata: Array<{
+    exportDate: string;
+    organizationId: string;
+    version: string;
+  }>;
+  [key: string]: any[];
+}
+
+export interface ImportResult {
+  message: string;
+  organizationId: string;
+  importedCounts: Record<string, number>;
+  totalImported: number;
+}
+
 export const demoDataApi = {
   /**
    * Get data statistics for an organization
@@ -39,5 +55,19 @@ export const demoDataApi = {
    */
   async clearData(organizationId: string): Promise<ClearResult> {
     return apiClient.delete<ClearResult>(`/api/v1/organizations/${organizationId}/demo-data/clear`);
+  },
+
+  /**
+   * Export all organization data as JSON
+   */
+  async exportData(organizationId: string): Promise<ExportData> {
+    return apiClient.get<ExportData>(`/api/v1/organizations/${organizationId}/demo-data/export`);
+  },
+
+  /**
+   * Import organization data from JSON
+   */
+  async importData(organizationId: string, data: ExportData): Promise<ImportResult> {
+    return apiClient.post<ImportResult>(`/api/v1/organizations/${organizationId}/demo-data/import`, data);
   },
 };

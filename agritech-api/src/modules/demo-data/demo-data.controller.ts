@@ -9,7 +9,11 @@ import {
   HttpCode,
   HttpStatus,
   ForbiddenException,
+  Body,
+  Res,
+  Header,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { DemoDataService } from './demo-data.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -78,6 +82,54 @@ export class DemoDataController {
       organizationId,
       deletedCounts: result.deletedCounts,
       totalDeleted: Object.values(result.deletedCounts).reduce((sum, count) => sum + count, 0),
+    };
+  }
+
+  /**
+   * Export all organization data as JSON
+   */
+  @Get('export')
+  @Header('Content-Type', 'application/json')
+  async exportData(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    // Verify user has admin access to this organization
+    this.verifyAdminAccess(req.user, organizationId);
+
+    const exportData = await this.demoDataService.exportOrganizationData(organizationId);
+
+    const filename = `agritech-export-${organizationId}-${new Date().toISOString().split('T')[0]}.json`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(exportData);
+  }
+
+  /**
+   * Import organization data from JSON
+   */
+  @Post('import')
+  @HttpCode(HttpStatus.OK)
+  async importData(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+    @Body() importData: any,
+  ) {
+    // Verify user has admin access to this organization
+    this.verifyAdminAccess(req.user, organizationId);
+
+    const result = await this.demoDataService.importOrganizationData(
+      organizationId,
+      req.user.id,
+      importData,
+    );
+
+    return {
+      message: 'Data imported successfully',
+      organizationId,
+      importedCounts: result.importedCounts,
+      totalImported: Object.values(result.importedCounts).reduce((sum: number, count: number) => sum + count, 0),
     };
   }
 

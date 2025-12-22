@@ -2160,4 +2160,371 @@ export class DemoDataService {
       this.logger.error(`Failed to create demo stock entry items: ${itemsError.message}`);
     }
   }
+
+  /**
+   * Export all organization data as JSON
+   */
+  async exportOrganizationData(organizationId: string): Promise<any> {
+    this.logger.log(`Exporting data for organization ${organizationId}`);
+    const client = this.databaseService.getAdminClient();
+
+    const exportData: Record<string, any[]> = {
+      metadata: [{
+        exportDate: new Date().toISOString(),
+        organizationId,
+        version: '1.0',
+      }],
+    };
+
+    // Tables to export in order (respecting dependencies for import)
+    const tables = [
+      'farms',
+      'parcels',
+      'workers',
+      'cost_centers',
+      'structures',
+      'warehouses',
+      'item_groups',
+      'items',
+      'customers',
+      'suppliers',
+      'tasks',
+      'task_assignments',
+      'harvest_records',
+      'reception_batches',
+      'stock_entries',
+      'stock_entry_items',
+      'sales_orders',
+      'sales_order_items',
+      'invoices',
+      'invoice_items',
+      'costs',
+      'revenues',
+    ];
+
+    for (const table of tables) {
+      try {
+        const { data, error } = await client
+          .from(table)
+          .select('*')
+          .eq('organization_id', organizationId);
+
+        if (error) {
+          this.logger.warn(`Failed to export ${table}: ${error.message}`);
+          exportData[table] = [];
+        } else {
+          exportData[table] = data || [];
+        }
+      } catch (err) {
+        this.logger.warn(`Error exporting ${table}: ${err}`);
+        exportData[table] = [];
+      }
+    }
+
+    // Export related items (no organization_id column)
+    // Stock entry items - get via stock_entries
+    if (exportData.stock_entries && exportData.stock_entries.length > 0) {
+      const entryIds = exportData.stock_entries.map((e: any) => e.id);
+      const { data: stockEntryItems } = await client
+        .from('stock_entry_items')
+        .select('*')
+        .in('stock_entry_id', entryIds);
+      exportData.stock_entry_items = stockEntryItems || [];
+    }
+
+    // Sales order items - get via sales_orders
+    if (exportData.sales_orders && exportData.sales_orders.length > 0) {
+      const orderIds = exportData.sales_orders.map((o: any) => o.id);
+      const { data: salesOrderItems } = await client
+        .from('sales_order_items')
+        .select('*')
+        .in('sales_order_id', orderIds);
+      exportData.sales_order_items = salesOrderItems || [];
+    }
+
+    // Invoice items - get via invoices
+    if (exportData.invoices && exportData.invoices.length > 0) {
+      const invoiceIds = exportData.invoices.map((i: any) => i.id);
+      const { data: invoiceItems } = await client
+        .from('invoice_items')
+        .select('*')
+        .in('invoice_id', invoiceIds);
+      exportData.invoice_items = invoiceItems || [];
+    }
+
+    this.logger.log(`Export completed for organization ${organizationId}`);
+    return exportData;
+  }
+
+  /**
+   * Import organization data from JSON
+   */
+  async importOrganizationData(
+    organizationId: string,
+    userId: string,
+    importData: any,
+  ): Promise<{ importedCounts: Record<string, number> }> {
+    this.logger.log(`Importing data for organization ${organizationId}`);
+    const client = this.databaseService.getAdminClient();
+    const importedCounts: Record<string, number> = {};
+
+    // Map old IDs to new IDs for reference updates
+    const idMaps: Record<string, Map<string, string>> = {};
+
+    // Tables to import in order (respecting dependencies)
+    const importOrder = [
+      'farms',
+      'parcels',
+      'workers',
+      'cost_centers',
+      'structures',
+      'warehouses',
+      'item_groups',
+      'items',
+      'customers',
+      'suppliers',
+      'tasks',
+      'task_assignments',
+      'harvest_records',
+      'reception_batches',
+      'stock_entries',
+      'sales_orders',
+      'invoices',
+      'costs',
+      'revenues',
+    ];
+
+    for (const table of importOrder) {
+      const records = importData[table];
+      if (!records || !Array.isArray(records) || records.length === 0) {
+        importedCounts[table] = 0;
+        continue;
+      }
+
+      idMaps[table] = new Map();
+
+      try {
+        const processedRecords = records.map((record: any) => {
+          const oldId = record.id;
+          const newRecord = { ...record };
+
+          // Remove fields that will be auto-generated
+          delete newRecord.id;
+          delete newRecord.created_at;
+          delete newRecord.updated_at;
+
+          // Update organization_id to current organization
+          newRecord.organization_id = organizationId;
+
+          // Update foreign key references using ID maps
+          this.updateForeignKeys(newRecord, table, idMaps);
+
+          // Update created_by/updated_by if present
+          if (newRecord.created_by) newRecord.created_by = userId;
+          if (newRecord.updated_by) newRecord.updated_by = userId;
+
+          return { oldId, newRecord };
+        });
+
+        // Insert records one by one to track ID mapping
+        for (const { oldId, newRecord } of processedRecords) {
+          const { data: inserted, error } = await client
+            .from(table)
+            .insert(newRecord)
+            .select('id')
+            .single();
+
+          if (error) {
+            this.logger.warn(`Failed to import record to ${table}: ${error.message}`);
+          } else if (inserted) {
+            idMaps[table].set(oldId, inserted.id);
+          }
+        }
+
+        importedCounts[table] = idMaps[table].size;
+        this.logger.log(`Imported ${importedCounts[table]} records to ${table}`);
+      } catch (err) {
+        this.logger.error(`Error importing ${table}: ${err}`);
+        importedCounts[table] = 0;
+      }
+    }
+
+    // Import child tables (items without organization_id)
+    await this.importChildRecords(client, importData, idMaps, importedCounts);
+
+    this.logger.log(`Import completed for organization ${organizationId}`);
+    return { importedCounts };
+  }
+
+  /**
+   * Update foreign key references in a record based on ID mappings
+   */
+  private updateForeignKeys(
+    record: any,
+    table: string,
+    idMaps: Record<string, Map<string, string>>,
+  ): void {
+    const foreignKeyMappings: Record<string, Record<string, string>> = {
+      parcels: { farm_id: 'farms' },
+      workers: { farm_id: 'farms' },
+      cost_centers: { parcel_id: 'parcels' },
+      structures: { farm_id: 'farms' },
+      warehouses: { farm_id: 'farms' },
+      items: {
+        item_group_id: 'item_groups',
+        default_warehouse_id: 'warehouses',
+      },
+      tasks: {
+        farm_id: 'farms',
+        parcel_id: 'parcels',
+        assigned_to: 'workers',
+      },
+      task_assignments: {
+        task_id: 'tasks',
+        worker_id: 'workers',
+      },
+      harvest_records: {
+        farm_id: 'farms',
+        parcel_id: 'parcels',
+        harvest_task_id: 'tasks',
+        warehouse_id: 'warehouses',
+      },
+      reception_batches: {
+        warehouse_id: 'warehouses',
+        parcel_id: 'parcels',
+        harvest_id: 'harvest_records',
+        destination_warehouse_id: 'warehouses',
+        received_by: 'workers',
+        quality_checked_by: 'workers',
+      },
+      stock_entries: {
+        from_warehouse_id: 'warehouses',
+        to_warehouse_id: 'warehouses',
+      },
+      sales_orders: {
+        customer_id: 'customers',
+      },
+      invoices: {
+        party_id: 'customers', // or suppliers depending on type
+      },
+      costs: {
+        parcel_id: 'parcels',
+      },
+      revenues: {
+        parcel_id: 'parcels',
+      },
+    };
+
+    const mappings = foreignKeyMappings[table];
+    if (!mappings) return;
+
+    for (const [fkField, refTable] of Object.entries(mappings)) {
+      if (record[fkField] && idMaps[refTable]) {
+        const newId = idMaps[refTable].get(record[fkField]);
+        if (newId) {
+          record[fkField] = newId;
+        } else {
+          // Referenced record not found, set to null
+          record[fkField] = null;
+        }
+      }
+    }
+  }
+
+  /**
+   * Import child records (tables without organization_id)
+   */
+  private async importChildRecords(
+    client: any,
+    importData: any,
+    idMaps: Record<string, Map<string, string>>,
+    importedCounts: Record<string, number>,
+  ): Promise<void> {
+    // Stock entry items
+    const stockEntryItems = importData.stock_entry_items;
+    if (stockEntryItems && Array.isArray(stockEntryItems) && stockEntryItems.length > 0) {
+      let count = 0;
+      for (const item of stockEntryItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        // Update foreign keys
+        if (newItem.stock_entry_id && idMaps.stock_entries) {
+          const newId = idMaps.stock_entries.get(newItem.stock_entry_id);
+          if (newId) newItem.stock_entry_id = newId;
+          else continue; // Skip if parent not found
+        }
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+        }
+        if (newItem.source_warehouse_id && idMaps.warehouses) {
+          const newId = idMaps.warehouses.get(newItem.source_warehouse_id);
+          if (newId) newItem.source_warehouse_id = newId;
+        }
+        if (newItem.target_warehouse_id && idMaps.warehouses) {
+          const newId = idMaps.warehouses.get(newItem.target_warehouse_id);
+          if (newId) newItem.target_warehouse_id = newId;
+        }
+
+        const { error } = await client.from('stock_entry_items').insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.stock_entry_items = count;
+    }
+
+    // Sales order items
+    const salesOrderItems = importData.sales_order_items;
+    if (salesOrderItems && Array.isArray(salesOrderItems) && salesOrderItems.length > 0) {
+      let count = 0;
+      for (const item of salesOrderItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.sales_order_id && idMaps.sales_orders) {
+          const newId = idMaps.sales_orders.get(newItem.sales_order_id);
+          if (newId) newItem.sales_order_id = newId;
+          else continue;
+        }
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+        }
+
+        const { error } = await client.from('sales_order_items').insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.sales_order_items = count;
+    }
+
+    // Invoice items
+    const invoiceItems = importData.invoice_items;
+    if (invoiceItems && Array.isArray(invoiceItems) && invoiceItems.length > 0) {
+      let count = 0;
+      for (const item of invoiceItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.invoice_id && idMaps.invoices) {
+          const newId = idMaps.invoices.get(newItem.invoice_id);
+          if (newId) newItem.invoice_id = newId;
+          else continue;
+        }
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+        }
+
+        const { error } = await client.from('invoice_items').insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.invoice_items = count;
+    }
+  }
 }

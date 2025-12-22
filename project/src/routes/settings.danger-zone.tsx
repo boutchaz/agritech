@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { demoDataApi } from '../lib/api/demo-data';
+import { demoDataApi, ExportData } from '../lib/api/demo-data';
 import {
   AlertTriangle,
   Trash2,
@@ -19,6 +19,8 @@ import {
   Warehouse,
   FileText,
   DollarSign,
+  Download,
+  Upload,
 } from 'lucide-react';
 
 const STAT_LABELS: Record<string, { label: string; icon: React.ElementType }> = {
@@ -49,6 +51,10 @@ function DangerZonePage() {
   const [confirmText, setConfirmText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importData, setImportData] = useState<ExportData | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user is admin
   const isAdmin = userRole?.role_name === 'system_admin' || userRole?.role_name === 'organization_admin';
@@ -92,12 +98,78 @@ function DangerZonePage() {
     },
   });
 
+  // Export data mutation
+  const exportMutation = useMutation({
+    mutationFn: () => {
+      if (!organizationId) throw new Error('No organization');
+      return demoDataApi.exportData(organizationId);
+    },
+    onSuccess: (data) => {
+      // Create download file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `agritech-export-${currentOrganization?.name?.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+  });
+
+  // Import data mutation
+  const importMutation = useMutation({
+    mutationFn: (data: ExportData) => {
+      if (!organizationId) throw new Error('No organization');
+      return demoDataApi.importData(organizationId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      refetchStats();
+      setShowImportConfirm(false);
+      setImportFile(null);
+      setImportData(null);
+    },
+  });
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          setImportData(data);
+          setShowImportConfirm(true);
+        } catch {
+          alert('Fichier JSON invalide');
+          setImportFile(null);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   // Reset confirm text when dialogs close
   useEffect(() => {
     if (!showDeleteConfirm) {
       setConfirmText('');
     }
   }, [showDeleteConfirm]);
+
+  // Reset import state when dialog closes
+  useEffect(() => {
+    if (!showImportConfirm) {
+      setImportFile(null);
+      setImportData(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [showImportConfirm]);
 
   if (!isAdmin) {
     return (
@@ -175,6 +247,142 @@ function DangerZonePage() {
               <p className="text-sm text-blue-500 dark:text-blue-300">Enregistrements au total</p>
             </div>
           </>
+        )}
+      </div>
+
+      {/* Export/Import Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 sm:p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Database className="h-5 w-5 text-blue-500" />
+          Exporter / Importer les Données
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+          Sauvegardez toutes vos données dans un fichier JSON ou restaurez-les à partir d'une sauvegarde précédente.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Export */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <h3 className="font-medium text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Exporter
+            </h3>
+            <p className="text-blue-700 dark:text-blue-400 text-sm mb-3">
+              Téléchargez toutes les données de votre organisation dans un fichier JSON.
+            </p>
+            <button
+              onClick={() => exportMutation.mutate()}
+              disabled={exportMutation.isPending || !hasData}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Exporter les Données
+            </button>
+            {exportMutation.isSuccess && (
+              <p className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                <CheckCircle className="h-4 w-4" />
+                Exportation réussie !
+              </p>
+            )}
+            {exportMutation.isError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                <XCircle className="h-4 w-4" />
+                Erreur lors de l'exportation
+              </p>
+            )}
+          </div>
+
+          {/* Import */}
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+            <h3 className="font-medium text-purple-900 dark:text-purple-300 mb-2 flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Importer
+            </h3>
+            <p className="text-purple-700 dark:text-purple-400 text-sm mb-3">
+              Restaurez vos données à partir d'un fichier JSON exporté précédemment.
+            </p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              {importMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Sélectionner un Fichier
+            </button>
+          </div>
+        </div>
+
+        {/* Import Confirmation Dialog */}
+        {showImportConfirm && importData && (
+          <div className="mt-4 bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700 rounded-lg p-4">
+            <h4 className="font-medium text-purple-900 dark:text-purple-300 mb-2">
+              Confirmer l'importation
+            </h4>
+            <p className="text-purple-700 dark:text-purple-400 text-sm mb-2">
+              Fichier: <strong>{importFile?.name}</strong>
+            </p>
+            {importData.metadata?.[0] && (
+              <p className="text-purple-700 dark:text-purple-400 text-sm mb-2">
+                Date d'export: <strong>{new Date(importData.metadata[0].exportDate).toLocaleString()}</strong>
+              </p>
+            )}
+            <p className="text-purple-700 dark:text-purple-400 text-sm mb-4">
+              <strong>Attention:</strong> L'importation ajoutera les données au contenu existant.
+              Les identifiants seront régénérés et les relations préservées.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => importMutation.mutate(importData)}
+                disabled={importMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {importMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                Confirmer l'Importation
+              </button>
+              <button
+                onClick={() => setShowImportConfirm(false)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              >
+                <XCircle className="h-4 w-4" />
+                Annuler
+              </button>
+            </div>
+            {importMutation.isSuccess && (
+              <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <p className="text-green-700 dark:text-green-300 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Importation réussie ! {importMutation.data?.totalImported} enregistrements importés.
+                </p>
+              </div>
+            )}
+            {importMutation.isError && (
+              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
+                <p className="text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <XCircle className="h-4 w-4" />
+                  Une erreur s'est produite lors de l'importation.
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
