@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Play,
@@ -11,6 +11,8 @@ import {
   Wheat,
   Edit,
   AlertCircle,
+  PackageCheck,
+  Hash,
 } from 'lucide-react';
 import { useUpdateTask } from '../../hooks/useTasks';
 import { tasksApi } from '../../lib/api/tasks';
@@ -56,14 +58,37 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const [showHarvestForm, setShowHarvestForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completionType, setCompletionType] = useState<'complete' | 'partial'>('complete');
+  const [lotNumber, setLotNumber] = useState<string>('');
 
-  // Fetch crops for the task's farm and parcel
+  // Generate lot number when harvest form opens
+  useEffect(() => {
+    if (showHarvestForm && !lotNumber) {
+      // Format: {ParcelCode}{FarmCode}-{Sequence}{Year}
+      // Example: P1FM1-0012025
+      const year = new Date().getFullYear();
+      const parcelCode = task.parcel_id ? `P${task.parcel_id.slice(-2).toUpperCase()}` : 'PX';
+      const farmCode = task.farm_id ? `F${task.farm_id.slice(-2).toUpperCase()}` : 'FX';
+      const sequence = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+      setLotNumber(`${parcelCode}${farmCode}-${sequence}${year}`);
+    }
+  }, [showHarvestForm, lotNumber, task.parcel_id, task.farm_id]);
+
+  // Fetch crops for the task's farm (don't filter by parcel to show all available crops)
   const { data: crops = [] } = useQuery({
-    queryKey: ['crops', organizationId, task.farm_id, task.parcel_id],
+    queryKey: ['crops', organizationId, task.farm_id],
     queryFn: async () => {
-      return cropsApi.getAll(organizationId, task.farm_id, task.parcel_id);
+      // First try to get crops for the specific parcel
+      if (task.parcel_id) {
+        const parcelCrops = await cropsApi.getAll(organizationId, task.farm_id, task.parcel_id);
+        if (parcelCrops.length > 0) {
+          return parcelCrops;
+        }
+      }
+      // Fall back to all crops for the farm
+      return cropsApi.getAll(organizationId, task.farm_id);
     },
-    enabled: !!organizationId,
+    enabled: !!organizationId && !!task.farm_id,
   });
 
   // Harvest completion form data
@@ -79,6 +104,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const isHarvestingTask = task.task_type === 'harvesting';
   const canStart = task.status === 'pending' || task.status === 'assigned';
   const canPause = task.status === 'in_progress';
+  const canResume = task.status === 'paused';
   const canComplete = task.status === 'in_progress' || task.status === 'paused';
 
   const handleStartTask = async () => {
@@ -118,6 +144,23 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     }
   };
 
+  const handleResumeTask = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        organizationId,
+        updates: { status: 'in_progress' },
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la reprise de la tâche');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCompleteTask = async () => {
     if (isHarvestingTask) {
       setShowHarvestForm(true);
@@ -146,6 +189,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       setError('Veuillez entrer une quantité valide');
       return;
     }
+    if (!lotNumber) {
+      setError('Veuillez entrer un numéro de lot');
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -159,11 +206,34 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         quantity: harvestData.quantity || 0,
         unit: harvestData.unit || 'kg',
         workers: harvestData.workers || [],
-      } as CompleteHarvestTaskRequest);
+        // Add lot number and completion type
+        lot_number: lotNumber,
+        is_partial: completionType === 'partial',
+      } as CompleteHarvestTaskRequest & { lot_number: string; is_partial: boolean });
 
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['harvests'] });
-      onClose();
+
+      // For partial completion, don't close the dialog - just reset the form for next entry
+      if (completionType === 'partial') {
+        setHarvestData({
+          ...harvestData,
+          quantity: 0,
+          harvest_notes: '',
+        });
+        // Generate new lot number for next partial harvest
+        const year = new Date().getFullYear();
+        const parcelCode = task.parcel_id ? `P${task.parcel_id.slice(-2).toUpperCase()}` : 'PX';
+        const farmCode = task.farm_id ? `F${task.farm_id.slice(-2).toUpperCase()}` : 'FX';
+        const sequence = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+        setLotNumber(`${parcelCode}${farmCode}-${sequence}${year}`);
+        setError(null);
+        // Show success message briefly
+        setError('✓ Récolte partielle enregistrée. Vous pouvez continuer.');
+        setTimeout(() => setError(null), 3000);
+      } else {
+        onClose();
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la complétion de la récolte');
     } finally {
@@ -343,6 +413,69 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 Enregistrer la récolte
               </h3>
 
+              {/* Completion Type Selector */}
+              <div className="space-y-2">
+                <Label>Type de complétion</Label>
+                <div className="flex gap-4">
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    completionType === 'complete'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="completionType"
+                      value="complete"
+                      checked={completionType === 'complete'}
+                      onChange={() => setCompletionType('complete')}
+                      className="sr-only"
+                    />
+                    <CheckCircle className={`w-5 h-5 ${completionType === 'complete' ? 'text-green-600' : 'text-gray-400'}`} />
+                    <div>
+                      <p className="font-medium text-sm">Terminer complètement</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Marquer la tâche comme terminée</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    completionType === 'partial'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="completionType"
+                      value="partial"
+                      checked={completionType === 'partial'}
+                      onChange={() => setCompletionType('partial')}
+                      className="sr-only"
+                    />
+                    <PackageCheck className={`w-5 h-5 ${completionType === 'partial' ? 'text-amber-600' : 'text-gray-400'}`} />
+                    <div>
+                      <p className="font-medium text-sm">Récolte partielle</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Continuer la tâche après</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Lot Number */}
+              <div className="space-y-2">
+                <Label htmlFor="lot_number" className="flex items-center gap-2">
+                  <Hash className="w-4 h-4" />
+                  Numéro de lot *
+                </Label>
+                <Input
+                  id="lot_number"
+                  type="text"
+                  value={lotNumber}
+                  onChange={(e) => setLotNumber(e.target.value)}
+                  placeholder="Ex: P1FM1-0012025"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Format automatique: {'{'}ParcelCode{'}'}{'{'}FarmCode{'}'}-{'{'}Sequence{'}'}{'{'}Year{'}'}
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 {/* Crop Selector */}
                 <div className="space-y-2 col-span-2">
@@ -496,6 +629,17 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </Button>
             )}
 
+            {canResume && (
+              <Button
+                onClick={handleResumeTask}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Reprendre
+              </Button>
+            )}
+
             {canComplete && !showHarvestForm && (
               <Button
                 onClick={handleCompleteTask}
@@ -520,17 +664,29 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               <>
                 <Button
                   variant="outline"
-                  onClick={() => setShowHarvestForm(false)}
+                  onClick={() => {
+                    setShowHarvestForm(false);
+                    setCompletionType('complete');
+                    setLotNumber('');
+                  }}
                 >
                   Annuler
                 </Button>
                 <Button
                   onClick={handleCompleteWithHarvest}
                   disabled={isLoading}
-                  className="bg-green-600 hover:bg-green-700"
+                  className={completionType === 'partial' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Enregistrement...' : 'Enregistrer la récolte'}
+                  {completionType === 'partial' ? (
+                    <PackageCheck className="w-4 h-4 mr-2" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                  )}
+                  {isLoading
+                    ? 'Enregistrement...'
+                    : completionType === 'partial'
+                    ? 'Enregistrer récolte partielle'
+                    : 'Terminer et enregistrer'}
                 </Button>
               </>
             )}

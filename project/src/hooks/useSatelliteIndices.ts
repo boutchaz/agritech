@@ -4,7 +4,9 @@ import {
   SatelliteIndicesService,
   IndexCalculationRequest,
   IndexCalculationResponse,
-  TimeSeriesResponse
+  TimeSeriesResponse,
+  ExportFormat,
+  ExportOptions
 } from '../services/satelliteIndicesService';
 
 interface UseSatelliteIndicesReturn {
@@ -24,8 +26,14 @@ interface UseSatelliteIndicesReturn {
     boundary: number[][],
     parcelName: string,
     date: string,
-    index: string
-  ) => Promise<{ download_url: string; expires_at: string }>;
+    index: string,
+    options?: ExportOptions
+  ) => Promise<{ download_url: string; expires_at: string; format: string }>;
+  exportTimeSeries: (
+    timeSeriesData: TimeSeriesResponse,
+    format: 'JSON' | 'CSV' | 'PDF',
+    parcelName?: string
+  ) => Promise<void>;
   loading: boolean;
   error: string | null;
   availableIndices: string[];
@@ -103,8 +111,9 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     boundary: number[][],
     parcelName: string,
     date: string,
-    index: string
-  ): Promise<{ download_url: string; expires_at: string }> => {
+    index: string,
+    options: ExportOptions = { format: 'GeoTIFF' }
+  ): Promise<{ download_url: string; expires_at: string; format: string }> => {
     setLoading(true);
     setError(null);
 
@@ -112,10 +121,48 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
       const aoi = SatelliteIndicesService.convertBoundaryToGeoJSON(boundary);
       aoi.name = parcelName;
 
-      const result = await satelliteIndicesService.exportIndexMap(aoi, date, index);
+      const result = await satelliteIndicesService.exportIndexMap(aoi, date, index, 10, options);
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to export index map';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const exportTimeSeries = useCallback(async (
+    timeSeriesData: TimeSeriesResponse,
+    format: 'JSON' | 'CSV' | 'PDF',
+    parcelName?: string
+  ): Promise<void> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const blob = await satelliteIndicesService.exportTimeSeries(timeSeriesData, format, parcelName);
+
+      // Get file extension
+      const extensions: Record<string, string> = {
+        'JSON': 'json',
+        'CSV': 'csv',
+        'PDF': 'html', // We generate HTML for PDF (can be printed to PDF)
+      };
+      const ext = extensions[format] || 'txt';
+      const filename = `${parcelName || 'data'}_${timeSeriesData.index}_${new Date().toISOString().split('T')[0]}.${ext}`;
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to export time series';
       setError(errorMessage);
       throw err;
     } finally {
@@ -138,6 +185,7 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     calculateIndices,
     getTimeSeries,
     exportIndexMap,
+    exportTimeSeries,
     loading,
     error,
     availableIndices,

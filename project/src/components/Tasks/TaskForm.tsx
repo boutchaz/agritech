@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { X, UserCog, MapPin } from 'lucide-react';
+import { X, MapPin, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
+import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
 import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
 import type { Task, CreateTaskRequest, TaskType, TaskPriority } from '../../types/tasks';
 import { TASK_TYPE_LABELS } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
-import type { Parcel } from '../../types/parcels';
+import type { Parcel } from '../../lib/api/parcels';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -54,8 +56,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
     rate_per_unit: task?.rate_per_unit || undefined,
   });
 
+  // State for multiple worker selection
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>(
+    task?.assigned_to ? [task.assigned_to] : []
+  );
+
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const bulkCreateAssignments = useBulkCreateTaskAssignments();
 
   // Filter workers by selected farm - workers are linked to specific farms
   const { data: workers = [] } = useWorkers(organizationId, formData.farm_id || null);
@@ -106,21 +114,62 @@ const TaskForm: React.FC<TaskFormProps> = ({
         })
       ) as Partial<CreateTaskRequest>;
 
+      // Set the primary assigned_to to the first selected worker (for backward compatibility)
+      if (selectedWorkerIds.length > 0) {
+        cleanedData.assigned_to = selectedWorkerIds[0];
+      } else {
+        cleanedData.assigned_to = undefined;
+      }
+
       if (task) {
         await updateTask.mutateAsync({
           taskId: task.id,
           updates: cleanedData,
         });
+        // For existing tasks, create additional assignments for workers beyond the first
+        if (selectedWorkerIds.length > 1) {
+          await bulkCreateAssignments.mutateAsync({
+            taskId: task.id,
+            data: {
+              assignments: selectedWorkerIds.slice(1).map(workerId => ({
+                worker_id: workerId,
+                role: 'worker' as const,
+              })),
+            },
+          });
+        }
       } else {
-        await createTask.mutateAsync({
+        // Create the task first
+        const newTask = await createTask.mutateAsync({
           ...cleanedData as CreateTaskRequest,
           organization_id: organizationId,
         });
+        // Then create assignments for additional workers (first worker is already assigned via assigned_to)
+        if (selectedWorkerIds.length > 1 && newTask?.id) {
+          await bulkCreateAssignments.mutateAsync({
+            taskId: newTask.id,
+            data: {
+              assignments: selectedWorkerIds.slice(1).map(workerId => ({
+                worker_id: workerId,
+                role: 'worker' as const,
+              })),
+            },
+          });
+        }
       }
       onSuccess();
     } catch (error) {
       console.error('Error saving task:', error);
     }
+  };
+
+  // Helper to toggle worker selection
+  const toggleWorkerSelection = (workerId: string) => {
+    setSelectedWorkerIds(prev =>
+      prev.includes(workerId)
+        ? prev.filter(id => id !== workerId)
+        : [...prev, workerId]
+    );
   };
 
   return (
@@ -250,7 +299,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <SelectItem value="__none__">Aucune</SelectItem>
                   {parcels.map((parcel: Parcel) => (
                     <SelectItem key={parcel.id} value={parcel.id}>
-                      {parcel.parcel_name} {parcel.crop_type ? `(${parcel.crop_type})` : ''}
+                      {parcel.name} {parcel.crop_type ? `(${parcel.crop_type})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -263,35 +312,68 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </div>
           </div>
 
-          {/* Assigned To */}
+          {/* Assigned To - Multiple Workers */}
           <div className="space-y-2">
-            <Label htmlFor="assigned_to" className="flex items-center gap-2">
-              <UserCog className="w-4 h-4" />
-              Assigné à (travailleur)
+            <Label className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Assigné à (travailleurs)
+              {selectedWorkerIds.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs rounded-full">
+                  {selectedWorkerIds.length} sélectionné{selectedWorkerIds.length > 1 ? 's' : ''}
+                </span>
+              )}
             </Label>
-            <Select
-              value={formData.assigned_to || '__none__'}
-              onValueChange={(value) => setFormData({ ...formData, assigned_to: value === '__none__' ? undefined : value })}
-              disabled={!formData.farm_id}
-            >
-              <SelectTrigger id="assigned_to">
-                <SelectValue placeholder={formData.farm_id ? "Non assigné" : "Sélectionnez d'abord une ferme"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Non assigné</SelectItem>
-                {workers.map(worker => (
-                  <SelectItem key={worker.id} value={worker.id}>
-                    {worker.first_name} {worker.last_name} {worker.position ? `- ${worker.position}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!formData.farm_id ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Sélectionnez d'abord une ferme pour voir les travailleurs disponibles
+              </p>
+            ) : workers.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Aucun travailleur trouvé pour cette ferme
+              </p>
+            ) : (
+              <div className="border rounded-lg max-h-40 overflow-y-auto">
+                {workers.map(worker => {
+                  const isFixedSalary = worker.worker_type === 'fixed_salary';
+                  const workerTypeLabel = worker.worker_type === 'fixed_salary' ? 'Salarié fixe' :
+                                         worker.worker_type === 'daily_worker' ? 'Journalier' :
+                                         worker.worker_type === 'metayage' ? 'Métayer' : '';
+                  return (
+                  <div
+                    key={worker.id}
+                    className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b last:border-b-0 ${
+                      selectedWorkerIds.includes(worker.id) ? 'bg-green-50 dark:bg-green-900/20' : ''
+                    }`}
+                    onClick={() => toggleWorkerSelection(worker.id)}
+                  >
+                    <Checkbox
+                      id={`worker-${worker.id}`}
+                      checked={selectedWorkerIds.includes(worker.id)}
+                      onCheckedChange={() => toggleWorkerSelection(worker.id)}
+                    />
+                    <label
+                      htmlFor={`worker-${worker.id}`}
+                      className="flex-1 text-sm cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        {worker.first_name} {worker.last_name}
+                        {worker.position && (
+                          <span className="text-muted-foreground">- {worker.position}</span>
+                        )}
+                        {isFixedSalary && (
+                          <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded">
+                            {workerTypeLabel}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              {formData.farm_id
-                ? workers.length > 0
-                  ? 'Sélectionnez un travailleur de cette ferme'
-                  : 'Aucun travailleur trouvé pour cette ferme'
-                : 'Sélectionnez une ferme pour voir les travailleurs disponibles'}
+              Vous pouvez sélectionner plusieurs travailleurs pour cette tâche
             </p>
           </div>
 
@@ -331,22 +413,53 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
           {/* Payment Type & Work Unit Fields */}
           <div className="border-t pt-4 space-y-4">
-            <h3 className="text-sm font-semibold">
-              Paiement et Unités de Travail
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">
+                Paiement et Unités de Travail
+              </h3>
+              {/* Check if any selected workers are fixed salary */}
+              {selectedWorkerIds.length > 0 &&
+                workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
+                <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
+                  Salariés fixes sélectionnés - paiement optionnel
+                </span>
+              )}
+            </div>
+
+            {/* Note for fixed salary workers */}
+            {selectedWorkerIds.length > 0 &&
+              workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Note:</strong> Les travailleurs à salaire fixe sont déjà rémunérés mensuellement.
+                  Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {/* Payment Type */}
               <div className="space-y-2">
-                <Label htmlFor="payment_type">Type de paiement</Label>
+                <Label htmlFor="payment_type">
+                  Type de paiement
+                  {selectedWorkerIds.length > 0 &&
+                    workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length === selectedWorkerIds.length && (
+                    <span className="text-xs text-muted-foreground ml-2">(optionnel)</span>
+                  )}
+                </Label>
                 <Select
-                  value={formData.payment_type}
-                  onValueChange={(value) => setFormData({ ...formData, payment_type: value as any })}
+                  value={formData.payment_type || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, payment_type: value === 'none' ? undefined : value as any })}
                 >
                   <SelectTrigger id="payment_type">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Show "none" option only when all selected workers are fixed salary */}
+                    {selectedWorkerIds.length > 0 &&
+                      workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
+                      <SelectItem value="none">Aucun (inclus dans le salaire)</SelectItem>
+                    )}
                     <SelectItem value="daily">Par jour</SelectItem>
                     <SelectItem value="per_unit">À l'unité (Pièce-travail)</SelectItem>
                     <SelectItem value="monthly">Mensuel</SelectItem>

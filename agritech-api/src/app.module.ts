@@ -52,6 +52,7 @@ import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module
 import { UtilitiesModule } from './modules/utilities/utilities.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { PieceWorkModule } from './modules/piece-work/piece-work.module';
+import { TaskAssignmentsModule } from './modules/task-assignments/task-assignments.module';
 import { ProfitabilityModule } from './modules/profitability/profitability.module';
 import { ProductApplicationsModule } from './modules/product-applications/product-applications.module';
 import { AccountMappingsModule } from './modules/account-mappings/account-mappings.module';
@@ -59,6 +60,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EventsModule } from './modules/events/events.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { StrapiModule } from './modules/strapi/strapi.module';
+import { DemoDataModule } from './modules/demo-data/demo-data.module';
 
 @Module({
   imports: [
@@ -103,6 +105,7 @@ import { StrapiModule } from './modules/strapi/strapi.module';
     HarvestsModule,
     DeliveriesModule,
     TasksModule,
+    TaskAssignmentsModule,
     WorkersModule,
     WorkUnitsModule,
     PieceWorkModule,
@@ -134,6 +137,7 @@ import { StrapiModule } from './modules/strapi/strapi.module';
     EventsModule,
     MarketplaceModule,
     StrapiModule,
+    DemoDataModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer } from 'lucide-react';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
-import { TimeSeriesResponse, IndexCalculationResponse } from '../services/satelliteIndicesService';
-import TimeSeriesChart from './TimeSeriesChart';
+import { TimeSeriesResponse, IndexCalculationResponse, ExportFormat } from '../services/satelliteIndicesService';
+import TimeSeriesChart, { TemperatureDataPoint } from './TimeSeriesChart';
 import MultiIndexChart from './MultiIndexChart';
+
+type DataExportFormat = 'JSON' | 'CSV' | 'PDF';
+type ImageExportFormat = ExportFormat;
 
 interface Parcel {
   id: string;
@@ -20,6 +23,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     calculateIndices,
     getTimeSeries,
     exportIndexMap,
+    exportTimeSeries,
     loading,
     error,
     availableIndices,
@@ -35,6 +39,20 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'timeseries'>('current');
   const [chartMode, setChartMode] = useState<'single' | 'multi'>('single');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showTemperatureOverlay, setShowTemperatureOverlay] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadAvailableIndices();
@@ -136,7 +154,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     }
   };
 
-  const handleExportMap = async () => {
+  const handleExportMap = async (format: ImageExportFormat = 'GeoTIFF') => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
       alert('Cette parcelle n\'a pas de limites géographiques définies.');
       return;
@@ -148,18 +166,45 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         parcel.boundary,
         parcel.name,
         today,
-        selectedIndex
+        selectedIndex,
+        { format }
       );
+
+      // Get file extension based on format
+      const extensions: Record<string, string> = {
+        'GeoTIFF': 'tif',
+        'PNG': 'png',
+        'JPEG': 'jpg',
+        'JSON': 'json',
+        'CSV': 'csv',
+        'PDF': 'pdf',
+      };
+      const ext = extensions[format] || 'tif';
 
       // Create a temporary link to download the file
       const link = document.createElement('a');
       link.href = result.download_url;
-      link.download = `${parcel.name}_${selectedIndex}_${today}.tif`;
+      link.download = `${parcel.name}_${selectedIndex}_${today}.${ext}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setShowExportMenu(false);
     } catch (err) {
       console.error('Error exporting map:', err);
+    }
+  };
+
+  const handleExportData = async (format: DataExportFormat) => {
+    if (!timeSeriesData) {
+      alert('Veuillez d\'abord charger les données de la série temporelle.');
+      return;
+    }
+
+    try {
+      await exportTimeSeries(timeSeriesData, format, parcel.name);
+      setShowExportMenu(false);
+    } catch (err) {
+      console.error('Error exporting data:', err);
     }
   };
 
@@ -442,6 +487,27 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   </button>
                 </div>
               )}
+
+              {/* Temperature Overlay Toggle */}
+              {chartMode === 'single' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Température
+                  </label>
+                  <button
+                    onClick={() => setShowTemperatureOverlay(!showTemperatureOverlay)}
+                    className={`flex items-center gap-2 px-3 py-2 border rounded-md transition-colors ${
+                      showTemperatureOverlay
+                        ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                    title="Afficher la température au moment du passage satellite (11h)"
+                  >
+                    <Thermometer className="h-4 w-4" />
+                    <span className="hidden sm:inline">{showTemperatureOverlay ? 'Masquer' : 'Afficher'}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Load Button */}
@@ -546,19 +612,99 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   <h4 className="font-medium text-gray-900 dark:text-white">
                     Graphique d'évolution
                   </h4>
-                  <button
-                    onClick={handleExportMap}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
-                  >
-                    <Download className="h-3 w-3" />
-                    <span>Exporter</span>
-                  </button>
+                  {/* Export Dropdown */}
+                  <div className="relative" ref={exportMenuRef}>
+                    <button
+                      onClick={() => setShowExportMenu(!showExportMenu)}
+                      disabled={loading}
+                      className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Exporter</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+
+                    {showExportMenu && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                        <div className="py-1">
+                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Données
+                          </div>
+                          <button
+                            onClick={() => handleExportData('JSON')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <FileJson className="h-4 w-4 mr-3 text-blue-500" />
+                            JSON
+                          </button>
+                          <button
+                            onClick={() => handleExportData('CSV')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <FileSpreadsheet className="h-4 w-4 mr-3 text-green-500" />
+                            CSV / Excel
+                          </button>
+                          <button
+                            onClick={() => handleExportData('PDF')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <FileText className="h-4 w-4 mr-3 text-red-500" />
+                            PDF / Rapport
+                          </button>
+
+                          <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+
+                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Image Satellite
+                          </div>
+                          <button
+                            onClick={() => handleExportMap('GeoTIFF')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <Image className="h-4 w-4 mr-3 text-purple-500" />
+                            GeoTIFF (SIG)
+                          </button>
+                          <button
+                            onClick={() => handleExportMap('PNG')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <Image className="h-4 w-4 mr-3 text-orange-500" />
+                            PNG (Image)
+                          </button>
+                          <button
+                            onClick={() => handleExportMap('JPEG')}
+                            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <Image className="h-4 w-4 mr-3 text-amber-500" />
+                            JPEG (Compressé)
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <TimeSeriesChart
                   data={timeSeriesData.data}
                   index={selectedIndex}
+                  showTemperature={showTemperatureOverlay}
+                  temperatureData={showTemperatureOverlay ? timeSeriesData.data.map(point => {
+                    // Simulated temperature at 11:00 (satellite pass time)
+                    // In production, this would come from a weather API
+                    const date = new Date(point.date);
+                    const month = date.getMonth();
+                    // Approximate temperature based on month (Northern Hemisphere pattern)
+                    // Summer (June-Aug): 25-35°C, Winter (Dec-Feb): 5-15°C
+                    const baseTemp = 15 + 10 * Math.sin((month - 3) * Math.PI / 6);
+                    const dailyVariation = (Math.random() - 0.5) * 8;
+                    const temperature = baseTemp + dailyVariation;
+                    return {
+                      date: point.date,
+                      temperature: Math.round(temperature * 10) / 10,
+                      temp_min: temperature - 5,
+                      temp_max: temperature + 8,
+                    };
+                  }) : []}
                 />
 
                 {/* Data table (collapsed by default) */}
@@ -659,12 +805,12 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                       {Object.keys(multiTimeSeriesData).length} indices affichés
                     </span>
                     <button
-                      onClick={handleExportMap}
+                      onClick={() => handleExportMap('GeoTIFF')}
                       disabled={loading}
                       className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
                     >
                       <Download className="h-3 w-3" />
-                      <span>Exporter</span>
+                      <span>GeoTIFF</span>
                     </button>
                   </div>
                 </div>

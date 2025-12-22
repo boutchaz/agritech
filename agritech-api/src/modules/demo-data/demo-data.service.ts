@@ -1302,6 +1302,187 @@ export class DemoDataService {
   }
 
   /**
+   * Clear all demo data for an organization
+   * This deletes data that was created via demo seeding
+   */
+  async clearDemoData(organizationId: string): Promise<{ deletedCounts: Record<string, number> }> {
+    this.logger.log(`Clearing demo data for organization ${organizationId}`);
+    const client = this.databaseService.getAdminClient();
+    const deletedCounts: Record<string, number> = {};
+
+    try {
+      // Delete in reverse order of dependencies
+
+      // Financial data
+      const { count: costsCount } = await client
+        .from('costs')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['costs'] = costsCount || 0;
+
+      const { count: revenuesCount } = await client
+        .from('revenues')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['revenues'] = revenuesCount || 0;
+
+      // Reception batches
+      const { count: receptionBatchesCount } = await client
+        .from('reception_batches')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['reception_batches'] = receptionBatchesCount || 0;
+
+      // Harvests
+      const { count: harvestsCount } = await client
+        .from('harvest_records')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['harvest_records'] = harvestsCount || 0;
+
+      // Invoice items then invoices
+      const { data: invoices } = await client
+        .from('invoices')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (invoices && invoices.length > 0) {
+        const invoiceIds = invoices.map(i => i.id);
+        await client.from('invoice_items').delete().in('invoice_id', invoiceIds);
+      }
+      const { count: invoicesCount } = await client
+        .from('invoices')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['invoices'] = invoicesCount || 0;
+
+      // Sales order items then sales orders
+      const { data: salesOrders } = await client
+        .from('sales_orders')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (salesOrders && salesOrders.length > 0) {
+        const orderIds = salesOrders.map(o => o.id);
+        await client.from('sales_order_items').delete().in('sales_order_id', orderIds);
+      }
+      const { count: salesOrdersCount } = await client
+        .from('sales_orders')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['sales_orders'] = salesOrdersCount || 0;
+
+      // Customers and suppliers
+      const { count: customersCount } = await client
+        .from('customers')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['customers'] = customersCount || 0;
+
+      const { count: suppliersCount } = await client
+        .from('suppliers')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['suppliers'] = suppliersCount || 0;
+
+      // Items and item groups
+      const { count: itemsCount } = await client
+        .from('items')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['items'] = itemsCount || 0;
+
+      const { count: itemGroupsCount } = await client
+        .from('item_groups')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['item_groups'] = itemGroupsCount || 0;
+
+      // Warehouses
+      const { count: warehousesCount } = await client
+        .from('warehouses')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['warehouses'] = warehousesCount || 0;
+
+      // Structures
+      const { count: structuresCount } = await client
+        .from('structures')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['structures'] = structuresCount || 0;
+
+      // Tasks
+      const { count: tasksCount } = await client
+        .from('tasks')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['tasks'] = tasksCount || 0;
+
+      // Cost centers
+      const { count: costCentersCount } = await client
+        .from('cost_centers')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['cost_centers'] = costCentersCount || 0;
+
+      // Workers
+      const { count: workersCount } = await client
+        .from('workers')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['workers'] = workersCount || 0;
+
+      // Parcels
+      const { count: parcelsCount } = await client
+        .from('parcels')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['parcels'] = parcelsCount || 0;
+
+      // Farms
+      const { count: farmsCount } = await client
+        .from('farms')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['farms'] = farmsCount || 0;
+
+      this.logger.log(`✅ Demo data cleared for organization ${organizationId}`);
+      return { deletedCounts };
+    } catch (error) {
+      this.logger.error(`❌ Error clearing demo data: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Get data statistics for an organization
+   */
+  async getDataStats(organizationId: string): Promise<Record<string, number>> {
+    const client = this.databaseService.getAdminClient();
+    const stats: Record<string, number> = {};
+
+    const tables = [
+      'farms', 'parcels', 'workers', 'tasks', 'harvest_records',
+      'reception_batches', 'warehouses', 'items', 'item_groups',
+      'customers', 'suppliers', 'sales_orders', 'invoices',
+      'costs', 'revenues', 'structures', 'cost_centers'
+    ];
+
+    for (const table of tables) {
+      try {
+        const { count } = await client
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId);
+        stats[table] = count || 0;
+      } catch {
+        stats[table] = 0;
+      }
+    }
+
+    return stats;
+  }
+
+  /**
    * Create demo items and warehouses
    */
   private async createDemoItems(

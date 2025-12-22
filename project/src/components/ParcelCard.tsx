@@ -8,6 +8,7 @@ import ProductApplications from './ProductApplications';
 import { useNavigate } from '@tanstack/react-router';
 import { useAnalyses } from '../hooks/useAnalyses';
 import AnalysisCard from './Analysis/AnalysisCard';
+import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
 
 // Lazy load heavy chart components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysis/IndicesCalculator'));
@@ -42,6 +43,9 @@ interface ParcelCardProps {
 
 const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
   const navigate = useNavigate();
+
+  // Fetch latest satellite indices for this parcel
+  const { data: satelliteData, isLoading: satelliteLoading } = useLatestSatelliteIndices(parcel.id);
 
   // Memoize the module object to prevent infinite re-renders
   const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
@@ -83,19 +87,65 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
   ];
 
   // Memoize parcel data to prevent recalculation on every render
+  // Now uses real satellite data when available
   const data = useMemo(() => {
     const baseId = parseInt(parcel.id.slice(-1)) || 1;
-    return {
-      health: ['Excellent', 'Bon', 'Attention'][baseId % 3],
-      healthColor: ['text-green-600', 'text-blue-600', 'text-yellow-600'][baseId % 3],
-      healthBg: ['bg-green-50 dark:bg-green-900/20', 'bg-blue-50 dark:bg-blue-900/20', 'bg-yellow-50 dark:bg-yellow-900/20'][baseId % 3],
-      irrigation: (60 + (baseId * 15) % 40),
-      yield: (25 + (baseId * 5) % 15).toFixed(1),
-      lastUpdate: `Il y a ${baseId + 1} jour${baseId > 0 ? 's' : ''}`,
-      ndvi: (0.6 + (baseId * 0.1) % 0.3).toFixed(2),
-      issues: baseId % 3 === 2 ? ['Irrigation insuffisante', 'Surveillance requise'] : []
+
+    // Use real satellite data if available
+    const hasRealData = satelliteData && (satelliteData.ndvi !== null || satelliteData.ndmi !== null);
+
+    // Calculate health status from real NDVI
+    const healthStatus = hasRealData && satelliteData.ndvi !== null
+      ? calculateHealthStatus(satelliteData.ndvi)
+      : null;
+
+    // Calculate irrigation from real NDMI
+    const irrigationIndex = hasRealData && satelliteData.ndmi !== null
+      ? calculateIrrigationIndex(satelliteData.ndmi)
+      : null;
+
+    // Format last update date
+    const formatLastUpdate = (dateStr: string | null): string => {
+      if (!dateStr) return `Il y a ${baseId + 1} jour${baseId > 0 ? 's' : ''}`;
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return "Aujourd'hui";
+      if (diffDays === 1) return "Hier";
+      if (diffDays < 7) return `Il y a ${diffDays} jours`;
+
+      // Format as date: DD/MM/YYYY
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
-  }, [parcel.id]);
+
+    // Map health status to background colors
+    const healthBgMap: Record<string, string> = {
+      'Excellente': 'bg-green-50 dark:bg-green-900/20',
+      'Bonne': 'bg-green-50 dark:bg-green-900/20',
+      'Moyenne': 'bg-yellow-50 dark:bg-yellow-900/20',
+      'Faible': 'bg-orange-50 dark:bg-orange-900/20',
+      'Critique': 'bg-red-50 dark:bg-red-900/20',
+      'Inconnu': 'bg-gray-50 dark:bg-gray-900/20',
+    };
+
+    return {
+      health: healthStatus?.status ?? ['Excellent', 'Bon', 'Attention'][baseId % 3],
+      healthColor: healthStatus?.color ?? ['text-green-600', 'text-blue-600', 'text-yellow-600'][baseId % 3],
+      healthBg: healthStatus ? healthBgMap[healthStatus.status] : ['bg-green-50 dark:bg-green-900/20', 'bg-blue-50 dark:bg-blue-900/20', 'bg-yellow-50 dark:bg-yellow-900/20'][baseId % 3],
+      irrigation: irrigationIndex ?? (60 + (baseId * 15) % 40),
+      yield: (25 + (baseId * 5) % 15).toFixed(1),
+      lastUpdate: formatLastUpdate(satelliteData?.lastUpdate ?? null),
+      ndvi: satelliteData?.ndvi !== null && satelliteData?.ndvi !== undefined
+        ? satelliteData.ndvi.toFixed(2)
+        : (0.6 + (baseId * 0.1) % 0.3).toFixed(2),
+      ndmi: satelliteData?.ndmi !== null && satelliteData?.ndmi !== undefined
+        ? satelliteData.ndmi.toFixed(2)
+        : null,
+      issues: baseId % 3 === 2 ? ['Irrigation insuffisante', 'Surveillance requise'] : [],
+      hasRealData,
+    };
+  }, [parcel.id, satelliteData]);
 
   // Memoize random values to prevent recalculation on every render
   const randomValues = useMemo(() => {
@@ -134,17 +184,50 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
       case 'overview':
         return (
           <div className="space-y-6">
+            {/* Satellite Data Indicator */}
+            {data.hasRealData && (
+              <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                <Satellite className="h-3 w-3" />
+                <span>Données satellite en temps réel</span>
+              </div>
+            )}
+
             {/* Parcel Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
                   <Droplets className="h-4 w-4 text-blue-600" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    Irrigation
+                    Irrigation (NDMI)
                   </span>
                 </div>
                 <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  {data.irrigation}%
+                  {satelliteLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    `${data.irrigation}%`
+                  )}
+                </div>
+                {data.ndmi && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    NDMI: {data.ndmi}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                <div className="flex items-center space-x-2 mb-1">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    NDVI
+                  </span>
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  {satelliteLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    data.ndvi
+                  )}
                 </div>
               </div>
 
@@ -162,25 +245,17 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    NDVI
-                  </span>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  {data.ndvi}
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
-                <div className="flex items-center space-x-2 mb-1">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     Statut
                   </span>
                 </div>
                 <div className={`text-sm font-medium ${data.healthColor}`}>
-                  {data.health}
+                  {satelliteLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    data.health
+                  )}
                 </div>
               </div>
             </div>
@@ -200,7 +275,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span>Dernière mise à jour:</span>
+                  <span>Dernière mise à jour satellite:</span>
                   <span className="font-medium">{data.lastUpdate}</span>
                 </div>
               </div>

@@ -129,6 +129,25 @@ export class QuotesService {
       // Extract items from DTO
       const { items, ...quoteData } = createQuoteDto;
 
+      // Fetch tax rates for items that have tax_id but no tax_rate
+      const taxIds = items
+        .filter(item => item.tax_id && !item.tax_rate)
+        .map(item => item.tax_id);
+
+      const taxRates: Record<string, number> = {};
+      if (taxIds.length > 0) {
+        const { data: taxes } = await supabaseClient
+          .from('taxes')
+          .select('id, rate')
+          .in('id', taxIds);
+
+        if (taxes) {
+          taxes.forEach(tax => {
+            taxRates[tax.id] = tax.rate;
+          });
+        }
+      }
+
       // Calculate totals
       let subtotal = 0;
       let taxTotal = 0;
@@ -137,7 +156,10 @@ export class QuotesService {
         const amount = item.quantity * item.unit_price;
         const discountAmount = item.discount_percent ? (amount * item.discount_percent) / 100 : 0;
         const amountAfterDiscount = amount - discountAmount;
-        const taxAmount = item.tax_rate ? (amountAfterDiscount * item.tax_rate) / 100 : 0;
+
+        // Use provided tax_rate, or look up from tax_id
+        const effectiveTaxRate = item.tax_rate || (item.tax_id ? taxRates[item.tax_id] : 0) || 0;
+        const taxAmount = effectiveTaxRate ? (amountAfterDiscount * effectiveTaxRate) / 100 : 0;
         const lineTotal = amountAfterDiscount + taxAmount;
 
         subtotal += amountAfterDiscount;
@@ -154,7 +176,7 @@ export class QuotesService {
           discount_percent: item.discount_percent || 0,
           discount_amount: discountAmount,
           tax_id: item.tax_id || null,
-          tax_rate: item.tax_rate || 0,
+          tax_rate: effectiveTaxRate,
           tax_amount: taxAmount,
           line_total: lineTotal,
           account_id: item.account_id || null,
@@ -501,6 +523,25 @@ export class QuotesService {
           .delete()
           .eq('quote_id', id);
 
+        // Fetch tax rates for items that have tax_id but no tax_rate
+        const taxIds = items
+          .filter(item => item.tax_id && !item.tax_rate)
+          .map(item => item.tax_id);
+
+        const taxRates: Record<string, number> = {};
+        if (taxIds.length > 0) {
+          const { data: taxes } = await supabaseClient
+            .from('taxes')
+            .select('id, rate')
+            .in('id', taxIds);
+
+          if (taxes) {
+            taxes.forEach(tax => {
+              taxRates[tax.id] = tax.rate;
+            });
+          }
+        }
+
         // Calculate totals for new items
         let subtotal = 0;
         let taxTotal = 0;
@@ -509,7 +550,10 @@ export class QuotesService {
           const amount = item.quantity * item.unit_price;
           const discountAmount = item.discount_percent ? (amount * item.discount_percent) / 100 : 0;
           const amountAfterDiscount = amount - discountAmount;
-          const taxAmount = item.tax_rate ? (amountAfterDiscount * item.tax_rate) / 100 : 0;
+
+          // Use provided tax_rate, or look up from tax_id
+          const effectiveTaxRate = item.tax_rate || (item.tax_id ? taxRates[item.tax_id] : 0) || 0;
+          const taxAmount = effectiveTaxRate ? (amountAfterDiscount * effectiveTaxRate) / 100 : 0;
           const lineTotal = amountAfterDiscount + taxAmount;
 
           subtotal += amountAfterDiscount;
@@ -527,7 +571,7 @@ export class QuotesService {
             discount_percent: item.discount_percent || 0,
             discount_amount: discountAmount,
             tax_id: item.tax_id || null,
-            tax_rate: item.tax_rate || 0,
+            tax_rate: effectiveTaxRate,
             tax_amount: taxAmount,
             line_total: lineTotal,
             account_id: item.account_id || null,

@@ -138,4 +138,13 @@ export class CompleteHarvestTaskDto {
   @IsOptional()
   @IsString()
   harvest_notes?: string;
+
+  @ApiPropertyOptional({ description: 'Lot number for traceability' })
+  @IsOptional()
+  @IsString()
+  lot_number?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this is a partial harvest (task stays in progress)' })
+  @IsOptional()
+  is_partial?: boolean;
 }

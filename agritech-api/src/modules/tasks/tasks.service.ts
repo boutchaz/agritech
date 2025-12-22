@@ -433,19 +433,30 @@ export class TasksService {
     }
 
     const now = new Date().toISOString();
+    const isPartial = completeDto.is_partial === true;
 
-    // Complete the task
+    // Update the task - for partial harvest, keep it in_progress
+    const taskUpdateData = isPartial
+      ? {
+          // For partial completion, just update notes but keep in progress
+          notes: completeDto.notes
+            ? `${existingTask.notes || ''}\n[Récolte partielle ${now.split('T')[0]}]: ${completeDto.notes}`
+            : existingTask.notes,
+        }
+      : {
+          // For complete, mark as completed
+          status: 'completed',
+          completed_date: now.split('T')[0],
+          actual_end: now,
+          completion_percentage: 100,
+          quality_rating: completeDto.quality_rating,
+          actual_cost: completeDto.actual_cost,
+          notes: completeDto.notes,
+        };
+
     const { data: task, error: taskError } = await client
       .from('tasks')
-      .update({
-        status: 'completed',
-        completed_date: now.split('T')[0],
-        actual_end: now,
-        completion_percentage: 100,
-        quality_rating: completeDto.quality_rating,
-        actual_cost: completeDto.actual_cost,
-        notes: completeDto.notes,
-      })
+      .update(taskUpdateData)
       .eq('id', taskId)
       .select(`
         *,
@@ -456,7 +467,7 @@ export class TasksService {
       .single();
 
     if (taskError) {
-      throw new Error(`Failed to complete task: ${taskError.message}`);
+      throw new Error(`Failed to update task: ${taskError.message}`);
     }
 
     // Create harvest record
@@ -485,6 +496,8 @@ export class TasksService {
         expected_price_per_unit: completeDto.expected_price_per_unit,
         status: 'stored',
         notes: completeDto.harvest_notes,
+        lot_number: completeDto.lot_number,
+        is_partial: isPartial,
         created_by: userId,
       })
       .select()

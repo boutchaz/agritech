@@ -78,6 +78,7 @@ import { Route as SettingsOrganizationRouteImport } from './routes/settings.orga
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
+import { Route as SettingsDangerZoneRouteImport } from './routes/settings.danger-zone'
 import { Route as SettingsCostCentersRouteImport } from './routes/settings.cost-centers'
 import { Route as SettingsAccountMappingsRouteImport } from './routes/settings.account-mappings'
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
@@ -437,6 +438,11 @@ const SettingsDashboardRoute = SettingsDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsDangerZoneRoute = SettingsDangerZoneRouteImport.update({
+  id: '/danger-zone',
+  path: '/danger-zone',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsCostCentersRoute = SettingsCostCentersRouteImport.update({
   id: '/cost-centers',
   path: '/cost-centers',
@@ -562,6 +568,7 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
+  '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -641,6 +648,7 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
+  '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -726,6 +734,7 @@ export interface FileRoutesById {
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
+  '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/modules': typeof SettingsModulesRoute
@@ -812,6 +821,7 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId'
     | '/settings/account-mappings'
     | '/settings/cost-centers'
+    | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -891,6 +901,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/settings/account-mappings'
     | '/settings/cost-centers'
+    | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -975,6 +986,7 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId'
     | '/settings/account-mappings'
     | '/settings/cost-centers'
+    | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/modules'
@@ -1544,6 +1556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsDashboardRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/danger-zone': {
+      id: '/settings/danger-zone'
+      path: '/danger-zone'
+      fullPath: '/settings/danger-zone'
+      preLoaderRoute: typeof SettingsDangerZoneRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/cost-centers': {
       id: '/settings/cost-centers'
       path: '/cost-centers'
@@ -1705,6 +1724,7 @@ const ParcelsRouteWithChildren =
 interface SettingsRouteChildren {
   SettingsAccountMappingsRoute: typeof SettingsAccountMappingsRoute
   SettingsCostCentersRoute: typeof SettingsCostCentersRoute
+  SettingsDangerZoneRoute: typeof SettingsDangerZoneRoute
   SettingsDashboardRoute: typeof SettingsDashboardRoute
   SettingsDocumentsRoute: typeof SettingsDocumentsRoute
   SettingsModulesRoute: typeof SettingsModulesRoute
@@ -1720,6 +1740,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountMappingsRoute: SettingsAccountMappingsRoute,
   SettingsCostCentersRoute: SettingsCostCentersRoute,
+  SettingsDangerZoneRoute: SettingsDangerZoneRoute,
   SettingsDashboardRoute: SettingsDashboardRoute,
   SettingsDocumentsRoute: SettingsDocumentsRoute,
   SettingsModulesRoute: SettingsModulesRoute,

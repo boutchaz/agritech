@@ -2416,6 +2416,30 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tasks_work_unit ON tasks(work_unit_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(task_type);
 
+-- Task Assignments (for multiple worker assignment)
+CREATE TABLE IF NOT EXISTS task_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'worker', -- worker, supervisor, lead
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  assigned_by UUID REFERENCES auth.users(id),
+  status TEXT DEFAULT 'assigned', -- assigned, working, completed, removed
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  hours_worked NUMERIC(10, 2),
+  units_completed NUMERIC(10, 2),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(task_id, worker_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignments_task ON task_assignments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignments_worker ON task_assignments(worker_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignments_org ON task_assignments(organization_id);
+
 -- Task Categories
 CREATE TABLE IF NOT EXISTS task_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2745,6 +2769,8 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   documents JSONB DEFAULT '[]',
   status TEXT DEFAULT 'stored',
   notes TEXT,
+  lot_number TEXT, -- Unique lot number for traceability (e.g., P1FM1-0012025)
+  is_partial BOOLEAN DEFAULT false, -- Whether this is a partial harvest record
   created_by UUID REFERENCES auth.users(id),
   reception_batch_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2761,6 +2787,8 @@ CREATE INDEX IF NOT EXISTS idx_harvest_records_farm ON harvest_records(farm_id);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_parcel ON harvest_records(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_warehouse ON harvest_records(warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_date ON harvest_records(harvest_date DESC);
+CREATE INDEX IF NOT EXISTS idx_harvest_records_lot ON harvest_records(lot_number) WHERE lot_number IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_harvest_records_task ON harvest_records(harvest_task_id) WHERE harvest_task_id IS NOT NULL;
 
 -- Harvest Forecasts (Production Intelligence)
 CREATE TABLE IF NOT EXISTS harvest_forecasts (

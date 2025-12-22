@@ -13,8 +13,8 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { Loader2 } from 'lucide-react';
 
 const paymentSchema = z.object({
-  payment_type: z.enum(['received', 'paid']),
-  party_type: z.enum(['Customer', 'Supplier']).nullable().optional(),
+  payment_type: z.enum(['receive', 'pay']),
+  party_type: z.enum(['customer', 'supplier']).nullable().optional(),
   party_id: z.string().nullable().optional(),
   party_name: z.string().min(1, 'Party name is required'),
   payment_date: z.string().min(1, 'Payment date is required'),
@@ -43,8 +43,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: payment ? {
-      payment_type: payment.payment_type,
-      party_type: payment.party_type as 'Customer' | 'Supplier' | null,
+      payment_type: payment.payment_type as 'receive' | 'pay',
+      party_type: payment.party_type as 'customer' | 'supplier' | null,
       party_id: payment.party_id,
       party_name: payment.party_name,
       payment_date: payment.payment_date,
@@ -55,7 +55,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       status: payment.status || 'draft',
       remarks: payment.remarks,
     } : {
-      payment_type: 'received',
+      payment_type: 'receive',
       payment_date: new Date().toISOString().split('T')[0],
       amount: 0,
       payment_method: 'bank_transfer',
@@ -70,11 +70,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
   // Auto-fill party name when party is selected
   React.useEffect(() => {
     if (watchPartyId) {
-      const parties = watchPaymentType === 'received' ? customers : suppliers;
+      const parties = watchPaymentType === 'receive' ? customers : suppliers;
       const party = parties.find((p) => p.id === watchPartyId);
       if (party) {
         form.setValue('party_name', party.name);
-        form.setValue('party_type', watchPaymentType === 'received' ? 'Customer' : 'Supplier');
+        form.setValue('party_type', watchPaymentType === 'receive' ? 'customer' : 'supplier');
       }
     }
   }, [watchPartyId, watchPaymentType, customers, suppliers, form]);
@@ -105,8 +105,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
             {...form.register('payment_type')}
             disabled={!!payment}
           >
-            <option value="received">Payment Received</option>
-            <option value="paid">Payment Made</option>
+            <option value="receive">Payment Received</option>
+            <option value="pay">Payment Made</option>
           </NativeSelect>
           {form.formState.errors.payment_type && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_type.message}</p>
@@ -130,14 +130,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       {/* Party Selection */}
       <div>
         <Label htmlFor="party_id">
-          {watchPaymentType === 'received' ? 'Customer' : 'Supplier'} (Optional)
+          {watchPaymentType === 'receive' ? 'Customer' : 'Supplier'} (Optional)
         </Label>
         <NativeSelect
           id="party_id"
           {...form.register('party_id')}
         >
-          <option value="">-- Select {watchPaymentType === 'received' ? 'Customer' : 'Supplier'} --</option>
-          {(watchPaymentType === 'received' ? customers : suppliers).map((party) => (
+          <option value="">-- Select {watchPaymentType === 'receive' ? 'Customer' : 'Supplier'} --</option>
+          {(watchPaymentType === 'receive' ? customers : suppliers).map((party) => (
             <option key={party.id} value={party.id}>
               {party.name}
             </option>
@@ -151,7 +151,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
         <Input
           id="party_name"
           {...form.register('party_name')}
-          placeholder={`Enter ${watchPaymentType === 'received' ? 'customer' : 'supplier'} name`}
+          placeholder={`Enter ${watchPaymentType === 'receive' ? 'customer' : 'supplier'} name`}
           disabled={!!watchPartyId}
         />
         {form.formState.errors.party_name && (

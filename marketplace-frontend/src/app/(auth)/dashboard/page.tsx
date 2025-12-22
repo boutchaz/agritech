@@ -1,15 +1,58 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
 import Link from 'next/link';
-import { Package, ShoppingCart, TrendingUp, Plus } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, Plus, LogOut } from 'lucide-react';
 
-export default async function DashboardPage() {
-    // For now, we'll use mock data since auth needs to be implemented properly
-    // In production, this would check authentication via API
-    const stats = {
+export default function DashboardPage() {
+    const router = useRouter();
+    const [user, setUser] = useState<any>(null);
+    const [stats, setStats] = useState({
         listingsCount: 0,
         ordersCount: 0,
         revenue: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadDashboard();
+    }, []);
+
+    const loadDashboard = async () => {
+        try {
+            const currentUser = await ApiClient.getCurrentUser();
+            setUser(currentUser);
+
+            // Load stats if we have user data
+            if (currentUser?.organization_id) {
+                const dashboardStats = await ApiClient.getDashboardStats(currentUser.organization_id);
+                setStats(dashboardStats);
+            }
+        } catch (error) {
+            console.error('Failed to load dashboard:', error);
+            router.push('/login');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const handleLogout = async () => {
+        await ApiClient.logout();
+        router.push('/');
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-4xl mb-4">🌱</div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -26,8 +69,15 @@ export default async function DashboardPage() {
                                 Browse Products
                             </Link>
                             <div className="text-sm text-gray-500">
-                                Seller Dashboard
+                                {user?.email}
                             </div>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                <span className="text-sm">Logout</span>
+                            </button>
                         </div>
                     </div>
                 </div>

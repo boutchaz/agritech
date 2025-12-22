@@ -126,7 +126,8 @@ export const workersApi = {
    * Get all workers for an organization
    */
   async getAll(organizationId: string, farmId?: string): Promise<Worker[]> {
-    const params = farmId ? `?farmId=${farmId}` : '';
+    // Only include farmId param if it's a non-empty string
+    const params = farmId && farmId.trim() ? `?farmId=${farmId}` : '';
     return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`);
   },
 

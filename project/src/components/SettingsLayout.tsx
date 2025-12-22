@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2 } from 'lucide-react';
+import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2, AlertTriangle } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -103,6 +103,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       icon: FileText,
       path: '/settings/documents',
       description: t('settings.menu.documentsDescription'),
+      roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'danger-zone',
+      name: t('settings.menu.dangerZone', 'Zone de Danger'),
+      icon: AlertTriangle,
+      path: '/settings/danger-zone',
+      description: t('settings.menu.dangerZoneDescription', 'Gérer les données de démo et actions critiques'),
       roles: ['system_admin', 'organization_admin'] // Admin only
     }
   ], [t]);

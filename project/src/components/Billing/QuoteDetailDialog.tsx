@@ -864,7 +864,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                             {item.quantity}
                           </td>
                           <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
-                            {formatCurrency(Number(item.rate ?? 0), q.currency_code)}
+                            {formatCurrency(Number(item.unit_price ?? item.rate ?? 0), q.currency_code)}
                           </td>
                           <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.amount ?? 0), q.currency_code)}

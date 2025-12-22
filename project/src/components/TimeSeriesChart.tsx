@@ -1,18 +1,29 @@
 import React from 'react';
 import { TimeSeriesPoint } from '../services/satelliteIndicesService';
 
+export interface TemperatureDataPoint {
+  date: string;
+  temperature: number; // Temperature at 11:00 (satellite pass time)
+  temp_min?: number;
+  temp_max?: number;
+}
+
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
   index: string;
   width?: number;
   height?: number;
+  temperatureData?: TemperatureDataPoint[];
+  showTemperature?: boolean;
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   data,
   index,
   width = 600,
-  height = 300
+  height = 300,
+  temperatureData = [],
+  showTemperature = false,
 }) => {
   if (!data || data.length === 0) {
     return (
@@ -22,11 +33,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     );
   }
 
-  const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+  // Adjust right margin for temperature axis
+  const margin = { top: 20, right: showTemperature ? 70 : 30, bottom: 40, left: 60 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
 
-  // Calculate scales
+  // Calculate scales for index values
   const values = data.map(d => d.value);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
@@ -36,6 +48,22 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const minDate = Math.min(...dates);
   const maxDate = Math.max(...dates);
   const dateRange = maxDate - minDate || 1;
+
+  // Calculate temperature scales if temperature data is provided
+  const tempValues = temperatureData.map(d => d.temperature);
+  const minTemp = tempValues.length > 0 ? Math.min(...tempValues) - 5 : 0;
+  const maxTemp = tempValues.length > 0 ? Math.max(...tempValues) + 5 : 40;
+  const tempRange = maxTemp - minTemp || 1;
+
+  // Match temperature data to satellite dates
+  const matchedTemperatures = data.map(point => {
+    const tempMatch = temperatureData.find(t => {
+      const pointDate = new Date(point.date).toISOString().split('T')[0];
+      const tempDate = new Date(t.date).toISOString().split('T')[0];
+      return pointDate === tempDate;
+    });
+    return tempMatch ? { ...tempMatch, date: point.date } : null;
+  }).filter(t => t !== null) as TemperatureDataPoint[];
 
   // Create path for the line
   const pathData = data
@@ -56,13 +84,40 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       return { x, y, ...point };
     });
 
-  // Generate y-axis ticks
+  // Create temperature path and points if showing temperature
+  const tempPathData = showTemperature && matchedTemperatures.length > 0
+    ? matchedTemperatures
+        .map((point, i) => {
+          const x = (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
+          const y = chartHeight - ((point.temperature - minTemp) / tempRange * chartHeight);
+          return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+        })
+        .join(' ')
+    : '';
+
+  const tempPoints = showTemperature && matchedTemperatures.length > 0
+    ? matchedTemperatures.map((point) => {
+        const x = (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
+        const y = chartHeight - ((point.temperature - minTemp) / tempRange * chartHeight);
+        return { x, y, ...point };
+      })
+    : [];
+
+  // Generate y-axis ticks (left - index values)
   const yTicks = [];
   const tickCount = 5;
   for (let i = 0; i <= tickCount; i++) {
     const value = minValue + (valueRange * i / tickCount);
     const y = chartHeight - (i / tickCount * chartHeight);
     yTicks.push({ value, y });
+  }
+
+  // Generate temperature y-axis ticks (right)
+  const tempTicks = [];
+  for (let i = 0; i <= tickCount; i++) {
+    const value = minTemp + (tempRange * i / tickCount);
+    const y = chartHeight - (i / tickCount * chartHeight);
+    tempTicks.push({ value, y });
   }
 
   // Generate x-axis ticks
@@ -153,7 +208,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             className="dark:stroke-gray-400"
           />
 
-          {/* Y-axis labels */}
+          {/* Y-axis labels (left - index values) */}
           {yTicks.map((tick, i) => (
             <text
               key={i}
@@ -161,12 +216,37 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               y={margin.top + tick.y + 4}
               textAnchor="end"
               fontSize="12"
-              fill="#6b7280"
-              className="dark:fill-gray-400"
+              fill={getIndexColor(index)}
             >
               {tick.value.toFixed(2)}
             </text>
           ))}
+
+          {/* Temperature Y-axis (right) */}
+          {showTemperature && (
+            <>
+              <line
+                x1={margin.left + chartWidth}
+                y1={margin.top}
+                x2={margin.left + chartWidth}
+                y2={margin.top + chartHeight}
+                stroke="#ef4444"
+                strokeWidth="2"
+              />
+              {tempTicks.map((tick, i) => (
+                <text
+                  key={`temp-${i}`}
+                  x={margin.left + chartWidth + 10}
+                  y={margin.top + tick.y + 4}
+                  textAnchor="start"
+                  fontSize="12"
+                  fill="#ef4444"
+                >
+                  {tick.value.toFixed(0)}°C
+                </text>
+              ))}
+            </>
+          )}
 
           {/* X-axis labels */}
           {xTicks.map((tick, i) => (
@@ -183,7 +263,21 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             </text>
           ))}
 
-          {/* Data line */}
+          {/* Temperature line (render first so index line is on top) */}
+          {showTemperature && tempPathData && (
+            <path
+              d={tempPathData}
+              fill="none"
+              stroke="#ef4444"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              strokeDasharray="5,3"
+              opacity="0.8"
+            />
+          )}
+
+          {/* Index data line */}
           <path
             d={pathData}
             fill="none"
@@ -193,7 +287,26 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             strokeLinecap="round"
           />
 
-          {/* Data points */}
+          {/* Temperature points */}
+          {showTemperature && tempPoints.map((point, i) => (
+            <g key={`temp-point-${i}`}>
+              <circle
+                cx={margin.left + point.x}
+                cy={margin.top + point.y}
+                r="3"
+                fill="#ef4444"
+                stroke="white"
+                strokeWidth="1"
+                opacity="0.8"
+              >
+                <title>
+                  {new Date(point.date).toLocaleDateString('fr-FR')} - {point.temperature.toFixed(1)}°C
+                </title>
+              </circle>
+            </g>
+          ))}
+
+          {/* Index data points */}
           {points.map((point, i) => (
             <g key={i}>
               <circle
@@ -231,13 +344,40 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             y={height / 2}
             textAnchor="middle"
             fontSize="12"
-            fill="#6b7280"
-            className="dark:fill-gray-400"
+            fill={getIndexColor(index)}
             transform={`rotate(-90, 15, ${height / 2})`}
           >
             Valeur {index}
           </text>
+
+          {/* Temperature Y-axis label */}
+          {showTemperature && (
+            <text
+              x={width - 15}
+              y={height / 2}
+              textAnchor="middle"
+              fontSize="12"
+              fill="#ef4444"
+              transform={`rotate(90, ${width - 15}, ${height / 2})`}
+            >
+              Température (°C)
+            </text>
+          )}
         </svg>
+
+        {/* Legend */}
+        {showTemperature && (
+          <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5" style={{ backgroundColor: getIndexColor(index) }} />
+              <span className="text-gray-700 dark:text-gray-300">{index}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5" style={{ backgroundColor: '#ef4444', borderStyle: 'dashed', borderWidth: 1, borderColor: '#ef4444' }} />
+              <span className="text-gray-700 dark:text-gray-300">Température (11h)</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
