@@ -34,7 +34,7 @@ export class MarketplaceService {
             this.logger.error(`Error fetching marketplace listings: ${listingsError.message}`);
         }
 
-        // Fetch items marked as sales items (from stock/items)
+        // Fetch items marked as sales items AND published to marketplace (from stock/items)
         const { data: salesItems, error: itemsError } = await supabase
             .from('items')
             .select(`
@@ -43,6 +43,7 @@ export class MarketplaceService {
                 item_code,
                 item_name,
                 description,
+                website_description,
                 standard_rate,
                 default_unit,
                 image_url,
@@ -51,6 +52,7 @@ export class MarketplaceService {
                 variety,
                 is_active,
                 is_sales_item,
+                show_in_website,
                 created_at,
                 updated_at,
                 item_groups (
@@ -60,6 +62,7 @@ export class MarketplaceService {
             `)
             .eq('is_sales_item', true)
             .eq('is_active', true)
+            .eq('show_in_website', true) // Only show items published to marketplace
             .order('created_at', { ascending: false });
 
         if (itemsError) {
@@ -73,7 +76,8 @@ export class MarketplaceService {
             id: item.id,
             organization_id: item.organization_id,
             title: item.item_name,
-            description: item.description,
+            description: (item as any).website_description || item.description, // Prefer marketplace description
+            short_description: item.description, // Original description as short version
             price: item.standard_rate || 0,
             currency: 'MAD',
             quantity_available: null, // Stock level would need separate query
@@ -133,6 +137,7 @@ export class MarketplaceService {
                 item_code,
                 item_name,
                 description,
+                website_description,
                 standard_rate,
                 default_unit,
                 image_url,
@@ -140,6 +145,7 @@ export class MarketplaceService {
                 crop_type,
                 variety,
                 is_active,
+                show_in_website,
                 created_at,
                 updated_at,
                 item_groups (
@@ -150,6 +156,7 @@ export class MarketplaceService {
             .eq('id', id)
             .eq('is_sales_item', true)
             .eq('is_active', true)
+            .eq('show_in_website', true) // Only show published items
             .single();
 
         if (itemError || !item) {
@@ -162,7 +169,8 @@ export class MarketplaceService {
             id: item.id,
             organization_id: item.organization_id,
             title: item.item_name,
-            description: item.description,
+            description: (item as any).website_description || item.description, // Prefer marketplace description
+            short_description: item.description, // Original description as short version
             price: item.standard_rate || 0,
             currency: 'MAD',
             quantity_available: null,

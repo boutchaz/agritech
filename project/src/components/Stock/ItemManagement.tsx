@@ -7,6 +7,9 @@ import { useFarms } from '@/hooks/useParcelsQuery';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -39,7 +42,7 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
@@ -49,6 +52,7 @@ import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
+import ProductImageUpload from './ProductImageUpload';
 
 interface ItemFormProps {
   item?: Item | null;
@@ -241,6 +245,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     is_purchase_item: item?.is_purchase_item ?? true,
     is_stock_item: item?.is_stock_item ?? true,
     minimum_stock_level: item?.minimum_stock_level || undefined,
+    // Marketplace fields
+    images: item?.images || [],
+    website_description: item?.website_description || '',
+    show_in_website: item?.show_in_website ?? false,
   });
 
   // Get first item group ID in a stable way to avoid infinite loops
@@ -264,6 +272,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: item.is_sales_item ?? true,
         is_purchase_item: item.is_purchase_item ?? true,
         is_stock_item: item.is_stock_item ?? true,
+        // Marketplace fields
+        images: item.images || [],
+        website_description: item.website_description || '',
+        show_in_website: item.show_in_website ?? false,
       });
     } else {
       // Create mode: reset to defaults
@@ -281,6 +293,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: true,
         is_purchase_item: true,
         is_stock_item: true,
+        // Marketplace fields
+        images: [],
+        website_description: '',
+        show_in_website: false,
       });
     }
   }, [item, currentOrganization?.id, firstItemGroupId]);
@@ -579,6 +595,103 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               <span className="text-sm">{t('items.stockItem')}</span>
             </label>
           </div>
+
+          {/* Marketplace Section - Show when is_sales_item is checked */}
+          {formData.is_sales_item && (
+            <Card className="border-emerald-200 bg-emerald-50/30 dark:bg-emerald-900/10 dark:border-emerald-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2 text-base">
+                  <ShoppingBag className="h-5 w-5" />
+                  {t('items.marketplace.title', 'Marketplace Listing')}
+                </CardTitle>
+                <CardDescription>
+                  {t('items.marketplace.description', 'Configure how this item appears on the marketplace')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Product Images */}
+                <div>
+                  <Label className="text-sm font-medium">
+                    {t('items.marketplace.images', 'Product Images')}
+                  </Label>
+                  <ProductImageUpload
+                    itemId={item?.id}
+                    organizationId={currentOrganization?.id || ''}
+                    images={formData.images || []}
+                    onImagesChange={(images) => setFormData({ ...formData, images })}
+                    maxImages={5}
+                    disabled={!currentOrganization?.id}
+                  />
+                </div>
+
+                {/* Website Description */}
+                <div>
+                  <Label htmlFor="website_description">
+                    {t('items.marketplace.websiteDescription', 'Marketplace Description')}
+                  </Label>
+                  <Textarea
+                    id="website_description"
+                    value={formData.website_description || ''}
+                    onChange={(e) => setFormData({ ...formData, website_description: e.target.value })}
+                    placeholder={t('items.marketplace.descriptionPlaceholder', 'Detailed description for marketplace buyers...')}
+                    rows={3}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('items.marketplace.descriptionHint', 'This description will be shown on the marketplace product page')}
+                  </p>
+                </div>
+
+                {/* Price Display */}
+                <div className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-md border">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {t('items.marketplace.price', 'Marketplace Price')}:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {formatCurrency(formData.standard_rate || 0)}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    / {formData.default_unit || t('items.unit.notSet', 'unit')}
+                  </span>
+                </div>
+
+                {/* Publish Toggle */}
+                <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md border">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="show_in_website" className="text-sm font-medium cursor-pointer">
+                      {t('items.marketplace.publishNow', 'Publish on Marketplace')}
+                    </Label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('items.marketplace.publishHint', 'Make this item visible to buyers on the marketplace')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="show_in_website"
+                    checked={formData.show_in_website || false}
+                    onCheckedChange={(checked) => setFormData({ ...formData, show_in_website: checked })}
+                  />
+                </div>
+
+                {/* Validation Warning */}
+                {formData.show_in_website && (!formData.images?.length || !formData.standard_rate) && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-700 dark:text-amber-300">
+                      <p className="font-medium">{t('items.marketplace.validationWarning', 'Missing required fields:')}</p>
+                      <ul className="list-disc list-inside mt-1 text-xs">
+                        {!formData.images?.length && (
+                          <li>{t('items.marketplace.missingImages', 'At least one product image is required')}</li>
+                        )}
+                        {!formData.standard_rate && (
+                          <li>{t('items.marketplace.missingPrice', 'Product price must be set')}</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Current Stock Level Display (only when editing) */}
           {item && item.is_stock_item && (
