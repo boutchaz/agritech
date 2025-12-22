@@ -59,4 +59,56 @@ export class StrapiService {
 
         return result.data && result.data.length > 0 ? result.data[0] : null;
     }
+
+    /**
+     * Get all marketplace categories
+     */
+    async getMarketplaceCategories(locale: string = 'fr') {
+        return this.findMany('marketplace-categories', {
+            populate: ['image'],
+            sort: ['sort_order:asc'],
+            locale,
+            filters: {
+                publishedAt: {
+                    $notNull: true
+                }
+            }
+        });
+    }
+
+    /**
+     * Get a single marketplace category by slug
+     */
+    async getMarketplaceCategoryBySlug(slug: string, locale: string = 'fr') {
+        const result = await this.findMany('marketplace-categories', {
+            filters: {
+                slug: {
+                    $eq: slug
+                }
+            },
+            populate: ['image', 'products'],
+            locale
+        });
+
+        return result.data && result.data.length > 0 ? result.data[0] : null;
+    }
+
+    /**
+     * Get featured marketplace categories
+     */
+    async getFeaturedCategories(locale: string = 'fr') {
+        return this.findMany('marketplace-categories', {
+            populate: ['image'],
+            sort: ['sort_order:asc'],
+            locale,
+            filters: {
+                is_featured: {
+                    $eq: true
+                },
+                publishedAt: {
+                    $notNull: true
+                }
+            }
+        });
+    }
 }

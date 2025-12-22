@@ -43,6 +43,43 @@
             "relation": "manyToMany",
             "target": "api::marketplace-product.marketplace-product",
             "mappedBy": "categories"
+        },
+        "icon": {
+            "type": "string",
+            "pluginOptions": {
+                "i18n": {
+                    "localized": false
+                }
+            }
+        },
+        "image": {
+            "type": "media",
+            "multiple": false,
+            "required": false,
+            "allowedTypes": ["images"],
+            "pluginOptions": {
+                "i18n": {
+                    "localized": false
+                }
+            }
+        },
+        "sort_order": {
+            "type": "integer",
+            "default": 0,
+            "pluginOptions": {
+                "i18n": {
+                    "localized": false
+                }
+            }
+        },
+        "is_featured": {
+            "type": "boolean",
+            "default": false,
+            "pluginOptions": {
+                "i18n": {
+                    "localized": false
+                }
+            }
         }
     }
 }

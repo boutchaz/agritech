@@ -74,8 +74,9 @@ export class ApiClient {
     }
 
     // MARKETPLACE METHODS
-    static async getProducts() {
-        return this.request<any[]>('/marketplace/products');
+    static async getProducts(category?: string) {
+        const params = category ? `?category=${encodeURIComponent(category)}` : '';
+        return this.request<any[]>(`/marketplace/products${params}`);
     }
 
     static async getProduct(id: string) {
@@ -91,5 +92,18 @@ export class ApiClient {
             method: 'POST',
             body: JSON.stringify(data),
         });
+    }
+
+    // CATEGORY METHODS
+    static async getCategories(locale: string = 'fr') {
+        return this.request<any>(`/marketplace/categories?locale=${locale}`);
+    }
+
+    static async getFeaturedCategories(locale: string = 'fr') {
+        return this.request<any>(`/marketplace/categories/featured?locale=${locale}`);
+    }
+
+    static async getCategoryBySlug(slug: string, locale: string = 'fr') {
+        return this.request<any>(`/marketplace/categories/${slug}?locale=${locale}`);
     }
 }
