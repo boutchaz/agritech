@@ -55,7 +55,7 @@ export class MarketplaceService {
                 updated_at,
                 item_groups (
                     id,
-                    group_name
+                    name
                 )
             `)
             .eq('is_sales_item', true)
@@ -79,7 +79,7 @@ export class MarketplaceService {
             quantity_available: null, // Stock level would need separate query
             unit: item.default_unit,
             product_category_id: (item.item_groups as any)?.id || null,
-            category_name: (item.item_groups as any)?.group_name || null,
+            category_name: (item.item_groups as any)?.name || null,
             status: 'active',
             is_public: true,
             images: item.images || (item.image_url ? [item.image_url] : []),
@@ -144,7 +144,7 @@ export class MarketplaceService {
                 updated_at,
                 item_groups (
                     id,
-                    group_name
+                    name
                 )
             `)
             .eq('id', id)
@@ -168,7 +168,7 @@ export class MarketplaceService {
             quantity_available: null,
             unit: item.default_unit,
             product_category_id: (item.item_groups as any)?.id || null,
-            category_name: (item.item_groups as any)?.group_name || null,
+            category_name: (item.item_groups as any)?.name || null,
             status: 'active',
             is_public: true,
             images: item.images || (item.image_url ? [item.image_url] : []),
