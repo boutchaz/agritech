@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsEnum,
   IsDate,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -136,4 +137,18 @@ export class CreateItemDto {
   @IsNumber()
   @IsOptional()
   days_to_harvest?: number;
+
+  // Marketplace fields
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
+
+  @IsString()
+  @IsOptional()
+  website_description?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  show_in_website?: boolean;
 }

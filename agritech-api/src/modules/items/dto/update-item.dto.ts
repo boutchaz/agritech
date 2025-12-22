@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsDate,
   IsUUID,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ValuationMethod } from './create-item.dto';
@@ -128,4 +129,18 @@ export class UpdateItemDto {
   @IsNumber()
   @IsOptional()
   days_to_harvest?: number;
+
+  // Marketplace fields
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
+
+  @IsString()
+  @IsOptional()
+  website_description?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  show_in_website?: boolean;
 }
