@@ -48,14 +48,22 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo stock entries`);
 
       // 8. Seed Customers/Suppliers
-      const customers = await this.createDemoParties(organizationId, userId);
+      const { customers, suppliers } = await this.createDemoParties(organizationId, userId);
       this.logger.log(`✅ Created demo customers/suppliers`);
 
-      // 9. Seed Sales Orders
-      const salesOrders = await this.createDemoSalesOrders(organizationId, customers, userId);
+      // 9. Seed Quotes
+      const quotes = await this.createDemoQuotes(organizationId, customers, items, userId);
+      this.logger.log(`✅ Created ${quotes.length} demo quotes`);
+
+      // 10. Seed Sales Orders
+      const salesOrders = await this.createDemoSalesOrders(organizationId, customers, items, userId);
       this.logger.log(`✅ Created ${salesOrders.length} demo sales orders`);
 
-      // 10. Seed Invoices
+      // 11. Seed Purchase Orders
+      const purchaseOrders = await this.createDemoPurchaseOrders(organizationId, suppliers, items, userId);
+      this.logger.log(`✅ Created ${purchaseOrders.length} demo purchase orders`);
+
+      // 12. Seed Invoices
       await this.createDemoInvoices(organizationId, parcels, customers, userId);
       this.logger.log(`✅ Created demo invoices`);
 
@@ -541,10 +549,10 @@ export class DemoDataService {
   /**
    * Create demo customers and suppliers
    */
-  private async createDemoParties(organizationId: string, userId: string) {
+  private async createDemoParties(organizationId: string, userId: string): Promise<{ customers: any[]; suppliers: any[] }> {
     const client = this.databaseService.getAdminClient();
 
-    const customers = [
+    const customersData = [
       {
         organization_id: organizationId,
         customer_code: 'CUST-001',
@@ -577,11 +585,27 @@ export class DemoDataService {
         is_active: true,
         created_by: userId,
       },
+      {
+        organization_id: organizationId,
+        customer_code: 'CUST-003',
+        customer_name: 'Restaurant Le Jardin',
+        customer_type: 'business',
+        email: 'commandes@lejardin.ma',
+        phone: '+212537456789',
+        address: 'Avenue Mohammed V, Fès',
+        city: 'Fès',
+        country: 'Maroc',
+        tax_id: '555666777',
+        payment_terms: 'Net 15',
+        credit_limit: 20000,
+        is_active: true,
+        created_by: userId,
+      },
     ];
 
     const { data: createdCustomers, error } = await client
       .from('customers')
-      .insert(customers)
+      .insert(customersData)
       .select();
 
     if (error) {
@@ -589,8 +613,8 @@ export class DemoDataService {
       throw error;
     }
 
-    // Also create a supplier
-    const suppliers = [
+    // Create suppliers
+    const suppliersData = [
       {
         organization_id: organizationId,
         supplier_code: 'SUP-001',
@@ -606,11 +630,193 @@ export class DemoDataService {
         is_active: true,
         created_by: userId,
       },
+      {
+        organization_id: organizationId,
+        supplier_code: 'SUP-002',
+        supplier_name: 'Engrais & Semences du Maroc',
+        supplier_type: 'manufacturer',
+        email: 'ventes@esmaroc.ma',
+        phone: '+212528987654',
+        address: 'Parc Industriel, Agadir',
+        city: 'Agadir',
+        country: 'Maroc',
+        tax_id: '789123456',
+        payment_terms: 'Net 45',
+        is_active: true,
+        created_by: userId,
+      },
     ];
 
-    await client.from('suppliers').insert(suppliers);
+    const { data: createdSuppliers, error: supplierError } = await client
+      .from('suppliers')
+      .insert(suppliersData)
+      .select();
 
-    return createdCustomers || [];
+    if (supplierError) {
+      this.logger.error(`Failed to create demo suppliers: ${supplierError.message}`);
+    }
+
+    return {
+      customers: createdCustomers || [],
+      suppliers: createdSuppliers || [],
+    };
+  }
+
+  /**
+   * Create demo quotes
+   */
+  private async createDemoQuotes(
+    organizationId: string,
+    customers: any[],
+    items: any[],
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const nextMonth = new Date(now);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const inTwoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    // Find olive oil and citrus items
+    const oliveOilItem = items.find(i => i.item_name?.includes('Olive')) || items[0];
+    const citrusItem = items.find(i => i.item_name?.includes('Clémentine') || i.item_name?.includes('Agrume')) || items[1];
+
+    const quotes = [
+      {
+        organization_id: organizationId,
+        quote_number: 'DEV-2024-001',
+        quote_date: lastWeek.toISOString().split('T')[0],
+        valid_until: nextMonth.toISOString().split('T')[0],
+        customer_id: customers[0]?.id,
+        customer_name: customers[0]?.customer_name || 'Client Demo',
+        status: 'sent',
+        subtotal: 25000,
+        tax_total: 4500,
+        grand_total: 29500,
+        payment_terms: 'Net 30',
+        delivery_terms: 'Livraison sur site',
+        notes: 'Devis pour commande régulière mensuelle',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        quote_number: 'DEV-2024-002',
+        quote_date: twoWeeksAgo.toISOString().split('T')[0],
+        valid_until: inTwoWeeks.toISOString().split('T')[0],
+        customer_id: customers[1]?.id,
+        customer_name: customers[1]?.customer_name || 'Client Demo 2',
+        status: 'accepted',
+        subtotal: 12000,
+        tax_total: 2160,
+        grand_total: 14160,
+        payment_terms: 'Net 15',
+        delivery_terms: 'Retrait en ferme',
+        notes: 'Devis accepté - convertir en commande',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        quote_number: 'DEV-2024-003',
+        quote_date: now.toISOString().split('T')[0],
+        valid_until: nextMonth.toISOString().split('T')[0],
+        customer_id: customers[2]?.id || customers[0]?.id,
+        customer_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        status: 'draft',
+        subtotal: 8500,
+        tax_total: 1530,
+        grand_total: 10030,
+        payment_terms: 'Net 15',
+        delivery_terms: 'Livraison express',
+        notes: 'En attente de confirmation des quantités',
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdQuotes, error } = await client
+      .from('quotes')
+      .insert(quotes)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to create demo quotes: ${error.message}`);
+      return [];
+    }
+
+    // Create quote items
+    if (createdQuotes && createdQuotes.length > 0) {
+      const quoteItems = [
+        // Quote 1 items
+        {
+          quote_id: createdQuotes[0].id,
+          line_number: 1,
+          item_id: oliveOilItem?.id,
+          item_name: 'Huile d\'Olive Extra Vierge',
+          description: 'Huile d\'olive pressée à froid, qualité premium',
+          quantity: 500,
+          unit_of_measure: 'L',
+          unit_price: 40,
+          discount_percent: 0,
+          tax_rate: 18,
+          amount: 20000,
+          tax_amount: 3600,
+          line_total: 23600,
+        },
+        {
+          quote_id: createdQuotes[0].id,
+          line_number: 2,
+          item_id: citrusItem?.id,
+          item_name: 'Clémentines Bio',
+          description: 'Clémentines de saison, agriculture biologique',
+          quantity: 200,
+          unit_of_measure: 'kg',
+          unit_price: 25,
+          discount_percent: 0,
+          tax_rate: 18,
+          amount: 5000,
+          tax_amount: 900,
+          line_total: 5900,
+        },
+        // Quote 2 items
+        {
+          quote_id: createdQuotes[1].id,
+          line_number: 1,
+          item_id: oliveOilItem?.id,
+          item_name: 'Huile d\'Olive Extra Vierge',
+          description: 'Huile d\'olive pressée à froid',
+          quantity: 300,
+          unit_of_measure: 'L',
+          unit_price: 40,
+          discount_percent: 0,
+          tax_rate: 18,
+          amount: 12000,
+          tax_amount: 2160,
+          line_total: 14160,
+        },
+        // Quote 3 items
+        {
+          quote_id: createdQuotes[2].id,
+          line_number: 1,
+          item_id: citrusItem?.id,
+          item_name: 'Oranges Navel',
+          description: 'Oranges fraîches pour jus',
+          quantity: 500,
+          unit_of_measure: 'kg',
+          unit_price: 17,
+          discount_percent: 0,
+          tax_rate: 18,
+          amount: 8500,
+          tax_amount: 1530,
+          line_total: 10030,
+        },
+      ];
+
+      await client.from('quote_items').insert(quoteItems);
+    }
+
+    return createdQuotes || [];
   }
 
   /**
@@ -619,6 +825,7 @@ export class DemoDataService {
   private async createDemoSalesOrders(
     organizationId: string,
     customers: any[],
+    items: any[],
     userId: string,
   ) {
     const client = this.databaseService.getAdminClient();
@@ -626,32 +833,60 @@ export class DemoDataService {
     const now = new Date();
     const lastMonth = new Date(now);
     lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const inTwoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    // Find items
+    const oliveOilItem = items.find(i => i.item_name?.includes('Olive')) || items[0];
+    const citrusItem = items.find(i => i.item_name?.includes('Clémentine') || i.item_name?.includes('Agrume')) || items[1];
 
     const salesOrders = [
       {
         organization_id: organizationId,
         order_number: 'SO-2024-001',
         order_date: lastMonth.toISOString().split('T')[0],
-        customer_id: customers[0].id,
-        customer_name: customers[0].customer_name,
+        expected_delivery_date: new Date(lastMonth.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        customer_id: customers[0]?.id,
+        customer_name: customers[0]?.customer_name || 'Client Demo',
+        customer_address: customers[0]?.address,
         status: 'delivered',
         subtotal: 15000,
         tax_amount: 2700,
         total_amount: 17700,
+        stock_issued: true,
+        notes: 'Commande livrée avec succès',
         created_by: userId,
       },
       {
         organization_id: organizationId,
         order_number: 'SO-2024-002',
-        order_date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-        customer_id: customers[1].id,
-        customer_name: customers[1].customer_name,
+        order_date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        expected_delivery_date: nextWeek.toISOString().split('T')[0],
+        customer_id: customers[1]?.id,
+        customer_name: customers[1]?.customer_name || 'Client Demo 2',
+        customer_address: customers[1]?.address,
         status: 'confirmed',
         subtotal: 8500,
         tax_amount: 1530,
         total_amount: 10030,
+        stock_issued: false,
+        notes: 'En préparation',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        order_number: 'SO-2024-003',
+        order_date: now.toISOString().split('T')[0],
+        expected_delivery_date: inTwoWeeks.toISOString().split('T')[0],
+        customer_id: customers[2]?.id || customers[0]?.id,
+        customer_name: customers[2]?.customer_name || customers[0]?.customer_name || 'Client Demo',
+        customer_address: customers[2]?.address || customers[0]?.address,
+        status: 'draft',
+        subtotal: 20000,
+        tax_amount: 3600,
+        total_amount: 23600,
+        stock_issued: false,
+        notes: 'Nouvelle commande en attente de validation',
         created_by: userId,
       },
     ];
@@ -663,7 +898,6 @@ export class DemoDataService {
 
     if (error) {
       this.logger.error(`Failed to create demo sales orders: ${error.message}`);
-      // Don't throw - sales orders are optional
       return [];
     }
 
@@ -673,10 +907,11 @@ export class DemoDataService {
         {
           sales_order_id: createdOrders[0].id,
           line_number: 1,
+          item_id: oliveOilItem?.id,
           item_name: 'Huile d\'Olive Extra Vierge',
           description: 'Huile d\'olive de qualité supérieure',
           quantity: 500,
-          unit_of_measure: 'kg',
+          unit_of_measure: 'L',
           unit_price: 30,
           amount: 15000,
           tax_rate: 18,
@@ -686,6 +921,7 @@ export class DemoDataService {
         {
           sales_order_id: createdOrders[1].id,
           line_number: 1,
+          item_id: citrusItem?.id,
           item_name: 'Clémentines',
           description: 'Clémentines fraîches de saison',
           quantity: 300,
@@ -696,9 +932,204 @@ export class DemoDataService {
           tax_amount: 1530,
           line_total: 10030,
         },
+        {
+          sales_order_id: createdOrders[2].id,
+          line_number: 1,
+          item_id: oliveOilItem?.id,
+          item_name: 'Huile d\'Olive Extra Vierge',
+          description: 'Grande commande huile olive',
+          quantity: 400,
+          unit_of_measure: 'L',
+          unit_price: 40,
+          amount: 16000,
+          tax_rate: 18,
+          tax_amount: 2880,
+          line_total: 18880,
+        },
+        {
+          sales_order_id: createdOrders[2].id,
+          line_number: 2,
+          item_id: citrusItem?.id,
+          item_name: 'Oranges Navel',
+          description: 'Oranges pour jus',
+          quantity: 200,
+          unit_of_measure: 'kg',
+          unit_price: 20,
+          amount: 4000,
+          tax_rate: 18,
+          tax_amount: 720,
+          line_total: 4720,
+        },
       ];
 
       await client.from('sales_order_items').insert(orderItems);
+    }
+
+    return createdOrders || [];
+  }
+
+  /**
+   * Create demo purchase orders
+   */
+  private async createDemoPurchaseOrders(
+    organizationId: string,
+    suppliers: any[],
+    items: any[],
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const inThreeWeeks = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000);
+
+    // Find input items (fertilizers, seeds, etc.)
+    const fertilizerItem = items.find(i => i.item_name?.includes('Engrais') || i.item_name?.includes('NPK')) || items[0];
+    const seedItem = items.find(i => i.item_name?.includes('Semence') || i.item_name?.includes('Graine')) || items[1];
+
+    const purchaseOrders = [
+      {
+        organization_id: organizationId,
+        order_number: 'PO-2024-001',
+        order_date: lastMonth.toISOString().split('T')[0],
+        expected_delivery_date: new Date(lastMonth.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        supplier_id: suppliers[0]?.id,
+        supplier_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_contact: suppliers[0]?.email,
+        status: 'received',
+        subtotal: 12500,
+        tax_amount: 2250,
+        total_amount: 14750,
+        stock_received: true,
+        stock_received_date: new Date(lastMonth.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: 'Commande reçue et contrôlée',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        order_number: 'PO-2024-002',
+        order_date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        expected_delivery_date: nextWeek.toISOString().split('T')[0],
+        supplier_id: suppliers[1]?.id || suppliers[0]?.id,
+        supplier_name: suppliers[1]?.supplier_name || suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_contact: suppliers[1]?.email || suppliers[0]?.email,
+        status: 'confirmed',
+        subtotal: 8000,
+        tax_amount: 1440,
+        total_amount: 9440,
+        stock_received: false,
+        notes: 'En cours de livraison',
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        order_number: 'PO-2024-003',
+        order_date: now.toISOString().split('T')[0],
+        expected_delivery_date: inThreeWeeks.toISOString().split('T')[0],
+        supplier_id: suppliers[0]?.id,
+        supplier_name: suppliers[0]?.supplier_name || 'Fournisseur Demo',
+        supplier_contact: suppliers[0]?.email,
+        status: 'draft',
+        subtotal: 15000,
+        tax_amount: 2700,
+        total_amount: 17700,
+        stock_received: false,
+        notes: 'Commande en préparation pour la saison',
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdOrders, error } = await client
+      .from('purchase_orders')
+      .insert(purchaseOrders)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to create demo purchase orders: ${error.message}`);
+      return [];
+    }
+
+    // Create purchase order items
+    if (createdOrders && createdOrders.length > 0) {
+      const orderItems = [
+        // PO 1 items
+        {
+          purchase_order_id: createdOrders[0].id,
+          line_number: 1,
+          item_id: fertilizerItem?.id,
+          item_name: 'Engrais NPK 20-20-20',
+          description: 'Engrais équilibré pour cultures',
+          quantity: 500,
+          unit_of_measure: 'kg',
+          unit_price: 25,
+          amount: 12500,
+          tax_rate: 18,
+          tax_amount: 2250,
+          line_total: 14750,
+        },
+        // PO 2 items
+        {
+          purchase_order_id: createdOrders[1].id,
+          line_number: 1,
+          item_id: seedItem?.id,
+          item_name: 'Semences Tomate Bio',
+          description: 'Semences certifiées biologiques',
+          quantity: 50,
+          unit_of_measure: 'kg',
+          unit_price: 120,
+          amount: 6000,
+          tax_rate: 18,
+          tax_amount: 1080,
+          line_total: 7080,
+        },
+        {
+          purchase_order_id: createdOrders[1].id,
+          line_number: 2,
+          item_id: fertilizerItem?.id,
+          item_name: 'Compost Organique',
+          description: 'Compost naturel enrichi',
+          quantity: 100,
+          unit_of_measure: 'kg',
+          unit_price: 20,
+          amount: 2000,
+          tax_rate: 18,
+          tax_amount: 360,
+          line_total: 2360,
+        },
+        // PO 3 items
+        {
+          purchase_order_id: createdOrders[2].id,
+          line_number: 1,
+          item_id: fertilizerItem?.id,
+          item_name: 'Engrais Phosphaté',
+          description: 'Engrais riche en phosphore pour fruitiers',
+          quantity: 300,
+          unit_of_measure: 'kg',
+          unit_price: 30,
+          amount: 9000,
+          tax_rate: 18,
+          tax_amount: 1620,
+          line_total: 10620,
+        },
+        {
+          purchase_order_id: createdOrders[2].id,
+          line_number: 2,
+          item_id: seedItem?.id,
+          item_name: 'Plants d\'Olivier',
+          description: 'Jeunes plants d\'olivier certifiés',
+          quantity: 50,
+          unit_of_measure: 'unité',
+          unit_price: 120,
+          amount: 6000,
+          tax_rate: 18,
+          tax_amount: 1080,
+          line_total: 7080,
+        },
+      ];
+
+      await client.from('purchase_order_items').insert(orderItems);
     }
 
     return createdOrders || [];
@@ -1481,6 +1912,21 @@ export class DemoDataService {
         .eq('organization_id', organizationId);
       deletedCounts['invoices'] = invoicesCount || 0;
 
+      // Quote items then quotes
+      const { data: quotes } = await client
+        .from('quotes')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (quotes && quotes.length > 0) {
+        const quoteIds = quotes.map(q => q.id);
+        await client.from('quote_items').delete().in('quote_id', quoteIds);
+      }
+      const { count: quotesCount } = await client
+        .from('quotes')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['quotes'] = quotesCount || 0;
+
       // Sales order items then sales orders
       const { data: salesOrders } = await client
         .from('sales_orders')
@@ -1495,6 +1941,21 @@ export class DemoDataService {
         .delete({ count: 'exact' })
         .eq('organization_id', organizationId);
       deletedCounts['sales_orders'] = salesOrdersCount || 0;
+
+      // Purchase order items then purchase orders
+      const { data: purchaseOrders } = await client
+        .from('purchase_orders')
+        .select('id')
+        .eq('organization_id', organizationId);
+      if (purchaseOrders && purchaseOrders.length > 0) {
+        const poIds = purchaseOrders.map(po => po.id);
+        await client.from('purchase_order_items').delete().in('purchase_order_id', poIds);
+      }
+      const { count: purchaseOrdersCount } = await client
+        .from('purchase_orders')
+        .delete({ count: 'exact' })
+        .eq('organization_id', organizationId);
+      deletedCounts['purchase_orders'] = purchaseOrdersCount || 0;
 
       // Customers and suppliers
       const { count: customersCount } = await client
@@ -1604,7 +2065,7 @@ export class DemoDataService {
     const tables = [
       'farms', 'parcels', 'workers', 'tasks', 'harvest_records',
       'reception_batches', 'warehouses', 'items', 'item_groups',
-      'customers', 'suppliers', 'sales_orders', 'invoices',
+      'customers', 'suppliers', 'quotes', 'sales_orders', 'purchase_orders', 'invoices',
       'costs', 'revenues', 'structures', 'cost_centers', 'stock_entries'
     ];
 
@@ -2194,8 +2655,12 @@ export class DemoDataService {
       'reception_batches',
       'stock_entries',
       'stock_entry_items',
+      'quotes',
+      'quote_items',
       'sales_orders',
       'sales_order_items',
+      'purchase_orders',
+      'purchase_order_items',
       'invoices',
       'invoice_items',
       'costs',
@@ -2232,6 +2697,16 @@ export class DemoDataService {
       exportData.stock_entry_items = stockEntryItems || [];
     }
 
+    // Quote items - get via quotes
+    if (exportData.quotes && exportData.quotes.length > 0) {
+      const quoteIds = exportData.quotes.map((q: any) => q.id);
+      const { data: quoteItems } = await client
+        .from('quote_items')
+        .select('*')
+        .in('quote_id', quoteIds);
+      exportData.quote_items = quoteItems || [];
+    }
+
     // Sales order items - get via sales_orders
     if (exportData.sales_orders && exportData.sales_orders.length > 0) {
       const orderIds = exportData.sales_orders.map((o: any) => o.id);
@@ -2240,6 +2715,16 @@ export class DemoDataService {
         .select('*')
         .in('sales_order_id', orderIds);
       exportData.sales_order_items = salesOrderItems || [];
+    }
+
+    // Purchase order items - get via purchase_orders
+    if (exportData.purchase_orders && exportData.purchase_orders.length > 0) {
+      const poIds = exportData.purchase_orders.map((po: any) => po.id);
+      const { data: purchaseOrderItems } = await client
+        .from('purchase_order_items')
+        .select('*')
+        .in('purchase_order_id', poIds);
+      exportData.purchase_order_items = purchaseOrderItems || [];
     }
 
     // Invoice items - get via invoices
@@ -2288,7 +2773,9 @@ export class DemoDataService {
       'harvest_records',
       'reception_batches',
       'stock_entries',
+      'quotes',
       'sales_orders',
+      'purchase_orders',
       'invoices',
       'costs',
       'revenues',
@@ -2475,6 +2962,32 @@ export class DemoDataService {
       importedCounts.stock_entry_items = count;
     }
 
+    // Quote items
+    const quoteItems = importData.quote_items;
+    if (quoteItems && Array.isArray(quoteItems) && quoteItems.length > 0) {
+      let count = 0;
+      for (const item of quoteItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.quote_id && idMaps.quotes) {
+          const newId = idMaps.quotes.get(newItem.quote_id);
+          if (newId) newItem.quote_id = newId;
+          else continue;
+        }
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+        }
+
+        const { error } = await client.from('quote_items').insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.quote_items = count;
+    }
+
     // Sales order items
     const salesOrderItems = importData.sales_order_items;
     if (salesOrderItems && Array.isArray(salesOrderItems) && salesOrderItems.length > 0) {
@@ -2499,6 +3012,32 @@ export class DemoDataService {
         if (!error) count++;
       }
       importedCounts.sales_order_items = count;
+    }
+
+    // Purchase order items
+    const purchaseOrderItems = importData.purchase_order_items;
+    if (purchaseOrderItems && Array.isArray(purchaseOrderItems) && purchaseOrderItems.length > 0) {
+      let count = 0;
+      for (const item of purchaseOrderItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.purchase_order_id && idMaps.purchase_orders) {
+          const newId = idMaps.purchase_orders.get(newItem.purchase_order_id);
+          if (newId) newItem.purchase_order_id = newId;
+          else continue;
+        }
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+        }
+
+        const { error } = await client.from('purchase_order_items').insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.purchase_order_items = count;
     }
 
     // Invoice items
