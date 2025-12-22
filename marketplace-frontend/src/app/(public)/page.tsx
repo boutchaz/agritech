@@ -38,11 +38,11 @@ export default function MarketplaceHome() {
         if (cmsCategories.length > 0) {
           setCategories(cmsCategories);
         } else {
-          setCategories(fallbackCategories as any);
+          setCategories(fallbackCategories as Category[]);
         }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        setCategories(fallbackCategories as any);
+        setCategories(fallbackCategories as Category[]);
       } finally {
         setLoadingCategories(false);
       }
@@ -68,7 +68,7 @@ export default function MarketplaceHome() {
     slug: category.attributes?.slug || category.slug || '',
     description: category.attributes?.description || category.description || '',
     icon: category.attributes?.icon || category.icon || '',
-    is_featured: category.attributes?.is_featured || (category as any).is_featured || false,
+    is_featured: category.attributes?.is_featured || category.is_featured || false,
   });
 
   const featuredCategories = categories.filter(c => getCategoryProps(c).is_featured);

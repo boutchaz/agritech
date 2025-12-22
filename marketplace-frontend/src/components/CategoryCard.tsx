@@ -10,6 +10,7 @@ export interface Category {
         slug: string;
         description?: string;
         icon?: string;
+        is_featured?: boolean;
         image?: {
             data?: {
                 attributes?: {
@@ -24,6 +25,7 @@ export interface Category {
     slug?: string;
     description?: string;
     icon?: string;
+    is_featured?: boolean;
     image?: { url: string };
 }
 

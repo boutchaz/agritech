@@ -33,11 +33,11 @@ export default function CategoriesPage() {
         if (data.length > 0) {
           setCategories(data);
         } else {
-          setCategories(fallbackCategories as any);
+          setCategories(fallbackCategories as Category[]);
         }
       } catch (err) {
         console.error('Failed to fetch categories', err);
-        setCategories(fallbackCategories as any);
+        setCategories(fallbackCategories as Category[]);
       } finally {
         setLoading(false);
       }
@@ -50,7 +50,7 @@ export default function CategoriesPage() {
     slug: category.attributes?.slug || category.slug || '',
     description: category.attributes?.description || category.description || '',
     icon: category.attributes?.icon || category.icon || '',
-    is_featured: (category as any).attributes?.is_featured || (category as any).is_featured || false,
+    is_featured: category.attributes?.is_featured || category.is_featured || false,
   });
 
   const filteredCategories = categories.filter(cat => {
