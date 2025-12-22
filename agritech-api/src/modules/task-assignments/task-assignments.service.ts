@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { SupabaseService } from '../../supabase/supabase.service';
+import { DatabaseService } from '../database/database.service';
 import {
   CreateTaskAssignmentDto,
   BulkCreateTaskAssignmentsDto,
@@ -32,14 +32,14 @@ export interface TaskAssignment {
 
 @Injectable()
 export class TaskAssignmentsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly databaseService: DatabaseService) {}
 
   async getTaskAssignments(
     organizationId: string,
     taskId: string,
-    userId: string,
+    _userId: string,
   ): Promise<TaskAssignment[]> {
-    const client = this.supabaseService.getClientForUser(userId);
+    const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('task_assignments')
@@ -65,7 +65,7 @@ export class TaskAssignmentsService {
     dto: CreateTaskAssignmentDto,
     userId: string,
   ): Promise<TaskAssignment> {
-    const client = this.supabaseService.getClientForUser(userId);
+    const client = this.databaseService.getAdminClient();
 
     // Check if worker is already assigned
     const { data: existing } = await client
@@ -157,9 +157,9 @@ export class TaskAssignmentsService {
     taskId: string,
     assignmentId: string,
     dto: UpdateTaskAssignmentDto,
-    userId: string,
+    _userId: string,
   ): Promise<TaskAssignment> {
-    const client = this.supabaseService.getClientForUser(userId);
+    const client = this.databaseService.getAdminClient();
 
     const updateData: Record<string, any> = {
       ...dto,
@@ -201,9 +201,9 @@ export class TaskAssignmentsService {
     organizationId: string,
     taskId: string,
     assignmentId: string,
-    userId: string,
+    _userId: string,
   ): Promise<void> {
-    const client = this.supabaseService.getClientForUser(userId);
+    const client = this.databaseService.getAdminClient();
 
     // Soft delete by setting status to 'removed'
     const { error } = await client
@@ -224,34 +224,50 @@ export class TaskAssignmentsService {
   async getWorkerAssignments(
     organizationId: string,
     workerId: string,
-    userId: string,
+    _userId: string,
     options?: {
       status?: string[];
       includeTask?: boolean;
     },
   ): Promise<TaskAssignment[]> {
-    const client = this.supabaseService.getClientForUser(userId);
+    const client = this.databaseService.getAdminClient();
 
-    let query = client
+    // Build base query without task join
+    let baseQuery = client
       .from('task_assignments')
-      .select(options?.includeTask
-        ? `*, task:tasks!task_id(id, title, task_type, status, scheduled_start, due_date, farm_id, parcel_id)`
-        : '*')
+      .select('*')
       .eq('organization_id', organizationId)
       .eq('worker_id', workerId);
 
     if (options?.status && options.status.length > 0) {
-      query = query.in('status', options.status);
+      baseQuery = baseQuery.in('status', options.status);
     } else {
-      query = query.neq('status', 'removed');
+      baseQuery = baseQuery.neq('status', 'removed');
     }
 
-    const { data, error } = await query.order('assigned_at', { ascending: false });
+    const { data, error } = await baseQuery.order('assigned_at', { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch worker assignments: ${error.message}`);
     }
 
-    return data || [];
+    // If task details needed, fetch them separately
+    if (options?.includeTask && data && data.length > 0) {
+      const taskIds = data.map(d => d.task_id);
+      const { data: tasks } = await client
+        .from('tasks')
+        .select('id, title, task_type, status, scheduled_start, due_date, farm_id, parcel_id')
+        .in('id', taskIds);
+
+      if (tasks) {
+        const taskMap = new Map(tasks.map(t => [t.id, t]));
+        return data.map(assignment => ({
+          ...assignment,
+          task: taskMap.get(assignment.task_id),
+        })) as TaskAssignment[];
+      }
+    }
+
+    return (data as unknown as TaskAssignment[]) || [];
   }
 }

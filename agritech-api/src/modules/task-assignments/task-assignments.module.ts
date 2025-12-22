@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TaskAssignmentsController } from './task-assignments.controller';
 import { TaskAssignmentsService } from './task-assignments.service';
-import { SupabaseModule } from '../../supabase/supabase.module';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [DatabaseModule],
   controllers: [TaskAssignmentsController],
   providers: [TaskAssignmentsService],
   exports: [TaskAssignmentsService],

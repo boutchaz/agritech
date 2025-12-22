@@ -419,7 +419,7 @@ export class TasksService {
     // Verify task belongs to organization and is a harvest task
     const { data: existingTask } = await client
       .from('tasks')
-      .select('id, task_type, farm_id, parcel_id, assigned_to')
+      .select('id, task_type, farm_id, parcel_id, assigned_to, notes')
       .eq('id', taskId)
       .eq('organization_id', organizationId)
       .maybeSingle();
