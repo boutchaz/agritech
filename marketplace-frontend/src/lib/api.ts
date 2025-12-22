@@ -1,6 +1,8 @@
 export class ApiClient {
     private static get baseUrl() {
-        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+        // Ensure we use the /api/v1 prefix
+        return apiUrl.endsWith('/api/v1') ? apiUrl : `${apiUrl}/api/v1`;
     }
 
     private static getAuthToken(): string | null {
