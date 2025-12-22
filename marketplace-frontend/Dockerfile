@@ -53,7 +53,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Set correct permissions
+# Copy the cache directory for ISR/prerendering and set permissions
+COPY --from=builder --chown=nextjs:nodejs /app/.next/server ./.next/server
+
+# Set ownership for the entire .next directory so nextjs user can write to cache
+RUN chown -R nextjs:nodejs /app/.next
+
 USER nextjs
 
 EXPOSE 3000
