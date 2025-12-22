@@ -41,6 +41,13 @@ async function bootstrap() {
 
   logger.log(`CORS Origins configured: ${allowedOrigins.join(', ')}`);
 
+  // Always allow these origins for marketplace
+  const alwaysAllowedOrigins = [
+    'https://marketplace.thebzlab.online',
+    'https://dashboard.thebzlab.online',
+    'https://agritech.thebzlab.online',
+  ];
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or curl)
@@ -51,7 +58,13 @@ async function bootstrap() {
 
       logger.debug(`CORS: Checking origin: ${origin}`);
 
-      // Check if origin is in allowed list
+      // Check if origin is in always-allowed list
+      if (alwaysAllowedOrigins.includes(origin)) {
+        logger.debug(`CORS: Origin ${origin} is in always-allowed list`);
+        return callback(null, true);
+      }
+
+      // Check if origin is in configured allowed list
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         logger.debug(`CORS: Origin ${origin} is allowed`);
         return callback(null, true);
@@ -63,8 +76,15 @@ async function bootstrap() {
         return callback(null, true);
       }
 
+      // For thebzlab.online subdomains, allow them
+      if (origin.endsWith('.thebzlab.online')) {
+        logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
+        return callback(null, true);
+      }
+
       logger.warn(`CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error('Not allowed by CORS'));
+      // Return false instead of throwing error to avoid 500 errors
+      callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
