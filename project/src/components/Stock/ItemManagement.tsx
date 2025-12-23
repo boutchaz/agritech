@@ -208,9 +208,11 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     queryFn: async () => {
       try {
         const response = await marketplaceCategoriesApi.getAll('fr', currentOrganization?.id);
+        console.log('[DEBUG] Marketplace categories response:', response);
         return response.data || [];
       } catch (error) {
-        console.warn('Could not fetch marketplace categories:', error);
+        console.error('[ERROR] Could not fetch marketplace categories:', error);
+        toast.error('Could not load categories. Please check backend connection.');
         return [];
       }
     },
@@ -642,12 +644,18 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                       <SelectValue placeholder={categoriesLoading ? t('app.loading') : t('items.marketplace.selectCategory', 'Select a category')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {marketplaceCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.attributes.slug}>
-                          {cat.attributes.icon && `${cat.attributes.icon} `}
-                          {cat.attributes.name}
-                        </SelectItem>
-                      ))}
+                      {marketplaceCategories.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          {categoriesLoading ? t('app.loading') : 'No categories available. Check console for errors.'}
+                        </div>
+                      ) : (
+                        marketplaceCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.attributes.slug}>
+                            {cat.attributes.icon && `${cat.attributes.icon} `}
+                            {cat.attributes.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
