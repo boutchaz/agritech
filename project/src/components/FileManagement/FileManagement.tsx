@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -42,13 +42,11 @@ import {
   File,
   Trash2,
   Search,
-  AlertTriangle,
-  Download,
-  ExternalLink,
+  AlertTriangle, ExternalLink,
   HardDrive,
-  RefreshCw,
+  RefreshCw
 } from 'lucide-react';
-import { filesApi, FileRegistry, StorageStats } from '@/lib/api/files';
+import { filesApi, FileRegistry } from '@/lib/api/files';
 import { useOrganization } from '@/hooks/useOrganization';
 import { formatBytes } from '@/lib/utils';
 
