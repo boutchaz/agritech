@@ -582,13 +582,23 @@ export class OrdersService {
                                     });
 
                                 // Restore stock_valuation remaining_quantity
-                                await supabase
+                                // First, get current stock valuation
+                                const { data: currentStock } = await supabase
                                     .from('stock_valuation')
-                                    .update({
-                                        remaining_quantity: supabase.raw(`remaining_quantity + ${orderItem.quantity}`),
-                                    })
+                                    .select('remaining_quantity')
                                     .eq('item_id', orderItem.item_id)
-                                    .eq('warehouse_id', originalMovement.warehouse_id);
+                                    .eq('warehouse_id', originalMovement.warehouse_id)
+                                    .single();
+
+                                if (currentStock) {
+                                    await supabase
+                                        .from('stock_valuation')
+                                        .update({
+                                            remaining_quantity: currentStock.remaining_quantity + orderItem.quantity,
+                                        })
+                                        .eq('item_id', orderItem.item_id)
+                                        .eq('warehouse_id', originalMovement.warehouse_id);
+                                }
 
                                 // Mark as not deducted
                                 await supabase
