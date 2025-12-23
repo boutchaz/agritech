@@ -63,13 +63,20 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
-            await ApiClient.signup({
+            const response = await ApiClient.signup({
                 email: formData.email,
                 password: formData.password,
                 displayName: formData.displayName,
                 sellerType: formData.sellerType,
             });
-            router.push('/login?registered=true');
+
+            // Check if email confirmation is required
+            if (response.requiresLogin) {
+                router.push(`/login?registered=true&email=${encodeURIComponent(formData.email)}`);
+            } else {
+                // Auto-login successful
+                router.push('/dashboard');
+            }
         } catch (err: any) {
             setError(err.message || 'Echec de la creation du compte');
         } finally {

@@ -1,16 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
+import { CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        const registered = searchParams.get('registered');
+        const emailParam = searchParams.get('email');
+
+        if (registered === 'true') {
+            setShowSuccess(true);
+            if (emailParam) {
+                setEmail(decodeURIComponent(emailParam));
+            }
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,6 +63,18 @@ export default function LoginPage() {
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
                     <form className="space-y-6" onSubmit={handleSubmit}>
+                        {showSuccess && (
+                            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start gap-3">
+                                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className="font-medium">Compte créé avec succès!</p>
+                                    <p className="text-sm text-green-700 mt-1">
+                                        Connectez-vous avec votre email et mot de passe.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                                 {error}
