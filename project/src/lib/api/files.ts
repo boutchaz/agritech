@@ -1,5 +1,7 @@
 import { apiClient } from '../api-client';
 
+const BASE_URL = '/api/v1/files';
+
 export interface FileRegistry {
   id: string;
   organization_id: string;
@@ -71,7 +73,7 @@ export const filesApi = {
    * Register a new file in the tracking system
    */
   async register(dto: RegisterFileDto, organizationId?: string): Promise<FileRegistry> {
-    return apiClient.post('/files/register', dto, {}, organizationId);
+    return apiClient.post(`${BASE_URL}/register`, dto, {}, organizationId);
   },
 
   /**
@@ -95,69 +97,69 @@ export const filesApi = {
     if (filters?.markedForDeletion !== undefined) params.append('markedForDeletion', String(filters.markedForDeletion));
 
     const queryString = params.toString();
-    return apiClient.get(`/files${queryString ? `?${queryString}` : ''}`, {}, organizationId);
+    return apiClient.get(`${BASE_URL}${queryString ? `?${queryString}` : ''}`, {}, organizationId);
   },
 
   /**
    * Get storage statistics
    */
   async getStats(organizationId?: string): Promise<StorageStats[]> {
-    return apiClient.get('/files/stats', {}, organizationId);
+    return apiClient.get(`${BASE_URL}/stats`, {}, organizationId);
   },
 
   /**
    * Detect orphaned files
    */
   async detectOrphaned(organizationId?: string): Promise<OrphanedFile[]> {
-    return apiClient.get('/files/orphaned', {}, organizationId);
+    return apiClient.get(`${BASE_URL}/orphaned`, {}, organizationId);
   },
 
   /**
    * Mark orphaned files for deletion
    */
   async markOrphaned(organizationId?: string): Promise<{ marked_count: number }> {
-    return apiClient.post('/files/orphaned/mark', {}, {}, organizationId);
+    return apiClient.post(`${BASE_URL}/orphaned/mark`, {}, {}, organizationId);
   },
 
   /**
    * Delete all orphaned files that are marked for deletion
    */
   async deleteOrphaned(organizationId?: string): Promise<DeleteOrphanedResult> {
-    return apiClient.delete('/files/orphaned', {}, organizationId);
+    return apiClient.delete(`${BASE_URL}/orphaned`, {}, organizationId);
   },
 
   /**
    * Get a single file by ID
    */
   async getById(fileId: string, organizationId?: string): Promise<FileRegistry> {
-    return apiClient.get(`/files/${fileId}`, {}, organizationId);
+    return apiClient.get(`${BASE_URL}/${fileId}`, {}, organizationId);
   },
 
   /**
    * Update file metadata
    */
   async update(fileId: string, dto: UpdateFileDto, organizationId?: string): Promise<FileRegistry> {
-    return apiClient.patch(`/files/${fileId}`, dto, {}, organizationId);
+    return apiClient.patch(`${BASE_URL}/${fileId}`, dto, {}, organizationId);
   },
 
   /**
    * Soft delete a file (marks as deleted)
    */
   async delete(fileId: string, organizationId?: string): Promise<FileRegistry> {
-    return apiClient.delete(`/files/${fileId}`, {}, organizationId);
+    return apiClient.delete(`${BASE_URL}/${fileId}`, {}, organizationId);
   },
 
   /**
    * Permanently delete a file from storage and registry
    */
   async deletePermanently(fileId: string, organizationId?: string): Promise<{ success: boolean; file: FileRegistry }> {
-    return apiClient.delete(`/files/${fileId}/permanent`, {}, organizationId);
+    return apiClient.delete(`${BASE_URL}/${fileId}/permanent`, {}, organizationId);
   },
 
   /**
    * Track file access (increment access count)
    */
   async trackAccess(fileId: string, organizationId?: string): Promise<{ success: boolean }> {
-    return apiClient.post(`/files/${fileId}/access`, {}, {}, organizationId);
+    return apiClient.post(`${BASE_URL}/${fileId}/access`, {}, {}, organizationId);
   },
 };
