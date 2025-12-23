@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
 import { ArrowLeft, Loader2, LogOut } from 'lucide-react';
+import ProductImageUpload from '@/components/ProductImageUpload';
 
 export default function NewListingPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [images, setImages] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -50,6 +52,7 @@ export default function NewListingPage() {
                 unit: formData.unit,
                 quantity_available: formData.quantity_available ? parseFloat(formData.quantity_available) : undefined,
                 sku: formData.sku || undefined,
+                images: images.length > 0 ? images : undefined,
             });
 
             router.push('/dashboard/listings?created=true');
@@ -232,9 +235,19 @@ export default function NewListingPage() {
                             </div>
                         </div>
 
-                        {/* Note about images */}
-                        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
-                            <strong>Note:</strong> L'upload d'images sera disponible prochainement. Pour l'instant, l'annonce sera créée sans images.
+                        {/* Product Images */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Images du produit
+                            </label>
+                            <ProductImageUpload
+                                images={images}
+                                onImagesChange={setImages}
+                                maxImages={5}
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                                La première image sera l'image principale affichée sur le marketplace.
+                            </p>
                         </div>
 
                         {/* Submit Buttons */}

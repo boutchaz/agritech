@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import OnboardingFlow from '../components/OnboardingFlow';
+import EnhancedOnboardingFlow from '../components/EnhancedOnboardingFlow';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 
 export const Route = createFileRoute('/onboarding/')({
@@ -8,9 +8,12 @@ export const Route = createFileRoute('/onboarding/')({
 
 function OnboardingPage() {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUserData } = useAuth();
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = async () => {
+    // Refresh auth data to get updated onboarding_completed flag
+    await refreshUserData();
+
     // Navigate to dashboard after onboarding is complete
     navigate({ to: '/' });
   };
@@ -34,7 +37,7 @@ function OnboardingPage() {
   }
 
   return (
-    <OnboardingFlow
+    <EnhancedOnboardingFlow
       user={user}
       onComplete={handleOnboardingComplete}
     />

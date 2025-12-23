@@ -154,6 +154,14 @@ export class CartService {
                 throw new HttpException('Listing not found', HttpStatus.NOT_FOUND);
             }
 
+            // Check stock availability for listing
+            if (listing.quantity_available < dto.quantity) {
+                throw new HttpException(
+                    `Insufficient stock. Available: ${listing.quantity_available} ${listing.unit || 'units'}`,
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
             productData = {
                 title: listing.title,
                 unit_price: listing.price,
@@ -174,6 +182,21 @@ export class CartService {
 
             if (error || !item) {
                 throw new HttpException('Item not found or not available for sale', HttpStatus.NOT_FOUND);
+            }
+
+            // Check stock availability for inventory item (sum of all stock valuation batches)
+            const { data: stockData } = await adminSupabase
+                .from('stock_valuation')
+                .select('remaining_quantity')
+                .eq('item_id', dto.item_id);
+
+            const availableStock = stockData?.reduce((sum, batch) => sum + (batch.remaining_quantity || 0), 0) || 0;
+
+            if (availableStock < dto.quantity) {
+                throw new HttpException(
+                    `Insufficient stock. Available: ${availableStock} ${item.default_unit || 'units'}`,
+                    HttpStatus.BAD_REQUEST
+                );
             }
 
             productData = {
@@ -270,6 +293,46 @@ export class CartService {
 
         if (cartItem.cart.user_id !== user.id) {
             throw new HttpException('Unauthorized', HttpStatus.FORBIDDEN);
+        }
+
+        // Validate stock availability before updating
+        const adminSupabase = this.databaseService.getAdminClient();
+
+        if (cartItem.listing_id) {
+            // Check marketplace listing stock
+            const { data: listing } = await adminSupabase
+                .from('marketplace_listings')
+                .select('quantity_available, unit')
+                .eq('id', cartItem.listing_id)
+                .single();
+
+            if (listing && listing.quantity_available < dto.quantity) {
+                throw new HttpException(
+                    `Insufficient stock. Available: ${listing.quantity_available} ${listing.unit || 'units'}`,
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+        } else if (cartItem.item_id) {
+            // Check inventory item stock
+            const { data: stockData } = await adminSupabase
+                .from('stock_valuation')
+                .select('remaining_quantity')
+                .eq('item_id', cartItem.item_id);
+
+            const availableStock = stockData?.reduce((sum, batch) => sum + (batch.remaining_quantity || 0), 0) || 0;
+
+            if (availableStock < dto.quantity) {
+                const { data: item } = await adminSupabase
+                    .from('items')
+                    .select('default_unit')
+                    .eq('id', cartItem.item_id)
+                    .single();
+
+                throw new HttpException(
+                    `Insufficient stock. Available: ${availableStock} ${item?.default_unit || 'units'}`,
+                    HttpStatus.BAD_REQUEST
+                );
+            }
         }
 
         // Update quantity

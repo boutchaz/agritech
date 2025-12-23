@@ -3236,6 +3236,8 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   stock_entry_item_id UUID REFERENCES stock_entry_items(id),
   batch_number TEXT,
   serial_number TEXT,
+  marketplace_listing_id UUID REFERENCES marketplace_listings(id) ON DELETE SET NULL, -- For marketplace traceability
+  marketplace_order_item_id UUID REFERENCES marketplace_order_items(id) ON DELETE SET NULL, -- For order traceability
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
@@ -3245,6 +3247,8 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_org ON stock_movements(organizati
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse ON stock_movements(warehouse_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_date ON stock_movements(movement_date DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_listing ON stock_movements(marketplace_listing_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_order_item ON stock_movements(marketplace_order_item_id);
 
 -- Stock Valuation
 CREATE TABLE IF NOT EXISTS stock_valuation (
@@ -10084,30 +10088,48 @@ CREATE TABLE IF NOT EXISTS marketplace_orders (
   currency TEXT DEFAULT 'MAD',
   notes TEXT,
   shipping_address TEXT,
+  shipping_details JSONB DEFAULT '{}', -- { name, phone, email, address, city, postal_code }
+  payment_method TEXT DEFAULT 'cod', -- 'cod', 'cmi', 'paypal', etc.
+  payment_status TEXT DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed', 'refunded'
+  buyer_name TEXT,
+  buyer_phone TEXT,
+  buyer_email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
-  CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'disputed'))
+  CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'disputed')),
+  CHECK (payment_status IN ('pending', 'processing', 'completed', 'failed', 'refunded'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_marketplace_orders_buyer ON marketplace_orders(buyer_organization_id);
 CREATE INDEX IF NOT EXISTS idx_marketplace_orders_seller ON marketplace_orders(seller_organization_id);
 CREATE INDEX IF NOT EXISTS idx_marketplace_orders_status ON marketplace_orders(status);
+CREATE INDEX IF NOT EXISTS idx_marketplace_orders_payment_status ON marketplace_orders(payment_status);
 
 -- Marketplace Order Items
 CREATE TABLE IF NOT EXISTS marketplace_order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID NOT NULL REFERENCES marketplace_orders(id) ON DELETE CASCADE,
   listing_id UUID REFERENCES marketplace_listings(id) ON DELETE SET NULL,
+  item_id UUID REFERENCES items(id) ON DELETE SET NULL, -- Reference to inventory items
+  product_type TEXT DEFAULT 'listing', -- 'listing' or 'item'
   title TEXT NOT NULL, -- Snapshot of listing title
   quantity NUMERIC(12, 2) NOT NULL,
   unit_price NUMERIC(12, 2) NOT NULL,
+  unit TEXT, -- Snapshot of unit
+  image_url TEXT, -- Snapshot of main image
   total_price NUMERIC(12, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  stock_deducted BOOLEAN DEFAULT false, -- Track if stock was deducted
+  stock_movement_id UUID REFERENCES stock_movements(id) ON DELETE SET NULL, -- Link to stock movement
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (product_type IN ('listing', 'item'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_order ON marketplace_order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_listing ON marketplace_order_items(listing_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_item ON marketplace_order_items(item_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_product_type ON marketplace_order_items(product_type);
+CREATE INDEX IF NOT EXISTS idx_marketplace_order_items_stock_deducted ON marketplace_order_items(stock_deducted);
 
 -- Marketplace Reviews
 CREATE TABLE IF NOT EXISTS marketplace_reviews (
@@ -10648,3 +10670,95 @@ END;
 $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION update_file_access_timestamp IS 'Placeholder trigger function for tracking file access';
+
+-- =====================================================
+-- MARKETPLACE INVENTORY TRACKING FUNCTIONS
+-- Added: 2025-12-23
+-- Purpose: Stock deduction and restoration for marketplace orders
+-- =====================================================
+
+-- Function: Check marketplace stock availability
+CREATE OR REPLACE FUNCTION check_marketplace_stock_availability(
+  p_listing_id UUID DEFAULT NULL,
+  p_item_id UUID DEFAULT NULL,
+  p_quantity NUMERIC DEFAULT 1
+) RETURNS BOOLEAN AS $$
+DECLARE
+  v_available NUMERIC;
+BEGIN
+  -- Check marketplace listing availability
+  IF p_listing_id IS NOT NULL THEN
+    SELECT quantity_available INTO v_available
+    FROM marketplace_listings
+    WHERE id = p_listing_id AND is_public = true;
+
+    RETURN v_available >= p_quantity;
+  END IF;
+
+  -- Check inventory item availability (sum of all stock valuation batches)
+  IF p_item_id IS NOT NULL THEN
+    SELECT COALESCE(SUM(remaining_quantity), 0) INTO v_available
+    FROM stock_valuation
+    WHERE item_id = p_item_id;
+
+    RETURN v_available >= p_quantity;
+  END IF;
+
+  RETURN false;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION check_marketplace_stock_availability TO authenticated;
+COMMENT ON FUNCTION check_marketplace_stock_availability IS 'Check if sufficient stock is available for a listing or item';
+
+-- Function: Deduct marketplace listing stock
+CREATE OR REPLACE FUNCTION deduct_marketplace_listing_stock(
+  p_listing_id UUID,
+  p_quantity NUMERIC
+) RETURNS BOOLEAN AS $$
+DECLARE
+  v_current_qty NUMERIC;
+BEGIN
+  -- Get current quantity with row lock
+  SELECT quantity_available INTO v_current_qty
+  FROM marketplace_listings
+  WHERE id = p_listing_id
+  FOR UPDATE; -- Lock row for update to prevent race conditions
+
+  -- Check if sufficient stock
+  IF v_current_qty < p_quantity THEN
+    RAISE EXCEPTION 'Insufficient stock for listing %. Available: %, Requested: %',
+      p_listing_id, v_current_qty, p_quantity;
+  END IF;
+
+  -- Deduct quantity
+  UPDATE marketplace_listings
+  SET quantity_available = quantity_available - p_quantity,
+      updated_at = NOW()
+  WHERE id = p_listing_id;
+
+  RETURN true;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION deduct_marketplace_listing_stock TO authenticated;
+COMMENT ON FUNCTION deduct_marketplace_listing_stock IS 'Deduct quantity from marketplace_listings.quantity_available with row locking';
+
+-- Function: Restore marketplace listing stock
+CREATE OR REPLACE FUNCTION restore_marketplace_listing_stock(
+  p_listing_id UUID,
+  p_quantity NUMERIC
+) RETURNS BOOLEAN AS $$
+BEGIN
+  -- Restore quantity (e.g., when order is cancelled)
+  UPDATE marketplace_listings
+  SET quantity_available = quantity_available + p_quantity,
+      updated_at = NOW()
+  WHERE id = p_listing_id;
+
+  RETURN true;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION restore_marketplace_listing_stock TO authenticated;
+COMMENT ON FUNCTION restore_marketplace_listing_stock IS 'Restore quantity to marketplace_listings (e.g., when order is cancelled)';

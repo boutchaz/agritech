@@ -41,11 +41,13 @@ interface UserProfile {
   id: string;
   first_name: string;
   last_name: string;
+  full_name: string;
   avatar_url?: string;
   phone?: string;
   timezone: string;
   language: string;
   password_set?: boolean;
+  onboarding_completed?: boolean;
 }
 
 interface AuthContextType {
@@ -152,14 +154,14 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // });
 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
-  // Note: user_profiles table only has full_name field, not first_name/last_name
-  // Note: organizations table doesn't have onboarding_completed field
   const needsOnboarding = !!(
     user && !loading && (
-      // No profile yet (missing full_name)
+      // No profile yet (missing required fields)
       !profile || !profile.full_name ||
       // No organizations yet
-      organizations.length === 0
+      organizations.length === 0 ||
+      // Onboarding not marked as completed in user_profiles
+      (profile && profile.onboarding_completed === false)
     )
   );
 

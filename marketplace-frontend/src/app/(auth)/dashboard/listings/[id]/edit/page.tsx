@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
 import { ArrowLeft, Loader2, LogOut } from 'lucide-react';
+import ProductImageUpload from '@/components/ProductImageUpload';
 
 export default function EditListingPage() {
     const router = useRouter();
@@ -14,6 +15,7 @@ export default function EditListingPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [images, setImages] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -49,6 +51,7 @@ export default function EditListingPage() {
                 sku: listing.sku || '',
                 is_public: listing.is_public !== false,
             });
+            setImages(listing.images || []);
         } catch (error) {
             console.error('Failed to load listing:', error);
             router.push('/login');
@@ -88,6 +91,7 @@ export default function EditListingPage() {
                 quantity_available: formData.quantity_available ? parseFloat(formData.quantity_available) : undefined,
                 sku: formData.sku || undefined,
                 is_public: formData.is_public,
+                images: images,
             });
 
             router.push('/dashboard/listings?updated=true');
@@ -295,9 +299,20 @@ export default function EditListingPage() {
                             </label>
                         </div>
 
-                        {/* Note about images */}
-                        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
-                            <strong>Note:</strong> L'upload d'images sera disponible prochainement.
+                        {/* Product Images */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Images du produit
+                            </label>
+                            <ProductImageUpload
+                                images={images}
+                                onImagesChange={setImages}
+                                maxImages={5}
+                                listingId={listingId}
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                                La première image sera l'image principale affichée sur le marketplace.
+                            </p>
                         </div>
 
                         {/* Submit Buttons */}

@@ -88,24 +88,120 @@ export class OrdersService {
             // Create order items
             const orderItems = items.map(item => ({
                 order_id: order.id,
-                product_id: item.listing_id || item.item_id,
+                listing_id: item.listing_id || null,
+                item_id: item.item_id || null,
                 product_type: item.listing_id ? 'listing' : 'item',
                 title: item.title,
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 unit: item.unit || null,
                 image_url: item.image_url || null,
+                stock_deducted: false, // Will be updated after deduction
             }));
 
-            const { error: itemsError } = await supabase
+            const { data: createdItems, error: itemsError } = await supabase
                 .from('marketplace_order_items')
-                .insert(orderItems);
+                .insert(orderItems)
+                .select();
 
             if (itemsError) {
                 this.logger.error(`Failed to create order items: ${itemsError.message}`);
                 // Rollback order
                 await supabase.from('marketplace_orders').delete().eq('id', order.id);
                 throw new HttpException('Failed to create order items', HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            // Deduct stock for each order item
+            for (const [index, orderItem] of createdItems.entries()) {
+                const cartItem = items[index];
+
+                try {
+                    if (orderItem.product_type === 'listing' && orderItem.listing_id) {
+                        // Deduct from marketplace_listings.quantity_available
+                        const { error: stockError } = await supabase.rpc('deduct_marketplace_listing_stock', {
+                            p_listing_id: orderItem.listing_id,
+                            p_quantity: orderItem.quantity,
+                        });
+
+                        if (stockError) {
+                            this.logger.error(`Failed to deduct listing stock: ${stockError.message}`);
+                            throw new Error(`Insufficient stock for ${orderItem.title}`);
+                        }
+
+                        // Mark as deducted
+                        await supabase
+                            .from('marketplace_order_items')
+                            .update({ stock_deducted: true })
+                            .eq('id', orderItem.id);
+
+                    } else if (orderItem.product_type === 'item' && orderItem.item_id) {
+                        // For inventory items, create a stock movement (OUT)
+                        // Get the first available warehouse for this item
+                        const { data: itemStock } = await supabase
+                            .from('stock_valuation')
+                            .select('warehouse_id, remaining_quantity, cost_per_unit, item_id')
+                            .eq('item_id', orderItem.item_id)
+                            .gt('remaining_quantity', 0)
+                            .order('valuation_date', { ascending: true }) // FIFO
+                            .limit(1)
+                            .single();
+
+                        if (!itemStock || itemStock.remaining_quantity < orderItem.quantity) {
+                            this.logger.error(`Insufficient inventory stock for item ${orderItem.item_id}`);
+                            throw new Error(`Insufficient stock for ${orderItem.title}`);
+                        }
+
+                        // Create stock movement (OUT)
+                        const { data: movement, error: movementError } = await supabase
+                            .from('stock_movements')
+                            .insert({
+                                organization_id: sellerOrgId,
+                                movement_type: 'OUT',
+                                movement_date: new Date().toISOString(),
+                                item_id: orderItem.item_id,
+                                warehouse_id: itemStock.warehouse_id,
+                                quantity: -orderItem.quantity, // Negative for OUT
+                                unit: orderItem.unit || 'kg',
+                                balance_quantity: itemStock.remaining_quantity - orderItem.quantity,
+                                cost_per_unit: itemStock.cost_per_unit,
+                                total_cost: orderItem.quantity * itemStock.cost_per_unit,
+                                marketplace_order_item_id: orderItem.id,
+                            })
+                            .select()
+                            .single();
+
+                        if (movementError) {
+                            this.logger.error(`Failed to create stock movement: ${movementError.message}`);
+                            throw new Error(`Failed to deduct inventory for ${orderItem.title}`);
+                        }
+
+                        // Update stock_valuation remaining_quantity
+                        await supabase
+                            .from('stock_valuation')
+                            .update({
+                                remaining_quantity: itemStock.remaining_quantity - orderItem.quantity,
+                            })
+                            .eq('item_id', orderItem.item_id)
+                            .eq('warehouse_id', itemStock.warehouse_id);
+
+                        // Mark as deducted and link to movement
+                        await supabase
+                            .from('marketplace_order_items')
+                            .update({
+                                stock_deducted: true,
+                                stock_movement_id: movement.id,
+                            })
+                            .eq('id', orderItem.id);
+                    }
+                } catch (stockError) {
+                    this.logger.error(`Stock deduction failed for order ${order.id}, item ${orderItem.id}: ${stockError.message}`);
+                    // Rollback: Delete order and all items
+                    await supabase.from('marketplace_orders').delete().eq('id', order.id);
+                    throw new HttpException(
+                        stockError.message || 'Failed to deduct stock',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
             }
 
             // Send email notifications
@@ -430,6 +526,83 @@ export class OrdersService {
         if (updateError) {
             this.logger.error(`Failed to cancel order: ${updateError.message}`);
             throw new HttpException('Failed to cancel order', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // Restore stock for cancelled order
+        const { data: orderItems } = await supabase
+            .from('marketplace_order_items')
+            .select('*')
+            .eq('order_id', orderId);
+
+        if (orderItems && orderItems.length > 0) {
+            for (const orderItem of orderItems) {
+                try {
+                    if (orderItem.stock_deducted) {
+                        if (orderItem.product_type === 'listing' && orderItem.listing_id) {
+                            // Restore marketplace listing stock
+                            const { error: restoreError } = await supabase.rpc('restore_marketplace_listing_stock', {
+                                p_listing_id: orderItem.listing_id,
+                                p_quantity: orderItem.quantity,
+                            });
+
+                            if (restoreError) {
+                                this.logger.error(`Failed to restore listing stock: ${restoreError.message}`);
+                            } else {
+                                // Mark as not deducted
+                                await supabase
+                                    .from('marketplace_order_items')
+                                    .update({ stock_deducted: false })
+                                    .eq('id', orderItem.id);
+                            }
+
+                        } else if (orderItem.product_type === 'item' && orderItem.item_id && orderItem.stock_movement_id) {
+                            // For inventory items, create a reverse stock movement (IN)
+                            const { data: originalMovement } = await supabase
+                                .from('stock_movements')
+                                .select('*')
+                                .eq('id', orderItem.stock_movement_id)
+                                .single();
+
+                            if (originalMovement) {
+                                // Create reverse movement (IN)
+                                await supabase
+                                    .from('stock_movements')
+                                    .insert({
+                                        organization_id: originalMovement.organization_id,
+                                        movement_type: 'IN',
+                                        movement_date: new Date().toISOString(),
+                                        item_id: originalMovement.item_id,
+                                        warehouse_id: originalMovement.warehouse_id,
+                                        quantity: orderItem.quantity, // Positive for IN
+                                        unit: originalMovement.unit,
+                                        balance_quantity: originalMovement.balance_quantity + orderItem.quantity,
+                                        cost_per_unit: originalMovement.cost_per_unit,
+                                        total_cost: orderItem.quantity * originalMovement.cost_per_unit,
+                                        marketplace_order_item_id: orderItem.id,
+                                    });
+
+                                // Restore stock_valuation remaining_quantity
+                                await supabase
+                                    .from('stock_valuation')
+                                    .update({
+                                        remaining_quantity: supabase.raw(`remaining_quantity + ${orderItem.quantity}`),
+                                    })
+                                    .eq('item_id', orderItem.item_id)
+                                    .eq('warehouse_id', originalMovement.warehouse_id);
+
+                                // Mark as not deducted
+                                await supabase
+                                    .from('marketplace_order_items')
+                                    .update({ stock_deducted: false })
+                                    .eq('id', orderItem.id);
+                            }
+                        }
+                    }
+                } catch (stockError) {
+                    // Log but don't fail the cancellation
+                    this.logger.error(`Failed to restore stock for item ${orderItem.id}: ${stockError.message}`);
+                }
+            }
         }
 
         // Send email notification to buyer about cancellation
