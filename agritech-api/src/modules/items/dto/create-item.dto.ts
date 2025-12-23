@@ -151,4 +151,8 @@ export class CreateItemDto {
   @IsBoolean()
   @IsOptional()
   show_in_website?: boolean;
+
+  @IsString()
+  @IsOptional()
+  marketplace_category_slug?: string;
 }
