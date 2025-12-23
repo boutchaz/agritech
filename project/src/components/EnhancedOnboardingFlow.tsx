@@ -360,19 +360,20 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   const saveFarm = async () => {
     if (!existingOrgId) throw new Error('Organization not found');
 
-    // Use atomic RPC function
-    const { error } = await supabase.rpc('create_organization_with_farm', {
-      p_org_id: existingOrgId,
-      p_farm_name: farmData.name,
-      p_farm_location: farmData.location,
-      p_farm_size: farmData.size,
-      p_farm_size_unit: farmData.size_unit,
-      p_farm_type: farmData.farm_type,
-      p_description: farmData.description || null,
-      p_soil_type: farmData.soil_type || null,
-      p_climate_zone: farmData.climate_zone || null,
-      p_manager_user_id: user.id
-    });
+    // Insert farm directly
+    const { error } = await supabase
+      .from('farms')
+      .insert({
+        organization_id: existingOrgId,
+        name: farmData.name,
+        location: farmData.location,
+        size: farmData.size,
+        size_unit: farmData.size_unit,
+        soil_type: farmData.soil_type || null,
+        climate_zone: farmData.climate_zone || null,
+        description: farmData.description || null,
+        is_active: true
+      });
 
     if (error) throw error;
   };
