@@ -3,7 +3,7 @@ import { QuoteRequest } from '../../lib/api/quote-requests';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/Input';
-import { Textarea } from '../ui/textarea';
+import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/label';
 import { DollarSign, Calendar, Send } from 'lucide-react';
 
