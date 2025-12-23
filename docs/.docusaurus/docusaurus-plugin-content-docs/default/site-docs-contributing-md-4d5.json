@@ -1,0 +1,19 @@
+{
+  "id": "contributing",
+  "title": "Contributing Guide",
+  "description": "Thank you for your interest in contributing to the AgriTech Platform! This guide will help you get started with contributing to the project.",
+  "source": "@site/docs/contributing.md",
+  "sourceDirName": ".",
+  "slug": "/contributing",
+  "permalink": "/contributing",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Troubleshooting",
+    "permalink": "/troubleshooting"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "development/performance",
+  "title": "Performance Optimization",
+  "description": "Guide to optimizing performance in the AgriTech Platform.",
+  "source": "@site/docs/development/performance.md",
+  "sourceDirName": "development",
+  "slug": "/development/performance",
+  "permalink": "/development/performance",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

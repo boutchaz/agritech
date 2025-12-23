@@ -1,0 +1,23 @@
+{
+  "id": "frontend/authentication",
+  "title": "Authentication",
+  "description": "The AgriTech Platform uses Supabase Auth integrated with a custom multi-tenant authentication provider for comprehensive user authentication and context management.",
+  "source": "@site/docs/frontend/authentication.md",
+  "sourceDirName": "frontend",
+  "slug": "/frontend/authentication",
+  "permalink": "/frontend/authentication",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Forms with React Hook Form + Zod",
+    "permalink": "/frontend/forms"
+  },
+  "next": {
+    "title": "Authorization",
+    "permalink": "/frontend/authorization"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "database/rls-policies",
+  "title": "Row Level Security (RLS) Policies",
+  "description": "This document covers Row Level Security implementation in the AgriTech Platform, ensuring multi-tenant data isolation and role-based access control.",
+  "source": "@site/docs/database/rls-policies.md",
+  "sourceDirName": "database",
+  "slug": "/database/rls-policies",
+  "permalink": "/database/rls-policies",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

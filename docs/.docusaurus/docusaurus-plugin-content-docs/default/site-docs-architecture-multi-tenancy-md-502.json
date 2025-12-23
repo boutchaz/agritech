@@ -1,0 +1,26 @@
+{
+  "id": "architecture/multi-tenancy",
+  "title": "Multi-Tenancy Architecture",
+  "description": "Detailed explanation of the multi-tenant architecture, role hierarchy, and context management",
+  "source": "@site/docs/architecture/multi-tenancy.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/multi-tenancy",
+  "permalink": "/architecture/multi-tenancy",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Multi-Tenancy Architecture",
+    "description": "Detailed explanation of the multi-tenant architecture, role hierarchy, and context management"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Architecture Overview",
+    "permalink": "/architecture/overview"
+  },
+  "next": {
+    "title": "Frontend Architecture",
+    "permalink": "/architecture/frontend"
+  }
+}

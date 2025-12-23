@@ -1,0 +1,26 @@
+{
+  "id": "architecture/frontend",
+  "title": "Frontend Architecture",
+  "description": "Frontend architecture, React component structure, routing patterns, and state management",
+  "source": "@site/docs/architecture/frontend.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/frontend",
+  "permalink": "/architecture/frontend",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Frontend Architecture",
+    "description": "Frontend architecture, React component structure, routing patterns, and state management"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Multi-Tenancy Architecture",
+    "permalink": "/architecture/multi-tenancy"
+  },
+  "next": {
+    "title": "Backend Architecture",
+    "permalink": "/architecture/backend"
+  }
+}

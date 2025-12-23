@@ -1,0 +1,26 @@
+{
+  "id": "architecture/backend",
+  "title": "Backend Architecture",
+  "description": "Backend services, API design, authentication flow, and service integration",
+  "source": "@site/docs/architecture/backend.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/backend",
+  "permalink": "/architecture/backend",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Backend Architecture",
+    "description": "Backend services, API design, authentication flow, and service integration"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Frontend Architecture",
+    "permalink": "/architecture/frontend"
+  },
+  "next": {
+    "title": "Database Architecture",
+    "permalink": "/architecture/database"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "deployment/production",
+  "title": "Production Deployment",
+  "description": "Comprehensive guide for deploying the AgriTech Platform to production.",
+  "source": "@site/docs/deployment/production.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/production",
+  "permalink": "/deployment/production",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

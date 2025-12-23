@@ -1,0 +1,14 @@
+{
+  "id": "api/hooks",
+  "title": "TanStack Query Hooks API Reference",
+  "description": "Complete reference for all TanStack Query (React Query) hooks used in the AgriTech Platform for data fetching, caching, and mutations.",
+  "source": "@site/docs/api/hooks.md",
+  "sourceDirName": "api",
+  "slug": "/api/hooks",
+  "permalink": "/api/hooks",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

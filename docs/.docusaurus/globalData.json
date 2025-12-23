@@ -1,0 +1,290 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "api/hooks",
+              "path": "/api/hooks"
+            },
+            {
+              "id": "api/satellite-api",
+              "path": "/api/satellite-api"
+            },
+            {
+              "id": "api/supabase-functions",
+              "path": "/api/supabase-functions"
+            },
+            {
+              "id": "architecture/backend",
+              "path": "/architecture/backend",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/database",
+              "path": "/architecture/database",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/frontend",
+              "path": "/architecture/frontend",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/multi-tenancy",
+              "path": "/architecture/multi-tenancy",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/overview",
+              "path": "/architecture/overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/satellite-service",
+              "path": "/architecture/satellite-service",
+              "sidebar": "docs"
+            },
+            {
+              "id": "contributing",
+              "path": "/contributing",
+              "sidebar": "docs"
+            },
+            {
+              "id": "database/functions",
+              "path": "/database/functions"
+            },
+            {
+              "id": "database/migrations",
+              "path": "/database/migrations"
+            },
+            {
+              "id": "database/rls-policies",
+              "path": "/database/rls-policies"
+            },
+            {
+              "id": "database/schema",
+              "path": "/database/schema"
+            },
+            {
+              "id": "database/triggers",
+              "path": "/database/triggers"
+            },
+            {
+              "id": "database/type-generation",
+              "path": "/database/type-generation"
+            },
+            {
+              "id": "deployment/environment-variables",
+              "path": "/deployment/environment-variables"
+            },
+            {
+              "id": "deployment/monitoring",
+              "path": "/deployment/monitoring"
+            },
+            {
+              "id": "deployment/production",
+              "path": "/deployment/production"
+            },
+            {
+              "id": "deployment/staging",
+              "path": "/deployment/staging"
+            },
+            {
+              "id": "development/coding-standards",
+              "path": "/development/coding-standards",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/debugging",
+              "path": "/development/debugging"
+            },
+            {
+              "id": "development/git-workflow",
+              "path": "/development/git-workflow"
+            },
+            {
+              "id": "development/performance",
+              "path": "/development/performance"
+            },
+            {
+              "id": "development/testing-strategy",
+              "path": "/development/testing-strategy"
+            },
+            {
+              "id": "features/accounting",
+              "path": "/features/accounting"
+            },
+            {
+              "id": "features/billing-cycle",
+              "path": "/features/billing-cycle"
+            },
+            {
+              "id": "features/enhanced-parcel-planting-systems",
+              "path": "/features/enhanced-parcel-planting-systems"
+            },
+            {
+              "id": "features/farm-management",
+              "path": "/features/farm-management",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/inventory",
+              "path": "/features/inventory"
+            },
+            {
+              "id": "features/production-intelligence-data-flow",
+              "path": "/features/production-intelligence-data-flow"
+            },
+            {
+              "id": "features/satellite-analysis",
+              "path": "/features/satellite-analysis",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/subscriptions",
+              "path": "/features/subscriptions"
+            },
+            {
+              "id": "features/task-management",
+              "path": "/features/task-management",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/workers",
+              "path": "/features/workers"
+            },
+            {
+              "id": "frontend/authentication",
+              "path": "/frontend/authentication",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/authorization",
+              "path": "/frontend/authorization",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/components",
+              "path": "/frontend/components",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/forms",
+              "path": "/frontend/forms",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/internationalization",
+              "path": "/frontend/internationalization",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/routing",
+              "path": "/frontend/routing",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/state-management",
+              "path": "/frontend/state-management",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/styling",
+              "path": "/frontend/styling",
+              "sidebar": "docs"
+            },
+            {
+              "id": "frontend/tech-stack",
+              "path": "/frontend/tech-stack",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/environment-setup",
+              "path": "/getting-started/environment-setup",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/first-deployment",
+              "path": "/getting-started/first-deployment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/installation",
+              "path": "/getting-started/installation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/quick-start",
+              "path": "/getting-started/quick-start",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/adding-feature",
+              "path": "/guides/adding-feature",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/adding-new-route",
+              "path": "/guides/adding-new-route",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/creating-component",
+              "path": "/guides/creating-component",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/database-migration",
+              "path": "/guides/database-migration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/deployment",
+              "path": "/guides/deployment"
+            },
+            {
+              "id": "guides/satellite-integration",
+              "path": "/guides/satellite-integration"
+            },
+            {
+              "id": "guides/testing",
+              "path": "/guides/testing"
+            },
+            {
+              "id": "intro",
+              "path": "/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "testing/tax-calculations",
+              "path": "/testing/tax-calculations"
+            },
+            {
+              "id": "troubleshooting",
+              "path": "/troubleshooting",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/",
+                "label": "Introduction"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

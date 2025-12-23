@@ -1,0 +1,14 @@
+{
+  "id": "development/debugging",
+  "title": "Debugging Guide",
+  "description": "Comprehensive guide to debugging the AgriTech Platform during development.",
+  "source": "@site/docs/development/debugging.md",
+  "sourceDirName": "development",
+  "slug": "/development/debugging",
+  "permalink": "/development/debugging",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

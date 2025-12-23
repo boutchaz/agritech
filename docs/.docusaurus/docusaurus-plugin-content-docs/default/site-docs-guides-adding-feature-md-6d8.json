@@ -1,0 +1,23 @@
+{
+  "id": "guides/adding-feature",
+  "title": "Adding a Complete Feature",
+  "description": "This comprehensive guide walks you through adding a complete feature to the AgriTech Platform, from database schema to frontend UI, using a real-world example.",
+  "source": "@site/docs/guides/adding-feature.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/adding-feature",
+  "permalink": "/guides/adding-feature",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Database Migration Guide",
+    "permalink": "/guides/database-migration"
+  },
+  "next": {
+    "title": "Coding Standards",
+    "permalink": "/development/coding-standards"
+  }
+}

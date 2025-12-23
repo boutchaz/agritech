@@ -1,0 +1,14 @@
+{
+  "id": "api/supabase-functions",
+  "title": "Supabase Functions API Reference",
+  "description": "Complete reference for Supabase Edge Functions and RPC (Remote Procedure Call) database functions used in the AgriTech Platform.",
+  "source": "@site/docs/api/supabase-functions.md",
+  "sourceDirName": "api",
+  "slug": "/api/supabase-functions",
+  "permalink": "/api/supabase-functions",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

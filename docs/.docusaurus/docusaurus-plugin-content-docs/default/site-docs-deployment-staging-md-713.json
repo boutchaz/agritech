@@ -1,0 +1,14 @@
+{
+  "id": "deployment/staging",
+  "title": "Staging Environment",
+  "description": "Guide for setting up and maintaining a staging environment for the AgriTech Platform.",
+  "source": "@site/docs/deployment/staging.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/staging",
+  "permalink": "/deployment/staging",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

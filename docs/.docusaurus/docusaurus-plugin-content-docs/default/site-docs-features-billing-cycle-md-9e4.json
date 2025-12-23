@@ -1,0 +1,14 @@
+{
+  "id": "features/billing-cycle",
+  "title": "Billing Cycle: Quotes, Orders, and Bills",
+  "description": "The AgriTech Platform implements a complete billing cycle for both sales and purchases, enabling professional quotation, order management, and invoicing workflows.",
+  "source": "@site/docs/features/billing-cycle.md",
+  "sourceDirName": "features",
+  "slug": "/features/billing-cycle",
+  "permalink": "/features/billing-cycle",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}
