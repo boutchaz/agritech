@@ -38,8 +38,8 @@ export const marketplaceCategoriesApi = {
   /**
    * Get all marketplace categories from Strapi CMS
    */
-  async getAll(locale: string = 'fr', organizationId?: string): Promise<MarketplaceCategoryResponse> {
-    const url = `${BASE_URL}/categories?locale=${locale}`;
+  async getAll(locale?: string, organizationId?: string): Promise<MarketplaceCategoryResponse> {
+    const url = locale ? `${BASE_URL}/categories?locale=${locale}` : `${BASE_URL}/categories`;
     return apiClient.get<MarketplaceCategoryResponse>(url, {}, organizationId);
   },
 

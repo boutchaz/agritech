@@ -14,7 +14,7 @@ export class MarketplaceController {
      * Get all marketplace categories from CMS
      */
     @Get('categories')
-    async getCategories(@Query('locale') locale: string = 'fr') {
+    async getCategories(@Query('locale') locale?: string) {
         return this.strapiService.getMarketplaceCategories(locale);
     }
 

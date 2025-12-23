@@ -204,10 +204,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 
   // Fetch marketplace categories from Strapi CMS
   const { data: marketplaceCategories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ['marketplace-categories', 'fr'],
+    queryKey: ['marketplace-categories'],
     queryFn: async () => {
       try {
-        const response = await marketplaceCategoriesApi.getAll('fr', currentOrganization?.id);
+        const response = await marketplaceCategoriesApi.getAll(undefined, currentOrganization?.id);
         console.log('[DEBUG] Marketplace categories response:', response);
         return response.data || [];
       } catch (error) {

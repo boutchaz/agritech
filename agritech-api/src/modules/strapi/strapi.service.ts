@@ -63,17 +63,23 @@ export class StrapiService {
     /**
      * Get all marketplace categories
      */
-    async getMarketplaceCategories(locale: string = 'fr') {
-        return this.findMany('marketplace-categories', {
+    async getMarketplaceCategories(locale?: string) {
+        const query: any = {
             populate: ['image'],
             sort: ['sort_order:asc'],
-            locale,
             filters: {
                 publishedAt: {
                     $notNull: true
                 }
             }
-        });
+        };
+
+        // Only filter by locale if provided
+        if (locale) {
+            query.locale = locale;
+        }
+
+        return this.findMany('marketplace-categories', query);
     }
 
     /**
