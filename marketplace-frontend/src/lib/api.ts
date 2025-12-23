@@ -99,10 +99,50 @@ export class ApiClient {
         return this.request<any>(`/marketplace/dashboard/stats?organizationId=${organizationId}`);
     }
 
-    static async createListing(data: any) {
-        return this.request<any>('/marketplace/products', {
+    // LISTING MANAGEMENT METHODS
+    static async getMyListings() {
+        return this.request<any[]>('/marketplace/my-listings');
+    }
+
+    static async createListing(data: {
+        title: string;
+        description: string;
+        short_description?: string;
+        price: number;
+        unit: string;
+        product_category_id?: string;
+        images?: string[];
+        quantity_available?: number;
+        sku?: string;
+    }) {
+        return this.request<any>('/marketplace/listings', {
             method: 'POST',
             body: JSON.stringify(data),
+        });
+    }
+
+    static async updateListing(id: string, data: Partial<{
+        title: string;
+        description: string;
+        short_description: string;
+        price: number;
+        unit: string;
+        product_category_id: string;
+        images: string[];
+        quantity_available: number;
+        sku: string;
+        status: string;
+        is_public: boolean;
+    }>) {
+        return this.request<any>(`/marketplace/listings/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    static async deleteListing(id: string) {
+        return this.request<{ success: boolean }>(`/marketplace/listings/${id}`, {
+            method: 'DELETE',
         });
     }
 
