@@ -381,21 +381,34 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   const saveModules = async () => {
     if (!existingOrgId) return;
 
-    const modulesToEnable = Object.entries(moduleSelection)
+    // Get selected module names
+    const selectedModuleNames = Object.entries(moduleSelection)
       .filter(([_, enabled]) => enabled)
-      .map(([moduleName, _]) => ({
-        organization_id: existingOrgId,
-        module_name: moduleName,
-        is_enabled: true
-      }));
+      .map(([moduleName, _]) => moduleName);
 
-    if (modulesToEnable.length > 0) {
-      const { error } = await supabase
-        .from('organization_modules')
-        .upsert(modulesToEnable, { onConflict: 'organization_id,module_name' });
+    if (selectedModuleNames.length === 0) return;
 
-      if (error) throw error;
-    }
+    // Fetch module IDs from modules table
+    const { data: modules, error: modulesError } = await supabase
+      .from('modules')
+      .select('id, name')
+      .in('name', selectedModuleNames);
+
+    if (modulesError) throw modulesError;
+    if (!modules || modules.length === 0) return;
+
+    // Create organization_modules records
+    const modulesToInsert = modules.map(module => ({
+      organization_id: existingOrgId,
+      module_id: module.id,
+      is_active: true
+    }));
+
+    const { error } = await supabase
+      .from('organization_modules')
+      .upsert(modulesToInsert, { onConflict: 'organization_id,module_id' });
+
+    if (error) throw error;
   };
 
   const savePreferences = async () => {
