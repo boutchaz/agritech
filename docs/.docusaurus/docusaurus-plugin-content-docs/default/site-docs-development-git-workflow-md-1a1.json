@@ -1,0 +1,14 @@
+{
+  "id": "development/git-workflow",
+  "title": "Git Workflow",
+  "description": "This document describes the Git workflow and branching strategy used in the AgriTech Platform project.",
+  "source": "@site/docs/development/git-workflow.md",
+  "sourceDirName": "development",
+  "slug": "/development/git-workflow",
+  "permalink": "/development/git-workflow",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

@@ -1,0 +1,14 @@
+{
+  "id": "testing/tax-calculations",
+  "title": "Tax Calculations Testing Guide",
+  "description": "This guide provides comprehensive test scenarios for validating the tax calculation system in the AgriTech Platform accounting module.",
+  "source": "@site/docs/testing/tax-calculations.md",
+  "sourceDirName": "testing",
+  "slug": "/testing/tax-calculations",
+  "permalink": "/testing/tax-calculations",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

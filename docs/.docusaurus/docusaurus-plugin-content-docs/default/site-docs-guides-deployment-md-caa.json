@@ -1,0 +1,14 @@
+{
+  "id": "guides/deployment",
+  "title": "Deployment Guide",
+  "description": "This comprehensive guide covers deploying the AgriTech Platform to production, including frontend, backend satellite service, database migrations, and environment configuration.",
+  "source": "@site/docs/guides/deployment.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/deployment",
+  "permalink": "/guides/deployment",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

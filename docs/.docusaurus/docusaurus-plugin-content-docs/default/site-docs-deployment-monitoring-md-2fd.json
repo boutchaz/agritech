@@ -1,0 +1,14 @@
+{
+  "id": "deployment/monitoring",
+  "title": "Monitoring and Observability",
+  "description": "Comprehensive guide for monitoring the AgriTech Platform in production.",
+  "source": "@site/docs/deployment/monitoring.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/monitoring",
+  "permalink": "/deployment/monitoring",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

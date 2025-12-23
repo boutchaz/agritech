@@ -1,0 +1,26 @@
+{
+  "id": "architecture/satellite-service",
+  "title": "Satellite Service Architecture",
+  "description": "Satellite service architecture, Google Earth Engine integration, vegetation indices, and cloud masking strategy",
+  "source": "@site/docs/architecture/satellite-service.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/satellite-service",
+  "permalink": "/architecture/satellite-service",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Satellite Service Architecture",
+    "description": "Satellite service architecture, Google Earth Engine integration, vegetation indices, and cloud masking strategy"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Database Architecture",
+    "permalink": "/architecture/database"
+  },
+  "next": {
+    "title": "Frontend Tech Stack",
+    "permalink": "/frontend/tech-stack"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "database/functions",
+  "title": "Database Functions",
+  "description": "PostgreSQL functions and RPC endpoints for business logic in the AgriTech Platform.",
+  "source": "@site/docs/database/functions.md",
+  "sourceDirName": "database",
+  "slug": "/database/functions",
+  "permalink": "/database/functions",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

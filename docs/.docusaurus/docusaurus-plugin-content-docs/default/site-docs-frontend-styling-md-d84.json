@@ -1,0 +1,23 @@
+{
+  "id": "frontend/styling",
+  "title": "Styling",
+  "description": "The AgriTech Platform uses Tailwind CSS as its primary styling solution, with custom components, dark mode support, and responsive design utilities.",
+  "source": "@site/docs/frontend/styling.md",
+  "sourceDirName": "frontend",
+  "slug": "/frontend/styling",
+  "permalink": "/frontend/styling",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Components",
+    "permalink": "/frontend/components"
+  },
+  "next": {
+    "title": "Internationalization (i18n)",
+    "permalink": "/frontend/internationalization"
+  }
+}

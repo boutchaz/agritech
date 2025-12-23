@@ -1,0 +1,14 @@
+{
+  "id": "development/testing-strategy",
+  "title": "Testing Strategy",
+  "description": "This document outlines the comprehensive testing strategy for the AgriTech Platform.",
+  "source": "@site/docs/development/testing-strategy.md",
+  "sourceDirName": "development",
+  "slug": "/development/testing-strategy",
+  "permalink": "/development/testing-strategy",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

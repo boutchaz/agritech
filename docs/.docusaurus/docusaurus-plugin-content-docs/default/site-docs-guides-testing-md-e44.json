@@ -1,0 +1,14 @@
+{
+  "id": "guides/testing",
+  "title": "Testing Guide",
+  "description": "This comprehensive guide covers testing strategies for the AgriTech Platform, including unit tests with Vitest, end-to-end tests with Playwright, and testing patterns for React components, hooks, and API integrations.",
+  "source": "@site/docs/guides/testing.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/testing",
+  "permalink": "/guides/testing",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

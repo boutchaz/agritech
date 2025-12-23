@@ -1,0 +1,23 @@
+{
+  "id": "frontend/routing",
+  "title": "Routing with TanStack Router",
+  "description": "The AgriTech Platform uses TanStack Router v1 for file-based routing with automatic code splitting and type-safe navigation.",
+  "source": "@site/docs/frontend/routing.md",
+  "sourceDirName": "frontend",
+  "slug": "/frontend/routing",
+  "permalink": "/frontend/routing",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Frontend Tech Stack",
+    "permalink": "/frontend/tech-stack"
+  },
+  "next": {
+    "title": "State Management",
+    "permalink": "/frontend/state-management"
+  }
+}

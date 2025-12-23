@@ -1,0 +1,14 @@
+{
+  "id": "database/triggers",
+  "title": "Database Triggers",
+  "description": "Database triggers for automatic data validation, calculation, and integrity in the AgriTech Platform.",
+  "source": "@site/docs/database/triggers.md",
+  "sourceDirName": "database",
+  "slug": "/database/triggers",
+  "permalink": "/database/triggers",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

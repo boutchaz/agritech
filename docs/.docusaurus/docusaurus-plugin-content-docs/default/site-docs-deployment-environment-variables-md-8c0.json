@@ -1,0 +1,14 @@
+{
+  "id": "deployment/environment-variables",
+  "title": "Environment Variables",
+  "description": "Complete reference for all environment variables used in the AgriTech Platform.",
+  "source": "@site/docs/deployment/environment-variables.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/environment-variables",
+  "permalink": "/deployment/environment-variables",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

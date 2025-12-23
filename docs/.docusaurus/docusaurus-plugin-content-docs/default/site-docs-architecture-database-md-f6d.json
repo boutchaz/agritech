@@ -1,0 +1,26 @@
+{
+  "id": "architecture/database",
+  "title": "Database Architecture",
+  "description": "Database architecture, schema design, RLS policies, and data modeling principles",
+  "source": "@site/docs/architecture/database.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/database",
+  "permalink": "/architecture/database",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Database Architecture",
+    "description": "Database architecture, schema design, RLS policies, and data modeling principles"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Backend Architecture",
+    "permalink": "/architecture/backend"
+  },
+  "next": {
+    "title": "Satellite Service Architecture",
+    "permalink": "/architecture/satellite-service"
+  }
+}

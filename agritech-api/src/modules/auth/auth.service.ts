@@ -88,6 +88,7 @@ export class AuthService {
   async getUserProfile(userId: string) {
     const client = this.databaseService.getAdminClient();
 
+    // First try to get user_profile
     const { data: profile, error } = await client
       .from('user_profiles')
       .select(
@@ -114,12 +115,56 @@ export class AuthService {
       .eq('id', userId)
       .single();
 
-    if (error) {
-      this.logger.error(`Failed to get user profile: ${error.message}`);
-      throw new UnauthorizedException('User profile not found');
+    if (!error && profile) {
+      return profile;
     }
 
-    return profile;
+    // If no profile exists, fall back to basic Supabase auth user data
+    // This is for marketplace-only users who don't have full profiles
+    this.logger.warn(`No user_profile found for ${userId}, falling back to auth user data`);
+
+    const { data: authUser, error: authError } = await client.auth.admin.getUserById(userId);
+
+    if (authError || !authUser) {
+      this.logger.error(`Failed to get auth user: ${authError?.message}`);
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Get user's organizations
+    const { data: orgUsers } = await client
+      .from('organization_users')
+      .select(`
+        organization_id,
+        role_id,
+        is_active,
+        organizations!inner (
+          id,
+          name,
+          subscription_plan,
+          slug
+        )
+      `)
+      .eq('user_id', userId);
+
+    // Return a simplified profile for marketplace users
+    const firstOrg = orgUsers && orgUsers.length > 0 ? orgUsers[0] : null;
+    const organization = firstOrg?.organizations as any;
+
+    return {
+      id: authUser.user.id,
+      email: authUser.user.email,
+      first_name: authUser.user.user_metadata?.first_name || '',
+      last_name: authUser.user.user_metadata?.last_name || '',
+      full_name: authUser.user.user_metadata?.full_name || authUser.user.email,
+      phone: authUser.user.user_metadata?.phone || authUser.user.phone || null,
+      organization_users: orgUsers || [],
+      // For marketplace users, provide the first organization if available
+      ...(organization && {
+        organization_id: organization.id,
+        organization_name: organization.name,
+        organization_slug: organization.slug,
+      }),
+    };
   }
 
   /**

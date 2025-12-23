@@ -1,0 +1,14 @@
+{
+  "id": "api/satellite-api",
+  "title": "Satellite Service API Reference",
+  "description": "Complete API reference for the AgriTech Platform Satellite Indices Service, which provides vegetation analysis using Google Earth Engine and Sentinel-2 imagery.",
+  "source": "@site/docs/api/satellite-api.md",
+  "sourceDirName": "api",
+  "slug": "/api/satellite-api",
+  "permalink": "/api/satellite-api",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

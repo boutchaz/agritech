@@ -1,0 +1,23 @@
+{
+  "id": "troubleshooting",
+  "title": "Troubleshooting Guide",
+  "description": "This guide covers common issues you may encounter while developing or deploying the AgriTech Platform and their solutions.",
+  "source": "@site/docs/troubleshooting.md",
+  "sourceDirName": ".",
+  "slug": "/troubleshooting",
+  "permalink": "/troubleshooting",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Coding Standards",
+    "permalink": "/development/coding-standards"
+  },
+  "next": {
+    "title": "Contributing",
+    "permalink": "/contributing"
+  }
+}

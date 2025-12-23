@@ -27,6 +27,7 @@ import { Route as ReceptionBatchesRouteImport } from './routes/reception-batches
 import { Route as QualityControlRouteImport } from './routes/quality-control'
 import { Route as ProfitabilityRouteImport } from './routes/profitability'
 import { Route as ProductionIntelligenceRouteImport } from './routes/production-intelligence'
+import { Route as PitchDeckRouteImport } from './routes/pitch-deck'
 import { Route as ParcelsRouteImport } from './routes/parcels'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
@@ -185,6 +186,11 @@ const ProfitabilityRoute = ProfitabilityRouteImport.update({
 const ProductionIntelligenceRoute = ProductionIntelligenceRouteImport.update({
   id: '/production-intelligence',
   path: '/production-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PitchDeckRoute = PitchDeckRouteImport.update({
+  id: '/pitch-deck',
+  path: '/pitch-deck',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParcelsRoute = ParcelsRouteImport.update({
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
+  '/pitch-deck': typeof PitchDeckRoute
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/quality-control': typeof QualityControlRoute
@@ -652,6 +659,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
+  '/pitch-deck': typeof PitchDeckRoute
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/quality-control': typeof QualityControlRoute
@@ -737,6 +745,7 @@ export interface FileRoutesById {
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
+  '/pitch-deck': typeof PitchDeckRoute
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
   '/quality-control': typeof QualityControlRoute
@@ -827,6 +836,7 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/onboarding'
     | '/parcels'
+    | '/pitch-deck'
     | '/production-intelligence'
     | '/profitability'
     | '/quality-control'
@@ -914,6 +924,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/marketplace'
     | '/parcels'
+    | '/pitch-deck'
     | '/production-intelligence'
     | '/profitability'
     | '/quality-control'
@@ -998,6 +1009,7 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/onboarding'
     | '/parcels'
+    | '/pitch-deck'
     | '/production-intelligence'
     | '/profitability'
     | '/quality-control'
@@ -1088,6 +1100,7 @@ export interface RootRouteChildren {
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   OnboardingRoute: typeof OnboardingRouteWithChildren
   ParcelsRoute: typeof ParcelsRouteWithChildren
+  PitchDeckRoute: typeof PitchDeckRoute
   ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
   ProfitabilityRoute: typeof ProfitabilityRoute
   QualityControlRoute: typeof QualityControlRoute
@@ -1235,6 +1248,13 @@ declare module '@tanstack/react-router' {
       path: '/production-intelligence'
       fullPath: '/production-intelligence'
       preLoaderRoute: typeof ProductionIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pitch-deck': {
+      id: '/pitch-deck'
+      path: '/pitch-deck'
+      fullPath: '/pitch-deck'
+      preLoaderRoute: typeof PitchDeckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parcels': {
@@ -1924,6 +1944,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketplaceRoute: MarketplaceRouteWithChildren,
   OnboardingRoute: OnboardingRouteWithChildren,
   ParcelsRoute: ParcelsRouteWithChildren,
+  PitchDeckRoute: PitchDeckRoute,
   ProductionIntelligenceRoute: ProductionIntelligenceRoute,
   ProfitabilityRoute: ProfitabilityRoute,
   QualityControlRoute: QualityControlRoute,

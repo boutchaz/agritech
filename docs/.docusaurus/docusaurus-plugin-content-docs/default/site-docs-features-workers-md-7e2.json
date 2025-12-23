@@ -1,0 +1,14 @@
+{
+  "id": "features/workers",
+  "title": "Workers Management",
+  "description": "Overview",
+  "source": "@site/docs/features/workers.md",
+  "sourceDirName": "features",
+  "slug": "/features/workers",
+  "permalink": "/features/workers",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

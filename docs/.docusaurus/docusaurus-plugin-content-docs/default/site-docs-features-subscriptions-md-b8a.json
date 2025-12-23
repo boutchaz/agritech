@@ -1,0 +1,14 @@
+{
+  "id": "features/subscriptions",
+  "title": "Subscriptions and Feature Gating",
+  "description": "Overview",
+  "source": "@site/docs/features/subscriptions.md",
+  "sourceDirName": "features",
+  "slug": "/features/subscriptions",
+  "permalink": "/features/subscriptions",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

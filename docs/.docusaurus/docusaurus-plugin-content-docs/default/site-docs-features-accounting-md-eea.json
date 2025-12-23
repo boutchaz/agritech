@@ -1,0 +1,14 @@
+{
+  "id": "features/accounting",
+  "title": "Accounting Module",
+  "description": "Overview",
+  "source": "@site/docs/features/accounting.md",
+  "sourceDirName": "features",
+  "slug": "/features/accounting",
+  "permalink": "/features/accounting",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

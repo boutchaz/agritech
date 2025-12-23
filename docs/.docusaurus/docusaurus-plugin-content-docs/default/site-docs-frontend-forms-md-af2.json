@@ -1,0 +1,23 @@
+{
+  "id": "frontend/forms",
+  "title": "Forms with React Hook Form + Zod",
+  "description": "The AgriTech Platform uses React Hook Form v7+ with Zod validation for type-safe, performant forms with minimal re-renders.",
+  "source": "@site/docs/frontend/forms.md",
+  "sourceDirName": "frontend",
+  "slug": "/frontend/forms",
+  "permalink": "/frontend/forms",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "State Management",
+    "permalink": "/frontend/state-management"
+  },
+  "next": {
+    "title": "Authentication",
+    "permalink": "/frontend/authentication"
+  }
+}

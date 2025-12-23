@@ -1,0 +1,14 @@
+{
+  "id": "database/type-generation",
+  "title": "TypeScript Type Generation",
+  "description": "Generating TypeScript types from PostgreSQL database schema for type-safe database access.",
+  "source": "@site/docs/database/type-generation.md",
+  "sourceDirName": "database",
+  "slug": "/database/type-generation",
+  "permalink": "/database/type-generation",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}
