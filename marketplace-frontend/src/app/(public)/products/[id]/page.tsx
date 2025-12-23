@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
+import { QuoteRequestsApi } from '@/lib/quote-requests-api';
 import { CartIcon } from '@/components/CartIcon';
 import {
     ArrowLeft,
@@ -20,7 +21,8 @@ import {
     Menu,
     Building2,
     BadgeCheck,
-    ExternalLink
+    ExternalLink,
+    Check
 } from 'lucide-react';
 
 interface Seller {
@@ -68,6 +70,8 @@ export default function ProductDetailPage() {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [submittingQuote, setSubmittingQuote] = useState(false);
+    const [quoteSubmitted, setQuoteSubmitted] = useState(false);
 
     useEffect(() => {
         // Check if user is logged in
@@ -96,13 +100,45 @@ export default function ProductDetailPage() {
         fetchProduct();
     }, [productId]);
 
-    const handleRequestQuote = () => {
+    const handleRequestQuote = async () => {
         if (!isLoggedIn) {
             router.push('/login?redirect=' + encodeURIComponent(`/products/${productId}`));
             return;
         }
-        // TODO: Implement quote request functionality
-        alert('Fonctionnalité de demande de devis à venir');
+
+        if (!product) return;
+
+        // Get user info from localStorage
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        const user = userStr ? JSON.parse(userStr) : null;
+
+        setSubmittingQuote(true);
+        try {
+            await QuoteRequestsApi.create({
+                item_id: product.source === 'inventory_item' ? product.id : undefined,
+                listing_id: product.source === 'marketplace_listing' ? product.id : undefined,
+                product_title: product.title,
+                product_description: product.description,
+                requested_quantity: 1,
+                unit_of_measure: product.unit,
+                message: '', // Can be enhanced with a modal to collect message
+                buyer_contact_name: user?.name || '',
+                buyer_contact_email: user?.email || '',
+                seller_organization_id: product.organization_id || product.seller?.id || '',
+            });
+
+            setQuoteSubmitted(true);
+            setTimeout(() => {
+                setQuoteSubmitted(false);
+                // Optionally redirect to quote requests page
+                router.push('/dashboard/quote-requests');
+            }, 2000);
+        } catch (error) {
+            console.error('Failed to request quote:', error);
+            alert('Échec de l\'envoi de la demande de devis. Veuillez réessayer.');
+        } finally {
+            setSubmittingQuote(false);
+        }
     };
 
     const handleContactSeller = () => {
@@ -478,10 +514,29 @@ export default function ProductDetailPage() {
                         <div className="space-y-3 pt-6">
                             <button
                                 onClick={handleRequestQuote}
-                                className="w-full px-6 py-4 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition font-medium text-lg flex items-center justify-center gap-2"
+                                disabled={submittingQuote || quoteSubmitted}
+                                className={`w-full px-6 py-4 rounded-xl transition font-medium text-lg flex items-center justify-center gap-2 ${
+                                    quoteSubmitted
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                <Mail className="w-5 h-5" />
-                                Demander un devis
+                                {submittingQuote ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Envoi en cours...
+                                    </>
+                                ) : quoteSubmitted ? (
+                                    <>
+                                        <Check className="w-5 h-5" />
+                                        Demande envoyée!
+                                    </>
+                                ) : (
+                                    <>
+                                        <Mail className="w-5 h-5" />
+                                        Demander un devis
+                                    </>
+                                )}
                             </button>
                             <button
                                 onClick={handleContactSeller}
@@ -494,6 +549,12 @@ export default function ProductDetailPage() {
                             {!isLoggedIn && (
                                 <p className="text-sm text-gray-500 text-center pt-2">
                                     Connectez-vous pour demander un devis ou contacter le vendeur
+                                </p>
+                            )}
+
+                            {quoteSubmitted && (
+                                <p className="text-sm text-green-600 text-center pt-2">
+                                    Le vendeur a reçu votre demande par email et dans son tableau de bord.
                                 </p>
                             )}
                         </div>
