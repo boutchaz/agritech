@@ -194,7 +194,6 @@ export class AuthService {
    */
   async signup(signupDto: SignupDto) {
     const adminClient = this.databaseService.getAdminClient();
-    const regularClient = this.databaseService.getClient();
 
     // Derive firstName and lastName from available data
     // Priority: explicit firstName/lastName > displayName > organizationName > default
@@ -224,27 +223,23 @@ export class AuthService {
 
     const fullName = lastName ? `${firstName} ${lastName}` : firstName;
 
-    // 1. Create Supabase user using regular signUp
-    // IMPORTANT: Requires ENABLE_EMAIL_AUTOCONFIRM=true in Supabase config
-    // This ensures passwords are properly hashed for signInWithPassword
+    // 1. Create Supabase user using admin API to bypass email confirmation
+    // Using admin client allows us to create confirmed users directly
     this.logger.log(`Creating user with email: ${signupDto.email}`);
 
     const { data: signUpData, error: signUpError } =
-      await regularClient.auth.signUp({
+      await adminClient.auth.admin.createUser({
         email: signupDto.email,
         password: signupDto.password,
-        options: {
-          data: {
-            full_name: fullName,
-            first_name: firstName,
-            last_name: lastName,
-            phone: signupDto.phone || null,
-            invited_to_organization: signupDto.invitedToOrganization || null,
-            invited_with_role: signupDto.invitedWithRole || null,
-            seller_type: signupDto.sellerType || 'individual',
-          },
-          // Skip email confirmation redirect
-          emailRedirectTo: undefined,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          phone: signupDto.phone || null,
+          invited_to_organization: signupDto.invitedToOrganization || null,
+          invited_with_role: signupDto.invitedWithRole || null,
+          seller_type: signupDto.sellerType || 'individual',
         },
       });
 
