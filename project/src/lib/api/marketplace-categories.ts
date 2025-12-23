@@ -4,22 +4,20 @@ const BASE_URL = '/api/v1/marketplace';
 
 export interface MarketplaceCategory {
   id: number;
-  attributes: {
-    name: string;
-    slug: string;
-    description?: string;
-    icon?: string;
-    image?: {
-      data?: {
-        attributes: {
-          url: string;
-        };
-      };
-    };
-    sort_order?: number;
-    is_featured?: boolean;
-    locale: string;
-  };
+  documentId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  image?: {
+    url: string;
+  } | null;
+  sort_order?: number;
+  is_featured?: boolean;
+  locale: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
 }
 
 export interface MarketplaceCategoryResponse {

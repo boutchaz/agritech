@@ -650,9 +650,9 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                         </div>
                       ) : (
                         marketplaceCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.attributes.slug}>
-                            {cat.attributes.icon && `${cat.attributes.icon} `}
-                            {cat.attributes.name}
+                          <SelectItem key={cat.id} value={cat.slug}>
+                            {cat.icon && `${cat.icon} `}
+                            {cat.name}
                           </SelectItem>
                         ))
                       )}
