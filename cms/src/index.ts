@@ -192,22 +192,32 @@ export default {
         return;
       }
 
-      // Check if categories already exist
+      // Fetch all existing categories (including drafts) to check by slug
       const existingCategories = await strapi.entityService.findMany('api::marketplace-category.marketplace-category', {
         filters: {},
-        publicationState: 'preview',
+        publicationState: 'preview', // Include both published and draft
       });
 
-      if (existingCategories && existingCategories.length > 0) {
-        strapi.log.info(`Marketplace categories already seeded (${existingCategories.length} found)`);
-        return;
-      }
+      // Build a set of existing slugs for fast lookup
+      const existingSlugs = new Set(
+        (existingCategories || [])
+          .map((cat: any) => cat.slug)
+          .filter((slug: string) => slug)
+      );
 
-      // Seed categories
-      strapi.log.info('🌱 Seeding marketplace categories...');
+      strapi.log.info(`Found ${existingSlugs.size} existing marketplace categories`);
+
+      // Seed missing categories only
       let created = 0;
+      let skipped = 0;
 
       for (const category of marketplaceCategories) {
+        // Skip if category with this slug already exists
+        if (existingSlugs.has(category.slug)) {
+          skipped++;
+          continue;
+        }
+
         try {
           await strapi.entityService.create('api::marketplace-category.marketplace-category', {
             data: {
@@ -222,7 +232,11 @@ export default {
         }
       }
 
-      strapi.log.info(`🎉 Marketplace categories seeding completed: ${created}/${marketplaceCategories.length} created`);
+      if (created > 0) {
+        strapi.log.info(`🎉 Marketplace categories seeding completed: ${created} created, ${skipped} skipped`);
+      } else if (skipped > 0) {
+        strapi.log.info(`✅ Marketplace categories already seeded (${skipped} existing)`);
+      }
     } catch (error) {
       strapi.log.error('Failed to seed marketplace categories:', error);
     }
