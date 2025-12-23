@@ -76,6 +76,7 @@ import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsPreferencesRouteImport } from './routes/settings.preferences'
 import { Route as SettingsOrganizationRouteImport } from './routes/settings.organization'
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
+import { Route as SettingsFilesRouteImport } from './routes/settings.files'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 import { Route as SettingsDangerZoneRouteImport } from './routes/settings.danger-zone'
@@ -428,6 +429,11 @@ const SettingsModulesRoute = SettingsModulesRouteImport.update({
   path: '/modules',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsFilesRoute = SettingsFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsDocumentsRoute = SettingsDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
@@ -571,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
+  '/settings/files': typeof SettingsFilesRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -651,6 +658,7 @@ export interface FileRoutesByTo {
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
+  '/settings/files': typeof SettingsFilesRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -737,6 +745,7 @@ export interface FileRoutesById {
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
+  '/settings/files': typeof SettingsFilesRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -824,6 +833,7 @@ export interface FileRouteTypes {
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
+    | '/settings/files'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -904,6 +914,7 @@ export interface FileRouteTypes {
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
+    | '/settings/files'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -989,6 +1000,7 @@ export interface FileRouteTypes {
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
+    | '/settings/files'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1542,6 +1554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsModulesRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/files': {
+      id: '/settings/files'
+      path: '/files'
+      fullPath: '/settings/files'
+      preLoaderRoute: typeof SettingsFilesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/documents': {
       id: '/settings/documents'
       path: '/documents'
@@ -1727,6 +1746,7 @@ interface SettingsRouteChildren {
   SettingsDangerZoneRoute: typeof SettingsDangerZoneRoute
   SettingsDashboardRoute: typeof SettingsDashboardRoute
   SettingsDocumentsRoute: typeof SettingsDocumentsRoute
+  SettingsFilesRoute: typeof SettingsFilesRoute
   SettingsModulesRoute: typeof SettingsModulesRoute
   SettingsOrganizationRoute: typeof SettingsOrganizationRoute
   SettingsPreferencesRoute: typeof SettingsPreferencesRoute
@@ -1743,6 +1763,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsDangerZoneRoute: SettingsDangerZoneRoute,
   SettingsDashboardRoute: SettingsDashboardRoute,
   SettingsDocumentsRoute: SettingsDocumentsRoute,
+  SettingsFilesRoute: SettingsFilesRoute,
   SettingsModulesRoute: SettingsModulesRoute,
   SettingsOrganizationRoute: SettingsOrganizationRoute,
   SettingsPreferencesRoute: SettingsPreferencesRoute,

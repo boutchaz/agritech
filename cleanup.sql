@@ -1,7 +1,7 @@
 -- ============================================================================
--- DATABASE CLEANUP SCRIPT
+-- DATABASE CLEANUP SCRIPT - AgriTech Platform
 -- ============================================================================
--- This script drops ALL tables, functions, triggers, and policies
+-- This script drops ALL tables, functions, triggers, policies, and storage
 -- Use this to completely reset the database to an empty state
 --
 -- ⚠️  WARNING: THIS WILL DELETE ALL DATA PERMANENTLY
@@ -11,12 +11,71 @@
 --
 -- After running this, you can reinitialize with:
 --   psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/migrations/00000000000000_schema.sql
+--
+-- Updated: 2025-12-23 - Includes file_registry and all marketplace tables
+--
+-- This script will drop:
+--   • 130+ tables (organizations, farms, items, invoices, marketplace_*, etc.)
+--   • 20+ views (auth_users_view, file_storage_stats, stock_balance_*, etc.)
+--   • 50+ functions (number generators, RPC functions, orphan detection, etc.)
+--   • All RLS policies on public schema tables
+--   • All storage buckets (products, invoices, documents)
+--   • All custom ENUM types
+--   • All triggers (updated_at, etc.)
 -- ============================================================================
 
 BEGIN;
 
 -- Disable triggers for faster cleanup
 SET session_replication_role = 'replica';
+
+-- ============================================================================
+-- DROP STORAGE BUCKETS (Supabase Storage)
+-- ============================================================================
+
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- Drop all custom storage buckets
+    FOR r IN (
+        SELECT id
+        FROM storage.buckets
+        WHERE id NOT IN ('avatars')  -- Keep system buckets if any
+        ORDER BY id
+    ) LOOP
+        RAISE NOTICE 'Dropping storage bucket: %', r.id;
+
+        -- Delete all objects in bucket first
+        DELETE FROM storage.objects WHERE bucket_id = r.id;
+
+        -- Delete the bucket
+        DELETE FROM storage.buckets WHERE id = r.id;
+    END LOOP;
+END$$;
+
+-- ============================================================================
+-- DROP ALL RLS POLICIES
+-- ============================================================================
+
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- Drop all RLS policies on tables in public schema
+    FOR r IN (
+        SELECT
+            schemaname,
+            tablename,
+            policyname
+        FROM pg_policies
+        WHERE schemaname = 'public'
+        ORDER BY tablename, policyname
+    ) LOOP
+        RAISE NOTICE 'Dropping policy: % on table %', r.policyname, r.tablename;
+        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON public.' || quote_ident(r.tablename);
+    END LOOP;
+END$$;
 
 -- ============================================================================
 -- DROP ALL TABLES
@@ -197,18 +256,84 @@ COMMIT;
 DO $$
 BEGIN
     RAISE NOTICE '';
-    RAISE NOTICE '✅ Database cleanup complete!';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+    RAISE NOTICE '✅ DATABASE CLEANUP COMPLETE!';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
     RAISE NOTICE '';
-    RAISE NOTICE 'Next steps:';
-    RAISE NOTICE '  1. Apply main schema:';
-    RAISE NOTICE '     psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/migrations/00000000000000_schema.sql';
+    RAISE NOTICE 'The following have been removed:';
+    RAISE NOTICE '  • All tables (organizations, farms, parcels, items, invoices, etc.)';
+    RAISE NOTICE '  • All views (auth_users_view, file_storage_stats, etc.)';
+    RAISE NOTICE '  • All functions (number generators, RPC functions, etc.)';
+    RAISE NOTICE '  • All triggers (updated_at triggers, etc.)';
+    RAISE NOTICE '  • All RLS policies';
+    RAISE NOTICE '  • All storage buckets (products, invoices, documents)';
+    RAISE NOTICE '  • All custom types (enums)';
     RAISE NOTICE '';
-    RAISE NOTICE '  2. Apply additional migrations:';
-    RAISE NOTICE '     psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/migrations/20251122000002_fix_parcel_rls_policies.sql';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+    RAISE NOTICE 'NEXT STEPS - Reinitialize Database:';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
     RAISE NOTICE '';
-    RAISE NOTICE '  3. Apply seed data:';
-    RAISE NOTICE '     psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/01_roles.sql';
-    RAISE NOTICE '     psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/02_work_units.sql';
-    RAISE NOTICE '     psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/03_accounts.sql';
+    RAISE NOTICE '1️⃣  Apply main schema (comprehensive):';
+    RAISE NOTICE '    psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/migrations/00000000000000_schema.sql';
+    RAISE NOTICE '';
+    RAISE NOTICE '2️⃣  Apply additional migrations (if needed):';
+    RAISE NOTICE '    psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/migrations/20251122000002_fix_parcel_rls_policies.sql';
+    RAISE NOTICE '';
+    RAISE NOTICE '3️⃣  Seed reference data:';
+    RAISE NOTICE '    psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/01_roles.sql';
+    RAISE NOTICE '    psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/02_work_units.sql';
+    RAISE NOTICE '    psql -h HOST -U postgres -d postgres -p 5432 -f project/supabase/seed/03_accounts.sql';
+    RAISE NOTICE '';
+    RAISE NOTICE '4️⃣  Seed Strapi marketplace categories:';
+    RAISE NOTICE '    Categories will auto-seed on Strapi bootstrap (cms/src/index.ts)';
+    RAISE NOTICE '';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+    RAISE NOTICE 'SCHEMA INCLUDES (Updated 2025-12-23):';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+    RAISE NOTICE '';
+    RAISE NOTICE '📦 Core Tables:';
+    RAISE NOTICE '   • organizations, organization_users, user_profiles';
+    RAISE NOTICE '   • subscriptions, modules, organization_modules';
+    RAISE NOTICE '';
+    RAISE NOTICE '🌾 Farm Management:';
+    RAISE NOTICE '   • farms, parcels, crops, parcel_crops';
+    RAISE NOTICE '   • satellite_indices, soil_analyses, analyses';
+    RAISE NOTICE '';
+    RAISE NOTICE '👥 Workforce:';
+    RAISE NOTICE '   • workers, work_units, day_laborers, employees';
+    RAISE NOTICE '   • tasks, task_assignments, task_categories';
+    RAISE NOTICE '';
+    RAISE NOTICE '📊 Inventory & Stock:';
+    RAISE NOTICE '   • item_groups, items, item_variants, item_unit_conversions';
+    RAISE NOTICE '   • warehouses, bins, stock_entries, stock_transactions';
+    RAISE NOTICE '   • harvests, harvest_records, reception_batches';
+    RAISE NOTICE '';
+    RAISE NOTICE '💰 Accounting & Finance:';
+    RAISE NOTICE '   • accounts, account_templates, account_mappings';
+    RAISE NOTICE '   • journal_entries, journal_items, cost_centers';
+    RAISE NOTICE '   • invoices, invoice_items, accounting_payments';
+    RAISE NOTICE '';
+    RAISE NOTICE '🛒 Sales & Procurement:';
+    RAISE NOTICE '   • customers, suppliers, quotes, quote_items';
+    RAISE NOTICE '   • sales_orders, sales_order_items, purchase_orders';
+    RAISE NOTICE '   • deliveries, delivery_items';
+    RAISE NOTICE '';
+    RAISE NOTICE '🏪 Marketplace:';
+    RAISE NOTICE '   • marketplace_listings, marketplace_products';
+    RAISE NOTICE '   • marketplace_orders, marketplace_order_items';
+    RAISE NOTICE '   • marketplace_carts, marketplace_cart_items';
+    RAISE NOTICE '   • marketplace_reviews, marketplace_partners';
+    RAISE NOTICE '';
+    RAISE NOTICE '📁 File Management:';
+    RAISE NOTICE '   • file_registry (tracks all uploaded files)';
+    RAISE NOTICE '   • file_storage_stats view';
+    RAISE NOTICE '   • detect_orphaned_files(), mark_orphaned_files() functions';
+    RAISE NOTICE '';
+    RAISE NOTICE '🗂️  Storage Buckets:';
+    RAISE NOTICE '   • products (marketplace images)';
+    RAISE NOTICE '   • invoices (PDF documents)';
+    RAISE NOTICE '   • documents (general files)';
+    RAISE NOTICE '';
+    RAISE NOTICE '═══════════════════════════════════════════════════════════════';
     RAISE NOTICE '';
 END$$;

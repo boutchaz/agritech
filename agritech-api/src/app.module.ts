@@ -61,6 +61,7 @@ import { EventsModule } from './modules/events/events.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { StrapiModule } from './modules/strapi/strapi.module';
 import { DemoDataModule } from './modules/demo-data/demo-data.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -138,6 +139,7 @@ import { DemoDataModule } from './modules/demo-data/demo-data.module';
     MarketplaceModule,
     StrapiModule,
     DemoDataModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [
