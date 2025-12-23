@@ -298,4 +298,209 @@ export class MarketplaceService {
             revenue
         };
     }
+
+    /**
+     * Get seller's own listings
+     */
+    async getMyListings(token: string) {
+        const supabase = this.databaseService.getClientWithAuth(token);
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            throw new Error('Unauthorized');
+        }
+
+        // Get user's organization
+        const { data: userData } = await supabase
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single();
+
+        if (!userData?.organization_id) {
+            return [];
+        }
+
+        // Fetch seller's listings
+        const { data: listings, error } = await supabase
+            .from('marketplace_listings')
+            .select('*')
+            .eq('organization_id', userData.organization_id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            this.logger.error(`Error fetching seller listings: ${error.message}`);
+            throw new Error('Failed to fetch listings');
+        }
+
+        return listings || [];
+    }
+
+    /**
+     * Create a new marketplace listing
+     */
+    async createListing(token: string, data: {
+        title: string;
+        description: string;
+        short_description?: string;
+        price: number;
+        unit: string;
+        product_category_id?: string;
+        images?: string[];
+        quantity_available?: number;
+        sku?: string;
+    }) {
+        const supabase = this.databaseService.getClientWithAuth(token);
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            throw new Error('Unauthorized');
+        }
+
+        // Get user's organization
+        const { data: userData } = await supabase
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single();
+
+        if (!userData?.organization_id) {
+            throw new Error('User must belong to an organization');
+        }
+
+        // Create listing
+        const { data: listing, error } = await supabase
+            .from('marketplace_listings')
+            .insert({
+                organization_id: userData.organization_id,
+                title: data.title,
+                description: data.description,
+                short_description: data.short_description || data.description.substring(0, 150),
+                price: data.price,
+                currency: 'MAD',
+                unit: data.unit,
+                product_category_id: data.product_category_id || null,
+                images: data.images || [],
+                quantity_available: data.quantity_available || null,
+                sku: data.sku || null,
+                status: 'active',
+                is_public: true,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            this.logger.error(`Error creating listing: ${error.message}`);
+            throw new Error('Failed to create listing');
+        }
+
+        return listing;
+    }
+
+    /**
+     * Update a marketplace listing
+     */
+    async updateListing(token: string, listingId: string, data: Partial<{
+        title: string;
+        description: string;
+        short_description: string;
+        price: number;
+        unit: string;
+        product_category_id: string;
+        images: string[];
+        quantity_available: number;
+        sku: string;
+        status: string;
+        is_public: boolean;
+    }>) {
+        const supabase = this.databaseService.getClientWithAuth(token);
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            throw new Error('Unauthorized');
+        }
+
+        // Get user's organization
+        const { data: userData } = await supabase
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single();
+
+        // Verify ownership
+        const { data: existing } = await supabase
+            .from('marketplace_listings')
+            .select('organization_id')
+            .eq('id', listingId)
+            .single();
+
+        if (!existing || existing.organization_id !== userData?.organization_id) {
+            throw new Error('Forbidden: You can only update your own listings');
+        }
+
+        // Update listing
+        const { data: listing, error } = await supabase
+            .from('marketplace_listings')
+            .update({
+                ...data,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', listingId)
+            .select()
+            .single();
+
+        if (error) {
+            this.logger.error(`Error updating listing: ${error.message}`);
+            throw new Error('Failed to update listing');
+        }
+
+        return listing;
+    }
+
+    /**
+     * Delete a marketplace listing
+     */
+    async deleteListing(token: string, listingId: string) {
+        const supabase = this.databaseService.getClientWithAuth(token);
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            throw new Error('Unauthorized');
+        }
+
+        // Get user's organization
+        const { data: userData } = await supabase
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single();
+
+        // Verify ownership
+        const { data: existing } = await supabase
+            .from('marketplace_listings')
+            .select('organization_id')
+            .eq('id', listingId)
+            .single();
+
+        if (!existing || existing.organization_id !== userData?.organization_id) {
+            throw new Error('Forbidden: You can only delete your own listings');
+        }
+
+        // Delete listing
+        const { error } = await supabase
+            .from('marketplace_listings')
+            .delete()
+            .eq('id', listingId);
+
+        if (error) {
+            this.logger.error(`Error deleting listing: ${error.message}`);
+            throw new Error('Failed to delete listing');
+        }
+
+        return { success: true };
+    }
 }
