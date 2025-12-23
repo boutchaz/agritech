@@ -29,14 +29,27 @@ export class ApiClient {
         });
 
         if (!response.ok) {
+            // Try to get error message from response body
+            let errorMessage = response.statusText;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+                // Response body is not JSON, use statusText
+            }
+
             if (response.status === 401) {
-                // Clear token and redirect to login
-                if (typeof window !== 'undefined') {
-                    localStorage.removeItem('auth_token');
-                    window.location.href = '/login';
+                // Only redirect to login if we have a token (user was authenticated but token expired)
+                // Don't redirect on login failures
+                const token = this.getAuthToken();
+                if (token && endpoint !== '/auth/login') {
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('auth_token');
+                        window.location.href = '/login';
+                    }
                 }
             }
-            throw new Error(`API Error: ${response.statusText}`);
+            throw new Error(errorMessage);
         }
 
         return response.json();
