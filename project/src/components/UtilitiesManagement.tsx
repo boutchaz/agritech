@@ -5,6 +5,7 @@ import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie
 import { supabase } from '../lib/supabase';
 import { accountingApi } from '../lib/accounting-api';
 import { utilitiesApi } from '../lib/api/utilities';
+import { filesApi } from '../lib/api/files';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -129,7 +130,7 @@ const UtilitiesManagement: React.FC = () => {
 
       accountIdCacheRef.current[cacheKey] = account.id;
       return account.id;
-    } catch (error) {
+    } catch (_error) {
       const subtypeMsg = accountSubtype ? ` (${accountSubtype})` : '';
       throw new Error(
         `Compte comptable de type "${accountType}"${subtypeMsg} introuvable. ` +
@@ -150,7 +151,7 @@ const UtilitiesManagement: React.FC = () => {
   };
 
   // Helper function to upload invoice file
-  const uploadInvoiceFile = async (file: File): Promise<string | null> => {
+  const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
     try {
       if (!currentFarm?.id) return null;
 
@@ -170,7 +171,7 @@ const UtilitiesManagement: React.FC = () => {
         .from('invoices')
         .getPublicUrl(fileName);
 
-      return publicUrl;
+      return { url: publicUrl, path: fileName };
     } catch (error) {
       console.error('Error uploading file:', error);
       return null;
@@ -460,15 +461,18 @@ const UtilitiesManagement: React.FC = () => {
       setError(null);
       setUploading(true);
       let invoiceUrl: string | null = null;
+      let invoiceFilePath: string | null = null;
 
       // Upload file if selected
       if (selectedFile) {
-        invoiceUrl = await uploadInvoiceFile(selectedFile);
-        if (!invoiceUrl) {
+        const uploadResult = await uploadInvoiceFile(selectedFile);
+        if (!uploadResult) {
           setError('Erreur lors du téléchargement du fichier');
           setUploading(false);
           return;
         }
+        invoiceUrl = uploadResult.url;
+        invoiceFilePath = uploadResult.path;
       }
 
       const createdUtility = await utilitiesApi.create(currentOrganization.id, {
@@ -480,6 +484,25 @@ const UtilitiesManagement: React.FC = () => {
         amount: newUtility.amount || 0,
         billing_date: newUtility.billing_date || new Date().toISOString().split('T')[0],
       });
+
+      // Register file in file_registry with entity_id now that we have the utility ID
+      if (selectedFile && invoiceFilePath) {
+        try {
+          await filesApi.register({
+            bucket_name: 'invoices',
+            file_path: invoiceFilePath,
+            file_name: selectedFile.name,
+            file_size: selectedFile.size,
+            mime_type: selectedFile.type,
+            entity_type: 'utility',
+            entity_id: createdUtility.id,
+            field_name: 'invoice_url',
+          }, currentOrganization.id);
+        } catch (regError) {
+          console.error('Failed to register file in registry:', regError);
+          // Don't fail the entire operation if registration fails
+        }
+      }
 
       let finalUtility = createdUtility;
       try {
