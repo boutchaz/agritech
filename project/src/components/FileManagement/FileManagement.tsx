@@ -47,11 +47,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { filesApi, FileRegistry } from '@/lib/api/files';
-import { useOrganization } from '@/hooks/useOrganization';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { formatBytes } from '@/lib/utils';
 
 export function FileManagement() {
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
 
   const [selectedBucket, setSelectedBucket] = useState<string>('all');
