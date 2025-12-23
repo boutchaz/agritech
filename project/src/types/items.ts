@@ -137,7 +137,8 @@ export interface Item {
   show_in_website: boolean;
   website_image_url?: string;
   website_description?: string;
-  
+  marketplace_category_slug?: string; // Strapi marketplace category slug
+
   // Images & Media
   image_url?: string;
   images?: string[];
@@ -392,6 +393,7 @@ export interface CreateItemInput {
   show_in_website?: boolean;
   website_image_url?: string;
   website_description?: string;
+  marketplace_category_slug?: string;
   image_url?: string;
   images?: string[];
   notes?: string;
@@ -434,6 +436,7 @@ export interface UpdateItemInput {
   show_in_website?: boolean;
   website_image_url?: string;
   website_description?: string;
+  marketplace_category_slug?: string;
   image_url?: string;
   images?: string[];
   notes?: string;

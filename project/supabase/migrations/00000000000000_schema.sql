@@ -255,6 +255,9 @@ CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 -- Add account_type column for existing databases (safe migration)
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_type VARCHAR(20) DEFAULT 'business' CHECK (account_type IN ('individual', 'business', 'farm'));
 
+-- Add marketplace_category_slug column for existing databases (safe migration)
+ALTER TABLE items ADD COLUMN IF NOT EXISTS marketplace_category_slug TEXT;
+
 -- Organization Users
 CREATE TABLE IF NOT EXISTS organization_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3032,6 +3035,7 @@ CREATE TABLE IF NOT EXISTS items (
   image_url TEXT,
   images JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
+  marketplace_category_slug TEXT, -- Strapi marketplace category slug for website display
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

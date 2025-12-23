@@ -25,6 +25,40 @@ export class AuthService {
   ) { }
 
   /**
+   * Login - Authenticate user with email and password
+   */
+  async login(email: string, password: string) {
+    const client = this.databaseService.getClient();
+
+    this.logger.log(`Login attempt for email: ${email}`);
+
+    // Sign in with Supabase
+    const { data, error } = await client.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.user) {
+      this.logger.error(`Login failed for ${email}: ${error?.message}`);
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    this.logger.log(`User ${email} logged in successfully`);
+
+    // Return session with access token
+    return {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        fullName: data.user.user_metadata?.full_name || '',
+      },
+    };
+  }
+
+  /**
    * Validate a Supabase JWT token
    */
   async validateToken(token: string): Promise<any> {

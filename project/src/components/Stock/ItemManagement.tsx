@@ -46,6 +46,7 @@ import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangl
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
+import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
 import type { Item, CreateItemInput, UpdateItemInput } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
@@ -201,6 +202,21 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     enabled: !!currentOrganization?.id,
   });
 
+  // Fetch marketplace categories from Strapi CMS
+  const { data: marketplaceCategories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['marketplace-categories', 'fr'],
+    queryFn: async () => {
+      try {
+        const response = await marketplaceCategoriesApi.getAll('fr', currentOrganization?.id);
+        return response.data || [];
+      } catch (error) {
+        console.warn('Could not fetch marketplace categories:', error);
+        return [];
+      }
+    },
+    enabled: !!currentOrganization?.id,
+  });
+
   // Fetch current stock level for this item (only when editing)
   const { data: itemStockLevel, isLoading: stockLevelLoading } = useQuery({
     queryKey: ['item-stock-level', item?.id, currentOrganization?.id],
@@ -248,6 +264,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     // Marketplace fields
     images: item?.images || [],
     website_description: item?.website_description || '',
+    marketplace_category_slug: item?.marketplace_category_slug || '',
     show_in_website: item?.show_in_website ?? false,
   });
 
@@ -275,6 +292,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         // Marketplace fields
         images: item.images || [],
         website_description: item.website_description || '',
+        marketplace_category_slug: item.marketplace_category_slug || '',
         show_in_website: item.show_in_website ?? false,
       });
     } else {
@@ -296,6 +314,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         // Marketplace fields
         images: [],
         website_description: '',
+        marketplace_category_slug: '',
         show_in_website: false,
       });
     }
@@ -609,6 +628,33 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Marketplace Category */}
+                <div>
+                  <Label htmlFor="marketplace_category" className="text-sm font-medium">
+                    {t('items.marketplace.category', 'Category')} <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.marketplace_category_slug || ''}
+                    onValueChange={(value) => setFormData({ ...formData, marketplace_category_slug: value })}
+                    disabled={categoriesLoading}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={categoriesLoading ? t('app.loading') : t('items.marketplace.selectCategory', 'Select a category')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {marketplaceCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.attributes.slug}>
+                          {cat.attributes.icon && `${cat.attributes.icon} `}
+                          {cat.attributes.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('items.marketplace.categoryHint', 'Choose the category where this product will appear on the marketplace')}
+                  </p>
+                </div>
+
                 {/* Product Images */}
                 <div>
                   <Label className="text-sm font-medium">
@@ -673,12 +719,15 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </div>
 
                 {/* Validation Warning */}
-                {formData.show_in_website && (!formData.images?.length || !formData.standard_rate) && (
+                {formData.show_in_website && (!formData.marketplace_category_slug || !formData.images?.length || !formData.standard_rate) && (
                   <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-amber-700 dark:text-amber-300">
                       <p className="font-medium">{t('items.marketplace.validationWarning', 'Missing required fields:')}</p>
                       <ul className="list-disc list-inside mt-1 text-xs">
+                        {!formData.marketplace_category_slug && (
+                          <li>{t('items.marketplace.missingCategory', 'Marketplace category is required')}</li>
+                        )}
                         {!formData.images?.length && (
                           <li>{t('items.marketplace.missingImages', 'At least one product image is required')}</li>
                         )}
