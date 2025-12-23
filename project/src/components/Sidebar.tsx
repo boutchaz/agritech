@@ -87,6 +87,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showConfiguration, setShowConfiguration] = useState(() =>
     getInitialSectionState(['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'])
   );
+  const [showMarketplace, setShowMarketplace] = useState(() =>
+    getInitialSectionState(['/marketplace/quote-requests'])
+  );
   const [showAgricultureModules, setShowAgricultureModules] = useState(false);
   const [showElevageModules, setShowElevageModules] = useState(false);
 
@@ -111,6 +114,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Configuration section
     if (['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowConfiguration(true);
+    }
+    // Marketplace section
+    if (currentPath.startsWith('/marketplace/')) {
+      setShowMarketplace(true);
     }
   }, [currentPath]);
 
@@ -627,23 +634,53 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== MARKETPLACE ========== */}
             <Separator className="my-3" />
-            <a
-              href="https://marketplace.thebzlab.online"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
+            <div className="space-y-1">
               <Button
                 variant="ghost"
-                className={getButtonClassName(false, "group")}
+                className={getSectionHeaderClassName()}
+                onClick={() => setShowMarketplace(!showMarketplace)}
               >
-                <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
+                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
                   {renderIcon(ShoppingBag)}
-                  <span className="flex-1">{renderText("Marketplace")}</span>
-                  <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <span>{renderText("Marketplace")}</span>
                 </div>
+                {renderChevron(showMarketplace)}
               </Button>
-            </a>
+              {showMarketplace && (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={getSubItemClassName(currentPath === '/marketplace/quote-requests/received')}
+                    onClick={(e) => handleNavigation('/marketplace/quote-requests/received', e)}
+                  >
+                    {renderText("Demandes reçues")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={getSubItemClassName(currentPath === '/marketplace/quote-requests/sent')}
+                    onClick={(e) => handleNavigation('/marketplace/quote-requests/sent', e)}
+                  >
+                    {renderText("Demandes envoyées")}
+                  </Button>
+                  <a
+                    href="https://marketplace.thebzlab.online"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <Button
+                      variant="ghost"
+                      className={cn(getSubItemClassName(false), "group")}
+                    >
+                      <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
+                        <span className="flex-1">{renderText("Voir la marketplace")}</span>
+                        <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </Button>
+                  </a>
+                </>
+              )}
+            </div>
 
             {/* ========== AGRICULTURE MODULES ========== */}
             {agricultureModules.length > 0 && (

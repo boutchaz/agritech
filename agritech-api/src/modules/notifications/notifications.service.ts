@@ -19,6 +19,20 @@ export interface QuoteRequestEmailData {
   quoteRequestUrl: string;
 }
 
+export interface QuoteResponseEmailData {
+  buyerName: string;
+  buyerEmail: string;
+  sellerName: string;
+  productTitle: string;
+  quotedPrice: number;
+  currency: string;
+  requestedQuantity?: number;
+  unitOfMeasure?: string;
+  sellerResponse: string;
+  validUntil?: string;
+  quoteRequestUrl: string;
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -288,6 +302,235 @@ export class NotificationsService {
 
     text += `\nRépondre à la demande: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails et envoyer votre devis.\n`;
+    text += `\n© 2025 AgriTech Marketplace\n`;
+    text += `https://marketplace.thebzlab.online\n`;
+
+    return text;
+  }
+
+  /**
+   * Send quote response notification to buyer
+   */
+  async sendQuoteResponseNotification(
+    buyerEmail: string,
+    data: QuoteResponseEmailData,
+  ): Promise<boolean> {
+    const subject = `Réponse à votre demande de devis - ${data.productTitle}`;
+
+    const html = this.generateQuoteResponseEmail(data);
+    const text = this.generateQuoteResponseEmailText(data);
+
+    return this.sendEmail({
+      to: buyerEmail,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Generate HTML email template for quote response
+   */
+  private generateQuoteResponseEmail(data: QuoteResponseEmailData): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .content {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      padding: 30px;
+      border-radius: 0 0 10px 10px;
+    }
+    .info-row {
+      margin: 15px 0;
+      padding: 10px;
+      background: #f9fafb;
+      border-left: 3px solid #10b981;
+      border-radius: 4px;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #059669;
+      margin-bottom: 5px;
+    }
+    .info-value {
+      color: #374151;
+    }
+    .price-box {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: center;
+      border: 2px solid #10b981;
+    }
+    .price-box .price {
+      font-size: 32px;
+      font-weight: 700;
+      color: #059669;
+      margin: 10px 0;
+    }
+    .price-box .currency {
+      font-size: 20px;
+      color: #059669;
+    }
+    .response-box {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 3px solid #6366f1;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 30px;
+      background: #10b981;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .button:hover {
+      background: #059669;
+    }
+    .footer {
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📋 Devis Reçu</h1>
+  </div>
+
+  <div class="content">
+    <p>Bonjour ${data.buyerName},</p>
+
+    <p>Vous avez reçu une réponse à votre demande de devis de la part de <strong>${data.sellerName}</strong>.</p>
+
+    <div class="info-row">
+      <div class="info-label">Produit:</div>
+      <div class="info-value"><strong>${data.productTitle}</strong></div>
+    </div>
+
+    ${data.requestedQuantity ? `
+    <div class="info-row">
+      <div class="info-label">Quantité:</div>
+      <div class="info-value">${data.requestedQuantity} ${data.unitOfMeasure || 'unités'}</div>
+    </div>
+    ` : ''}
+
+    <div class="price-box">
+      <div style="color: #059669; font-weight: 600; margin-bottom: 5px;">Prix proposé</div>
+      <div class="price">
+        ${data.quotedPrice.toLocaleString()} <span class="currency">${data.currency}</span>
+      </div>
+      ${data.unitOfMeasure ? `<div style="color: #6b7280; font-size: 14px;">par ${data.unitOfMeasure}</div>` : ''}
+      ${data.requestedQuantity ? `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #10b981;">
+          <div style="color: #059669; font-weight: 600;">Total estimé</div>
+          <div style="font-size: 24px; font-weight: 700; color: #059669; margin-top: 5px;">
+            ${(data.quotedPrice * data.requestedQuantity).toLocaleString()} ${data.currency}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+
+    ${data.validUntil ? `
+    <div class="info-row">
+      <div class="info-label">Validité du devis:</div>
+      <div class="info-value">Jusqu'au ${new Date(data.validUntil).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    ` : ''}
+
+    <div class="response-box">
+      <strong style="color: #4f46e5;">Conditions et informations du vendeur:</strong><br><br>
+      ${data.sellerResponse.replace(/\n/g, '<br>')}
+    </div>
+
+    <div style="text-align: center;">
+      <a href="${data.quoteRequestUrl}" class="button">
+        Consulter le devis
+      </a>
+    </div>
+
+    <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+      Connectez-vous à votre tableau de bord pour consulter tous les détails, accepter ou décliner ce devis.
+    </p>
+  </div>
+
+  <div class="footer">
+    <p>
+      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
+    </p>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Generate plain text version of quote response email
+   */
+  private generateQuoteResponseEmailText(data: QuoteResponseEmailData): string {
+    let text = `Devis Reçu\n\n`;
+    text += `Bonjour ${data.buyerName},\n\n`;
+    text += `Vous avez reçu une réponse à votre demande de devis de la part de ${data.sellerName}.\n\n`;
+    text += `Produit: ${data.productTitle}\n`;
+
+    if (data.requestedQuantity) {
+      text += `Quantité: ${data.requestedQuantity} ${data.unitOfMeasure || 'unités'}\n`;
+    }
+
+    text += `\nPrix proposé: ${data.quotedPrice.toLocaleString()} ${data.currency}`;
+    if (data.unitOfMeasure) {
+      text += ` par ${data.unitOfMeasure}`;
+    }
+    text += `\n`;
+
+    if (data.requestedQuantity) {
+      text += `Total estimé: ${(data.quotedPrice * data.requestedQuantity).toLocaleString()} ${data.currency}\n`;
+    }
+
+    if (data.validUntil) {
+      text += `\nValidité du devis: Jusqu'au ${new Date(data.validUntil).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+    }
+
+    text += `\nConditions et informations du vendeur:\n${data.sellerResponse}\n`;
+    text += `\nConsulter le devis: ${data.quoteRequestUrl}\n`;
+    text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails, accepter ou décliner ce devis.\n`;
     text += `\n© 2025 AgriTech Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 

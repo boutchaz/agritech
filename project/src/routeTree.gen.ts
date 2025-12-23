@@ -94,6 +94,8 @@ import { Route as ParcelsParcelIdReportsRouteImport } from './routes/parcels.$pa
 import { Route as ParcelsParcelIdProfitabilityRouteImport } from './routes/parcels.$parcelId.profitability'
 import { Route as ParcelsParcelIdProductionRouteImport } from './routes/parcels.$parcelId.production'
 import { Route as ParcelsParcelIdAnalyseRouteImport } from './routes/parcels.$parcelId.analyse'
+import { Route as MarketplaceQuoteRequestsSentRouteImport } from './routes/marketplace.quote-requests.sent'
+import { Route as MarketplaceQuoteRequestsReceivedRouteImport } from './routes/marketplace.quote-requests.received'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -522,6 +524,18 @@ const ParcelsParcelIdAnalyseRoute = ParcelsParcelIdAnalyseRouteImport.update({
   path: '/analyse',
   getParentRoute: () => ParcelsParcelIdRoute,
 } as any)
+const MarketplaceQuoteRequestsSentRoute =
+  MarketplaceQuoteRequestsSentRouteImport.update({
+    id: '/quote-requests/sent',
+    path: '/quote-requests/sent',
+    getParentRoute: () => MarketplaceRoute,
+  } as any)
+const MarketplaceQuoteRequestsReceivedRoute =
+  MarketplaceQuoteRequestsReceivedRouteImport.update({
+    id: '/quote-requests/received',
+    path: '/quote-requests/received',
+    getParentRoute: () => MarketplaceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -548,7 +562,7 @@ export interface FileRoutesByFullPath {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
-  '/marketplace': typeof MarketplaceRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
@@ -599,6 +613,8 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/marketplace/quote-requests/received': typeof MarketplaceQuoteRequestsReceivedRoute
+  '/marketplace/quote-requests/sent': typeof MarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
@@ -634,7 +650,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
-  '/marketplace': typeof MarketplaceRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
   '/profitability': typeof ProfitabilityRoute
@@ -679,6 +695,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/stock': typeof StockIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/marketplace/quote-requests/received': typeof MarketplaceQuoteRequestsReceivedRoute
+  '/marketplace/quote-requests/sent': typeof MarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
@@ -716,7 +734,7 @@ export interface FileRoutesById {
   '/infrastructure': typeof InfrastructureRoute
   '/lab-services': typeof LabServicesRoute
   '/login': typeof LoginRoute
-  '/marketplace': typeof MarketplaceRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
   '/parcels': typeof ParcelsRouteWithChildren
   '/production-intelligence': typeof ProductionIntelligenceRoute
@@ -767,6 +785,8 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/stock/': typeof StockIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/marketplace/quote-requests/received': typeof MarketplaceQuoteRequestsReceivedRoute
+  '/marketplace/quote-requests/sent': typeof MarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof ParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof ParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof ParcelsParcelIdProfitabilityRoute
@@ -855,6 +875,8 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/marketplace/quote-requests/received'
+    | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
@@ -935,6 +957,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stock'
     | '/tasks'
+    | '/marketplace/quote-requests/received'
+    | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
@@ -1022,6 +1046,8 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/stock/'
     | '/tasks/'
+    | '/marketplace/quote-requests/received'
+    | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
@@ -1059,7 +1085,7 @@ export interface RootRouteChildren {
   InfrastructureRoute: typeof InfrastructureRoute
   LabServicesRoute: typeof LabServicesRoute
   LoginRoute: typeof LoginRoute
-  MarketplaceRoute: typeof MarketplaceRoute
+  MarketplaceRoute: typeof MarketplaceRouteWithChildren
   OnboardingRoute: typeof OnboardingRouteWithChildren
   ParcelsRoute: typeof ParcelsRouteWithChildren
   ProductionIntelligenceRoute: typeof ProductionIntelligenceRoute
@@ -1680,6 +1706,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParcelsParcelIdAnalyseRouteImport
       parentRoute: typeof ParcelsParcelIdRoute
     }
+    '/marketplace/quote-requests/sent': {
+      id: '/marketplace/quote-requests/sent'
+      path: '/quote-requests/sent'
+      fullPath: '/marketplace/quote-requests/sent'
+      preLoaderRoute: typeof MarketplaceQuoteRequestsSentRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
+    '/marketplace/quote-requests/received': {
+      id: '/marketplace/quote-requests/received'
+      path: '/quote-requests/received'
+      fullPath: '/marketplace/quote-requests/received'
+      preLoaderRoute: typeof MarketplaceQuoteRequestsReceivedRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
   }
 }
 
@@ -1692,6 +1732,20 @@ const BlogRouteChildren: BlogRouteChildren = {
 }
 
 const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
+interface MarketplaceRouteChildren {
+  MarketplaceQuoteRequestsReceivedRoute: typeof MarketplaceQuoteRequestsReceivedRoute
+  MarketplaceQuoteRequestsSentRoute: typeof MarketplaceQuoteRequestsSentRoute
+}
+
+const MarketplaceRouteChildren: MarketplaceRouteChildren = {
+  MarketplaceQuoteRequestsReceivedRoute: MarketplaceQuoteRequestsReceivedRoute,
+  MarketplaceQuoteRequestsSentRoute: MarketplaceQuoteRequestsSentRoute,
+}
+
+const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
+  MarketplaceRouteChildren,
+)
 
 interface OnboardingRouteChildren {
   OnboardingIndexRoute: typeof OnboardingIndexRoute
@@ -1867,7 +1921,7 @@ const rootRouteChildren: RootRouteChildren = {
   InfrastructureRoute: InfrastructureRoute,
   LabServicesRoute: LabServicesRoute,
   LoginRoute: LoginRoute,
-  MarketplaceRoute: MarketplaceRoute,
+  MarketplaceRoute: MarketplaceRouteWithChildren,
   OnboardingRoute: OnboardingRouteWithChildren,
   ParcelsRoute: ParcelsRouteWithChildren,
   ProductionIntelligenceRoute: ProductionIntelligenceRoute,

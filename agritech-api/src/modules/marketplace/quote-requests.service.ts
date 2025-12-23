@@ -298,6 +298,7 @@ export class QuoteRequestsService {
 
     // Determine update data based on role
     const updateData: any = {};
+    let shouldSendBuyerEmail = false;
 
     if (existing.seller_organization_id === organizationId) {
       // Seller updating
@@ -315,6 +316,8 @@ export class QuoteRequestsService {
         if (!dto.status) {
           updateData.status = dto.quoted_price ? 'quoted' : 'responded';
         }
+        // Trigger email to buyer when seller provides a quote
+        shouldSendBuyerEmail = true;
       }
     } else if (existing.requester_organization_id === organizationId) {
       // Buyer updating (only allow status changes to accepted/cancelled)
@@ -342,7 +345,77 @@ export class QuoteRequestsService {
       );
     }
 
+    // Send email notification to buyer (non-blocking)
+    if (shouldSendBuyerEmail) {
+      this.sendBuyerNotification(data, existing).catch((err) => {
+        this.logger.error(`Failed to send quote response email: ${err.message}`);
+      });
+    }
+
     return data;
+  }
+
+  /**
+   * Send email notification to buyer about seller's quote response
+   */
+  private async sendBuyerNotification(
+    updatedQuote: QuoteRequest,
+    originalQuote: QuoteRequest,
+  ): Promise<void> {
+    try {
+      // Fetch buyer organization details
+      const supabase = this.databaseService.getAdminClient();
+      const { data: buyer, error: buyerError } = await supabase
+        .from('organizations')
+        .select('name, email')
+        .eq('id', updatedQuote.requester_organization_id)
+        .single();
+
+      // Fetch seller organization details
+      const { data: seller, error: sellerError } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', updatedQuote.seller_organization_id)
+        .single();
+
+      if (buyerError || sellerError || !buyer || !buyer.email || !seller) {
+        this.logger.warn(
+          `Buyer or seller email not found for quote ${updatedQuote.id}`,
+        );
+        return;
+      }
+
+      // Use buyer contact email if available, otherwise organization email
+      const recipientEmail =
+        updatedQuote.buyer_contact_email || buyer.email;
+
+      // Send email notification
+      const dashboardUrl =
+        process.env.DASHBOARD_URL || 'https://agritech-dashboard.thebzlab.online';
+      const quoteRequestUrl = `${dashboardUrl}/marketplace/quote-requests/${updatedQuote.id}`;
+
+      await this.notificationsService.sendQuoteResponseNotification(
+        recipientEmail,
+        {
+          buyerName: updatedQuote.buyer_contact_name || buyer.name || 'Client',
+          buyerEmail: recipientEmail,
+          sellerName: seller.name || 'Vendeur',
+          productTitle: updatedQuote.product_title,
+          quotedPrice: updatedQuote.quoted_price || 0,
+          currency: updatedQuote.quoted_currency || 'MAD',
+          requestedQuantity: updatedQuote.requested_quantity,
+          unitOfMeasure: updatedQuote.unit_of_measure,
+          sellerResponse: updatedQuote.seller_response || '',
+          validUntil: updatedQuote.quote_valid_until,
+          quoteRequestUrl,
+        },
+      );
+
+      this.logger.log(`Quote response notification sent to ${recipientEmail}`);
+    } catch (error) {
+      this.logger.error(`Failed to send buyer notification: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
