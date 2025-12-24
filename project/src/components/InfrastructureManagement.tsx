@@ -520,44 +520,48 @@ const InfrastructureManagement: React.FC = () => {
   const renderStructureCard = (structure: Structure) => (
     <div
       key={structure.id}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow"
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center space-x-3">
-          {structure.type === 'stable' ? (
-            <Building2 className="h-6 w-6 text-blue-500" />
-          ) : structure.type === 'technical_room' ? (
-            <Wrench className="h-6 w-6 text-green-500" />
-          ) : structure.type === 'basin' ? (
-            <Droplets className="h-6 w-6 text-blue-500" />
-          ) : (
-            <Flask className="h-6 w-6 text-purple-500" />
-          )}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{structure.name}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between items-start mb-4 gap-3">
+        <div className="flex items-start space-x-3 min-w-0 flex-1">
+          <div className="flex-shrink-0 mt-0.5">
+            {structure.type === 'stable' ? (
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+            ) : structure.type === 'technical_room' ? (
+              <Wrench className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
+            ) : structure.type === 'basin' ? (
+              <Droplets className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+            ) : (
+              <Flask className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{structure.name}</h3>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               {STRUCTURE_TYPES.find(t => t.value === structure.type)?.label}
             </p>
             {structure.farm && (
               <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
-                <MapPin className="h-3 w-3" />
-                <span>{structure.farm.name}</span>
+                <MapPin className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{structure.farm.name}</span>
               </div>
             )}
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2 flex-shrink-0">
           <button
             onClick={() => setEditingStructure(structure)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Modifier"
           >
-            <Edit2 className="h-5 w-5" />
+            <Edit2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
           <button
             onClick={() => handleDeleteStructure(structure.id)}
-            className="text-gray-400 hover:text-red-500"
+            className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            aria-label="Supprimer"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
       </div>
@@ -652,10 +656,10 @@ const InfrastructureManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="hidden sm:block">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Gestion des Infrastructures
           </h2>
@@ -665,10 +669,10 @@ const InfrastructureManagement: React.FC = () => {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
-          <span>Nouvelle Infrastructure</span>
+          <span className="font-medium">Nouvelle Infrastructure</span>
         </button>
       </div>
 
@@ -679,12 +683,12 @@ const InfrastructureManagement: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-min">
           <button
             onClick={() => setActiveTab('organization')}
             className={`
-              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap
               ${activeTab === 'organization'
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -692,9 +696,9 @@ const InfrastructureManagement: React.FC = () => {
             `}
           >
             <div className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
+              <Building className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
               <span>Organisation</span>
-              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+              <span className="py-0.5 px-1.5 sm:px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {organizationStructures.length}
               </span>
             </div>
@@ -702,7 +706,7 @@ const InfrastructureManagement: React.FC = () => {
           <button
             onClick={() => setActiveTab('farm')}
             className={`
-              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap
               ${activeTab === 'farm'
                 ? 'border-green-500 text-green-600 dark:text-green-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -710,9 +714,9 @@ const InfrastructureManagement: React.FC = () => {
             `}
           >
             <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
               <span>Par Ferme</span>
-              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+              <span className="py-0.5 px-1.5 sm:px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {allFarmStructures.length}
               </span>
             </div>
@@ -867,19 +871,20 @@ const InfrastructureManagement: React.FC = () => {
       {/* Add/Edit Structure Modal */}
       {(showAddModal || editingStructure) && (
         <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingStructure ? 'Modifier la Structure' : 'Nouvelle Structure'}
+          <div className="modal-panel p-4 sm:p-6 max-w-full sm:max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700 mb-4">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
+                {editingStructure ? 'Modifier la Structure' : 'Nouvelle Infrastructure'}
               </h3>
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingStructure(null);
                 }}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Fermer"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
@@ -1032,19 +1037,19 @@ const InfrastructureManagement: React.FC = () => {
               {renderStructureFields()}
             </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end sticky bottom-0 bg-white dark:bg-gray-800 pt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingStructure(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
               >
                 {editingStructure ? 'Mettre à jour' : 'Ajouter'}
               </button>

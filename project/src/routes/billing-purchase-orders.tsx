@@ -216,17 +216,15 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Hide sidebar on mobile */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-      </div>
-      <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar with mobile menu support */}
+      <Sidebar
+        modules={modules.filter(m => m.active)}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      />
+      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
         {/* Mobile Navigation Bar */}
         <MobileNavBar title="Purchase Orders" />
 

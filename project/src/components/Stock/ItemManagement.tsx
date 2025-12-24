@@ -988,47 +988,61 @@ export default function ItemManagement() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="flex items-center gap-2 flex-1">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <Input
-            placeholder={t('items.searchPlaceholder', 'Search items...')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        
-        <Select value={selectedFarm} onValueChange={setSelectedFarm}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
-            {farms.map((farm) => {
-              const farmId = (farm as any).farm_id || farm.id;
-              const farmName = (farm as any).farm_name || farm.name;
-              return (
-                <SelectItem key={farmId} value={farmId}>
-                  {farmName}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+      <Card className="bg-white dark:bg-gray-800">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            {/* Search Input */}
+            <div className="flex-1 min-w-0">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Input
+                  placeholder={t('items.searchPlaceholder', 'Search items...')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500"
+                />
+              </div>
+            </div>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={lowStockOnly}
-            onChange={(e) => setLowStockOnly(e.target.checked)}
-            className="rounded"
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            {t('items.lowStockOnly', 'Low Stock Only')}
-          </span>
-        </label>
-      </div>
+            {/* Farm Filter */}
+            <div className="w-full sm:w-auto sm:min-w-[200px]">
+              <Select value={selectedFarm} onValueChange={setSelectedFarm}>
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500">
+                  <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
+                  {farms.map((farm) => {
+                    const farmId = (farm as any).farm_id || farm.id;
+                    const farmName = (farm as any).farm_name || farm.name;
+                    return (
+                      <SelectItem key={farmId} value={farmId}>
+                        {farmName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Low Stock Filter */}
+            <div className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                 onClick={() => setLowStockOnly(!lowStockOnly)}>
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <AlertTriangle className={`w-4 h-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium transition-colors ${lowStockOnly ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                  {t('items.lowStockOnly', 'Low Stock Only')}
+                </span>
+              </div>
+              <Switch
+                checked={lowStockOnly}
+                onCheckedChange={setLowStockOnly}
+                className="pointer-events-none"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -1036,8 +1050,9 @@ export default function ItemManagement() {
         </div>
       ) : (
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800 border-b">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.itemCode')}
@@ -1092,7 +1107,10 @@ export default function ItemManagement() {
                      stockLevel.total_quantity < item.minimum_stock_level);
                   
                   return (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                         <div className="flex items-center gap-2">
                           {item.item_code}
@@ -1164,12 +1182,12 @@ export default function ItemManagement() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedItemForDetails(item)}
-                            className="text-blue-600 hover:text-blue-700"
+                            className="text-blue-600 hover:text-blue-700 p-1 sm:p-2"
                             title={t('items.viewDetails', 'View Details')}
                           >
                             <Eye className="w-4 h-4" />
@@ -1178,6 +1196,7 @@ export default function ItemManagement() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(item)}
+                            className="p-1 sm:p-2"
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
@@ -1185,7 +1204,7 @@ export default function ItemManagement() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(item)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 p-1 sm:p-2"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1196,7 +1215,8 @@ export default function ItemManagement() {
                 })
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 

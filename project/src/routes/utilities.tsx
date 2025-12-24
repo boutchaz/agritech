@@ -3,9 +3,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
+import { MobileNavBar } from '../components/MobileNavBar'
+import ModernPageHeader from '../components/ModernPageHeader'
 import { useState } from 'react'
 import type { Module } from '../types'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Building2, Zap } from 'lucide-react'
 
 // Lazy load utilities component (includes Recharts ~600KB)
 const UtilitiesManagement = lazy(() => import('../components/UtilitiesManagement'))
@@ -57,28 +59,32 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {currentOrganization.name}
-            </h1>
-            {currentFarm && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                • {currentFarm.name}
-              </span>
-            )}
-          </div>
-          <OrganizationSwitcher />
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        {/* Mobile Navigation Bar */}
+        <MobileNavBar title="Gestion des Utilités" />
+
+        {/* Desktop Header */}
+        <div className="hidden md:block">
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Zap, label: 'Gestion des Utilités', isActive: true }
+            ]}
+            title="Gestion des Utilités"
+            subtitle="Suivez et gérez la consommation d'eau et d'électricité de vos fermes"
+          />
         </div>
-        <Suspense fallback={
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-gray-600">Loading utilities dashboard...</span>
-          </div>
-        }>
-          <UtilitiesManagement />
-        </Suspense>
+
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement du tableau de bord...</span>
+            </div>
+          }>
+            <UtilitiesManagement />
+          </Suspense>
+        </div>
       </main>
     </div>
   );

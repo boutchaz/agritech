@@ -644,45 +644,62 @@ const UtilitiesManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header with responsive layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="hidden sm:block text-2xl font-bold text-gray-900 dark:text-white">
           Gestion des Charges Fixes
         </h2>
-        <div className="flex items-center space-x-4">
+
+        {/* Mobile: Add button at top */}
+        <div className="sm:hidden">
+          <button
+            onClick={() => setShowAddModal(true)}
+            disabled={!currentFarm?.id}
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'} shadow-md`}
+            title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
+          >
+            <Plus className="h-5 w-5" />
+            <span className="font-medium">Nouvelle Charge</span>
+          </button>
+        </div>
+
+        {/* Desktop controls */}
+        <div className="hidden sm:flex items-center space-x-4">
           <button
             onClick={() => navigate({ to: '/accounting-journal' })}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
           >
             <BookOpen className="h-4 w-4" />
             <span>Journal Comptable</span>
           </button>
+
           {/* View Mode Toggle */}
           <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button
               onClick={() => setViewMode('grouped')}
-              className={`p-2 rounded-md ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue groupée"
             >
               <Grid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('cards')}
-              className={`p-2 rounded-md ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue cartes"
             >
               <List className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue liste"
             >
               <Calendar className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('dashboard')}
-              className={`p-2 rounded-md ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue tableau de bord"
             >
               <BarChart3 className="h-4 w-4" />
@@ -692,7 +709,7 @@ const UtilitiesManagement: React.FC = () => {
           {/* Filter and Sort Controls */}
           <button
             onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
-            className={`flex items-center space-x-2 px-3 py-2 border rounded-md ${filters.showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-700'} hover:bg-blue-50`}
+            className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'} hover:bg-blue-50 dark:hover:bg-blue-900/20`}
             title="Filtres et tri"
           >
             <Filter className="h-4 w-4" />
@@ -714,6 +731,52 @@ const UtilitiesManagement: React.FC = () => {
             <span>Nouvelle Charge</span>
           </button>
         </div>
+      </div>
+
+      {/* Mobile: View mode and filter toggle */}
+      <div className="sm:hidden flex items-center gap-2">
+        <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 overflow-x-auto">
+          <button
+            onClick={() => setViewMode('grouped')}
+            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+            title="Vue groupée"
+          >
+            <Grid className="h-4 w-4 mx-auto" />
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+            title="Vue cartes"
+          >
+            <List className="h-4 w-4 mx-auto" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+            title="Vue liste"
+          >
+            <Calendar className="h-4 w-4 mx-auto" />
+          </button>
+          <button
+            onClick={() => setViewMode('dashboard')}
+            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
+            title="Vue tableau de bord"
+          >
+            <BarChart3 className="h-4 w-4 mx-auto" />
+          </button>
+        </div>
+
+        <button
+          onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
+          className={`flex items-center space-x-2 px-3 py-2 border rounded-lg transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}
+        >
+          <Filter className="h-4 w-4" />
+          {filters.showFilters ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )}
+        </button>
       </div>
 
       {/* Advanced Filters Panel */}
