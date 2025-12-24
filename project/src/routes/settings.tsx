@@ -55,17 +55,14 @@ const SettingsLayoutComponent: React.FC = () => {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Hide main sidebar on mobile */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-      </div>
-      <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
+      <Sidebar
+        modules={modules.filter(m => m.active)}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      />
+      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
         {/* Mobile-optimized header */}
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">

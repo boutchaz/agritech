@@ -20,17 +20,15 @@ const AccountsContent = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Hide sidebar on mobile (< 768px) */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={[]}
-          activeModule="accounting"
-          onModuleChange={() => {}}
-          isDarkMode={false}
-          onThemeToggle={() => {}}
-        />
-      </div>
-      <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar with mobile menu support */}
+      <Sidebar
+        modules={[]}
+        activeModule="accounting"
+        onModuleChange={() => {}}
+        isDarkMode={false}
+        onThemeToggle={() => {}}
+      />
+      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
         {/* Mobile Navigation Bar */}
         <MobileNavBar title="Chart of Accounts" />
 

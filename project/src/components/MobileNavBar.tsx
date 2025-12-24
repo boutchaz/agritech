@@ -34,7 +34,9 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
 
   return (
     <div className={cn(
-      "md:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
+      "md:hidden flex items-center gap-2 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
+      // Add left padding to make room for hamburger menu button (16px margin + 40px button + 8px gap = 64px)
+      "pl-16 pr-3",
       className
     )}>
       {showBackButton && (

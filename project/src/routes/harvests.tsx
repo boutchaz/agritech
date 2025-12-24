@@ -146,18 +146,16 @@ function HarvestsPage() {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Hide sidebar on mobile */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-      </div>
+      {/* Sidebar with mobile menu support */}
+      <Sidebar
+        modules={modules.filter(m => m.active)}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      />
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
         <MobileNavBar title="Gestion des Récoltes" />
 
@@ -205,6 +203,17 @@ function HarvestsPage() {
         </div>
 
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+          {/* Mobile Add Button - Only visible on mobile */}
+          <div className="md:hidden">
+            <button
+              onClick={handleAddHarvest}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
+            >
+              <Plus className="h-5 w-5" />
+              Nouvelle Récolte
+            </button>
+          </div>
+
           {/* Statistics */}
           {statistics && <HarvestStatistics statistics={statistics} />}
 

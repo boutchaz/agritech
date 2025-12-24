@@ -33,9 +33,18 @@ function LoginForm() {
         setLoading(true);
 
         try {
+            console.log('[Login] Starting login attempt...');
             await ApiClient.login(email, password);
+            console.log('[Login] Login successful, token received');
+
+            // Check if token was stored
+            const storedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+            console.log('[Login] Token stored in localStorage:', !!storedToken);
+
+            console.log('[Login] Redirecting to dashboard...');
             router.push('/dashboard');
         } catch (err: any) {
+            console.error('[Login] Login failed:', err);
             setError(err.message || 'Invalid email or password');
         } finally {
             setLoading(false);

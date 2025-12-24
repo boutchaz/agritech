@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
+import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, XCircle, Loader2, Trash2, Send, MoreHorizontal, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -296,29 +297,45 @@ const AppContent: React.FC = () => {
           onThemeToggle={toggleTheme}
         />
         <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: BookOpen, label: 'Journal Comptable', isActive: true }
-            ]}
-            title="Journal Comptable"
-            subtitle="Gérer les écritures du grand livre"
-          />
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title="Journal Comptable" />
 
-          <div className="p-6 space-y-6">
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: BookOpen, label: 'Journal Comptable', isActive: true }
+              ]}
+              title="Journal Comptable"
+              subtitle="Gérer les écritures du grand livre"
+            />
+          </div>
+
+          <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
             {/* Header Actions */}
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="hidden sm:block">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Écritures Comptables</h2>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
                   Consultez et gérez vos écritures du grand livre
                 </p>
               </div>
-              <div className="flex gap-2">
+
+              {/* Mobile: Add button at top */}
+              <div className="sm:hidden">
+                <Button onClick={() => setShowCreateModal(true)} className="w-full shadow-md">
+                  <Plus className="mr-2 h-5 w-5" />
+                  <span className="font-medium">Nouvelle Écriture</span>
+                </Button>
+              </div>
+
+              {/* Desktop controls */}
+              <div className="hidden sm:flex gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowFilters(!showFilters)}
-                  className={showFilters ? 'bg-blue-50 border-blue-300' : ''}
+                  className={showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}
                 >
                   <Filter className="mr-2 h-4 w-4" />
                   Filtres
@@ -331,6 +348,23 @@ const AppContent: React.FC = () => {
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvelle Écriture
+                </Button>
+              </div>
+
+              {/* Mobile: Filter button */}
+              <div className="sm:hidden">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`w-full ${showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtres
+                  {Object.keys(filters).length > 0 && (
+                    <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
+                      {Object.keys(filters).length}
+                    </span>
+                  )}
                 </Button>
               </div>
             </div>
@@ -389,49 +423,49 @@ const AppContent: React.FC = () => {
             )}
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Total Écritures
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Comptabilisées
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {stats.posted}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Brouillons
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-600">
+                <div className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-600">
                   {stats.draft}
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Total Débits
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-base sm:text-xl md:text-2xl font-bold">
                   MAD {stats.totalDebit.toLocaleString('fr-FR')}
                 </div>
               </CardContent>
@@ -441,14 +475,14 @@ const AppContent: React.FC = () => {
           {/* Journal Entry List */}
           <Card>
             <CardHeader>
-              <CardTitle>Toutes les Écritures</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Toutes les Écritures</CardTitle>
+              <CardDescription className="text-sm">
                 Consultez et gérez vos écritures du grand livre
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <table className="w-full min-w-[800px]">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">

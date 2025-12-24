@@ -61,18 +61,16 @@ function ReceptionBatchesPage() {
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Hide sidebar on mobile */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-      </div>
+      {/* Sidebar with mobile menu support */}
+      <Sidebar
+        modules={modules.filter(m => m.active)}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      />
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
         <MobileNavBar title="Lots de Réception" />
 

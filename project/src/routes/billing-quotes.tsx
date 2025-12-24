@@ -196,16 +196,14 @@ const AppContent: React.FC = () => {
   if (isLoading) {
     return (
       <div className={cn("flex min-h-screen", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="hidden md:block">
-          <Sidebar
-            modules={modules.filter(m => m.active)}
-            activeModule={activeModule}
-            onModuleChange={setActiveModule}
-            isDarkMode={isDarkMode}
-            onThemeToggle={toggleTheme}
-          />
-        </div>
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+        <Sidebar
+          modules={modules.filter(m => m.active)}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          isDarkMode={isDarkMode}
+          onThemeToggle={toggleTheme}
+        />
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
@@ -238,17 +236,15 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={cn(`flex min-h-screen ${isDarkMode ? 'dark' : ''}`, isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Hide sidebar on mobile */}
-      <div className="hidden md:block">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-      </div>
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar with mobile menu support */}
+      <Sidebar
+        modules={modules.filter(m => m.active)}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        isDarkMode={isDarkMode}
+        onThemeToggle={toggleTheme}
+      />
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('quotes.pageTitle')} />
 
