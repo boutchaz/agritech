@@ -41,11 +41,13 @@ async function bootstrap() {
 
   logger.log(`CORS Origins configured: ${allowedOrigins.join(', ')}`);
 
-  // Always allow these origins for marketplace
   const alwaysAllowedOrigins = [
     'https://marketplace.thebzlab.online',
     'https://dashboard.thebzlab.online',
     'https://agritech.thebzlab.online',
+    'https://agritech-dashboard.thebzlab.online',
+    'https://agritech-api.thebzlab.online',
+    'https://agritech-marketplace.thebzlab.online',
   ];
 
   app.enableCors({

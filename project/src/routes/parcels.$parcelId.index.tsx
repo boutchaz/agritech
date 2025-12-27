@@ -127,6 +127,11 @@ const ParcelOverview = () => {
               </div>
             </div>
           )}
+          {indices?.lastUpdate && (
+            <p className="text-xs text-gray-500 mt-2">
+              Mis à jour le {data.lastUpdate}
+            </p>
+          )}
         </div>
 
         <div className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm">

@@ -27,14 +27,15 @@ function ReceptionBatchesPage() {
   const [activeModule, setActiveModule] = useState('reception-batches');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
   const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
   const defaultHarvestId = search.harvest_id;
 
   useEffect(() => {
     if (defaultHarvestId) {
-      setShowCreateForm(true);
+      setShowForm(true);
     }
   }, [defaultHarvestId]);
 
@@ -45,7 +46,23 @@ function ReceptionBatchesPage() {
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);
-    // TODO: Open batch detail dialog
+  };
+
+  const handleEditBatch = (batch: ReceptionBatch) => {
+    setBatchToEdit(batch);
+    setShowForm(true);
+  };
+
+  const handleFormClose = (open: boolean) => {
+    setShowForm(open);
+    if (!open) {
+      setBatchToEdit(null);
+    }
+  };
+
+  const handleCreateClick = () => {
+    setBatchToEdit(null);
+    setShowForm(true);
   };
 
   if (!currentOrganization) {
@@ -88,15 +105,17 @@ function ReceptionBatchesPage() {
 
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           <ReceptionBatchList
-            onCreateClick={() => setShowCreateForm(true)}
+            onCreateClick={handleCreateClick}
             onViewClick={handleViewBatch}
+            onEditClick={handleEditBatch}
           />
         </div>
 
         <ReceptionBatchForm
-          open={showCreateForm}
-          onOpenChange={setShowCreateForm}
+          open={showForm}
+          onOpenChange={handleFormClose}
           defaultHarvestId={defaultHarvestId}
+          batchToEdit={batchToEdit}
         />
       </main>
     </div>

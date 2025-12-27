@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import {
   useCreateReceptionBatch,
+  useUpdateReceptionBatch,
 } from '@/hooks/useReceptionBatches';
 import { useParcelsWithDetails } from '@/hooks/useParcelsWithDetails';
 import { useAssignableUsers } from '@/hooks/useAssignableUsers';
@@ -88,6 +89,7 @@ interface ReceptionBatchFormProps {
   onOpenChange: (open: boolean) => void;
   defaultHarvestId?: string;
   defaultParcelId?: string;
+  batchToEdit?: any;
 }
 
 export default function ReceptionBatchForm({
@@ -95,18 +97,44 @@ export default function ReceptionBatchForm({
   onOpenChange,
   defaultHarvestId,
   defaultParcelId,
+  batchToEdit,
 }: ReceptionBatchFormProps) {
   const { currentOrganization, user } = useAuth();
   const createBatch = useCreateReceptionBatch();
+  const updateBatch = useUpdateReceptionBatch();
   const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
   const { data: parcels = [], isLoading: parcelsLoading } = useParcelsWithDetails();
   const { data: assignableUsers = [] } = useAssignableUsers(currentOrganization?.id || null);
   const { data: harvests = [], isLoading: harvestsLoading } = useHarvests(currentOrganization?.id || '');
   const [showQualityControl, setShowQualityControl] = useState(false);
 
+  const isEditMode = !!batchToEdit;
+
   const form = useForm<ReceptionBatchFormData>({
     resolver: zodResolver(receptionBatchSchema),
-    defaultValues: {
+    defaultValues: batchToEdit ? {
+      warehouse_id: batchToEdit.warehouse_id || '',
+      harvest_id: batchToEdit.harvest_id || undefined,
+      parcel_id: batchToEdit.parcel_id || '',
+      crop_id: batchToEdit.crop_id || undefined,
+      culture_type: batchToEdit.culture_type || undefined,
+      reception_date: batchToEdit.reception_date || new Date().toISOString().split('T')[0],
+      reception_time: batchToEdit.reception_time || undefined,
+      weight: batchToEdit.weight || 0,
+      weight_unit: batchToEdit.weight_unit || 'kg',
+      quantity: batchToEdit.quantity || undefined,
+      quantity_unit: batchToEdit.quantity_unit || undefined,
+      quality_grade: batchToEdit.quality_grade || undefined,
+      quality_score: batchToEdit.quality_score || undefined,
+      quality_notes: batchToEdit.quality_notes || undefined,
+      humidity_percentage: batchToEdit.humidity_percentage || undefined,
+      maturity_level: batchToEdit.maturity_level || undefined,
+      temperature: batchToEdit.temperature || undefined,
+      moisture_content: batchToEdit.moisture_content || undefined,
+      received_by: batchToEdit.received_by || user?.id || '',
+      producer_name: batchToEdit.producer_name || undefined,
+      supplier_id: batchToEdit.supplier_id || undefined,
+    } : {
       warehouse_id: '',
       harvest_id: defaultHarvestId || undefined,
       parcel_id: defaultParcelId || '',
@@ -117,6 +145,37 @@ export default function ReceptionBatchForm({
       received_by: user?.id || '',
     } as any,
   });
+
+  useEffect(() => {
+    if (open && batchToEdit) {
+      form.reset({
+        warehouse_id: batchToEdit.warehouse_id || '',
+        harvest_id: batchToEdit.harvest_id || undefined,
+        parcel_id: batchToEdit.parcel_id || '',
+        crop_id: batchToEdit.crop_id || undefined,
+        culture_type: batchToEdit.culture_type || undefined,
+        reception_date: batchToEdit.reception_date || new Date().toISOString().split('T')[0],
+        reception_time: batchToEdit.reception_time || undefined,
+        weight: batchToEdit.weight || 0,
+        weight_unit: batchToEdit.weight_unit || 'kg',
+        quantity: batchToEdit.quantity || undefined,
+        quantity_unit: batchToEdit.quantity_unit || undefined,
+        quality_grade: batchToEdit.quality_grade || undefined,
+        quality_score: batchToEdit.quality_score || undefined,
+        quality_notes: batchToEdit.quality_notes || undefined,
+        humidity_percentage: batchToEdit.humidity_percentage || undefined,
+        maturity_level: batchToEdit.maturity_level || undefined,
+        temperature: batchToEdit.temperature || undefined,
+        moisture_content: batchToEdit.moisture_content || undefined,
+        received_by: batchToEdit.received_by || user?.id || '',
+        producer_name: batchToEdit.producer_name || undefined,
+        supplier_id: batchToEdit.supplier_id || undefined,
+      });
+      if (batchToEdit.quality_grade || batchToEdit.quality_score) {
+        setShowQualityControl(true);
+      }
+    }
+  }, [open, batchToEdit, form, user?.id]);
 
   // Watch parcel selection to auto-populate culture type and crop
   const selectedParcelId = form.watch('parcel_id');
@@ -191,28 +250,34 @@ export default function ReceptionBatchForm({
         supplier_id: data.supplier_id,
       };
 
-      await createBatch.mutateAsync(input);
-      toast.success('Lot de réception créé avec succès');
+      if (isEditMode && batchToEdit?.id) {
+        await updateBatch.mutateAsync({ batchId: batchToEdit.id, data: input });
+        toast.success('Lot de réception mis à jour avec succès');
+      } else {
+        await createBatch.mutateAsync(input);
+        toast.success('Lot de réception créé avec succès');
+      }
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
-      toast.error(`Échec de la création du lot: ${error.message}`);
+      toast.error(`Échec ${isEditMode ? 'de la mise à jour' : 'de la création'} du lot: ${error.message}`);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-        {/* Gradient Header */}
         <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-lg">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
             <div className="p-2 bg-white/20 rounded-lg">
               <Package className="w-6 h-6" />
             </div>
-            Nouveau lot de réception
+            {isEditMode ? 'Modifier le lot de réception' : 'Nouveau lot de réception'}
           </DialogTitle>
           <p className="text-blue-100 text-sm mt-1">
-            Enregistrez la réception d'une récolte avec pesée et contrôle qualité
+            {isEditMode 
+              ? 'Modifiez les informations du lot de réception'
+              : 'Enregistrez la réception d\'une récolte avec pesée et contrôle qualité'}
           </p>
         </DialogHeader>
 
@@ -644,7 +709,6 @@ export default function ReceptionBatchForm({
             )}
           </div>
 
-          {/* Form Actions */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
             <Button
               type="button"
@@ -655,18 +719,18 @@ export default function ReceptionBatchForm({
             </Button>
             <Button
               type="submit"
-              disabled={createBatch.isPending}
+              disabled={createBatch.isPending || updateBatch.isPending}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
             >
-              {createBatch.isPending ? (
+              {(createBatch.isPending || updateBatch.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Création en cours...
+                  {isEditMode ? 'Mise à jour...' : 'Création en cours...'}
                 </>
               ) : (
                 <>
                   <ClipboardCheck className="w-4 h-4 mr-2" />
-                  Créer le lot de réception
+                  {isEditMode ? 'Mettre à jour' : 'Créer le lot de réception'}
                 </>
               )}
             </Button>

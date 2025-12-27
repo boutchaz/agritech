@@ -12,11 +12,13 @@ import {
   Lock,
   ShieldCheck,
   ShieldOff,
+  Banknote,
 } from 'lucide-react';
 import { useWorkers, useDeactivateWorker, useDeleteWorker } from '../../hooks/useWorkers';
 import { getWorkerTypeLabel, getCompensationDisplay } from '../../types/workers';
 import type { Worker, WorkerType } from '../../types/workers';
 import WorkerForm from './WorkerForm';
+import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
 
@@ -33,6 +35,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [workerToPay, setWorkerToPay] = useState<Worker | null>(null);
 
   const { data: workers = [], isLoading } = useWorkers(organizationId);
   const deactivateWorker = useDeactivateWorker();
@@ -60,6 +64,11 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const handleEdit = (worker: Worker) => {
     setSelectedWorker(worker);
     setShowForm(true);
+  };
+
+  const handlePayWorker = (worker: Worker) => {
+    setWorkerToPay(worker);
+    setShowPaymentDialog(true);
   };
 
   const handleDeactivate = async (workerId: string) => {
@@ -368,6 +377,15 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Can I="create" a="Payment">
+                          <button
+                            onClick={() => handlePayWorker(worker)}
+                            className="p-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+                            title="Payer le salaire"
+                          >
+                            <Banknote className="w-4 h-4" />
+                          </button>
+                        </Can>
                         <Can I="update" a="Worker">
                           <button
                             onClick={() => handleEdit(worker)}
@@ -428,6 +446,23 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           setSelectedWorker(null);
         }}
       />
+
+      {/* Worker Payment Dialog */}
+      {workerToPay && (
+        <WorkerPaymentDialog
+          open={showPaymentDialog}
+          worker={workerToPay}
+          organizationId={organizationId}
+          onClose={() => {
+            setShowPaymentDialog(false);
+            setWorkerToPay(null);
+          }}
+          onSuccess={() => {
+            setShowPaymentDialog(false);
+            setWorkerToPay(null);
+          }}
+        />
+      )}
     </div>
   );
 };

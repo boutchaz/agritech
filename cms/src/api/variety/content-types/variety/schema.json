@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "varieties",
+  "info": {
+    "singularName": "variety",
+    "pluralName": "varieties",
+    "displayName": "Variety",
+    "description": "Varieties of crop types"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "value": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "origin": {
+      "type": "string"
+    },
+    "main_use": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    },
+    "crop_type": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::crop-type.crop-type",
+      "inversedBy": "varieties"
+    }
+  }
+}

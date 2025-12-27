@@ -27,6 +27,7 @@ import {
   calculatePlantCount,
   type CropCategory,
 } from '../lib/plantingSystemData';
+import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
 import {
   Dialog,
   DialogContent,
@@ -140,14 +141,26 @@ const MapComponent: React.FC<MapProps> = ({
     rootstock: ''
   });
 
-  // Get available options based on selected crop category
-  const availableCropTypes = parcelDetails.crop_category
-    ? getCropTypesByCategory(parcelDetails.crop_category as CropCategory)
-    : [];
+  // Fetch reference data from Strapi CMS
+  const { data: soilTypes = [] } = useSoilTypes();
+  const { data: irrigationTypes = [] } = useIrrigationTypes();
+  const { data: cropCategories = [] } = useCropCategories();
+  const { data: cropTypesFromStrapi = [] } = useCropTypes(parcelDetails.crop_category);
+  const { data: varietiesFromStrapi = [] } = useVarieties(parcelDetails.crop_type);
 
-  const availableVarieties = parcelDetails.crop_type
-    ? getVarietiesByCropType(parcelDetails.crop_type)
-    : [];
+  // Get available options based on selected crop category
+  // Fallback to hardcoded data if Strapi data is not available yet
+  const availableCropTypes = cropTypesFromStrapi.length > 0
+    ? cropTypesFromStrapi
+    : parcelDetails.crop_category
+      ? getCropTypesByCategory(parcelDetails.crop_category as CropCategory).map(name => ({ id: name, name, value: name }))
+      : [];
+
+  const availableVarieties = varietiesFromStrapi.length > 0
+    ? varietiesFromStrapi
+    : parcelDetails.crop_type
+      ? getVarietiesByCropType(parcelDetails.crop_type).map(name => ({ id: name, name, value: name }))
+      : [];
 
   const availablePlantingSystems = parcelDetails.crop_category
     ? getPlantingSystemsByCategory(parcelDetails.crop_category as CropCategory)
@@ -1467,11 +1480,9 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      <option value="Argileux">Argileux</option>
-                      <option value="Limoneux">Limoneux</option>
-                      <option value="Sableux">Sableux</option>
-                      <option value="Argilo-limoneux">Argilo-limoneux</option>
-                      <option value="Limono-sableux">Limono-sableux</option>
+                      {soilTypes.map(type => (
+                        <option key={type.id} value={type.value}>{type.name}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1488,10 +1499,9 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      <option value="drip">Goutte-à-goutte</option>
-                      <option value="sprinkler">Aspersion</option>
-                      <option value="flood">Gravitaire</option>
-                      <option value="none">Aucune</option>
+                      {irrigationTypes.map(type => (
+                        <option key={type.id} value={type.value}>{type.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1519,10 +1529,9 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      <option value="trees">Arbres fruitiers</option>
-                      <option value="cereals">Céréales</option>
-                      <option value="vegetables">Légumes</option>
-                      <option value="other">Autre</option>
+                      {cropCategories.map(category => (
+                        <option key={category.id} value={category.value}>{category.name}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1542,9 +1551,16 @@ const MapComponent: React.FC<MapProps> = ({
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                         >
                           <option value="">Sélectionner...</option>
-                          {availableCropTypes.map(crop => (
-                            <option key={crop} value={crop}>{crop}</option>
-                          ))}
+                          {availableCropTypes.map(crop => {
+                            const key = typeof crop === 'string' ? crop : crop.id;
+                            const value = typeof crop === 'string' ? crop : crop.value;
+                            const label = typeof crop === 'string' ? crop : crop.name;
+                            return (
+                              <option key={key} value={value}>
+                                {label}
+                              </option>
+                            );
+                          })}
                         </select>
                       ) : (
                         <input
@@ -1575,9 +1591,16 @@ const MapComponent: React.FC<MapProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                       >
                         <option value="">Sélectionner...</option>
-                        {availableVarieties.map(variety => (
-                          <option key={variety} value={variety}>{variety}</option>
-                        ))}
+                        {availableVarieties.map(variety => {
+                          const key = typeof variety === 'string' ? variety : variety.id;
+                          const value = typeof variety === 'string' ? variety : variety.value;
+                          const label = typeof variety === 'string' ? variety : variety.name;
+                          return (
+                            <option key={key} value={value}>
+                              {label}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   )}

@@ -124,6 +124,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       if (task) {
         await updateTask.mutateAsync({
           taskId: task.id,
+          organizationId,
           updates: cleanedData,
         });
         // For existing tasks, create additional assignments for workers beyond the first
