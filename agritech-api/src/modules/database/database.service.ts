@@ -23,6 +23,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       throw new Error('Supabase configuration is missing');
     }
 
+    this.logger.log(`Supabase URL: ${supabaseUrl}`);
+    this.logger.log(`Supabase Anon Key: ${supabaseAnonKey?.substring(0, 20)}...`);
+
     // Client for user-authenticated requests (uses RLS)
     this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
