@@ -4,7 +4,7 @@ import { AuthLayout } from '../components/AuthLayout'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
-import { authSupabase } from '../lib/auth-supabase'
+import { loginViaApi } from '../lib/auth-api'
 import { useAuth } from '../hooks/useAuth'
 
 export const Route = createFileRoute('/login')({
@@ -31,25 +31,14 @@ function LoginPage() {
     setError(null)
 
     try {
-      const { data, error } = await authSupabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const response = await loginViaApi(email, password)
 
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Email ou mot de passe incorrect')
-        }
-        throw error
-      }
-
-      if (data?.user) {
-        // User profile and organization should have been created automatically by backend trigger
-        // Reload the page to ensure auth state is fresh
+      if (response?.user) {
         window.location.href = '/dashboard'
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la connexion')
+      const message = error instanceof Error ? error.message : 'Une erreur est survenue lors de la connexion'
+      setError(message.includes('Invalid') ? 'Email ou mot de passe incorrect' : message)
     } finally {
       setIsLoading(false)
     }

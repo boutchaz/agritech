@@ -83,8 +83,15 @@ The new CORS configuration in `main.ts` now supports:
 3. ✅ **Auto-trim**: Whitespace is automatically trimmed from origins
 4. ✅ **Development Mode**: Automatically allows all localhost URLs in development
 5. ✅ **No-Origin Requests**: Allows requests without origin (Postman, curl, mobile apps)
-6. ✅ **Explicit Methods**: GET, POST, PUT, PATCH, DELETE, OPTIONS
+6. ✅ **Explicit Methods**: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
 7. ✅ **Credentials Support**: Allows cookies and authentication headers
+8. ✅ **Auto-allowed Subdomains**: All `*.thebzlab.online` subdomains are automatically allowed
+9. ✅ **Hardcoded Production Origins**: Key production domains are always allowed regardless of env config:
+   - `https://agritech-dashboard.thebzlab.online`
+   - `https://agritech-marketplace.thebzlab.online`
+   - `https://agritech.thebzlab.online`
+   - `https://marketplace.thebzlab.online`
+   - `https://dashboard.thebzlab.online`
 
 ### Testing CORS
 

@@ -5,10 +5,8 @@ import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
 import { Checkbox } from '../components/ui/checkbox'
-import { authSupabase } from '../lib/auth-supabase'
+import { signupViaApi, loginViaApi } from '../lib/auth-api'
 import { useAuth } from '../hooks/useAuth'
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export const Route = createFileRoute('/register')({
   component: RegisterPage,
@@ -43,62 +41,23 @@ function RegisterPage() {
     }
 
     try {
-      // Starting user signup via NestJS API
-
-      // Extract first and last name from organization name
       const nameParts = organizationName.split(' ')
       const firstName = nameParts[0] || organizationName
       const lastName = nameParts.slice(1).join(' ') || 'User'
 
-      // Call NestJS signup endpoint
-      const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-          organizationName,
-          includeDemoData,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        console.error('❌ Signup error:', data)
-
-        if (response.status === 409 || data.message?.includes('already exists') || data.message?.includes('already registered')) {
-          throw new Error('A user with this email already exists')
-        }
-
-        throw new Error(data.message || 'An error occurred during registration')
-      }
-
-      // Signup successful - now sign in with Supabase directly
-      console.log('✅ User created, signing in with Supabase...')
-
-      // Sign in with Supabase to get session
-      const { data: signInData, error: signInError } = await authSupabase.auth.signInWithPassword({
+      const data = await signupViaApi({
         email,
         password,
+        firstName,
+        lastName,
+        organizationName,
+        includeDemoData,
       })
 
-      if (signInError || !signInData.session) {
-        console.error('❌ Sign in error after signup:', signInError)
-        throw new Error('Account created but failed to sign in. Please try logging in.')
-      }
+      await loginViaApi(email, password)
 
-      console.log('✅ Signed in successfully')
-
-      // Store organization ID and data for later use
       if (data.organization?.id) {
         localStorage.setItem('currentOrganizationId', data.organization.id)
-
-        // Store organization data to help with initial load
         localStorage.setItem('currentOrganization', JSON.stringify({
           id: data.organization.id,
           name: data.organization.name,
@@ -108,11 +67,14 @@ function RegisterPage() {
         }))
       }
 
-      // Redirect to trial selection
       window.location.href = '/select-trial'
     } catch (error) {
-      console.error('❌ Registration error:', error)
-      setError(error instanceof Error ? error.message : 'An error occurred during registration')
+      const message = error instanceof Error ? error.message : 'An error occurred during registration'
+      if (message.includes('already exists') || message.includes('already registered')) {
+        setError('A user with this email already exists')
+      } else {
+        setError(message)
+      }
       setIsLoading(false)
     }
   }
