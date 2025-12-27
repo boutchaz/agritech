@@ -348,12 +348,16 @@ interface PhenologicalTemperatureCountersProps {
   cropType?: string | null;
   treeType?: string | null;
   variety?: string | null;
+  startDate?: string;
+  endDate?: string;
 }
 
 const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersProps> = ({
   temperatureData,
   cropType,
   treeType,
+  startDate,
+  endDate,
 }) => {
   const { t } = useTranslation();
 
@@ -436,10 +440,13 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
       }
     }
 
-    // Show default months if available
-    if (stage.defaultMonths) {
-      const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-      return `${monthNames[stage.defaultMonths[0]]} - ${monthNames[stage.defaultMonths[1]]}`;
+    // Use parent's date range if available
+    if (startDate && endDate) {
+      try {
+        return `${format(parseISO(startDate), 'dd/MM/yyyy', { locale: fr })} - ${format(parseISO(endDate), 'dd/MM/yyyy', { locale: fr })}`;
+      } catch {
+        return t('phenological.allPeriod', 'Toute la période');
+      }
     }
 
     return t('phenological.allPeriod', 'Toute la période');
@@ -504,23 +511,33 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-          <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+            <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('phenological.title', 'Temperature Counters by Phenological Stage')}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('phenological.subtitle', 'Based on crop type')}: {' '}
+              <span className="font-medium capitalize">
+                {effectiveCropType === 'default'
+                  ? t('phenological.general', 'General')
+                  : effectiveCropType}
+              </span>
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('phenological.title', 'Temperature Counters by Phenological Stage')}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t('phenological.subtitle', 'Based on crop type')}: {' '}
-            <span className="font-medium capitalize">
-              {effectiveCropType === 'default'
-                ? t('phenological.general', 'General')
-                : effectiveCropType}
+        {startDate && endDate && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+            <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              {format(parseISO(startDate), 'dd/MM/yyyy', { locale: fr })} - {format(parseISO(endDate), 'dd/MM/yyyy', { locale: fr })}
             </span>
-          </p>
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">

@@ -311,6 +311,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             cropType={cropType}
             treeType={treeType}
             variety={variety}
+            startDate={data.start_date}
+            endDate={data.end_date}
           />
 
           {/* Precipitation Analysis Section */}
