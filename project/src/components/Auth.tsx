@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { authSupabase } from '../lib/auth-supabase';
+import { loginViaApi, signupViaApi } from '../lib/auth-api';
 import { Lock, Mail, User } from 'lucide-react';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -22,44 +20,15 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isSignUp) {
-        // Use NestJS API for signup
-        const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            password,
-            firstName: email.split('@')[0],
-            lastName: 'User',
-          }),
+        const data = await signupViaApi({
+          email,
+          password,
+          firstName: email.split('@')[0],
+          lastName: 'User',
         });
 
-        const data = await response.json();
+        await loginViaApi(email, password);
 
-        if (!response.ok) {
-          if (response.status === 409 || data.message?.includes('already exists') || data.message?.includes('already registered')) {
-            throw new Error('Un compte existe déjà avec cette adresse email');
-          }
-          throw new Error(data.message || 'Une erreur est survenue lors de l\'inscription');
-        }
-
-        // Store session tokens
-        if (data.session) {
-          localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
-
-          const { error: sessionError } = await authSupabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-
-          if (sessionError) {
-            console.error('Error setting session:', sessionError);
-          }
-        }
-
-        // Store organization data
         if (data.organization?.id) {
           localStorage.setItem('currentOrganizationId', data.organization.id);
           localStorage.setItem('currentOrganization', JSON.stringify({
@@ -71,31 +40,23 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           }));
         }
 
-        // Redirect to trial selection
         window.location.href = '/select-trial';
       } else {
-        const { data, error: signInError } = await authSupabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const response = await loginViaApi(email, password);
 
-        if (signInError) {
-          if (signInError.message.includes('Invalid login credentials')) {
-            throw new Error('Email ou mot de passe incorrect');
-          }
-          throw signInError;
-        }
-
-        if (data?.user) {
-          // User is authenticated via cloud Supabase
-          // MultiTenantAuthProvider will check if onboarding is needed and redirect accordingly
-          console.log('User authenticated successfully via cloud Supabase');
+        if (response?.user) {
           onAuthSuccess();
         }
       }
     } catch (error) {
-      console.error('Authentication error:', error);
-      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'authentification');
+      const message = error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'authentification';
+      if (message.includes('already exists') || message.includes('already registered')) {
+        setError('Un compte existe déjà avec cette adresse email');
+      } else if (message.includes('Invalid')) {
+        setError('Email ou mot de passe incorrect');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
