@@ -16,13 +16,13 @@ export interface Parcel {
   soil_type?: string | null;
   planting_density?: number | null;
   irrigation_type?: string | null;
-  // Fruit trees specific fields
+  crop_type?: string | null;
+  crop_category?: string | null;
   tree_type?: string | null;
   tree_count?: number | null;
   planting_year?: number | null;
   variety?: string | null;
   rootstock?: string | null;
-  // New parcel fields
   planting_date?: string | null;
   planting_type?: string | null;
   created_at: string | null;
@@ -92,6 +92,8 @@ export const useParcelsByFarm = (farmId: string | undefined) => {
         soil_type: parcel.soil_type ?? null,
         planting_density: (parcel as any).planting_density ?? null,
         irrigation_type: parcel.irrigation_type ?? null,
+        crop_type: (parcel as any).crop_type ?? null,
+        crop_category: (parcel as any).crop_category ?? null,
         tree_type: (parcel as any).tree_type ?? null,
         tree_count: (parcel as any).tree_count ?? null,
         planting_year: parcel.planting_year ?? null,
@@ -132,6 +134,8 @@ export const useParcelsByFarms = (farmIds: string[]) => {
         soil_type: parcel.soil_type ?? null,
         planting_density: (parcel as any).planting_density ?? null,
         irrigation_type: parcel.irrigation_type ?? null,
+        crop_type: (parcel as any).crop_type ?? null,
+        crop_category: (parcel as any).crop_category ?? null,
         tree_type: (parcel as any).tree_type ?? null,
         tree_count: (parcel as any).tree_count ?? null,
         planting_year: parcel.planting_year ?? null,
@@ -169,6 +173,8 @@ export const useParcelById = (parcelId: string | null | undefined) => {
         soil_type: parcel.soil_type ?? null,
         planting_density: (parcel as any).planting_density ?? null,
         irrigation_type: parcel.irrigation_type ?? null,
+        crop_type: (parcel as any).crop_type ?? null,
+        crop_category: (parcel as any).crop_category ?? null,
         tree_type: (parcel as any).tree_type ?? null,
         tree_count: (parcel as any).tree_count ?? null,
         planting_year: parcel.planting_year ?? null,
