@@ -17,7 +17,7 @@ const ParcelsOverviewWidget: React.FC = () => {
   // Calculate statistics
   const totalArea = parcels.reduce((sum, p) => sum + (p.calculated_area || p.area || 0), 0);
   const parcelsByCrop = parcels.reduce((acc, p) => {
-    const cropType = p.crop_type || t('dashboard.widgets.parcels.unspecifiedCrop');
+    const cropType = p.crop_type || p.tree_type || t('dashboard.widgets.parcels.unspecifiedCrop');
     acc[cropType] = (acc[cropType] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
