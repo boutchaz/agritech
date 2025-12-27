@@ -32,30 +32,34 @@ export class AuthService {
 
     this.logger.log(`Login attempt for email: ${email}`);
 
-    // Sign in with Supabase
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error || !data.user) {
-      this.logger.error(`Login failed for ${email}: ${error?.message}`);
+      if (error || !data.user) {
+        this.logger.error(`Login failed for ${email}: ${JSON.stringify(error, null, 2)}`);
+        this.logger.error(`Error details - code: ${error?.code}, status: ${error?.status}, message: ${error?.message}`);
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      this.logger.log(`User ${email} logged in successfully`);
+      return {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        expires_in: data.session.expires_in,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || '',
+        },
+      };
+    } catch (err) {
+      this.logger.error(`Login exception for ${email}: ${err.message}`);
+      this.logger.error(`Exception stack: ${err.stack}`);
       throw new UnauthorizedException('Invalid email or password');
     }
-
-    this.logger.log(`User ${email} logged in successfully`);
-
-    // Return session with access token
-    return {
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-      expires_in: data.session.expires_in,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        fullName: data.user.user_metadata?.full_name || '',
-      },
-    };
   }
 
   /**
@@ -289,7 +293,8 @@ export class AuthService {
       });
 
     if (signUpError || !signUpData.user) {
-      this.logger.error(`Failed to create user: ${signUpError?.message}`);
+      this.logger.error(`Failed to create user: ${JSON.stringify(signUpError, null, 2)}`);
+      this.logger.error(`Signup error details - code: ${signUpError?.code}, status: ${signUpError?.status}, message: ${signUpError?.message}`);
       throw new BadRequestException(
         signUpError?.message || 'Failed to create user',
       );
