@@ -37,6 +37,17 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   const handleTimeRangeChange = (range: TimeRange) => {
     setTimeRange(range);
     setShowCustomDates(range === 'custom');
+    
+    if (range === 'custom' && !customStartDate && !customEndDate) {
+      const now = new Date();
+      const threeMonthsAgo = new Date(now);
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      
+      setCustomStartDate(threeMonthsAgo.toISOString().split('T')[0]);
+      setCustomEndDate(yesterday.toISOString().split('T')[0]);
+    }
   };
 
   // Calculate the center of the parcel for weather forecast
