@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "crop_categories",
+  "info": {
+    "singularName": "crop-category",
+    "pluralName": "crop-categories",
+    "displayName": "Crop Category",
+    "description": "Main categories of crops"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    },
+    "crop_types": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::crop-type.crop-type",
+      "mappedBy": "crop_category"
+    }
+  }
+}

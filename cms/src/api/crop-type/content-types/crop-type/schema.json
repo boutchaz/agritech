@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "crop_types",
+  "info": {
+    "singularName": "crop-type",
+    "pluralName": "crop-types",
+    "displayName": "Crop Type",
+    "description": "Specific types of crops within categories"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "value": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    },
+    "crop_category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::crop-category.crop-category",
+      "inversedBy": "crop_types"
+    },
+    "varieties": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::variety.variety",
+      "mappedBy": "crop_type"
+    }
+  }
+}

@@ -67,6 +67,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 interface ReceptionBatchListProps {
   onCreateClick: () => void;
   onViewClick: (batch: ReceptionBatch) => void;
+  onEditClick?: (batch: ReceptionBatch) => void;
 }
 
 const STATUS_COLORS: Record<ReceptionBatchStatus, string> = {
@@ -98,6 +99,7 @@ const QUALITY_GRADE_COLORS: Record<QualityGrade, string> = {
 export default function ReceptionBatchList({
   onCreateClick,
   onViewClick,
+  onEditClick,
 }: ReceptionBatchListProps) {
   const [filters, setFilters] = useState<ReceptionBatchFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -387,11 +389,11 @@ export default function ReceptionBatchList({
                             View Details
                           </DropdownMenuItem>
 
-                          {batch.status === 'received' && (
+                          {batch.status === 'received' && onEditClick && (
                             <>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onEditClick(batch)}>
                                 <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                                Modifier
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -464,11 +466,11 @@ export default function ReceptionBatchList({
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
-                      {batch.status === 'received' && (
+                      {batch.status === 'received' && onEditClick && (
                         <>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onEditClick(batch)}>
                             <Edit className="w-4 h-4 mr-2" />
-                            Edit
+                            Modifier
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

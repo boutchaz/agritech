@@ -70,11 +70,70 @@ export interface ProductSubcategory {
   updatedAt?: string;
 }
 
+export interface SoilType {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+  organization_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IrrigationType {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+  organization_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CropCategory {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+  organization_id?: string;
+  crop_types?: CropType[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CropType {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+  organization_id?: string;
+  crop_category?: CropCategory;
+  varieties?: Variety[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Variety {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+  origin?: string;
+  main_use?: string;
+  organization_id?: string;
+  crop_type?: CropType;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AllReferenceData {
   treeCategories: TreeCategory[];
   plantationTypes: PlantationType[];
   testTypes: TestType[];
   productCategories: ProductCategory[];
+  soilTypes: SoilType[];
+  irrigationTypes: IrrigationType[];
+  cropCategories: CropCategory[];
 }
 
 // =====================================================
@@ -175,5 +234,69 @@ export const referenceDataApi = {
   async getProductSubcategories(categoryId?: string, organizationId?: string): Promise<ProductSubcategory[]> {
     const params = categoryId ? `?category_id=${categoryId}` : '';
     return apiClient.get<ProductSubcategory[]>(`${BASE_URL}/product-subcategories${params}`, {}, organizationId);
+  },
+
+  // =====================================================
+  // SOIL TYPES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all soil types (global reference data)
+   */
+  async getSoilTypes(organizationId?: string): Promise<SoilType[]> {
+    return apiClient.get<SoilType[]>(`${BASE_URL}/soil-types`, {}, organizationId);
+  },
+
+  // =====================================================
+  // IRRIGATION TYPES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all irrigation types (global reference data)
+   */
+  async getIrrigationTypes(organizationId?: string): Promise<IrrigationType[]> {
+    return apiClient.get<IrrigationType[]>(`${BASE_URL}/irrigation-types`, {}, organizationId);
+  },
+
+  // =====================================================
+  // CROP CATEGORIES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all crop categories (global reference data)
+   */
+  async getCropCategories(organizationId?: string): Promise<CropCategory[]> {
+    return apiClient.get<CropCategory[]>(`${BASE_URL}/crop-categories`, {}, organizationId);
+  },
+
+  /**
+   * Get a single crop category by ID
+   */
+  async getCropCategory(id: string, organizationId?: string): Promise<CropCategory> {
+    return apiClient.get<CropCategory>(`${BASE_URL}/crop-categories/${id}`, {}, organizationId);
+  },
+
+  // =====================================================
+  // CROP TYPES
+  // =====================================================
+
+  /**
+   * Get all crop types (optionally filtered by category)
+   */
+  async getCropTypes(categoryId?: string, organizationId?: string): Promise<CropType[]> {
+    const params = categoryId ? `?category_id=${categoryId}` : '';
+    return apiClient.get<CropType[]>(`${BASE_URL}/crop-types${params}`, {}, organizationId);
+  },
+
+  // =====================================================
+  // VARIETIES
+  // =====================================================
+
+  /**
+   * Get all varieties (optionally filtered by crop type)
+   */
+  async getVarieties(cropTypeId?: string, organizationId?: string): Promise<Variety[]> {
+    const params = cropTypeId ? `?crop_type_id=${cropTypeId}` : '';
+    return apiClient.get<Variety[]>(`${BASE_URL}/varieties${params}`, {}, organizationId);
   },
 };

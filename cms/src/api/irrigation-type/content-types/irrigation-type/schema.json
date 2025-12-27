@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "irrigation_types",
+  "info": {
+    "singularName": "irrigation-type",
+    "pluralName": "irrigation-types",
+    "displayName": "Irrigation Type",
+    "description": "Types of irrigation systems"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    }
+  }
+}

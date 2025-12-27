@@ -339,6 +339,43 @@ export function useCreateReceptionBatch() {
 }
 
 /**
+ * Update a reception batch (general update for editing)
+ */
+export function useUpdateReceptionBatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      batchId,
+      data,
+    }: {
+      batchId: string;
+      data: Partial<CreateReceptionBatchDto>;
+    }) => {
+      const updateData = {
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: batch, error } = await supabase
+        .from('reception_batches')
+        .update(updateData)
+        .eq('id', batchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return batch as ReceptionBatch;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['reception-batch', variables.batchId] });
+      queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+    },
+  });
+}
+
+/**
  * Update quality control information for a batch
  */
 export function useUpdateQualityControl() {

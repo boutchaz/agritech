@@ -76,7 +76,29 @@ serve(async (req) => {
       throw new Error('Invoice must have at least one item');
     }
 
-    // Calculate totals
+    const taxIds = invoiceData.items
+      .filter((item) => item.tax_id)
+      .map((item) => item.tax_id as string);
+    
+    const uniqueTaxIds = [...new Set(taxIds)];
+    const taxRates: Record<string, number> = {};
+    
+    if (uniqueTaxIds.length > 0) {
+      const { data: taxes, error: taxError } = await supabaseClient
+        .from('taxes')
+        .select('id, rate')
+        .in('id', uniqueTaxIds)
+        .eq('is_active', true);
+      
+      if (taxError) {
+        console.warn('Failed to fetch tax rates:', taxError.message);
+      } else if (taxes) {
+        taxes.forEach((tax: { id: string; rate: number }) => {
+          taxRates[tax.id] = tax.rate;
+        });
+      }
+    }
+
     let subtotal = 0;
     let totalTax = 0;
 
@@ -84,11 +106,10 @@ serve(async (req) => {
       const amount = item.quantity * item.rate;
       subtotal += amount;
 
-      // Calculate tax if applicable (simplified - should fetch tax rate from database)
       let taxAmount = 0;
-      if (item.tax_id) {
-        // TODO: Fetch actual tax rate from taxes table
-        taxAmount = amount * 0.2; // Example: 20% tax
+      if (item.tax_id && taxRates[item.tax_id] !== undefined) {
+        const taxRate = taxRates[item.tax_id];
+        taxAmount = (amount * taxRate) / 100;
         totalTax += taxAmount;
       }
 

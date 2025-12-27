@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "soil_types",
+  "info": {
+    "singularName": "soil-type",
+    "pluralName": "soil-types",
+    "displayName": "Soil Type",
+    "description": "Types of soil for parcels"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "organization_id": {
+      "type": "string",
+      "required": false
+    }
+  }
+}

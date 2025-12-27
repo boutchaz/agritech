@@ -174,6 +174,109 @@ export class ReferenceDataService {
   }
 
   // =====================================================
+  // SOIL TYPES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all soil types (global reference data)
+   */
+  async getSoilTypes() {
+    const params = {
+      sort: 'name:asc',
+    };
+
+    const response = await this.strapiService.get('/soil-types', params);
+    return this.strapiService.transformResponse(response);
+  }
+
+  // =====================================================
+  // IRRIGATION TYPES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all irrigation types (global reference data)
+   */
+  async getIrrigationTypes() {
+    const params = {
+      sort: 'name:asc',
+    };
+
+    const response = await this.strapiService.get('/irrigation-types', params);
+    return this.strapiService.transformResponse(response);
+  }
+
+  // =====================================================
+  // CROP CATEGORIES (GLOBAL)
+  // =====================================================
+
+  /**
+   * Get all crop categories (global reference data)
+   */
+  async getCropCategories() {
+    const params = {
+      populate: 'crop_types',
+      sort: 'name:asc',
+    };
+
+    const response = await this.strapiService.get('/crop-categories', params);
+    return this.strapiService.transformResponse(response);
+  }
+
+  /**
+   * Get a single crop category by ID
+   */
+  async getCropCategory(id: string) {
+    const params = {
+      populate: 'crop_types',
+    };
+
+    const response = await this.strapiService.get(`/crop-categories/${id}`, params);
+    return this.strapiService.transformSingleResponse(response);
+  }
+
+  // =====================================================
+  // CROP TYPES
+  // =====================================================
+
+  /**
+   * Get all crop types (optionally filtered by category)
+   */
+  async getCropTypes(categoryId?: string) {
+    const params: any = {
+      populate: 'crop_category,varieties',
+      sort: 'name:asc',
+    };
+
+    if (categoryId) {
+      params['filters[crop_category][id][$eq]'] = categoryId;
+    }
+
+    const response = await this.strapiService.get('/crop-types', params);
+    return this.strapiService.transformResponse(response);
+  }
+
+  // =====================================================
+  // VARIETIES
+  // =====================================================
+
+  /**
+   * Get all varieties (optionally filtered by crop type)
+   */
+  async getVarieties(cropTypeId?: string) {
+    const params: any = {
+      populate: 'crop_type',
+      sort: 'name:asc',
+    };
+
+    if (cropTypeId) {
+      params['filters[crop_type][id][$eq]'] = cropTypeId;
+    }
+
+    const response = await this.strapiService.get('/varieties', params);
+    return this.strapiService.transformResponse(response);
+  }
+
+  // =====================================================
   // COMBINED / UTILITY METHODS
   // =====================================================
 
@@ -187,11 +290,17 @@ export class ReferenceDataService {
       plantationTypes,
       testTypes,
       productCategories,
+      soilTypes,
+      irrigationTypes,
+      cropCategories,
     ] = await Promise.all([
       this.getTreeCategories(organizationId),
       this.getPlantationTypes(organizationId),
       this.getTestTypes(),
       this.getProductCategories(),
+      this.getSoilTypes(),
+      this.getIrrigationTypes(),
+      this.getCropCategories(),
     ]);
 
     return {
@@ -199,6 +308,9 @@ export class ReferenceDataService {
       plantationTypes,
       testTypes,
       productCategories,
+      soilTypes,
+      irrigationTypes,
+      cropCategories,
     };
   }
 }
