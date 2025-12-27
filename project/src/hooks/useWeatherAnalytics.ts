@@ -69,9 +69,15 @@ function calculateDateRange(
   customStartDate?: string,
   customEndDate?: string
 ): { startDate: string; endDate: string } {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Use yesterday to avoid timezone issues with weather API (data might not be available for today yet)
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
   let startDate: Date;
-  const endDate: Date = today;
+  const endDate: Date = yesterday;
 
   switch (timeRange) {
     case 'last-3-months':
