@@ -1,6 +1,12 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { moroccanChartOfAccounts } from './data/moroccan-chart-of-accounts';
+import {
+  ChartOfAccountsTemplate,
+  TemplateCountry,
+  TemplateAccount,
+  ApplyTemplateResult,
+} from './dto/apply-template.dto';
 
 interface AccountData {
   code: string;
@@ -233,6 +239,184 @@ export class AccountsService {
     } catch (error) {
       await client.query('ROLLBACK');
       this.logger.error(`Failed to seed accounts: ${error.message}`, error.stack);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private getCmsUrl(): string {
+    return process.env.CMS_URL || 'http://localhost:1337';
+  }
+
+  async getAvailableTemplates(): Promise<TemplateCountry[]> {
+    const cmsUrl = this.getCmsUrl();
+
+    try {
+      const response = await fetch(`${cmsUrl}/api/chart-of-account-templates/countries`);
+
+      if (!response.ok) {
+        this.logger.error(`Failed to fetch templates from CMS: ${response.statusText}`);
+        return this.getFallbackTemplates();
+      }
+
+      const result = await response.json();
+      return result.data || [];
+    } catch (error) {
+      this.logger.warn(`CMS unavailable, using fallback templates: ${error.message}`);
+      return this.getFallbackTemplates();
+    }
+  }
+
+  private getFallbackTemplates(): TemplateCountry[] {
+    return [
+      {
+        country_code: 'MAR',
+        country_name: 'Morocco',
+        country_name_native: 'المغرب',
+        accounting_standard: 'CGNC',
+        default_currency: 'MAD',
+        version: '1.0.0',
+      },
+    ];
+  }
+
+  async getTemplateByCountry(countryCode: string): Promise<ChartOfAccountsTemplate> {
+    const cmsUrl = this.getCmsUrl();
+    const upperCountryCode = countryCode.toUpperCase();
+
+    try {
+      const response = await fetch(`${cmsUrl}/api/chart-of-account-templates/country/${upperCountryCode}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new NotFoundException(`Template not found for country: ${upperCountryCode}`);
+        }
+        throw new BadRequestException(`Failed to fetch template: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data?.attributes || result.data;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      if (upperCountryCode === 'MAR') {
+        this.logger.warn('CMS unavailable, using hardcoded Moroccan template');
+        return this.getFallbackMoroccanTemplate();
+      }
+
+      throw new BadRequestException(`Template not available for country: ${upperCountryCode}`);
+    }
+  }
+
+  private getFallbackMoroccanTemplate(): ChartOfAccountsTemplate {
+    return {
+      id: 0,
+      country_code: 'MAR',
+      country_name: 'Morocco',
+      country_name_native: 'المغرب',
+      accounting_standard: 'CGNC',
+      default_currency: 'MAD',
+      version: '1.0.0',
+      description: 'Moroccan Chart of Accounts based on CGNC',
+      accounts: moroccanChartOfAccounts as TemplateAccount[],
+      is_default: true,
+      supported_industries: ['agriculture'],
+      fiscal_year_start_month: 1,
+    };
+  }
+
+  async applyTemplate(
+    countryCode: string,
+    organizationId: string,
+    options: { overwrite?: boolean; includeAccountMappings?: boolean; includeCostCenters?: boolean } = {},
+  ): Promise<ApplyTemplateResult> {
+    const template = await this.getTemplateByCountry(countryCode);
+
+    if (!template || !template.accounts || template.accounts.length === 0) {
+      throw new BadRequestException('Template has no accounts to apply');
+    }
+
+    const pool = this.databaseService.getPgPool();
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const orgResult = await client.query('SELECT id FROM organizations WHERE id = $1', [organizationId]);
+      if (orgResult.rows.length === 0) {
+        throw new BadRequestException('Organization not found');
+      }
+
+      if (options.overwrite) {
+        await client.query('DELETE FROM accounts WHERE organization_id = $1', [organizationId]);
+        this.logger.log(`Deleted existing accounts for organization ${organizationId}`);
+      }
+
+      let accountsCreated = 0;
+      const accountsWithParent: Array<{ code: string; parent_code: string }> = [];
+
+      for (const account of template.accounts) {
+        const description = account.description_fr || null;
+
+        const result = await client.query(
+          `INSERT INTO accounts (
+            organization_id, code, name, account_type, account_subtype,
+            is_group, is_active, currency_code, description
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (organization_id, code) DO NOTHING
+          RETURNING id`,
+          [
+            organizationId,
+            account.code,
+            account.name,
+            account.account_type,
+            account.account_subtype,
+            account.is_group,
+            account.is_active,
+            account.currency_code,
+            description,
+          ],
+        );
+
+        if (result.rows.length > 0) {
+          accountsCreated++;
+        }
+
+        if (account.parent_code) {
+          accountsWithParent.push({
+            code: account.code,
+            parent_code: account.parent_code,
+          });
+        }
+      }
+
+      for (const { code, parent_code } of accountsWithParent) {
+        await client.query(
+          `UPDATE accounts
+           SET parent_id = (
+             SELECT id FROM accounts
+             WHERE organization_id = $1 AND code = $2
+           )
+           WHERE organization_id = $1 AND code = $3`,
+          [organizationId, parent_code, code],
+        );
+      }
+
+      await client.query('COMMIT');
+
+      this.logger.log(`Applied template ${countryCode} to organization ${organizationId}: ${accountsCreated} accounts created`);
+
+      return {
+        success: true,
+        accounts_created: accountsCreated,
+        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts`,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      this.logger.error(`Failed to apply template: ${error.message}`, error.stack);
       throw error;
     } finally {
       client.release();

@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "cost_center_templates",
+  "info": {
+    "singularName": "cost-center-template",
+    "pluralName": "cost-center-templates",
+    "displayName": "Cost Center Template",
+    "description": "Default cost centers for chart of accounts templates"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "country_code": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 3
+    },
+    "version": {
+      "type": "string",
+      "required": true,
+      "default": "1.0.0"
+    },
+    "cost_centers": {
+      "type": "json",
+      "required": true
+    },
+    "hierarchy_type": {
+      "type": "enumeration",
+      "enum": ["flat", "hierarchical"],
+      "default": "hierarchical"
+    },
+    "default_allocation_method": {
+      "type": "enumeration",
+      "enum": ["direct", "step_down", "reciprocal"],
+      "default": "direct"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Query, Param, Body, Req, UseGuards } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApplyTemplateDto } from './dto/apply-template.dto';
 
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
@@ -86,10 +87,6 @@ export class AccountsController {
     return { success: true, message: 'Account deleted successfully' };
   }
 
-  /**
-   * Seed Moroccan Chart of Accounts
-   * POST /api/v1/accounts/seed-moroccan-chart
-   */
   @Post('seed-moroccan-chart')
   async seedMoroccanChart(@Req() req: any) {
     const organizationId = req.headers['x-organization-id'];
@@ -99,5 +96,34 @@ export class AccountsController {
     }
 
     return this.accountsService.seedMoroccanChartOfAccounts(organizationId);
+  }
+
+  @Get('templates')
+  async getTemplates() {
+    return this.accountsService.getAvailableTemplates();
+  }
+
+  @Get('templates/:countryCode')
+  async getTemplateByCountry(@Param('countryCode') countryCode: string) {
+    return this.accountsService.getTemplateByCountry(countryCode);
+  }
+
+  @Post('templates/:countryCode/apply')
+  async applyTemplate(
+    @Req() req: any,
+    @Param('countryCode') countryCode: string,
+    @Body() applyTemplateDto: ApplyTemplateDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+
+    return this.accountsService.applyTemplate(countryCode, organizationId, {
+      overwrite: applyTemplateDto.overwrite,
+      includeAccountMappings: applyTemplateDto.includeAccountMappings,
+      includeCostCenters: applyTemplateDto.includeCostCenters,
+    });
   }
 }

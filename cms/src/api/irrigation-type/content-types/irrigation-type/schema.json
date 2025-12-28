@@ -5,7 +5,7 @@
     "singularName": "irrigation-type",
     "pluralName": "irrigation-types",
     "displayName": "Irrigation Type",
-    "description": "Types of irrigation systems"
+    "description": "Types of irrigation systems for agriculture"
   },
   "options": {
     "draftAndPublish": false
@@ -14,8 +14,13 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
     },
     "value": {
       "type": "string",
@@ -25,9 +30,46 @@
     "description": {
       "type": "text"
     },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "water_efficiency": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high", "very_high"]
+    },
+    "initial_cost": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"]
+    },
+    "maintenance_level": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"]
+    },
+    "suitable_for": {
+      "type": "json"
+    },
+    "specifications": {
+      "type": "json"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    },
     "organization_id": {
-      "type": "string",
-      "required": false
+      "type": "string"
     }
   }
 }

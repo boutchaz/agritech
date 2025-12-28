@@ -9,7 +9,16 @@ const BASE_URL = '/api/v1/reference-data';
 export interface TreeCategory {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   trees?: Tree[];
   createdAt?: string;
@@ -19,7 +28,24 @@ export interface TreeCategory {
 export interface Tree {
   id: string;
   name: string;
-  characteristics?: any;
+  name_fr?: string;
+  name_ar?: string;
+  scientific_name?: string;
+  value: string;
+  description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  origin?: string;
+  water_requirements?: 'low' | 'medium' | 'high';
+  growth_rate?: 'slow' | 'medium' | 'fast';
+  mature_height_m?: number;
+  lifespan_years?: number;
+  spacing_m?: number;
+  characteristics?: Record<string, unknown>;
+  varieties?: Record<string, unknown>[];
+  sort_order?: number;
+  is_global?: boolean;
   tree_category?: TreeCategory;
   createdAt?: string;
   updatedAt?: string;
@@ -73,8 +99,19 @@ export interface ProductSubcategory {
 export interface SoilType {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
   value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  drainage_rating?: 'poor' | 'moderate' | 'good' | 'excellent';
+  water_retention?: 'low' | 'medium' | 'high';
+  suitable_crops?: string[];
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -83,8 +120,20 @@ export interface SoilType {
 export interface IrrigationType {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
   value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  water_efficiency?: 'low' | 'medium' | 'high' | 'very_high';
+  initial_cost?: 'low' | 'medium' | 'high';
+  maintenance_level?: 'low' | 'medium' | 'high';
+  suitable_for?: string[];
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -93,8 +142,16 @@ export interface IrrigationType {
 export interface CropCategory {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
   value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   crop_types?: CropType[];
   createdAt?: string;
@@ -104,8 +161,18 @@ export interface CropCategory {
 export interface CropType {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
+  scientific_name?: string;
   value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  water_requirements?: 'low' | 'medium' | 'high';
+  growth_cycle_days?: number;
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   crop_category?: CropCategory;
   varieties?: Variety[];
@@ -116,10 +183,18 @@ export interface CropType {
 export interface Variety {
   id: string;
   name: string;
+  name_fr?: string;
+  name_ar?: string;
   value: string;
   description?: string;
+  description_fr?: string;
+  description_ar?: string;
   origin?: string;
   main_use?: string;
+  maturity_days?: number;
+  yield_potential?: 'low' | 'medium' | 'high' | 'very_high';
+  sort_order?: number;
+  is_global?: boolean;
   organization_id?: string;
   crop_type?: CropType;
   createdAt?: string;

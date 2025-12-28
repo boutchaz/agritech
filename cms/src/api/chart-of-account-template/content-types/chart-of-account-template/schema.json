@@ -1,0 +1,81 @@
+{
+  "kind": "collectionType",
+  "collectionName": "chart_of_account_templates",
+  "info": {
+    "singularName": "chart-of-account-template",
+    "pluralName": "chart-of-account-templates",
+    "displayName": "Chart of Account Template",
+    "description": "Country-specific chart of accounts templates for agricultural businesses"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "country_code": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 3,
+      "regex": "^[A-Z]{2,3}$"
+    },
+    "country_name": {
+      "type": "string",
+      "required": true
+    },
+    "country_name_native": {
+      "type": "string"
+    },
+    "accounting_standard": {
+      "type": "string",
+      "required": true
+    },
+    "default_currency": {
+      "type": "string",
+      "required": true,
+      "maxLength": 3
+    },
+    "version": {
+      "type": "string",
+      "required": true,
+      "default": "1.0.0"
+    },
+    "description": {
+      "type": "text"
+    },
+    "description_native": {
+      "type": "text"
+    },
+    "accounts": {
+      "type": "json",
+      "required": true
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    },
+    "supported_industries": {
+      "type": "json",
+      "default": ["agriculture"]
+    },
+    "tax_settings": {
+      "type": "json"
+    },
+    "fiscal_year_start_month": {
+      "type": "integer",
+      "min": 1,
+      "max": 12,
+      "default": 1
+    },
+    "account_mapping_template": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::account-mapping-template.account-mapping-template"
+    },
+    "cost_center_template": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::cost-center-template.cost-center-template"
+    }
+  }
+}

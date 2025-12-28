@@ -5,7 +5,7 @@
     "singularName": "crop-category",
     "pluralName": "crop-categories",
     "displayName": "Crop Category",
-    "description": "Main categories of crops"
+    "description": "Main categories of agricultural crops"
   },
   "options": {
     "draftAndPublish": false
@@ -14,8 +14,13 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
     },
     "value": {
       "type": "string",
@@ -25,9 +30,28 @@
     "description": {
       "type": "text"
     },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    },
     "organization_id": {
-      "type": "string",
-      "required": false
+      "type": "string"
     },
     "crop_types": {
       "type": "relation",
