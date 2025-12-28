@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Banknote, Calculator, Loader2 } from 'lucide-react';
+import { Banknote, Calculator, Loader2, AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/label';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Card, CardContent } from '../ui/card';
 import {
   Select,
   SelectContent,
@@ -54,7 +64,6 @@ function getDefaultPeriodDates(): { start: string; end: string } {
 const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   open,
   worker,
-  organizationId,
   onClose,
   onSuccess,
 }) => {
@@ -129,64 +138,57 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     }
   };
 
-  if (!open) return null;
-
   const isLoading = calculatePayment.isPending || createPayment.isPending;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
               <Banknote className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Créer un paiement
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <DialogTitle>Créer un paiement</DialogTitle>
+              <DialogDescription>
                 {worker.first_name} {worker.last_name}
-              </p>
+              </DialogDescription>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 py-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Type:</span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {getWorkerTypeLabel(worker.worker_type, 'fr')}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Rémunération:</span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {getCompensationDisplay(worker)}
-              </span>
-            </div>
-            {worker.farm_name && (
+          <Card className="bg-gray-50 dark:bg-gray-900/50 border-0">
+            <CardContent className="p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Ferme:</span>
+                <span className="text-gray-600 dark:text-gray-400">Type:</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {worker.farm_name}
+                  {getWorkerTypeLabel(worker.worker_type, 'fr')}
                 </span>
               </div>
-            )}
-          </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Rémunération:</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {getCompensationDisplay(worker)}
+                </span>
+              </div>
+              {worker.farm_name && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Ferme:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {worker.farm_name}
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -264,74 +266,76 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
             </Button>
           ) : (
             <div className="space-y-4">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-green-800 dark:text-green-200">
-                  Détail du calcul
-                </h4>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Montant de base:</span>
-                    <span className="font-medium">{formatCurrency(calculatedPayment.base_amount)}</span>
+              <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4 space-y-3">
+                  <h4 className="font-medium text-green-800 dark:text-green-200">
+                    Détail du calcul
+                  </h4>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Montant de base:</span>
+                      <span className="font-medium">{formatCurrency(calculatedPayment.base_amount)}</span>
+                    </div>
+                    
+                    {calculatedPayment.days_worked > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Jours travaillés:</span>
+                        <span>{calculatedPayment.days_worked}</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.hours_worked > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Heures travaillées:</span>
+                        <span>{calculatedPayment.hours_worked}h</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.tasks_completed > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Tâches terminées:</span>
+                        <span>{calculatedPayment.tasks_completed}</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.overtime_amount > 0 && (
+                      <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                        <span>+ Heures supp.:</span>
+                        <span>{formatCurrency(calculatedPayment.overtime_amount)}</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.bonuses && calculatedPayment.bonuses.length > 0 && (
+                      <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                        <span>+ Primes:</span>
+                        <span>{formatCurrency(calculatedPayment.bonuses.reduce((sum, b) => sum + b.amount, 0))}</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.total_deductions > 0 && (
+                      <div className="flex justify-between text-red-600 dark:text-red-400">
+                        <span>- Déductions:</span>
+                        <span>{formatCurrency(calculatedPayment.total_deductions)}</span>
+                      </div>
+                    )}
+                    
+                    {calculatedPayment.advance_deductions > 0 && (
+                      <div className="flex justify-between text-red-600 dark:text-red-400">
+                        <span>- Avances:</span>
+                        <span>{formatCurrency(calculatedPayment.advance_deductions)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-bold text-lg">
+                      <span>Net à payer:</span>
+                      <span className="text-green-600 dark:text-green-400">
+                        {formatCurrency(calculatedPayment.net_amount)}
+                      </span>
+                    </div>
                   </div>
-                  
-                  {calculatedPayment.days_worked > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Jours travaillés:</span>
-                      <span>{calculatedPayment.days_worked}</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.hours_worked > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Heures travaillées:</span>
-                      <span>{calculatedPayment.hours_worked}h</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.tasks_completed > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Tâches terminées:</span>
-                      <span>{calculatedPayment.tasks_completed}</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.overtime_amount > 0 && (
-                    <div className="flex justify-between text-blue-600 dark:text-blue-400">
-                      <span>+ Heures supp.:</span>
-                      <span>{formatCurrency(calculatedPayment.overtime_amount)}</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.bonuses && calculatedPayment.bonuses.length > 0 && (
-                    <div className="flex justify-between text-blue-600 dark:text-blue-400">
-                      <span>+ Primes:</span>
-                      <span>{formatCurrency(calculatedPayment.bonuses.reduce((sum, b) => sum + b.amount, 0))}</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.total_deductions > 0 && (
-                    <div className="flex justify-between text-red-600 dark:text-red-400">
-                      <span>- Déductions:</span>
-                      <span>{formatCurrency(calculatedPayment.total_deductions)}</span>
-                    </div>
-                  )}
-                  
-                  {calculatedPayment.advance_deductions > 0 && (
-                    <div className="flex justify-between text-red-600 dark:text-red-400">
-                      <span>- Avances:</span>
-                      <span>{formatCurrency(calculatedPayment.advance_deductions)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-bold text-lg">
-                    <span>Net à payer:</span>
-                    <span className="text-green-600 dark:text-green-400">
-                      {formatCurrency(calculatedPayment.net_amount)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
               <div className="flex gap-3">
                 <Button
@@ -358,13 +362,13 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 px-6 py-4">
-          <Button variant="outline" onClick={onClose} className="w-full">
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Annuler
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
