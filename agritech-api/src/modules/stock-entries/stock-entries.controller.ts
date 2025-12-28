@@ -21,6 +21,10 @@ import {
 import { StockEntriesService } from './stock-entries.service';
 import { CreateStockEntryDto } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
+import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
+import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
+import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
+import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -160,5 +164,118 @@ export class StockEntriesController {
       to_date: toDate,
       stock_entry_id: stockEntryId,
     });
+  }
+
+  @Get('opening-balances')
+  @ApiOperation({ summary: 'Get all opening stock balances with optional filters' })
+  @ApiResponse({ status: 200, description: 'Opening stock balances retrieved successfully' })
+  async getOpeningBalances(
+    @Req() req: any,
+    @Query() filters: OpeningStockFiltersDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getOpeningStockBalances(organizationId, filters);
+  }
+
+  @Get('opening-balances/:id')
+  @ApiOperation({ summary: 'Get single opening stock balance by ID' })
+  @ApiParam({ name: 'id', description: 'Opening stock balance ID' })
+  @ApiResponse({ status: 200, description: 'Opening stock balance retrieved successfully' })
+  async getOpeningBalance(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getOpeningStockBalance(id, organizationId);
+  }
+
+  @Post('opening-balances')
+  @ApiOperation({ summary: 'Create a new opening stock balance' })
+  @ApiResponse({ status: 201, description: 'Opening stock balance created successfully' })
+  async createOpeningBalance(
+    @Req() req: any,
+    @Body() createDto: CreateOpeningStockDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.stockEntriesService.createOpeningStockBalance(organizationId, userId, createDto);
+  }
+
+  @Patch('opening-balances/:id')
+  @ApiOperation({ summary: 'Update a draft opening stock balance' })
+  @ApiParam({ name: 'id', description: 'Opening stock balance ID' })
+  @ApiResponse({ status: 200, description: 'Opening stock balance updated successfully' })
+  async updateOpeningBalance(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() updateDto: UpdateOpeningStockDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.updateOpeningStockBalance(id, organizationId, updateDto);
+  }
+
+  @Post('opening-balances/:id/post')
+  @ApiOperation({ summary: 'Post opening stock balance (creates journal entry and updates inventory)' })
+  @ApiParam({ name: 'id', description: 'Opening stock balance ID' })
+  @ApiResponse({ status: 200, description: 'Opening stock balance posted successfully' })
+  async postOpeningBalance(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.postOpeningStockBalance(id, organizationId);
+  }
+
+  @Patch('opening-balances/:id/cancel')
+  @ApiOperation({ summary: 'Cancel an opening stock balance' })
+  @ApiParam({ name: 'id', description: 'Opening stock balance ID' })
+  @ApiResponse({ status: 200, description: 'Opening stock balance cancelled successfully' })
+  async cancelOpeningBalance(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.cancelOpeningStockBalance(id, organizationId);
+  }
+
+  @Delete('opening-balances/:id')
+  @ApiOperation({ summary: 'Delete a draft opening stock balance' })
+  @ApiParam({ name: 'id', description: 'Opening stock balance ID' })
+  @ApiResponse({ status: 200, description: 'Opening stock balance deleted successfully' })
+  async deleteOpeningBalance(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.deleteOpeningStockBalance(id, organizationId);
+  }
+
+  @Get('account-mappings')
+  @ApiOperation({ summary: 'Get all stock account mappings' })
+  @ApiResponse({ status: 200, description: 'Stock account mappings retrieved successfully' })
+  async getAccountMappings(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getStockAccountMappings(organizationId);
+  }
+
+  @Post('account-mappings')
+  @ApiOperation({ summary: 'Create a new stock account mapping' })
+  @ApiResponse({ status: 201, description: 'Stock account mapping created successfully' })
+  async createAccountMapping(
+    @Req() req: any,
+    @Body() createDto: CreateStockAccountMappingDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.createStockAccountMapping(organizationId, createDto);
+  }
+
+  @Patch('account-mappings/:id')
+  @ApiOperation({ summary: 'Update a stock account mapping' })
+  @ApiParam({ name: 'id', description: 'Stock account mapping ID' })
+  @ApiResponse({ status: 200, description: 'Stock account mapping updated successfully' })
+  async updateAccountMapping(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() updateDto: UpdateStockAccountMappingDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.updateStockAccountMapping(id, organizationId, updateDto);
+  }
+
+  @Delete('account-mappings/:id')
+  @ApiOperation({ summary: 'Delete a stock account mapping' })
+  @ApiParam({ name: 'id', description: 'Stock account mapping ID' })
+  @ApiResponse({ status: 200, description: 'Stock account mapping deleted successfully' })
+  async deleteAccountMapping(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.deleteStockAccountMapping(id, organizationId);
   }
 }

@@ -1,6 +1,9 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { authSupabase } from '@/lib/supabase';
+import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
+import { warehousesApi } from '@/lib/api/warehouses';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
 import {
   Dialog,
   DialogContent,
@@ -145,6 +148,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   onEdit,
   onDownloadPDF,
 }) => {
+  const { currentOrganization } = useAuth();
   const purchaseOrderId = purchaseOrder?.id ?? null;
   const {
     data: purchaseOrderWithItems,
@@ -196,6 +200,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const updateStatus = useMutation({
     mutationFn: async (status: ExtendedStatus) => {
       if (!resolvedPurchaseOrder) throw new Error('No purchase order selected');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
       // Normalize extended status to valid PurchaseOrder status
       const normalizedStatus: PurchaseOrder['status'] = 
@@ -206,12 +211,11 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         status === 'partially_billed' ? 'billed' :
         status as PurchaseOrder['status'];
 
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({ status: normalizedStatus })
-        .eq('id', resolvedPurchaseOrder.id);
-
-      if (error) throw error;
+      await purchaseOrdersApi.updatePurchaseOrderStatus(
+        resolvedPurchaseOrder.id,
+        { status: normalizedStatus },
+        currentOrganization.id
+      );
     },
     onSuccess: (_data, status) => {
       queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
@@ -220,7 +224,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       }
       toast.success(`Purchase order marked as ${status}`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error('Failed to update purchase order status: ' + error.message);
     },
   });
@@ -228,18 +232,16 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const updatePurchaseOrderDetails = useMutation({
     mutationFn: async () => {
       if (!resolvedPurchaseOrder) throw new Error('No purchase order selected');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({
-          expected_delivery_date: editFormData.expectedDeliveryDate || null,
-          payment_terms: editFormData.paymentTerms || null,
-          delivery_address: editFormData.deliveryAddress || null,
-          notes: editFormData.notes || null,
-        })
-        .eq('id', resolvedPurchaseOrder.id);
-
-      if (error) throw error;
+      await purchaseOrdersApi.updatePurchaseOrder(
+        resolvedPurchaseOrder.id,
+        {
+          expected_delivery_date: editFormData.expectedDeliveryDate || undefined,
+          notes: editFormData.notes || undefined,
+        },
+        currentOrganization.id
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
@@ -249,7 +251,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       toast.success('Purchase order details updated');
       setIsEditingDetails(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error('Failed to update purchase order: ' + error.message);
     },
   });
@@ -364,7 +366,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
     try {
       setIsDownloading(true);
-      const { data } = await supabase.auth.getSession();
+      const { data } = await authSupabase.auth.getSession();
       const session = data.session;
 
       if (!session) {
@@ -492,17 +494,15 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
   const handleCreateMaterialReceipt = async () => {
     if (!po || !po.id) return;
+    if (!currentOrganization?.id) {
+      toast.error('No organization selected');
+      return;
+    }
 
     setIsCreatingReceipt(true);
     try {
-      // Get first warehouse from organization as default
-      const { data: warehouses, error: whError } = await supabase
-        .from('warehouses')
-        .select('id')
-        .eq('organization_id', po.organization_id)
-        .limit(1);
+      const warehouses = await warehousesApi.getAll(currentOrganization.id);
 
-      if (whError) throw whError;
       if (!warehouses || warehouses.length === 0) {
         toast.error('No warehouse found. Please create a warehouse first.');
         setIsCreatingReceipt(false);
@@ -512,8 +512,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       const warehouseId = warehouses[0].id;
       const today = new Date().toISOString().split('T')[0];
 
-      // Call the database function to create material receipt
-      const { error } = await supabase.rpc('create_material_receipt_from_po', {
+      const { error } = await authSupabase.rpc('create_material_receipt_from_po', {
         p_purchase_order_id: po.id,
         p_warehouse_id: warehouseId,
         p_receipt_date: today

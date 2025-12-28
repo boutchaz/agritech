@@ -91,4 +91,64 @@ export const analysesApi = {
   async delete(id: string, organizationId?: string): Promise<{ message: string }> {
     return apiClient.delete<{ message: string }>(`${BASE_URL}/${id}`, {}, organizationId);
   },
+
+  /**
+   * Get recommendations for an analysis
+   */
+  async getRecommendations(
+    analysisId: string,
+    organizationId?: string,
+  ): Promise<AnalysisRecommendation[]> {
+    return apiClient.get<AnalysisRecommendation[]>(
+      `${BASE_URL}/${analysisId}/recommendations`,
+      {},
+      organizationId,
+    );
+  },
+
+  /**
+   * Create a recommendation for an analysis
+   */
+  async createRecommendation(
+    analysisId: string,
+    data: Omit<AnalysisRecommendation, 'id' | 'analysis_id' | 'created_at'>,
+    organizationId?: string,
+  ): Promise<AnalysisRecommendation> {
+    return apiClient.post<AnalysisRecommendation>(
+      `${BASE_URL}/${analysisId}/recommendations`,
+      data,
+      {},
+      organizationId,
+    );
+  },
+
+  /**
+   * Update a recommendation
+   */
+  async updateRecommendation(
+    recommendationId: string,
+    data: Partial<Omit<AnalysisRecommendation, 'id' | 'analysis_id' | 'created_at'>>,
+    organizationId?: string,
+  ): Promise<AnalysisRecommendation> {
+    return apiClient.patch<AnalysisRecommendation>(
+      `${BASE_URL}/recommendations/${recommendationId}`,
+      data,
+      {},
+      organizationId,
+    );
+  },
+
+  /**
+   * Delete a recommendation
+   */
+  async deleteRecommendation(
+    recommendationId: string,
+    organizationId?: string,
+  ): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(
+      `${BASE_URL}/recommendations/${recommendationId}`,
+      {},
+      organizationId,
+    );
+  },
 };

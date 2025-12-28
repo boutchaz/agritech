@@ -46,7 +46,8 @@ const ProfitabilityDashboard: React.FC = () => {
       if (!currentOrganization) return [];
       return profitabilityApi.getParcels(currentOrganization.id);
     },
-    enabled: !!currentOrganization
+    enabled: !!currentOrganization,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch costs
@@ -60,7 +61,8 @@ const ProfitabilityDashboard: React.FC = () => {
         parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
       }, currentOrganization.id);
     },
-    enabled: !!currentOrganization
+    enabled: !!currentOrganization,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Fetch revenues
@@ -74,7 +76,8 @@ const ProfitabilityDashboard: React.FC = () => {
         parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
       }, currentOrganization.id);
     },
-    enabled: !!currentOrganization
+    enabled: !!currentOrganization,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Calculate profitability metrics

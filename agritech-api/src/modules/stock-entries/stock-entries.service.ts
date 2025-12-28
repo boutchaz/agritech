@@ -3,6 +3,10 @@ import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { CreateStockEntryDto, StockEntryType, StockEntryStatus, ValuationMethod } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
+import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
+import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
+import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
+import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
 
 @Injectable()
 export class StockEntriesService {
@@ -1252,10 +1256,6 @@ export class StockEntriesService {
     return { totalCost, consumedBatches: consumed };
   }
 
-  /**
-   * Execute operations in a true PostgreSQL transaction
-   * Uses pg client with BEGIN/COMMIT/ROLLBACK for ACID guarantees
-   */
   private async executeInPgTransaction<T>(
     operation: (client: PoolClient) => Promise<T>,
   ): Promise<T> {
@@ -1276,4 +1276,243 @@ export class StockEntriesService {
     }
   }
 
+  async getOpeningStockBalances(organizationId: string, filters?: OpeningStockFiltersDto): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    let query = supabase
+      .from('opening_stock_balances')
+      .select(`
+        *,
+        item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
+        warehouse:warehouses(id, name),
+        journal_entry:journal_entries(id, entry_number)
+      `)
+      .eq('organization_id', organizationId)
+      .order('opening_date', { ascending: false });
+
+    if (filters?.item_id) query = query.eq('item_id', filters.item_id);
+    if (filters?.warehouse_id) query = query.eq('warehouse_id', filters.warehouse_id);
+    if (filters?.status) query = query.eq('status', filters.status);
+    if (filters?.from_date) query = query.gte('opening_date', filters.from_date);
+    if (filters?.to_date) query = query.lte('opening_date', filters.to_date);
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch opening stock balances: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async getOpeningStockBalance(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('opening_stock_balances')
+      .select(`
+        *,
+        item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
+        warehouse:warehouses(id, name),
+        journal_entry:journal_entries(id, entry_number)
+      `)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error) {
+      throw new NotFoundException('Opening stock balance not found');
+    }
+
+    return data;
+  }
+
+  async createOpeningStockBalance(
+    organizationId: string,
+    userId: string,
+    dto: CreateOpeningStockDto,
+  ): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('opening_stock_balances')
+      .insert({
+        organization_id: organizationId,
+        ...dto,
+        status: 'Draft',
+        created_by: userId,
+      })
+      .select(`
+        *,
+        item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
+        warehouse:warehouses(id, name)
+      `)
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to create opening stock balance: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateOpeningStockBalance(
+    id: string,
+    organizationId: string,
+    dto: UpdateOpeningStockDto,
+  ): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('opening_stock_balances')
+      .update(dto)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .eq('status', 'Draft')
+      .select(`
+        *,
+        item:items(id, item_code, item_name, default_unit, item_group:item_groups(name)),
+        warehouse:warehouses(id, name)
+      `)
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to update opening stock balance: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async postOpeningStockBalance(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase.rpc('post_opening_stock_balance', {
+      p_opening_stock_id: id,
+    });
+
+    if (error) {
+      throw new BadRequestException(`Failed to post opening stock balance: ${error.message}`);
+    }
+
+    return { journal_entry_id: data };
+  }
+
+  async cancelOpeningStockBalance(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('opening_stock_balances')
+      .update({ status: 'Cancelled' })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to cancel opening stock balance: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteOpeningStockBalance(id: string, organizationId: string): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { error } = await supabase
+      .from('opening_stock_balances')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .eq('status', 'Draft');
+
+    if (error) {
+      throw new BadRequestException(`Failed to delete opening stock balance: ${error.message}`);
+    }
+  }
+
+  async getStockAccountMappings(organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('stock_account_mappings')
+      .select(`
+        *,
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+      `)
+      .eq('organization_id', organizationId)
+      .order('entry_type');
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch stock account mappings: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async createStockAccountMapping(
+    organizationId: string,
+    dto: CreateStockAccountMappingDto,
+  ): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('stock_account_mappings')
+      .insert({
+        organization_id: organizationId,
+        ...dto,
+      })
+      .select(`
+        *,
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+      `)
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to create stock account mapping: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateStockAccountMapping(
+    id: string,
+    organizationId: string,
+    dto: UpdateStockAccountMappingDto,
+  ): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('stock_account_mappings')
+      .update(dto)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select(`
+        *,
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+      `)
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to update stock account mapping: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteStockAccountMapping(id: string, organizationId: string): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { error } = await supabase
+      .from('stock_account_mappings')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      throw new BadRequestException(`Failed to delete stock account mapping: ${error.message}`);
+    }
+  }
 }

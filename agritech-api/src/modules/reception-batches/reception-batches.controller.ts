@@ -124,6 +124,23 @@ export class ReceptionBatchesController {
     );
   }
 
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update reception batch (general update)' })
+  @ApiResponse({ status: 200, description: 'Reception batch updated successfully' })
+  async update(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('id') batchId: string,
+    @Body() updateDto: Partial<CreateReceptionBatchDto>,
+  ) {
+    return this.receptionBatchesService.update(
+      req.user.userId,
+      organizationId,
+      batchId,
+      updateDto,
+    );
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Cancel reception batch' })
   @ApiResponse({ status: 200, description: 'Reception batch cancelled successfully' })

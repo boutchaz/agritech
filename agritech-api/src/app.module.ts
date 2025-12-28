@@ -62,6 +62,9 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { StrapiModule } from './modules/strapi/strapi.module';
 import { DemoDataModule } from './modules/demo-data/demo-data.module';
 import { FilesModule } from './modules/files/files.module';
+import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
+import { LabServicesModule } from './modules/lab-services/lab-services.module';
+import { TreeManagementModule } from './modules/tree-management/tree-management.module';
 
 @Module({
   imports: [
@@ -132,6 +135,10 @@ import { FilesModule } from './modules/files/files.module';
     ProfitabilityModule,
     ProductApplicationsModule,
     AccountMappingsModule,
+
+    DocumentTemplatesModule,
+    LabServicesModule,
+    TreeManagementModule,
 
     // Admin & Analytics
     AdminModule,

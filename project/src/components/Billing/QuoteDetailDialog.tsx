@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { authSupabase } from '@/lib/supabase';
+import { quotesApi } from '@/lib/api/quotes';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -89,7 +90,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   onDownloadPDF,
 }) => {
   const { t } = useTranslation();
-  const { currentOrganization: _currentOrganization } = useAuth();
+  const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToOrder = useConvertQuoteToOrder();
 
@@ -193,19 +194,13 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
     setIsEditingDetails(false);
   }, [resolvedQuote?.id]);
 
-  // Update quote status mutation
   const updateStatus = useMutation({
     mutationFn: async (status: Quote['status']) => {
       if (!resolvedQuote) throw new Error('No quote selected');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { error } = await supabase
-        .from('quotes')
-        .update({ status })
-        .eq('id', resolvedQuote.id);
+      await quotesApi.updateStatus(resolvedQuote.id, { status }, currentOrganization.id);
 
-      if (error) throw error;
-
-      // If status is 'accepted', automatically convert to sales order
       if (status === 'accepted') {
         return { shouldConvert: true };
       }
@@ -214,17 +209,15 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
     onSuccess: async (result, status) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
 
-      // If accepted, trigger automatic conversion to sales order
       if (result?.shouldConvert && resolvedQuote) {
         toast.success(t('quotes.detail.messages.quoteAccepted'));
 
-        // Trigger conversion
         convertToOrder.mutate(resolvedQuote.id, {
           onSuccess: (salesOrder) => {
             toast.success(t('quotes.detail.messages.salesOrderCreated', { number: salesOrder.order_number }));
             onOpenChange(false);
           },
-          onError: (error) => {
+          onError: (error: Error) => {
             toast.error(t('quotes.detail.messages.convertFailed', { error: error.message }));
           },
         });
@@ -232,7 +225,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         toast.success(t('quotes.detail.messages.quoteMarked', { status: t(`quotes.status.${status}`) }));
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(t('quotes.detail.messages.updateFailed', { error: error.message }));
     },
   });
@@ -240,25 +233,25 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   const updateQuoteDetails = useMutation({
     mutationFn: async () => {
       if (!resolvedQuote) throw new Error('No quote selected');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { error } = await supabase
-        .from('quotes')
-        .update({
+      await quotesApi.update(
+        resolvedQuote.id,
+        {
           valid_until: editFormData.validUntil || undefined,
           payment_terms: editFormData.paymentTerms || undefined,
           delivery_terms: editFormData.deliveryTerms || undefined,
           terms_and_conditions: editFormData.termsConditions || undefined,
-        })
-        .eq('id', resolvedQuote.id);
-
-      if (error) throw error;
+        },
+        currentOrganization.id
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       toast.success(t('quotes.detail.messages.detailsUpdated'));
       setIsEditingDetails(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(t('quotes.detail.messages.updateDetailsFailed', { error: error.message }));
     },
   });
@@ -282,7 +275,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
     try {
       setIsDownloading(true);
-      const { data } = await supabase.auth.getSession();
+      const { data } = await authSupabase.auth.getSession();
       const session = data.session;
 
       if (!session) {

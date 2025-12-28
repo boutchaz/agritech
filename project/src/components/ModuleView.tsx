@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Settings, MapPin } from 'lucide-react';
 import type { Module, SensorData } from '../types';
-import { supabase } from '../lib/supabase';
+import { parcelsApi } from '../lib/api/parcels';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useNavigate } from '@tanstack/react-router';
 import ParcelCard from './ParcelCard';
@@ -63,8 +63,12 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
 
   const loadParcels = async () => {
     if (!currentFarm) {
-      console.log('No current farm available');
       setParcelError('Aucune ferme sélectionnée');
+      return;
+    }
+
+    if (!currentOrganization?.id) {
+      setParcelError('Aucune organisation sélectionnée');
       return;
     }
 
@@ -72,35 +76,23 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
     setParcelError(null);
 
     try {
-      console.log('Loading parcels for farm:', currentFarm.id);
-      console.log('Current organization:', currentOrganization?.name);
+      const parcels = await parcelsApi.getAll(
+        { farm_id: currentFarm.id },
+        currentOrganization.id
+      );
 
-      // Check authentication first
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('User not authenticated');
-      }
+      if (parcels && parcels.length > 0) {
+        const mappedParcels: Parcel[] = parcels.map(p => ({
+          id: p.id,
+          name: p.name,
+          area: p.area ?? null,
+          soil_type: p.soil_type,
+          boundary: p.boundary,
+        }));
 
-      console.log('User authenticated:', user.email);
+        setAllParcels(mappedParcels);
 
-      // Load all parcels for the current farm
-      const { data: parcels, error } = await supabase
-        .from('parcels')
-        .select('id, name, area, soil_type, boundary')
-        .eq('farm_id', currentFarm.id);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Loaded parcels:', parcels);
-
-      if (parcels) {
-        setAllParcels(parcels);
-
-        // Auto-assign parcels based on smart detection
-        const fruitTreeParcels = parcels.filter(p => {
+        const fruitTreeParcels = mappedParcels.filter(p => {
           const soilMatch = p.soil_type?.toLowerCase().includes('fruit') ||
                            p.soil_type?.toLowerCase().includes('arbre') ||
                            p.soil_type?.toLowerCase().includes('verger');
@@ -110,11 +102,8 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           return soilMatch || nameMatch;
         });
 
-        console.log('Auto-assigned parcels:', fruitTreeParcels);
-        // If no specific fruit tree parcels found, assign all parcels by default for demo
-        const defaultAssigned = fruitTreeParcels.length > 0 ? fruitTreeParcels : parcels;
+        const defaultAssigned = fruitTreeParcels.length > 0 ? fruitTreeParcels : mappedParcels;
         setAssignedParcels(defaultAssigned);
-        // Reset carousel to first slide when parcels change
         setCurrentParcelIndex(0);
       } else {
         setAllParcels([]);

@@ -97,7 +97,9 @@ export const quotesApi = {
    * Update a quote (only drafts)
    */
   async update(id: string, data: UpdateQuoteInput, organizationId?: string) {
-    const transformedData = transformQuoteForApi(data as CreateQuoteInput);
+    const transformedData = data.items
+      ? transformQuoteForApi(data as CreateQuoteInput)
+      : data;
     return apiClient.patch(`${BASE_URL}/${id}`, transformedData, {}, organizationId);
   },
 

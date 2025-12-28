@@ -21,7 +21,7 @@ import { withRouteProtection } from '../components/authorization/withRouteProtec
 import { usePurchaseOrders, type PurchaseOrder, type PurchaseOrderWithItems } from '../hooks/usePurchaseOrders';
 import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
-import { supabase } from '@/lib/supabase';
+import { authSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 const mockModules: Module[] = [
@@ -52,7 +52,7 @@ const AppContent: React.FC = () => {
 
   const handleDownloadPDF = async (order: PurchaseOrder) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await authSupabase.auth.getSession();
       if (!session) {
         toast.error('Please sign in to download PDF');
         return;

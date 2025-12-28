@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { receptionBatchesApi } from '@/lib/api/reception-batches';
+import { warehousesApi } from '@/lib/api/warehouses';
 import type {
   ReceptionBatch,
   CreateReceptionBatchDto,
@@ -23,58 +24,7 @@ export function useReceptionBatches(filters: ReceptionBatchFilters = {}) {
         throw new Error('No organization selected');
       }
 
-      // Optimized query - only fetch essential fields and limit nested data
-      let query = supabase
-        .from('reception_batches')
-        .select(`
-          id,
-          batch_code,
-          reception_date,
-          weight,
-          weight_unit,
-          quality_grade,
-          quality_score,
-          decision,
-          status,
-          warehouse_id,
-          parcel_id,
-          warehouse:warehouses!reception_batches_warehouse_id_fkey(name, location),
-          parcel:parcels(name, farm:farms(name))
-        `)
-        .eq('organization_id', currentOrganization.id)
-        .order('reception_date', { ascending: false })
-        .limit(100); // Limit initial results for performance
-
-      // Apply filters
-      if (filters.warehouse_id) {
-        query = query.eq('warehouse_id', filters.warehouse_id);
-      }
-      if (filters.parcel_id) {
-        query = query.eq('parcel_id', filters.parcel_id);
-      }
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters.decision) {
-        query = query.eq('decision', filters.decision);
-      }
-      if (filters.quality_grade) {
-        query = query.eq('quality_grade', filters.quality_grade);
-      }
-      if (filters.crop_id) {
-        query = query.eq('crop_id', filters.crop_id);
-      }
-      if (filters.from_date) {
-        query = query.gte('reception_date', filters.from_date);
-      }
-      if (filters.to_date) {
-        query = query.lte('reception_date', filters.to_date);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as ReceptionBatch[];
+      return receptionBatchesApi.getAll(currentOrganization.id, filters);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 30000, // 30 seconds
@@ -91,60 +41,9 @@ export function useReceptionBatch(id: string | undefined) {
     queryKey: ['reception-batch', id],
     queryFn: async () => {
       if (!id) throw new Error('Batch ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { data, error } = await supabase
-        .from('reception_batches')
-        .select(`
-          *,
-          warehouse:warehouses!reception_batches_warehouse_id_fkey(
-            id,
-            name,
-            location,
-            is_reception_center,
-            reception_type,
-            has_weighing_station,
-            has_quality_lab
-          ),
-          parcel:parcels(
-            id,
-            name,
-            farm:farms(
-              id,
-              name
-            )
-          ),
-          crop:crops(
-            id,
-            name
-          ),
-          harvest:harvest_records(
-            id,
-            harvest_date,
-            quantity,
-            unit
-          ),
-          destination_warehouse:warehouses!reception_batches_destination_warehouse_id_fkey(
-            id,
-            name,
-            location
-          ),
-          stock_entry:stock_entries(
-            id,
-            entry_number,
-            entry_type,
-            status
-          ),
-          sales_order:sales_orders(
-            id,
-            order_number,
-            status
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data as ReceptionBatch;
+      return receptionBatchesApi.getById(currentOrganization.id, id);
     },
     enabled: !!id && !!currentOrganization?.id,
   });
@@ -160,15 +59,9 @@ export function useHarvestReceptionBatches(harvestId: string | undefined) {
     queryKey: ['reception-batches', 'harvest', harvestId],
     queryFn: async () => {
       if (!harvestId) throw new Error('Harvest ID is required');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { data, error } = await supabase
-        .from('reception_batches')
-        .select('*')
-        .eq('harvest_id', harvestId)
-        .order('reception_date', { ascending: false });
-
-      if (error) throw error;
-      return data as ReceptionBatch[];
+      return receptionBatchesApi.getAll(currentOrganization.id, { harvest_id: harvestId });
     },
     enabled: !!harvestId && !!currentOrganization?.id,
   });
@@ -187,22 +80,8 @@ export function useReceptionBatchStats(filters: ReceptionBatchFilters = {}) {
         throw new Error('No organization selected');
       }
 
-      // Fetch all batches with filters
-      let query = supabase
-        .from('reception_batches')
-        .select('decision, quality_grade, status, weight, quality_score')
-        .eq('organization_id', currentOrganization.id);
+      const data = await receptionBatchesApi.getAll(currentOrganization.id, filters);
 
-      // Apply same filters as useReceptionBatches
-      if (filters.warehouse_id) query = query.eq('warehouse_id', filters.warehouse_id);
-      if (filters.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
-      if (filters.from_date) query = query.gte('reception_date', filters.from_date);
-      if (filters.to_date) query = query.lte('reception_date', filters.to_date);
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Calculate statistics
       const stats: ReceptionBatchStats = {
         total_batches: data.length,
         total_weight: data.reduce((sum, b) => sum + (b.weight || 0), 0),
@@ -236,22 +115,18 @@ export function useReceptionBatchStats(filters: ReceptionBatchFilters = {}) {
       let qualityScoreCount = 0;
 
       data.forEach((batch) => {
-        // Count by decision
         if (batch.decision) {
           stats.by_decision[batch.decision as keyof typeof stats.by_decision]++;
         }
 
-        // Count by quality grade
         if (batch.quality_grade) {
           stats.by_quality_grade[batch.quality_grade as keyof typeof stats.by_quality_grade]++;
         }
 
-        // Count by status
         if (batch.status) {
           stats.by_status[batch.status as keyof typeof stats.by_status]++;
         }
 
-        // Sum quality scores
         if (batch.quality_score) {
           qualityScoreSum += batch.quality_score;
           qualityScoreCount++;
@@ -263,20 +138,8 @@ export function useReceptionBatchStats(filters: ReceptionBatchFilters = {}) {
       return stats;
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
   });
-}
-
-/**
- * Generate a unique batch code
- */
-function generateBatchCode(): string {
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const day = now.getDate().toString().padStart(2, '0');
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `REC-${year}${month}${day}-${random}`;
 }
 
 /**
@@ -292,44 +155,7 @@ export function useCreateReceptionBatch() {
         throw new Error('No organization selected');
       }
 
-      // Generate batch_code if not provided
-      const batch_code = generateBatchCode();
-
-      // Build insert data with all valid fields
-      const insertData = {
-        organization_id: currentOrganization.id,
-        batch_code,
-        warehouse_id: data.warehouse_id,
-        parcel_id: data.parcel_id,
-        harvest_id: data.harvest_id || null,
-        crop_id: data.crop_id || null,
-        culture_type: data.culture_type || null,
-        reception_date: data.reception_date,
-        reception_time: data.reception_time || null,
-        weight: data.weight,
-        weight_unit: data.weight_unit || 'kg',
-        quantity: data.quantity || null,
-        quantity_unit: data.quantity_unit || null,
-        quality_grade: data.quality_grade || null,
-        quality_score: data.quality_score || null,
-        quality_notes: data.quality_notes || null,
-        humidity_percentage: data.humidity_percentage || null,
-        maturity_level: data.maturity_level || null,
-        temperature: data.temperature || null,
-        moisture_content: data.moisture_content || null,
-        producer_name: data.producer_name || null,
-        supplier_id: data.supplier_id || null,
-        // received_by requires worker ID, not user ID - skip for now
-      };
-
-      const { data: batch, error } = await supabase
-        .from('reception_batches')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return batch as ReceptionBatch;
+      return receptionBatchesApi.create(currentOrganization.id, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -343,6 +169,7 @@ export function useCreateReceptionBatch() {
  */
 export function useUpdateReceptionBatch() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -352,20 +179,11 @@ export function useUpdateReceptionBatch() {
       batchId: string;
       data: Partial<CreateReceptionBatchDto>;
     }) => {
-      const updateData = {
-        ...data,
-        updated_at: new Date().toISOString(),
-      };
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data: batch, error } = await supabase
-        .from('reception_batches')
-        .update(updateData)
-        .eq('id', batchId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return batch as ReceptionBatch;
+      return receptionBatchesApi.update(currentOrganization.id, batchId, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -380,6 +198,7 @@ export function useUpdateReceptionBatch() {
  */
 export function useUpdateQualityControl() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -389,19 +208,11 @@ export function useUpdateQualityControl() {
       batchId: string;
       data: UpdateQualityControlDto;
     }) => {
-      const { data: batch, error } = await supabase
-        .from('reception_batches')
-        .update({
-          ...data,
-          status: 'quality_checked',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', batchId)
-        .select()
-        .single();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return batch as ReceptionBatch;
+      return receptionBatchesApi.updateQualityControl(currentOrganization.id, batchId, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -416,7 +227,7 @@ export function useUpdateQualityControl() {
  */
 export function useMakeReceptionDecision() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -426,21 +237,11 @@ export function useMakeReceptionDecision() {
       batchId: string;
       data: MakeReceptionDecisionDto;
     }) => {
-      // Call database function to handle decision logic
-      const { data: result, error } = await supabase.rpc(
-        'make_reception_decision',
-        {
-          p_batch_id: batchId,
-          p_decision: data.decision,
-          p_decision_notes: data.decision_notes || null,
-          p_destination_warehouse_id: data.destination_warehouse_id || null,
-          p_item_id: data.item_id || null,
-          p_decision_by: user?.id || null,
-        }
-      );
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return result;
+      return receptionBatchesApi.makeDecision(currentOrganization.id, batchId, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -457,21 +258,15 @@ export function useMakeReceptionDecision() {
  */
 export function useCancelReceptionBatch() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (batchId: string) => {
-      const { data, error } = await supabase
-        .from('reception_batches')
-        .update({
-          status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', batchId)
-        .select()
-        .single();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as ReceptionBatch;
+      return receptionBatchesApi.cancel(currentOrganization.id, batchId);
     },
     onSuccess: (_, batchId) => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -486,16 +281,15 @@ export function useCancelReceptionBatch() {
  */
 export function useDeleteReceptionBatch() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (batchId: string) => {
-      const { error } = await supabase
-        .from('reception_batches')
-        .delete()
-        .eq('id', batchId)
-        .eq('status', 'received'); // Only allow delete if just received
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      return receptionBatchesApi.cancel(currentOrganization.id, batchId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
@@ -517,18 +311,10 @@ export function useReceptionCenters() {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('warehouses')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_reception_center', true)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data;
+      const warehouses = await warehousesApi.getAll(currentOrganization.id);
+      return warehouses.filter((w) => w.is_active && (w as { is_reception_center?: boolean }).is_reception_center);
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
   });
 }

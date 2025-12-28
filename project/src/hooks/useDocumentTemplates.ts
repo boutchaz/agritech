@@ -1,17 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
-import { useAuth } from './useAuth';
-import type { Tables, InsertDto, UpdateDto } from '../types/database.types';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
+import {
+  documentTemplatesApi,
+  DocumentTemplate,
+  DocumentType,
+  CreateDocumentTemplateDto,
+  UpdateDocumentTemplateDto,
+} from '@/lib/api/document-templates';
 
-type DocumentTemplate = Tables<'document_templates'>;
-type DocumentTemplateInsert = InsertDto<'document_templates'>;
-type DocumentTemplateUpdate = UpdateDto<'document_templates'>;
+export type { DocumentTemplate, DocumentType };
 
-export type DocumentType = 'invoice' | 'quote' | 'sales_order' | 'purchase_order' | 'report' | 'general';
-
-/**
- * Hook to fetch all document templates for current organization
- */
 export function useDocumentTemplates(documentType?: DocumentType) {
   const { currentOrganization } = useAuth();
 
@@ -22,28 +20,13 @@ export function useDocumentTemplates(documentType?: DocumentType) {
         throw new Error('No organization selected');
       }
 
-      let query = supabase
-        .from('document_templates')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('name');
-
-      if (documentType) {
-        query = query.eq('document_type', documentType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as DocumentTemplate[];
+      return documentTemplatesApi.getAll(documentType, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Hook to fetch a single document template by ID
- */
 export function useDocumentTemplate(templateId: string | null) {
   const { currentOrganization } = useAuth();
 
@@ -53,24 +36,17 @@ export function useDocumentTemplate(templateId: string | null) {
       if (!templateId) {
         throw new Error('No template ID provided');
       }
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .eq('id', templateId)
-        .eq('organization_id', currentOrganization!.id)
-        .single();
-
-      if (error) throw error;
-      return data as DocumentTemplate;
+      return documentTemplatesApi.getOne(templateId, currentOrganization.id);
     },
     enabled: !!templateId && !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Hook to fetch the default template for a document type
- */
 export function useDefaultDocumentTemplate(documentType: DocumentType) {
   const { currentOrganization } = useAuth();
 
@@ -81,154 +57,115 @@ export function useDefaultDocumentTemplate(documentType: DocumentType) {
         throw new Error('No organization selected');
       }
 
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('document_type', documentType)
-        .eq('is_default', true)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as DocumentTemplate | null;
+      return documentTemplatesApi.getDefault(documentType, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Hook to create a new document template
- */
 export function useCreateDocumentTemplate() {
   const queryClient = useQueryClient();
-  const { currentOrganization, user } = useAuth();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (template: Omit<DocumentTemplateInsert, 'organization_id' | 'created_by'>) => {
+    mutationFn: async (template: CreateDocumentTemplateDto) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
 
-      if (!user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data, error } = await supabase
-        .from('document_templates')
-        .insert({
-          ...template,
-          organization_id: currentOrganization.id,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as DocumentTemplate;
+      return documentTemplatesApi.create(template, currentOrganization.id);
     },
     onSuccess: (data) => {
-      // Invalidate all templates queries (with and without document type filter)
       queryClient.invalidateQueries({ queryKey: ['document-templates'] });
 
-      // If this is set as default, invalidate the default query
       if (data.is_default) {
         queryClient.invalidateQueries({
-          queryKey: ['document-template', 'default', data.document_type]
+          queryKey: ['document-template', 'default', data.document_type],
         });
       }
     },
   });
 }
 
-/**
- * Hook to update a document template
- */
 export function useUpdateDocumentTemplate() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: DocumentTemplateUpdate }) => {
-      const { data, error } = await supabase
-        .from('document_templates')
-        .update(updates)
-        .eq('id', id)
-        .eq('organization_id', currentOrganization!.id)
-        .select()
-        .single();
+    mutationFn: async ({ id, updates }: { id: string; updates: UpdateDocumentTemplateDto }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as DocumentTemplate;
+      return documentTemplatesApi.update(id, updates, currentOrganization.id);
     },
     onSuccess: (data) => {
-      // Invalidate all templates queries
       queryClient.invalidateQueries({ queryKey: ['document-templates'] });
-
-      // Invalidate the specific template
       queryClient.invalidateQueries({ queryKey: ['document-template', data.id] });
 
-      // If this is set as default, invalidate the default query
       if (data.is_default) {
         queryClient.invalidateQueries({
-          queryKey: ['document-template', 'default', data.document_type]
+          queryKey: ['document-template', 'default', data.document_type],
         });
       }
     },
   });
 }
 
-/**
- * Hook to delete a document template
- */
 export function useDeleteDocumentTemplate() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('document_templates')
-        .delete()
-        .eq('id', id)
-        .eq('organization_id', currentOrganization!.id);
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
+      return documentTemplatesApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
-      // Invalidate all templates queries
       queryClient.invalidateQueries({ queryKey: ['document-templates'] });
     },
   });
 }
 
-/**
- * Hook to set a template as default for its document type
- */
 export function useSetDefaultTemplate() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error} = await supabase
-        .from('document_templates')
-        .update({ is_default: true })
-        .eq('id', id)
-        .eq('organization_id', currentOrganization!.id)
-        .select()
-        .single();
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
 
-      if (error) throw error;
-      return data as DocumentTemplate;
+      return documentTemplatesApi.setDefault(id, currentOrganization.id);
     },
     onSuccess: (data) => {
-      // Invalidate all templates queries
       queryClient.invalidateQueries({ queryKey: ['document-templates'] });
-
-      // Invalidate the default query for this document type
       queryClient.invalidateQueries({
-        queryKey: ['document-template', 'default', data.document_type]
-        });
+        queryKey: ['document-template', 'default', data.document_type],
+      });
+    },
+  });
+}
+
+export function useDuplicateDocumentTemplate() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, newName }: { id: string; newName?: string }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return documentTemplatesApi.duplicate(id, newName, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-templates'] });
     },
   });
 }

@@ -19,7 +19,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AnalysesService } from './analyses.service';
-import { CreateAnalysisDto, UpdateAnalysisDto, AnalysisFiltersDto } from './dto';
+import {
+  CreateAnalysisDto,
+  UpdateAnalysisDto,
+  AnalysisFiltersDto,
+  CreateRecommendationDto,
+  UpdateRecommendationDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -103,5 +109,55 @@ export class AnalysesController {
   async delete(@Req() req, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
     return this.analysesService.delete(id, organizationId);
+  }
+
+  @Get(':analysisId/recommendations')
+  @ApiOperation({ summary: 'Get recommendations for an analysis' })
+  @ApiParam({ name: 'analysisId', description: 'Analysis ID' })
+  @ApiResponse({ status: 200, description: 'Recommendations retrieved successfully' })
+  async getRecommendations(@Req() req, @Param('analysisId') analysisId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.analysesService.getRecommendations(analysisId, organizationId);
+  }
+
+  @Post(':analysisId/recommendations')
+  @ApiOperation({ summary: 'Create a recommendation for an analysis' })
+  @ApiParam({ name: 'analysisId', description: 'Analysis ID' })
+  @ApiResponse({ status: 201, description: 'Recommendation created successfully' })
+  async createRecommendation(
+    @Req() req,
+    @Param('analysisId') analysisId: string,
+    @Body() dto: CreateRecommendationDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.analysesService.createRecommendation(
+      { ...dto, analysis_id: analysisId },
+      organizationId,
+    );
+  }
+
+  @Patch('recommendations/:recommendationId')
+  @ApiOperation({ summary: 'Update a recommendation' })
+  @ApiParam({ name: 'recommendationId', description: 'Recommendation ID' })
+  @ApiResponse({ status: 200, description: 'Recommendation updated successfully' })
+  async updateRecommendation(
+    @Req() req,
+    @Param('recommendationId') recommendationId: string,
+    @Body() dto: UpdateRecommendationDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.analysesService.updateRecommendation(recommendationId, organizationId, dto);
+  }
+
+  @Delete('recommendations/:recommendationId')
+  @ApiOperation({ summary: 'Delete a recommendation' })
+  @ApiParam({ name: 'recommendationId', description: 'Recommendation ID' })
+  @ApiResponse({ status: 200, description: 'Recommendation deleted successfully' })
+  async deleteRecommendation(
+    @Req() req,
+    @Param('recommendationId') recommendationId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.analysesService.deleteRecommendation(recommendationId, organizationId);
   }
 }

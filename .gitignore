@@ -1,0 +1,48 @@
+# ======================
+# AgriTech Monorepo Root
+# ======================
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+.env.backup
+.env.temp
+!.env.example
+!.env.*.example
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
