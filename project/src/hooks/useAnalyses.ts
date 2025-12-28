@@ -136,14 +136,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
       setLoading(true);
       setError(null);
 
-      const { data, error: supabaseError } = await supabase
-        .from('analysis_recommendations')
-        .select('*')
-        .eq('analysis_id', analysisId)
-        .order('priority', { ascending: false });
-
-      if (supabaseError) throw supabaseError;
-
+      const data = await analysesApi.getRecommendations(analysisId);
       setRecommendations(data || []);
     } catch (err) {
       console.error('Error fetching recommendations:', err);
@@ -156,14 +149,11 @@ export function useAnalysisRecommendations(analysisId: string | null) {
   const addRecommendation = async (
     recommendation: Omit<AnalysisRecommendation, 'id' | 'created_at'>
   ) => {
-    try {
-      const { data: newRecommendation, error: supabaseError } = await supabase
-        .from('analysis_recommendations')
-        .insert([recommendation])
-        .select()
-        .single();
+    if (!analysisId) throw new Error('Analysis ID is required');
 
-      if (supabaseError) throw supabaseError;
+    try {
+      const { analysis_id, ...rest } = recommendation;
+      const newRecommendation = await analysesApi.createRecommendation(analysisId, rest);
 
       setRecommendations(prev => [...prev, newRecommendation]);
       return newRecommendation;
@@ -179,14 +169,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
     updates: Partial<Omit<AnalysisRecommendation, 'id' | 'analysis_id' | 'created_at'>>
   ) => {
     try {
-      const { data: updatedRecommendation, error: supabaseError } = await supabase
-        .from('analysis_recommendations')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (supabaseError) throw supabaseError;
+      const updatedRecommendation = await analysesApi.updateRecommendation(id, updates);
 
       setRecommendations(prev =>
         prev.map(rec => rec.id === id ? updatedRecommendation : rec)
@@ -201,13 +184,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
 
   const deleteRecommendation = async (id: string) => {
     try {
-      const { error: supabaseError } = await supabase
-        .from('analysis_recommendations')
-        .delete()
-        .eq('id', id);
-
-      if (supabaseError) throw supabaseError;
-
+      await analysesApi.deleteRecommendation(id);
       setRecommendations(prev => prev.filter(rec => rec.id !== id));
     } catch (err) {
       console.error('Error deleting recommendation:', err);

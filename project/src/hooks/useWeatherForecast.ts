@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const OPENWEATHER_API_KEY = '9de243494c0b295cca9337e1e96b00e2'; // Free API key
+const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
 
 interface WeatherForecast {
   date: Date;

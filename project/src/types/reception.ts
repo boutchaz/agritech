@@ -251,6 +251,7 @@ export interface ReceptionBatchFilters {
   to_date?: string;
   quality_grade?: QualityGrade;
   crop_id?: string;
+  harvest_id?: string;
 }
 
 /**

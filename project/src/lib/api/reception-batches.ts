@@ -48,6 +48,10 @@ export const receptionBatchesApi = {
       params.append('date_to', filters.to_date);
     }
 
+    if (filters?.harvest_id) {
+      params.append('harvest_id', filters.harvest_id);
+    }
+
     const queryString = params.toString();
     return apiClient.get<ReceptionBatch[]>(
       `/api/v1/organizations/${organizationId}/reception-batches${queryString ? `?${queryString}` : ''}`
@@ -69,6 +73,20 @@ export const receptionBatchesApi = {
   async create(organizationId: string, data: CreateReceptionBatchDto): Promise<ReceptionBatch> {
     return apiClient.post<ReceptionBatch>(
       `/api/v1/organizations/${organizationId}/reception-batches`,
+      data
+    );
+  },
+
+  /**
+   * Update a reception batch (general update)
+   */
+  async update(
+    organizationId: string,
+    batchId: string,
+    data: Partial<CreateReceptionBatchDto>
+  ): Promise<ReceptionBatch> {
+    return apiClient.patch<ReceptionBatch>(
+      `/api/v1/organizations/${organizationId}/reception-batches/${batchId}`,
       data
     );
   },

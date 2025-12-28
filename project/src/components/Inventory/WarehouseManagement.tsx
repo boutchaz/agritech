@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useWarehouses, type Warehouse } from '@/hooks/useWarehouses';
 import { useFarms } from '@/hooks/useMultiTenantData';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import { supabase } from '@/lib/supabase';
+import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -126,43 +126,45 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: WarehouseFormData) => {
-      const { data: result, error } = await supabase
-        .from('warehouses')
-        .insert([data])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return result;
+      const createInput: CreateWarehouseInput = {
+        name: data.name,
+        description: data.description || undefined,
+        location: data.location || undefined,
+        address: data.address || undefined,
+        city: data.city || undefined,
+        postal_code: data.postal_code || undefined,
+        capacity: data.capacity,
+        capacity_unit: data.capacity_unit || undefined,
+        temperature_controlled: data.temperature_controlled,
+        humidity_controlled: data.humidity_controlled,
+        security_level: data.security_level || undefined,
+        manager_name: data.manager_name || undefined,
+        manager_phone: data.manager_phone || undefined,
+        farm_id: data.farm_id || undefined,
+        is_active: data.is_active,
+      };
+      return warehousesApi.create(createInput, currentOrganization?.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
       toast.success(t('warehouses.warehouseCreated'));
       onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`${t('warehouses.createError')}: ${error.message}`);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<WarehouseFormData> }) => {
-      const { data: result, error } = await supabase
-        .from('warehouses')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return result;
+      return warehousesApi.update(id, data, currentOrganization?.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
       toast.success(t('warehouses.warehouseUpdated'));
       onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`${t('warehouses.updateError')}: ${error.message}`);
     },
   });
@@ -396,12 +398,7 @@ export default function WarehouseManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (warehouseId: string) => {
-      const { error } = await supabase
-        .from('warehouses')
-        .delete()
-        .eq('id', warehouseId);
-
-      if (error) throw error;
+      return warehousesApi.delete(warehouseId, currentOrganization?.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
@@ -409,7 +406,7 @@ export default function WarehouseManagement() {
       setShowDeleteDialog(false);
       setWarehouseToDelete(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`${t('warehouses.deleteError')}: ${error.message}`);
     },
   });

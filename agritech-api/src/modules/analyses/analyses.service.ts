@@ -7,7 +7,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { CreateAnalysisDto, UpdateAnalysisDto, AnalysisFiltersDto } from './dto';
+import {
+  CreateAnalysisDto,
+  UpdateAnalysisDto,
+  AnalysisFiltersDto,
+  CreateRecommendationDto,
+  UpdateRecommendationDto,
+} from './dto';
 
 @Injectable()
 export class AnalysesService {
@@ -269,5 +275,105 @@ export class AnalysesService {
     }
 
     return { message: 'Analysis deleted successfully' };
+  }
+
+  async getRecommendations(analysisId: string, organizationId: string) {
+    this.logger.log(`Getting recommendations for analysis ${analysisId}`);
+
+    await this.findOne(analysisId, organizationId);
+
+    const { data, error } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .select('*')
+      .eq('analysis_id', analysisId)
+      .order('priority', { ascending: false });
+
+    if (error) {
+      this.logger.error('Error fetching recommendations', error);
+      throw new InternalServerErrorException(`Failed to fetch recommendations: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async createRecommendation(dto: CreateRecommendationDto, organizationId: string) {
+    this.logger.log(`Creating recommendation for analysis ${dto.analysis_id}`);
+
+    await this.findOne(dto.analysis_id, organizationId);
+
+    const { data, error } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .insert([dto])
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error creating recommendation', error);
+      throw new InternalServerErrorException(`Failed to create recommendation: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateRecommendation(
+    recommendationId: string,
+    organizationId: string,
+    dto: UpdateRecommendationDto,
+  ) {
+    this.logger.log(`Updating recommendation ${recommendationId}`);
+
+    const { data: rec, error: recError } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .select('analysis_id')
+      .eq('id', recommendationId)
+      .single();
+
+    if (recError || !rec) {
+      throw new NotFoundException('Recommendation not found');
+    }
+
+    await this.findOne(rec.analysis_id, organizationId);
+
+    const { data, error } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .update(dto)
+      .eq('id', recommendationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Error updating recommendation', error);
+      throw new InternalServerErrorException(`Failed to update recommendation: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteRecommendation(recommendationId: string, organizationId: string) {
+    this.logger.log(`Deleting recommendation ${recommendationId}`);
+
+    const { data: rec, error: recError } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .select('analysis_id')
+      .eq('id', recommendationId)
+      .single();
+
+    if (recError || !rec) {
+      throw new NotFoundException('Recommendation not found');
+    }
+
+    await this.findOne(rec.analysis_id, organizationId);
+
+    const { error } = await this.supabaseAdmin
+      .from('analysis_recommendations')
+      .delete()
+      .eq('id', recommendationId);
+
+    if (error) {
+      this.logger.error('Error deleting recommendation', error);
+      throw new InternalServerErrorException(`Failed to delete recommendation: ${error.message}`);
+    }
+
+    return { message: 'Recommendation deleted successfully' };
   }
 }

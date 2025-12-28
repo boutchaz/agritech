@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { salesOrdersApi } from '@/lib/api/sales-orders';
 import {
   Dialog,
   DialogContent,
@@ -66,7 +66,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { currentOrganization: _currentOrganization } = useAuth();
+  const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
   const issueStockMutation = useIssueStock();
@@ -81,17 +81,16 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   } = useSalesOrder(open ? salesOrderId : null);
   const resolvedSalesOrder: SalesOrder | null = salesOrderWithItems ?? salesOrder ?? null;
 
-  // Update order status mutation
   const updateStatus = useMutation({
     mutationFn: async (status: SalesOrder['status']) => {
       if (!salesOrder) throw new Error('No sales order selected');
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const { error } = await supabase
-        .from('sales_orders')
-        .update({ status })
-        .eq('id', salesOrder.id);
-
-      if (error) throw error;
+      await salesOrdersApi.updateSalesOrderStatus(
+        salesOrder.id,
+        { status },
+        currentOrganization.id
+      );
     },
     onSuccess: (_data, status) => {
       queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
@@ -100,7 +99,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
       }
       toast.success(`Sales order marked as ${status}`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error('Failed to update sales order status: ' + error.message);
     },
   });

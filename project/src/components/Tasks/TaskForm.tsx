@@ -77,6 +77,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return units || [];
     },
     enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch parcels for the selected farm
@@ -88,6 +89,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return result || [];
     },
     enabled: !!organizationId && !!formData.farm_id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const [validationError, setValidationError] = useState<string | null>(null);

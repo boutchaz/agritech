@@ -455,7 +455,51 @@ export class ReceptionBatchesService {
     return data;
   }
 
-  // Cancel batch
+  async update(
+    userId: string,
+    organizationId: string,
+    batchId: string,
+    updateDto: Partial<CreateReceptionBatchDto>,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    const client = this.databaseService.getAdminClient();
+    const { data: batch } = await client
+      .from('reception_batches')
+      .select('id, status')
+      .eq('id', batchId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!batch) {
+      throw new NotFoundException('Reception batch not found');
+    }
+
+    if (batch.status === 'cancelled' || batch.status === 'processed') {
+      throw new BadRequestException(
+        `Cannot update ${batch.status} batch`,
+      );
+    }
+
+    const { data, error } = await client
+      .from('reception_batches')
+      .update({
+        ...updateDto,
+        updated_at: new Date().toISOString(),
+        updated_by: userId,
+      })
+      .eq('id', batchId)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to update batch: ${error.message}`);
+    }
+
+    return data;
+  }
+
   async cancel(userId: string, organizationId: string, batchId: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
 

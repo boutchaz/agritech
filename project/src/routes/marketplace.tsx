@@ -71,6 +71,7 @@ function MarketplacePage() {
       return items;
     },
     enabled: !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Filter items by search query

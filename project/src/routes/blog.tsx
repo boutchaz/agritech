@@ -10,6 +10,7 @@ function BlogPage() {
   const { data: featuredPosts, isLoading: loadingFeatured } = useQuery({
     queryKey: ['featured-blogs'],
     queryFn: () => blogsApi.getFeaturedBlogs(3),
+    staleTime: 10 * 60 * 1000,
   });
 
   return (

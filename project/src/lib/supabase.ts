@@ -1,11 +1,9 @@
-// Re-export the auth supabase client as the main supabase client
-// This ensures session is shared between auth and data operations
 import { authSupabase } from './auth-supabase';
 import type { Database } from '../types/database.types';
 
-// Use the same client for both auth and data operations
-// This ensures the session token is automatically included in all requests
 export const supabase = authSupabase;
+
+export { authSupabase };
 
 // Re-export Database type for convenience
 export type { Database };

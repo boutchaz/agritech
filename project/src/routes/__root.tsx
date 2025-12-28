@@ -8,29 +8,32 @@ import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 
 export const Route = createRootRoute({
   component: () => (
-    <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
-      <MultiTenantAuthProvider>
-        <ExperienceLevelProvider>
-          <AbilityProvider>
-            <GlobalCommandPalette>
-              <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <Outlet />
-                <OfflineIndicator />
-                <Toaster richColors position="top-right" />
-                {import.meta.env.DEV && (
-                  <>
-                    <TanStackRouterDevtools />
-                    <ReactQueryDevtools initialIsOpen={false} />
-                  </>
-                )}
-              </div>
-            </GlobalCommandPalette>
-          </AbilityProvider>
-        </ExperienceLevelProvider>
-      </MultiTenantAuthProvider>
-    </NetworkStatusProvider>
+    <ErrorBoundary>
+      <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
+        <MultiTenantAuthProvider>
+          <ExperienceLevelProvider>
+            <AbilityProvider>
+              <GlobalCommandPalette>
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                  <Outlet />
+                  <OfflineIndicator />
+                  <Toaster richColors position="top-right" />
+                  {import.meta.env.DEV && (
+                    <>
+                      <TanStackRouterDevtools />
+                      <ReactQueryDevtools initialIsOpen={false} />
+                    </>
+                  )}
+                </div>
+              </GlobalCommandPalette>
+            </AbilityProvider>
+          </ExperienceLevelProvider>
+        </MultiTenantAuthProvider>
+      </NetworkStatusProvider>
+    </ErrorBoundary>
   ),
 })
