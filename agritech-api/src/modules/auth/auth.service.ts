@@ -487,10 +487,96 @@ export class AuthService {
     return role.id;
   }
 
-  /**
-   * Get user role and permissions for a specific organization
-   * Returns role info and all permissions granted to that role
-   */
+  async setupOrganization(userId: string, userEmail: string, organizationName?: string) {
+    const adminClient = this.databaseService.getAdminClient();
+
+    const { data: existingOrgUser } = await adminClient
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingOrgUser?.organization_id) {
+      const { data: existingOrg } = await adminClient
+        .from('organizations')
+        .select('id, name, slug')
+        .eq('id', existingOrgUser.organization_id)
+        .single();
+
+      this.logger.log(`User ${userId} already has organization: ${existingOrgUser.organization_id}`);
+      return {
+        success: true,
+        organization: existingOrg,
+        message: 'Organization already exists',
+      };
+    }
+
+    const orgName = organizationName || `${userEmail?.split('@')[0] || 'User'}'s Organization`;
+    this.logger.log(`Creating organization for existing user ${userId}: ${orgName}`);
+
+    const { data: existingProfile } = await adminClient
+      .from('user_profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      const { data: authUser } = await adminClient.auth.admin.getUserById(userId);
+      const metadata = authUser?.user?.user_metadata || {};
+
+      await this.usersService.createProfile({
+        userId,
+        email: userEmail,
+        firstName: metadata.first_name || userEmail?.split('@')[0] || 'User',
+        lastName: metadata.last_name || '',
+        fullName: metadata.full_name || userEmail,
+        language: 'fr',
+        timezone: 'Africa/Casablanca',
+        onboardingCompleted: false,
+        passwordSet: true,
+      });
+      this.logger.log(`Created user profile for ${userId}`);
+    }
+
+    const newOrg = await this.organizationsService.create({
+      name: orgName,
+      currencyCode: 'MAD',
+      timezone: 'Africa/Casablanca',
+      isActive: true,
+    });
+
+    this.logger.log(`Created organization ${newOrg.id} for user ${userId}`);
+
+    const orgAdminRoleId = await this.getOrgAdminRoleId(adminClient);
+
+    const { error: orgUserError } = await adminClient
+      .from('organization_users')
+      .insert({
+        user_id: userId,
+        organization_id: newOrg.id,
+        role_id: orgAdminRoleId,
+        is_active: true,
+      });
+
+    if (orgUserError) {
+      this.logger.error(`Failed to add user to organization: ${orgUserError.message}`);
+      throw new BadRequestException('Failed to add user to organization');
+    }
+
+    this.logger.log(`User ${userId} added to organization ${newOrg.id} as organization_admin`);
+
+    return {
+      success: true,
+      organization: {
+        id: newOrg.id,
+        name: newOrg.name,
+        slug: newOrg.slug,
+      },
+    };
+  }
+
   async getUserRoleAndPermissions(userId: string, organizationId: string) {
     const client = this.databaseService.getAdminClient();
 

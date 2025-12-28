@@ -52,35 +52,42 @@ function SelectTrialPage() {
           // Get organization name from user metadata or use default
           const orgName = user.user_metadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
           
-          console.log('📞 Calling Edge Function with:', {
+          console.log('📞 Calling NestJS API to setup organization:', {
             userId: user.id,
             email: user.email,
             organizationName: orgName
           })
 
-          // Use Supabase client to call Edge Function (handles auth automatically)
-          const { data, error } = await authSupabase.functions.invoke('on-user-created', {
-            body: {
-              id: user.id,
-              email: user.email,
-              raw_user_meta_data: {
-                organization_name: orgName,
-                allow_unconfirmed_setup: true,
-                ...user.user_metadata,
-              },
-            },
-          })
-
-          if (error) {
-            console.error('❌ Edge Function error:', error)
-            console.error('❌ Edge Function error details:', JSON.stringify(error, null, 2))
-            setError(`Setup failed: ${error.message || 'Unknown error'}. Please try again or refresh the page.`)
-            setupAttempted.current = false // Allow retry on error
+          const { data: { session } } = await authSupabase.auth.getSession()
+          if (!session?.access_token) {
+            console.error('❌ No access token available')
+            setError('Authentication required. Please try logging in again.')
+            setupAttempted.current = false
             return
           }
 
-          console.log('✅ Edge Function setup completed:', data)
-          console.log('✅ Edge Function response:', JSON.stringify(data, null, 2))
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+          const response = await fetch(`${apiUrl}/api/v1/auth/setup-organization`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              organizationName: orgName,
+            }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error('❌ API error:', response.status, errorData)
+            setError(`Setup failed: ${errorData.message || `Error ${response.status}`}. Please try again or refresh the page.`)
+            setupAttempted.current = false
+            return
+          }
+
+          const data = await response.json()
+          console.log('✅ Organization setup completed:', data)
           
           // Wait a moment for database to sync
           await new Promise(resolve => setTimeout(resolve, 1500))

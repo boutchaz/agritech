@@ -10,7 +10,7 @@ import {
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
-import { SignupDto, SignupResponseDto } from './dto/signup.dto';
+import { SignupDto, SignupResponseDto, SetupOrganizationDto, SetupOrganizationResponseDto } from './dto/signup.dto';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginDto {
@@ -88,5 +88,27 @@ export class AuthController {
     @Headers('x-organization-id') organizationId: string,
   ) {
     return this.authService.getUserRoleAndPermissions(req.user.id, organizationId);
+  }
+
+  @Post('setup-organization')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Setup organization for existing user without one' })
+  @ApiResponse({
+    status: 201,
+    description: 'Organization created and user added as admin',
+    type: SetupOrganizationResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async setupOrganization(
+    @Request() req,
+    @Body() setupDto: SetupOrganizationDto,
+  ) {
+    return this.authService.setupOrganization(
+      req.user.id,
+      req.user.email,
+      setupDto.organizationName,
+    );
   }
 }
