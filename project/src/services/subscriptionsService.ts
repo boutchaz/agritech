@@ -1,4 +1,5 @@
 import { apiClient } from '../lib/api-client';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 export interface Subscription {
   id: string;
@@ -14,18 +15,26 @@ export interface Subscription {
 }
 
 /**
- * Get the current organization ID from localStorage
+ * Get the current organization ID from Zustand store
+ * This uses the same store as api-client.ts to ensure consistency
  */
 function getCurrentOrganizationId(): string | null {
   try {
-    const orgStr = localStorage.getItem('currentOrganization');
-    if (orgStr) {
-      const org = JSON.parse(orgStr);
-      return org.id || null;
+    const currentOrganization = useOrganizationStore.getState().currentOrganization;
+    const orgId = currentOrganization?.id || null;
+
+    // Also check localStorage as fallback for backwards compatibility
+    if (!orgId) {
+      const orgStr = localStorage.getItem('currentOrganization');
+      if (orgStr) {
+        const org = JSON.parse(orgStr);
+        return org.id || null;
+      }
     }
-    return null;
+
+    return orgId;
   } catch (error) {
-    console.error('Error reading organization from localStorage:', error);
+    console.error('Error reading organization from store:', error);
     return null;
   }
 }
@@ -38,7 +47,13 @@ class SubscriptionsService {
   async getSubscription(organizationId?: string): Promise<Subscription | null> {
     // Get organization ID from parameter (from React context) or localStorage fallback
     const orgId = organizationId || getCurrentOrganizationId();
-    
+
+    console.log('[SubscriptionsService] getSubscription called', {
+      providedOrgId: organizationId,
+      fallbackOrgId: getCurrentOrganizationId(),
+      resolvedOrgId: orgId,
+    });
+
     if (!orgId) {
       throw new Error('Organization ID is required. Please select an organization first.');
     }
@@ -46,9 +61,11 @@ class SubscriptionsService {
     // Pass organization ID from React context to apiClient
     // This ensures the header is always included, even if localStorage is not set
     try {
+      console.log('[SubscriptionsService] Calling API with orgId:', orgId);
       // Pass organizationId as 3rd parameter to apiClient.get()
       return await apiClient.get<Subscription | null>('/api/v1/subscriptions', {}, orgId);
     } catch (error) {
+      console.error('[SubscriptionsService] Error fetching subscription:', error);
       // Handle 404 as null (no subscription found is expected)
       if (error instanceof Error && error.message.includes('404')) {
         return null;

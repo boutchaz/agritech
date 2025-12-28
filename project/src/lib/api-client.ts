@@ -27,8 +27,16 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
     throw new Error('No active session');
   }
 
-  // Use provided organizationId from context, or fall back to localStorage
+  // Use provided organizationId from context, or fall back to Zustand store
   const orgId = organizationId || getCurrentOrganizationId();
+
+  console.log('[API Client] Building headers', {
+    providedOrgId: organizationId,
+    storeOrgId: getCurrentOrganizationId(),
+    resolvedOrgId: orgId,
+    hasSession: !!session,
+    userId: session?.user?.id,
+  });
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -40,6 +48,9 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
   // Add organization ID header if available and valid (not "undefined" string)
   if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
     headers['X-Organization-Id'] = orgId;
+    console.log('[API Client] Added X-Organization-Id header:', orgId);
+  } else {
+    console.warn('[API Client] No valid organization ID to add to headers', { orgId });
   }
 
   return headers;

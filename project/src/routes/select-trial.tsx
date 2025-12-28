@@ -5,6 +5,7 @@ import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
 import { authSupabase } from '../lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useOrganizationStore } from '../stores/organizationStore'
 
 export const Route = createFileRoute('/select-trial')({
   component: SelectTrialPage,
@@ -334,8 +335,21 @@ function SelectTrialPage() {
 
       console.log('✅ Trial subscription created:', data.subscription)
 
-      // Ensure organization is saved to localStorage for API client to use after reload
+      // Ensure organization is saved to BOTH localStorage AND Zustand store
+      // This is critical for API client to find the organization ID after page reload
       localStorage.setItem('currentOrganization', JSON.stringify(orgToUse))
+      useOrganizationStore.getState().setCurrentOrganization({
+        id: orgToUse.id,
+        name: orgToUse.name,
+        description: undefined,
+        slug: orgToUse.slug || undefined,
+        currency_code: orgToUse.currency || undefined,
+        timezone: orgToUse.timezone || undefined,
+        is_active: orgToUse.is_active,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      console.log('✅ Organization saved to both localStorage and Zustand store')
 
       // Refresh the user session to ensure JWT has latest claims
       // This is important for organization access validation on subsequent API calls
