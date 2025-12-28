@@ -46,7 +46,21 @@ export class PoliciesGuard implements CanActivate {
             request.body?.organizationId ||
             request.user?.organizationId;
 
+        // Debug logging for 403 investigation
+        console.log('[PoliciesGuard] Debug info:', {
+            url: request.url,
+            method: request.method,
+            userId: user?.id,
+            userEmail: user?.email,
+            headerOrgId,
+            queryOrgId: request.query?.organization_id || request.query?.organizationId,
+            bodyOrgId: request.body?.organizationId,
+            resolvedOrgId: organizationId,
+            allHeaders: Object.keys(request.headers).filter(h => h.toLowerCase().includes('org')),
+        });
+
         if (!organizationId) {
+            console.error('[PoliciesGuard] No organization ID found in request');
             throw new BadRequestException('Organization ID is required for permission checks');
         }
 

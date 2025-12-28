@@ -301,13 +301,13 @@ function SelectTrialPage() {
         throw new Error('Not authenticated')
       }
 
-      // Call NestJS API to create trial subscription
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
       const response = await fetch(`${apiUrl}/api/v1/subscriptions/trial`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          'X-Organization-Id': orgToUse.id,
         },
         body: JSON.stringify({
           organization_id: orgToUse.id,
