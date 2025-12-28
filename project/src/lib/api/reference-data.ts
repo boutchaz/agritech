@@ -201,6 +201,374 @@ export interface Variety {
   updatedAt?: string;
 }
 
+export interface UnitOfMeasure {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  symbol?: string;
+  category?: 'weight' | 'volume' | 'count' | 'area' | 'length';
+  base_unit?: string;
+  conversion_factor?: number;
+  icon?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface QualityGrade {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  rank?: number;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface HarvestStatus {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_final?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface IntendedUse {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface UtilityType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  default_unit?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface InfrastructureType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  category?: 'building' | 'water' | 'storage' | 'equipment' | 'other';
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface BasinShape {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  volume_formula?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  requires_reference?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface PaymentStatus {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_final?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface TaskPriority {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  level?: number;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface WorkerType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  payment_frequency?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface MetayageType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  worker_share_percentage?: number;
+  owner_share_percentage?: number;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface DocumentType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  prefix?: string;
+  requires_numbering?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface Currency {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  code: string;
+  symbol: string;
+  symbol_position?: 'before' | 'after';
+  decimal_places?: number;
+  decimal_separator?: string;
+  thousands_separator?: string;
+  icon?: string;
+  country_code?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface Timezone {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  offset?: string;
+  offset_minutes?: number;
+  region?: string;
+  country_code?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface Language {
+  id: string;
+  name: string;
+  native_name?: string;
+  code: string;
+  locale?: string;
+  direction?: 'ltr' | 'rtl';
+  flag_icon?: string;
+  is_default?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface LabServiceCategory {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface SoilTexture {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  description_fr?: string;
+  description_ar?: string;
+  sand_percentage_min?: number;
+  sand_percentage_max?: number;
+  clay_percentage_min?: number;
+  clay_percentage_max?: number;
+  silt_percentage_min?: number;
+  silt_percentage_max?: number;
+  icon?: string;
+  color?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface CostCategory {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  parent_category?: string;
+  default_account_code?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface RevenueCategory {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  default_account_code?: string;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface SaleType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  requires_client?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface ExperienceLevel {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  level?: number;
+  wage_multiplier?: number;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface Seasonality {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  start_month?: number;
+  end_month?: number;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface DeliveryType {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  requires_destination?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
+export interface DeliveryStatus {
+  id: string;
+  name: string;
+  name_fr?: string;
+  name_ar?: string;
+  value: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_final?: boolean;
+  sort_order?: number;
+  is_global?: boolean;
+}
+
 export interface AllReferenceData {
   treeCategories: TreeCategory[];
   plantationTypes: PlantationType[];
@@ -367,11 +735,108 @@ export const referenceDataApi = {
   // VARIETIES
   // =====================================================
 
-  /**
-   * Get all varieties (optionally filtered by crop type)
-   */
   async getVarieties(cropTypeId?: string, organizationId?: string): Promise<Variety[]> {
     const params = cropTypeId ? `?crop_type_id=${cropTypeId}` : '';
     return apiClient.get<Variety[]>(`${BASE_URL}/varieties${params}`, {}, organizationId);
+  },
+
+  async getUnitsOfMeasure(organizationId?: string): Promise<UnitOfMeasure[]> {
+    return apiClient.get<UnitOfMeasure[]>(`${BASE_URL}/units-of-measure`, {}, organizationId);
+  },
+
+  async getQualityGrades(organizationId?: string): Promise<QualityGrade[]> {
+    return apiClient.get<QualityGrade[]>(`${BASE_URL}/quality-grades`, {}, organizationId);
+  },
+
+  async getHarvestStatuses(organizationId?: string): Promise<HarvestStatus[]> {
+    return apiClient.get<HarvestStatus[]>(`${BASE_URL}/harvest-statuses`, {}, organizationId);
+  },
+
+  async getIntendedUses(organizationId?: string): Promise<IntendedUse[]> {
+    return apiClient.get<IntendedUse[]>(`${BASE_URL}/intended-uses`, {}, organizationId);
+  },
+
+  async getUtilityTypes(organizationId?: string): Promise<UtilityType[]> {
+    return apiClient.get<UtilityType[]>(`${BASE_URL}/utility-types`, {}, organizationId);
+  },
+
+  async getInfrastructureTypes(organizationId?: string): Promise<InfrastructureType[]> {
+    return apiClient.get<InfrastructureType[]>(`${BASE_URL}/infrastructure-types`, {}, organizationId);
+  },
+
+  async getBasinShapes(organizationId?: string): Promise<BasinShape[]> {
+    return apiClient.get<BasinShape[]>(`${BASE_URL}/basin-shapes`, {}, organizationId);
+  },
+
+  async getPaymentMethods(organizationId?: string): Promise<PaymentMethod[]> {
+    return apiClient.get<PaymentMethod[]>(`${BASE_URL}/payment-methods`, {}, organizationId);
+  },
+
+  async getPaymentStatuses(organizationId?: string): Promise<PaymentStatus[]> {
+    return apiClient.get<PaymentStatus[]>(`${BASE_URL}/payment-statuses`, {}, organizationId);
+  },
+
+  async getTaskPriorities(organizationId?: string): Promise<TaskPriority[]> {
+    return apiClient.get<TaskPriority[]>(`${BASE_URL}/task-priorities`, {}, organizationId);
+  },
+
+  async getWorkerTypes(organizationId?: string): Promise<WorkerType[]> {
+    return apiClient.get<WorkerType[]>(`${BASE_URL}/worker-types`, {}, organizationId);
+  },
+
+  async getMetayageTypes(organizationId?: string): Promise<MetayageType[]> {
+    return apiClient.get<MetayageType[]>(`${BASE_URL}/metayage-types`, {}, organizationId);
+  },
+
+  async getDocumentTypes(organizationId?: string): Promise<DocumentType[]> {
+    return apiClient.get<DocumentType[]>(`${BASE_URL}/document-types`, {}, organizationId);
+  },
+
+  async getCurrencies(organizationId?: string): Promise<Currency[]> {
+    return apiClient.get<Currency[]>(`${BASE_URL}/currencies`, {}, organizationId);
+  },
+
+  async getTimezones(organizationId?: string): Promise<Timezone[]> {
+    return apiClient.get<Timezone[]>(`${BASE_URL}/timezones`, {}, organizationId);
+  },
+
+  async getLanguages(organizationId?: string): Promise<Language[]> {
+    return apiClient.get<Language[]>(`${BASE_URL}/languages`, {}, organizationId);
+  },
+
+  async getLabServiceCategories(organizationId?: string): Promise<LabServiceCategory[]> {
+    return apiClient.get<LabServiceCategory[]>(`${BASE_URL}/lab-service-categories`, {}, organizationId);
+  },
+
+  async getSoilTextures(organizationId?: string): Promise<SoilTexture[]> {
+    return apiClient.get<SoilTexture[]>(`${BASE_URL}/soil-textures`, {}, organizationId);
+  },
+
+  async getCostCategories(organizationId?: string): Promise<CostCategory[]> {
+    return apiClient.get<CostCategory[]>(`${BASE_URL}/cost-categories`, {}, organizationId);
+  },
+
+  async getRevenueCategories(organizationId?: string): Promise<RevenueCategory[]> {
+    return apiClient.get<RevenueCategory[]>(`${BASE_URL}/revenue-categories`, {}, organizationId);
+  },
+
+  async getSaleTypes(organizationId?: string): Promise<SaleType[]> {
+    return apiClient.get<SaleType[]>(`${BASE_URL}/sale-types`, {}, organizationId);
+  },
+
+  async getExperienceLevels(organizationId?: string): Promise<ExperienceLevel[]> {
+    return apiClient.get<ExperienceLevel[]>(`${BASE_URL}/experience-levels`, {}, organizationId);
+  },
+
+  async getSeasonalities(organizationId?: string): Promise<Seasonality[]> {
+    return apiClient.get<Seasonality[]>(`${BASE_URL}/seasonalities`, {}, organizationId);
+  },
+
+  async getDeliveryTypes(organizationId?: string): Promise<DeliveryType[]> {
+    return apiClient.get<DeliveryType[]>(`${BASE_URL}/delivery-types`, {}, organizationId);
+  },
+
+  async getDeliveryStatuses(organizationId?: string): Promise<DeliveryStatus[]> {
+    return apiClient.get<DeliveryStatus[]>(`${BASE_URL}/delivery-statuses`, {}, organizationId);
   },
 };

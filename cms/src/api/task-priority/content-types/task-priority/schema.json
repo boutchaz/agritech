@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "task_priorities",
+  "info": {
+    "singularName": "task-priority",
+    "pluralName": "task-priorities",
+    "displayName": "Task Priority",
+    "description": "Priority levels for tasks"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "level": {
+      "type": "integer",
+      "default": 0
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

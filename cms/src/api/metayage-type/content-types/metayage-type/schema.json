@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "metayage_types",
+  "info": {
+    "singularName": "metayage-type",
+    "pluralName": "metayage-types",
+    "displayName": "Metayage Type",
+    "description": "Traditional sharecropping arrangements (khammass, rebaa, tholth)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "worker_share_percentage": {
+      "type": "decimal"
+    },
+    "owner_share_percentage": {
+      "type": "decimal"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

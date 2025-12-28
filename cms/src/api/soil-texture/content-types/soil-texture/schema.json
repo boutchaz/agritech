@@ -1,0 +1,72 @@
+{
+  "kind": "collectionType",
+  "collectionName": "soil_textures",
+  "info": {
+    "singularName": "soil-texture",
+    "pluralName": "soil-textures",
+    "displayName": "Soil Texture",
+    "description": "Soil texture classifications (sand, clay, loam, silt, etc.)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "sand_percentage_min": {
+      "type": "decimal"
+    },
+    "sand_percentage_max": {
+      "type": "decimal"
+    },
+    "clay_percentage_min": {
+      "type": "decimal"
+    },
+    "clay_percentage_max": {
+      "type": "decimal"
+    },
+    "silt_percentage_min": {
+      "type": "decimal"
+    },
+    "silt_percentage_max": {
+      "type": "decimal"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}
