@@ -55,7 +55,6 @@ export class FarmsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
   async listFarms(
     @Request() req,
     @Query('organization_id') organizationId: string,

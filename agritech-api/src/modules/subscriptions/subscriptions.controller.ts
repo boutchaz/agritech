@@ -39,7 +39,6 @@ export class SubscriptionsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   @ApiResponse({ status: 404, description: 'No subscription found' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
   async getSubscription(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
