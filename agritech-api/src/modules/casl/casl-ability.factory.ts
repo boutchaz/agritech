@@ -33,7 +33,7 @@ export class CaslAbilityFactory {
         console.log('[CaslAbilityFactory] User role lookup:', {
             userId: user.id,
             organizationId,
-            foundRole: orgUser ? (orgUser.roles as Record<string, unknown>)?.name : null,
+            foundRole: orgUser ? (orgUser.roles as { name?: string })?.name : null,
             error: error?.message || null,
         });
 
