@@ -265,7 +265,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     setIsSubmitting(true);
     try {
       // Transform items to ensure proper number types
-      const transformedItems = data.items.map((item, index) => ({
+      const transformedItems = data.items.map((item) => ({
         item_name: item.item_name,
         description: item.description || undefined,
         quantity: Number(item.quantity),

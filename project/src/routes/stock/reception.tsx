@@ -6,7 +6,7 @@ import type { ReceptionBatch } from '@/types/reception';
 
 function ReceptionPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
+  const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);
