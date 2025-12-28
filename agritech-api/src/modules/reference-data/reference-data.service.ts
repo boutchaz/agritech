@@ -47,6 +47,19 @@ export class ReferenceDataService {
 
     try {
       const data = await fetcher();
+      // Use fallback if Strapi returns empty array but fallback has data
+      if (
+        Array.isArray(data) &&
+        data.length === 0 &&
+        Array.isArray(fallback) &&
+        fallback.length > 0
+      ) {
+        this.logger.debug(
+          `Empty response from Strapi for ${cacheKey}, using fallback data (${fallback.length} items)`,
+        );
+        this.setCache(cacheKey, fallback);
+        return fallback;
+      }
       this.setCache(cacheKey, data);
       return data;
     } catch (error) {
