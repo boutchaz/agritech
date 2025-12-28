@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -28,6 +29,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -56,36 +58,36 @@ const AppContent: React.FC = () => {
   // Calculate real metrics from stats
   const metrics = [
     {
-      title: 'Total Invoices',
+      title: t('accountingModule.dashboard.metrics.totalInvoices', 'Total Invoices'),
       value: invoiceStats.total.toString(),
-      change: `${invoiceStats.outstanding} outstanding`,
+      change: `${invoiceStats.outstanding} ${t('accountingModule.dashboard.metrics.outstanding', 'outstanding')}`,
       trend: 'neutral',
       icon: Receipt,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
     },
     {
-      title: 'Total Payments',
+      title: t('accountingModule.dashboard.metrics.totalPayments', 'Total Payments'),
       value: paymentStats.total.toString(),
-      change: `${paymentStats.received} received`,
+      change: `${paymentStats.received} ${t('accountingModule.dashboard.metrics.received', 'received')}`,
       trend: 'neutral',
       icon: CreditCard,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
     },
     {
-      title: 'Cash Received',
+      title: t('accountingModule.dashboard.metrics.cashReceived', 'Cash Received'),
       value: `${currencySymbol} ${paymentStats.totalReceived.toLocaleString('fr-FR')}`,
-      change: `${paymentStats.received} payments`,
+      change: `${paymentStats.received} ${t('accountingModule.dashboard.metrics.payments', 'payments')}`,
       trend: 'up',
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
     },
     {
-      title: 'Journal Entries',
+      title: t('accountingModule.dashboard.metrics.journalEntries', 'Journal Entries'),
       value: journalStats.total.toString(),
-      change: `${journalStats.posted} posted`,
+      change: `${journalStats.posted} ${t('accountingModule.dashboard.metrics.posted', 'posted')}`,
       trend: 'neutral',
       icon: BookOpen,
       color: 'text-purple-600',
@@ -123,7 +125,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -142,10 +144,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: BookOpen, label: 'Accounting Dashboard', isActive: true }
+            { icon: BookOpen, label: t('accountingModule.dashboard.title', 'Accounting Dashboard'), isActive: true }
           ]}
-          title="Accounting Dashboard"
-          subtitle="Overview of your financial performance"
+          title={t('accountingModule.dashboard.title', 'Accounting Dashboard')}
+          subtitle={t('accountingModule.dashboard.subtitle', 'Overview of your financial performance')}
         />
 
         <div className="p-6 space-y-6">
@@ -155,10 +157,10 @@ const AppContent: React.FC = () => {
               <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Accounting Module Active
+                  {t('accountingModule.dashboard.alert.title', 'Accounting Module Active')}
                 </h3>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Your accounting module is now active. Start by creating invoices or recording payments.
+                  {t('accountingModule.dashboard.alert.message', 'Your accounting module is now active. Start by creating invoices or recording payments.')}
                 </p>
               </div>
             </div>
@@ -193,25 +195,25 @@ const AppContent: React.FC = () => {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Common accounting tasks</CardDescription>
+                <CardTitle>{t('accountingModule.dashboard.quickActions.title', 'Quick Actions')}</CardTitle>
+                <CardDescription>{t('accountingModule.dashboard.quickActions.subtitle', 'Common accounting tasks')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-accounts')}>
                   <BookOpen className="mr-2 h-4 w-4" />
-                  Chart of Accounts
+                  {t('nav.chartOfAccounts', 'Chart of Accounts')}
                 </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-invoices')}>
                   <Receipt className="mr-2 h-4 w-4" />
-                  Create Invoice
+                  {t('accountingModule.dashboard.quickActions.createInvoice', 'Create Invoice')}
                 </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-payments')}>
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Record Payment
+                  {t('accountingModule.dashboard.quickActions.recordPayment', 'Record Payment')}
                 </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-journal')}>
                   <DollarSign className="mr-2 h-4 w-4" />
-                  Create Journal Entry
+                  {t('accountingModule.dashboard.quickActions.createJournalEntry', 'Create Journal Entry')}
                 </Button>
               </CardContent>
             </Card>
@@ -219,8 +221,8 @@ const AppContent: React.FC = () => {
             {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest transactions</CardDescription>
+                <CardTitle>{t('accountingModule.dashboard.recentActivity.title', 'Recent Activity')}</CardTitle>
+                <CardDescription>{t('accountingModule.dashboard.recentActivity.subtitle', 'Latest transactions')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -247,9 +249,9 @@ const AppContent: React.FC = () => {
           {/* Next Steps */}
           <Card>
             <CardHeader>
-              <CardTitle>Getting Started</CardTitle>
+              <CardTitle>{t('accountingModule.dashboard.gettingStarted.title', 'Getting Started')}</CardTitle>
               <CardDescription>
-                Complete these steps to set up your accounting
+                {t('accountingModule.dashboard.gettingStarted.subtitle', 'Complete these steps to set up your accounting')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -258,7 +260,7 @@ const AppContent: React.FC = () => {
                   1
                 </div>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  Review your Chart of Accounts (already seeded with defaults)
+                  {t('accountingModule.dashboard.gettingStarted.step1', 'Review your Chart of Accounts (already seeded with defaults)')}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -266,7 +268,7 @@ const AppContent: React.FC = () => {
                   2
                 </div>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  Create your first sales or purchase invoice
+                  {t('accountingModule.dashboard.gettingStarted.step2', 'Create your first sales or purchase invoice')}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -274,7 +276,7 @@ const AppContent: React.FC = () => {
                   3
                 </div>
                 <p className="text-sm text-gray-900 dark:text-gray-100">
-                  Record a payment and allocate it to invoices
+                  {t('accountingModule.dashboard.gettingStarted.step3', 'Record a payment and allocate it to invoices')}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -282,7 +284,7 @@ const AppContent: React.FC = () => {
                   4
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  View your financial reports (Balance Sheet, P&L)
+                  {t('accountingModule.dashboard.gettingStarted.step4', 'View your financial reports (Balance Sheet, P&L)')}
                 </p>
               </div>
             </CardContent>

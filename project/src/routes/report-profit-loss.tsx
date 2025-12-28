@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -87,6 +88,7 @@ const ProfitLossSection: React.FC<{
 );
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -111,7 +113,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -130,10 +132,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: TrendingUp, label: 'Profit & Loss', isActive: true }
+            { icon: TrendingUp, label: t('reportsModule.profitLoss.title', 'Profit & Loss'), isActive: true }
           ]}
-          title="Profit & Loss Statement"
-          subtitle="Income statement showing revenue, expenses, and net income"
+          title={t('reportsModule.profitLoss.title', 'Profit & Loss Statement')}
+          subtitle={t('reportsModule.profitLoss.subtitle', 'Income statement showing revenue, expenses, and net income')}
         />
 
         <div className="p-6 space-y-6">
@@ -144,7 +146,7 @@ const AppContent: React.FC = () => {
                 <div className="min-w-[200px]">
                   <Label htmlFor="start_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />
-                    Start Date
+                    {t('reportsModule.profitLoss.startDate', 'Start Date')}
                   </Label>
                   <Input
                     id="start_date"
@@ -157,7 +159,7 @@ const AppContent: React.FC = () => {
                 <div className="min-w-[200px]">
                   <Label htmlFor="end_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />
-                    End Date
+                    {t('reportsModule.profitLoss.endDate', 'End Date')}
                   </Label>
                   <Input
                     id="end_date"
@@ -169,7 +171,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <Button variant="outline" className="gap-2" disabled>
                   <Download className="h-4 w-4" />
-                  Export PDF
+                  {t('reportsModule.profitLoss.exportPdf', 'Export PDF')}
                 </Button>
               </div>
             </CardContent>
@@ -179,7 +181,7 @@ const AppContent: React.FC = () => {
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading profit & loss statement...</span>
+              <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.profitLoss.loading', 'Loading profit & loss statement...')}</span>
             </div>
           )}
 
@@ -204,7 +206,7 @@ const AppContent: React.FC = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
-                      Total Revenue
+                      {t('reportsModule.profitLoss.totalRevenue', 'Total Revenue')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -217,7 +219,7 @@ const AppContent: React.FC = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
                       <TrendingDown className="h-4 w-4" />
-                      Total Expenses
+                      {t('reportsModule.profitLoss.totalExpenses', 'Total Expenses')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -230,7 +232,7 @@ const AppContent: React.FC = () => {
                   <CardHeader className="pb-2">
                     <CardTitle className={`text-sm font-medium flex items-center gap-2 ${report.totals.net_income >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                       {report.totals.net_income >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {report.totals.net_income >= 0 ? 'Net Income' : 'Net Loss'}
+                      {report.totals.net_income >= 0 ? t('reportsModule.profitLoss.netIncome', 'Net Income') : t('reportsModule.profitLoss.netLoss', 'Net Loss')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -243,7 +245,7 @@ const AppContent: React.FC = () => {
 
               {/* Revenue Section */}
               <ProfitLossSection
-                title="Revenue"
+                title={t('reportsModule.profitLoss.revenue', 'Revenue')}
                 accounts={report.revenue}
                 total={report.totals.total_revenue}
                 currencySymbol={currencySymbol}
@@ -253,7 +255,7 @@ const AppContent: React.FC = () => {
 
               {/* Expenses Section */}
               <ProfitLossSection
-                title="Expenses"
+                title={t('reportsModule.profitLoss.expenses', 'Expenses')}
                 accounts={report.expenses}
                 total={report.totals.total_expenses}
                 currencySymbol={currencySymbol}

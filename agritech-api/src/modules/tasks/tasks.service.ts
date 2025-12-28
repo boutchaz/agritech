@@ -35,6 +35,66 @@ export class TasksService {
   }
 
   /**
+   * Get all tasks assigned to the current user across all organizations
+   */
+  async findMyTasks(userId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // First, get all organizations the user belongs to
+    const { data: orgUsers, error: orgError } = await client
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (orgError) {
+      throw new Error(`Failed to fetch user organizations: ${orgError.message}`);
+    }
+
+    if (!orgUsers || orgUsers.length === 0) {
+      return [];
+    }
+
+    const organizationIds = orgUsers.map(ou => ou.organization_id);
+
+    // Get tasks where user is assigned (via assigned_user_id) or linked to a worker
+    const { data: tasks, error } = await client
+      .from('tasks')
+      .select(`
+        *,
+        worker:workers!assigned_to(first_name, last_name, user_id),
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name),
+        organization:organizations!organization_id(name)
+      `)
+      .in('organization_id', organizationIds)
+      .or(`assigned_user_id.eq.${userId}`)
+      .in('status', ['pending', 'assigned', 'in_progress'])
+      .order('scheduled_start', { ascending: true, nullsFirst: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch user tasks: ${error.message}`);
+    }
+
+    // Filter to only include tasks where user is directly assigned or assigned via worker
+    const userTasks = (tasks || []).filter(task => {
+      if (task.assigned_user_id === userId) return true;
+      if (task.worker?.user_id === userId) return true;
+      return false;
+    });
+
+    return userTasks.map(task => ({
+      ...task,
+      worker_name: task.worker
+        ? `${task.worker.first_name} ${task.worker.last_name}`
+        : undefined,
+      farm_name: Array.isArray(task.farm) ? task.farm[0]?.name : task.farm?.name,
+      parcel_name: Array.isArray(task.parcel) ? task.parcel[0]?.name : task.parcel?.name,
+      organization_name: Array.isArray(task.organization) ? task.organization[0]?.name : task.organization?.name,
+    }));
+  }
+
+  /**
    * Get all tasks for an organization with filters
    */
   async findAll(userId: string, organizationId: string, filters?: TaskFiltersDto) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -83,6 +84,7 @@ const BalanceSheetSection: React.FC<{
 );
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -103,7 +105,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -122,10 +124,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Scale, label: 'Balance Sheet', isActive: true }
+            { icon: Scale, label: t('reportsModule.balanceSheet.title', 'Balance Sheet'), isActive: true }
           ]}
-          title="Balance Sheet"
-          subtitle="Financial position statement showing assets, liabilities, and equity"
+          title={t('reportsModule.balanceSheet.title', 'Balance Sheet')}
+          subtitle={t('reportsModule.balanceSheet.subtitle', 'Financial position statement showing assets, liabilities, and equity')}
         />
 
         <div className="p-6 space-y-6">
@@ -136,7 +138,7 @@ const AppContent: React.FC = () => {
                 <div className="flex-1 min-w-[200px]">
                   <Label htmlFor="as_of_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />
-                    As of Date
+                    {t('reportsModule.balanceSheet.asOfDate', 'As of Date')}
                   </Label>
                   <Input
                     id="as_of_date"
@@ -148,7 +150,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <Button variant="outline" className="gap-2" disabled>
                   <Download className="h-4 w-4" />
-                  Export PDF
+                  {t('reportsModule.balanceSheet.exportPdf', 'Export PDF')}
                 </Button>
               </div>
             </CardContent>
@@ -158,7 +160,7 @@ const AppContent: React.FC = () => {
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading balance sheet...</span>
+              <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.balanceSheet.loading', 'Loading balance sheet...')}</span>
             </div>
           )}
 
@@ -181,7 +183,7 @@ const AppContent: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Assets</CardTitle>
+                    <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('reportsModule.balanceSheet.totalAssets', 'Total Assets')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
@@ -191,7 +193,7 @@ const AppContent: React.FC = () => {
                 </Card>
                 <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">Total Liabilities</CardTitle>
+                    <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">{t('reportsModule.balanceSheet.totalLiabilities', 'Total Liabilities')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-700 dark:text-red-300">
@@ -201,7 +203,7 @@ const AppContent: React.FC = () => {
                 </Card>
                 <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">Total Equity</CardTitle>
+                    <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">{t('reportsModule.balanceSheet.totalEquity', 'Total Equity')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-700 dark:text-green-300">
@@ -212,12 +214,12 @@ const AppContent: React.FC = () => {
                 <Card className={report.totals.is_balanced ? 'border-green-200 bg-green-50 dark:bg-green-900/20' : 'border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20'}>
                   <CardHeader className="pb-2">
                     <CardTitle className={`text-sm font-medium ${report.totals.is_balanced ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
-                      Balance Check
+                      {t('reportsModule.balanceSheet.balanceCheck', 'Balance Check')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className={`text-xl font-bold ${report.totals.is_balanced ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
-                      {report.totals.is_balanced ? '✓ Balanced' : '⚠ Unbalanced'}
+                      {report.totals.is_balanced ? t('reportsModule.balanceSheet.balanced', '✓ Balanced') : t('reportsModule.balanceSheet.unbalanced', '⚠ Unbalanced')}
                     </div>
                   </CardContent>
                 </Card>
@@ -225,7 +227,7 @@ const AppContent: React.FC = () => {
 
               {/* Assets Section */}
               <BalanceSheetSection
-                title="Assets"
+                title={t('reportsModule.balanceSheet.assets', 'Assets')}
                 accounts={report.assets}
                 total={report.totals.total_assets}
                 currencySymbol={currencySymbol}
@@ -234,7 +236,7 @@ const AppContent: React.FC = () => {
 
               {/* Liabilities Section */}
               <BalanceSheetSection
-                title="Liabilities"
+                title={t('reportsModule.balanceSheet.liabilities', 'Liabilities')}
                 accounts={report.liabilities}
                 total={report.totals.total_liabilities}
                 currencySymbol={currencySymbol}
@@ -243,7 +245,7 @@ const AppContent: React.FC = () => {
 
               {/* Equity Section */}
               <BalanceSheetSection
-                title="Equity"
+                title={t('reportsModule.balanceSheet.equity', 'Equity')}
                 accounts={report.equity}
                 total={report.totals.total_equity}
                 currencySymbol={currencySymbol}
@@ -254,20 +256,20 @@ const AppContent: React.FC = () => {
               <Card className="bg-gray-100 dark:bg-gray-800">
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Accounting Equation</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('reportsModule.balanceSheet.accountingEquation', 'Accounting Equation')}</h3>
                     <div className="flex items-center justify-center gap-4 text-xl">
                       <div className="text-blue-600 dark:text-blue-400">
-                        <div className="text-sm text-gray-500">Assets</div>
+                        <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.assets', 'Assets')}</div>
                         <div className="font-bold">{formatCurrency(report.totals.total_assets, currencySymbol)}</div>
                       </div>
                       <span className="text-gray-400">=</span>
                       <div className="text-red-600 dark:text-red-400">
-                        <div className="text-sm text-gray-500">Liabilities</div>
+                        <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.liabilities', 'Liabilities')}</div>
                         <div className="font-bold">{formatCurrency(report.totals.total_liabilities, currencySymbol)}</div>
                       </div>
                       <span className="text-gray-400">+</span>
                       <div className="text-green-600 dark:text-green-400">
-                        <div className="text-sm text-gray-500">Equity</div>
+                        <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.equity', 'Equity')}</div>
                         <div className="font-bold">{formatCurrency(report.totals.total_equity, currencySymbol)}</div>
                       </div>
                     </div>
