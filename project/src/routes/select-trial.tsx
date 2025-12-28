@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import React, { useState, useEffect, useRef } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar'
 import { authSupabase } from '../lib/auth-supabase'
@@ -17,7 +17,6 @@ function SelectTrialPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const setupAttempted = useRef(false)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   
   // Use organizations array as fallback if currentOrganization isn't set yet
@@ -335,20 +334,37 @@ function SelectTrialPage() {
 
       console.log('✅ Trial subscription created:', data.subscription)
 
-      // Invalidate subscription query to force refetch
-      await queryClient.invalidateQueries({ queryKey: ['subscription', orgToUse.id] })
-      
-      // Wait a moment for database to sync
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Refetch subscription to ensure it's loaded
-      await queryClient.refetchQueries({ queryKey: ['subscription', orgToUse.id] })
-      
-      // Wait for refetch to complete
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Ensure organization is saved to localStorage for API client to use after reload
+      localStorage.setItem('currentOrganization', JSON.stringify(orgToUse))
 
-      // Use React Router navigation instead of window.location.href to preserve state
-      navigate({ to: '/dashboard' })
+      // Refresh the user session to ensure JWT has latest claims
+      // This is important for organization access validation on subsequent API calls
+      const { error: refreshError } = await authSupabase.auth.refreshSession()
+      if (refreshError) {
+        console.warn('⚠️ Failed to refresh session, continuing anyway:', refreshError)
+      } else {
+        console.log('✅ Session refreshed successfully')
+      }
+
+      // Invalidate and refetch subscription query to ensure it's loaded before navigation
+      await queryClient.invalidateQueries({ queryKey: ['subscription', orgToUse.id] })
+
+      // Wait for React Query to refetch and update the cache
+      await queryClient.refetchQueries({
+        queryKey: ['subscription', orgToUse.id],
+        type: 'active'
+      })
+
+      // Additional wait to ensure:
+      // 1. Subscription is fully cached
+      // 2. Database transaction is committed
+      // 3. Organization membership is fully established
+      // 4. Session refresh propagates
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Use window.location.href to force a full page reload and ensure provider re-evaluates
+      // This prevents the redirect loop where provider redirects back to /select-trial
+      window.location.href = '/dashboard'
     } catch (err) {
       console.error('Error creating trial subscription:', err)
       setError(err instanceof Error ? err.message : 'Failed to create trial subscription')
