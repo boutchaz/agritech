@@ -116,3 +116,32 @@ export class SignupResponseDto {
     expires_in: number;
   };
 }
+
+/**
+ * DTO for setting up organization for an existing authenticated user
+ * Used when user signed up via Supabase directly and needs an organization created
+ */
+export class SetupOrganizationDto {
+  @ApiPropertyOptional({
+    example: "John's Farm",
+    description: 'Organization name - will derive from user email if not provided',
+  })
+  @IsString()
+  @IsOptional()
+  organizationName?: string;
+}
+
+export class SetupOrganizationResponseDto {
+  @ApiProperty()
+  success: boolean;
+
+  @ApiProperty()
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+
+  @ApiPropertyOptional()
+  message?: string;
+}
