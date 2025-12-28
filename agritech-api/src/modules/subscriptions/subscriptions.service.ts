@@ -338,23 +338,26 @@ export class SubscriptionsService {
     );
 
     this.logger.debug(`[getSubscription] Checking membership - userId: "${userId}", orgId: "${organizationId}", types: userId=${typeof userId}, orgId=${typeof organizationId}`);
-    
-    const { data: allUserOrgs } = await this.supabaseAdmin
+
+    // First, check if user exists at all
+    const { data: allUserOrgs, error: allOrgsError } = await this.supabaseAdmin
       .from('organization_users')
-      .select('organization_id, role_id, is_active')
+      .select('user_id, organization_id, role_id, is_active')
       .eq('user_id', userId);
-    
-    this.logger.debug(`[getSubscription] All user orgs: ${JSON.stringify(allUserOrgs)}`);
-    
+
+    this.logger.debug(`[getSubscription] All user orgs query - count: ${allUserOrgs?.length || 0}, error: ${JSON.stringify(allOrgsError)}`);
+    this.logger.debug(`[getSubscription] All user orgs data: ${JSON.stringify(allUserOrgs)}`);
+
+    // Now check specific organization
     const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
       .from('organization_users')
-      .select('organization_id, role_id, is_active')
+      .select('user_id, organization_id, role_id, is_active')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
       .eq('is_active', true)
       .maybeSingle();
 
-    this.logger.debug(`[getSubscription] Specific org check - orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgUserError)}`);
+    this.logger.debug(`[getSubscription] Specific org check - found: ${!!orgUser}, orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgUserError)}`);
 
     if (orgUserError || !orgUser) {
       this.logger.error(

@@ -42,12 +42,22 @@ export class SubscriptionsController {
   async getSubscription(@Request() req) {
     console.log('[SubscriptionsController] GET /subscriptions called', {
       userId: req.user?.id,
+      userObject: req.user,
+      organizationIdHeader: req.headers['x-organization-id'],
       headers: Object.keys(req.headers).filter(h => h.toLowerCase().includes('org')),
     });
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
       throw new BadRequestException('Organization ID is required in X-Organization-Id header');
     }
+
+    console.log('[SubscriptionsController] Calling service with', {
+      userId: req.user.id,
+      userIdType: typeof req.user.id,
+      organizationId,
+      organizationIdType: typeof organizationId,
+    });
+
     return this.subscriptionsService.getSubscription(req.user.id, organizationId);
   }
 
