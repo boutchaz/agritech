@@ -59,6 +59,11 @@ export class FarmsController {
     @Request() req,
     @Query('organization_id') organizationId: string,
   ) {
+    console.log('[FarmsController] GET /farms called', {
+      userId: req.user?.id,
+      organizationId,
+      query: req.query,
+    });
     return this.farmsService.listFarms(req.user.id, organizationId);
   }
 

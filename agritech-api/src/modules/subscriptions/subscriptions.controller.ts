@@ -40,6 +40,10 @@ export class SubscriptionsController {
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   @ApiResponse({ status: 404, description: 'No subscription found' })
   async getSubscription(@Request() req) {
+    console.log('[SubscriptionsController] GET /subscriptions called', {
+      userId: req.user?.id,
+      headers: Object.keys(req.headers).filter(h => h.toLowerCase().includes('org')),
+    });
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
       throw new BadRequestException('Organization ID is required in X-Organization-Id header');

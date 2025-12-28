@@ -18,18 +18,15 @@ export class PoliciesGuard implements CanActivate {
                 context.getHandler(),
             ) || [];
 
-        // If no policies are defined, allow access (or deny? usually allow if other guards passed)
-        // But here we want to be strict if the guard is applied
+        const request = context.switchToHttp().getRequest();
+        
         if (policyHandlers.length === 0) {
+            console.log('[PoliciesGuard] No policies defined, allowing access for:', request.url);
             return true;
         }
 
-        const request = context.switchToHttp().getRequest();
         const user = request.user;
 
-        // Organization ID should have been extracted by a previous guard (e.g., OrganizationGuard)
-        // or we extract it here again as fallback
-        // Check headers in multiple case variations (HTTP headers are case-insensitive but Node.js lookup might be case-sensitive)
         const findHeaderValue = (headers: Record<string, any>, name: string): string | null => {
             const lowerName = name.toLowerCase();
             const key = Object.keys(headers).find(k => k.toLowerCase() === lowerName);
