@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -8,6 +9,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { ChartOfAccounts } from '../components/Accounting/ChartOfAccounts';
 
 const AccountsContent = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {
@@ -30,18 +32,18 @@ const AccountsContent = () => {
       />
       <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
         {/* Mobile Navigation Bar */}
-        <MobileNavBar title="Chart of Accounts" />
+        <MobileNavBar title={t('accountingModule.accounts.title', 'Chart of Accounts')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: BookOpen, label: 'Accounting', path: '/accounting' },
-              { label: 'Chart of Accounts', isActive: true },
+              { icon: BookOpen, label: t('nav.accounting', 'Accounting'), path: '/accounting' },
+              { label: t('accountingModule.accounts.title', 'Chart of Accounts'), isActive: true },
             ]}
-            title="Chart of Accounts"
-            subtitle="Manage your accounting account hierarchy"
+            title={t('accountingModule.accounts.title', 'Chart of Accounts')}
+            subtitle={t('accountingModule.accounts.subtitle', 'Manage your accounting account hierarchy')}
           />
         </div>
 

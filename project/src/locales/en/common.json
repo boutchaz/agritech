@@ -1771,5 +1771,202 @@
         "locked": "This quote was {{status}}. Remaining workflow actions are locked."
       }
     }
+  },
+  "accountingModule": {
+    "dashboard": {
+      "title": "Accounting Dashboard",
+      "subtitle": "Overview of your financial performance"
+    },
+    "accounts": {
+      "title": "Chart of Accounts",
+      "subtitle": "Manage your accounting account hierarchy",
+      "searchPlaceholder": "Search accounts by code or name...",
+      "filterByType": "Filter by type",
+      "parentAccount": "None (Root Account)",
+      "descriptionPlaceholder": "Optional description"
+    },
+    "journal": {
+      "title": "Journal Entries",
+      "subtitle": "Manage ledger entries",
+      "date": "Date",
+      "referenceType": "Reference Type",
+      "referenceNumber": "Reference Number",
+      "remarks": "Remarks",
+      "label": "Label",
+      "placeholders": {
+        "referenceType": "Ex: Invoice, Payment, Adjustment...",
+        "referenceNumber": "Ex: INV-001",
+        "remarks": "Description or notes...",
+        "label": "Label..."
+      }
+    },
+    "customers": {
+      "title": "Customers",
+      "subtitle": "Manage your customers for sales invoices",
+      "searchPlaceholder": "Search customers by name, email, or phone...",
+      "fields": {
+        "name": "Customer Name",
+        "code": "Customer Code",
+        "codePlaceholder": "Optional reference code",
+        "type": "Customer Type",
+        "contactPerson": "Contact Person",
+        "email": "Email",
+        "phone": "Phone",
+        "mobile": "Mobile",
+        "website": "Website"
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "subtitle": "Track and manage incoming and outgoing payments",
+      "referencePlaceholder": "Check number, transaction ID, etc.",
+      "notesPlaceholder": "Additional notes about this payment"
+    },
+    "reports": {
+      "title": "Financial Reports",
+      "subtitle": "Access comprehensive financial reports and analytics"
+    },
+    "invoice": {
+      "selectItem": "Select item",
+      "descriptionPlaceholder": "Description",
+      "remarksPlaceholder": "Optional remarks or notes"
+    }
+  },
+  "billingModule": {
+    "salesOrders": {
+      "title": "Sales Orders",
+      "subtitle": "Manage customer orders and fulfillment",
+      "selectWarehouse": "Select warehouse..."
+    },
+    "purchaseOrders": {
+      "title": "Purchase Orders",
+      "subtitle": "Manage supplier purchase orders and goods receipt",
+      "shippingPlaceholder": "Enter delivery address...",
+      "selectItem": "Select item",
+      "descriptionPlaceholder": "Description",
+      "notesPlaceholder": "Add internal notes...",
+      "commentsPlaceholder": "Add any internal comments or receiving instructions"
+    }
+  },
+  "reportsModule": {
+    "trialBalance": {
+      "title": "Trial Balance",
+      "subtitle": "List of all accounts with their debit and credit balances"
+    },
+    "profitLoss": {
+      "title": "Profit & Loss Statement",
+      "subtitle": "Income statement showing revenue, expenses, and net income",
+      "revenue": "Revenue",
+      "expenses": "Expenses"
+    },
+    "balanceSheet": {
+      "title": "Balance Sheet",
+      "subtitle": "Financial position statement showing assets, liabilities, and equity",
+      "assets": "Assets",
+      "liabilities": "Liabilities",
+      "equity": "Equity"
+    }
+  },
+  "qualityControl": {
+    "title": "Quality Control",
+    "subtitle": "Manage quality inspections and control processes"
+  },
+  "productionIntelligence": {
+    "title": "Production Intelligence",
+    "subtitle": "Yield tracking, forecasts, and performance benchmarks",
+    "observationsPlaceholder": "Any additional observations...",
+    "benchmarkPlaceholder": "Any additional context for this benchmark...",
+    "forecastPlaceholder": "Any additional context or assumptions for this forecast..."
+  },
+  "authPages": {
+    "login": {
+      "title": "Sign in to Agritech",
+      "subtitle": "Welcome back",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password"
+    },
+    "register": {
+      "title": "Create your Agritech account",
+      "subtitle": "Get started in minutes",
+      "organizationLabel": "Organization name",
+      "organizationPlaceholder": "Green Acres Cooperative",
+      "passwordPlaceholder": "Create a strong password",
+      "confirmPasswordPlaceholder": "Re-enter your password"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "We all forget sometimes",
+      "emailLabel": "Email address"
+    },
+    "setPassword": {
+      "passwordPlaceholder": "Enter your password",
+      "confirmPlaceholder": "Confirm your password"
+    }
+  },
+  "common": {
+    "views": {
+      "map": "Map view",
+      "list": "List view",
+      "grid": "Grid view",
+      "cards": "Card view",
+      "grouped": "Grouped view",
+      "dashboard": "Dashboard view"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "download": "Download",
+      "edit": "Edit",
+      "delete": "Delete",
+      "manage": "Manage",
+      "manageRoles": "Manage Roles",
+      "editFarm": "Edit Farm",
+      "deleteFarm": "Delete Farm",
+      "editRole": "Edit Role",
+      "removeRole": "Remove Role",
+      "createReceptionBatch": "Create Reception Batch",
+      "viewDetails": "View details",
+      "payWage": "Pay wage",
+      "deactivate": "Deactivate",
+      "editToEnableAccess": "Edit to enable access",
+      "downloadReport": "Download report",
+      "downloadInvoice": "Download invoice",
+      "downloadMap": "Download map",
+      "filtersAndSort": "Filters and sort",
+      "goToMyLocation": "Go to my location",
+      "searchLocation": "Search location",
+      "exitFullscreen": "Exit fullscreen (Esc)",
+      "addNewAccount": "Add new account",
+      "addNewTax": "Add new tax",
+      "changeLanguage": "Change language"
+    },
+    "placeholders": {
+      "searchLocation": "Search for a place in Morocco...",
+      "parcelName": "Parcel name",
+      "cropType": "Ex: Tomatoes",
+      "rootstock": "Ex: GF677",
+      "search": "Search...",
+      "selectDate": "Select date with satellite data",
+      "searchArticles": "Search articles...",
+      "searchFiles": "Search files...",
+      "selectBucket": "Select a bucket",
+      "typeOrganizationName": "Type the organization name",
+      "additionalNotes": "Additional notes..."
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "area": "Area",
+      "unit": "Unit",
+      "soilType": "Soil type",
+      "irrigationType": "Irrigation type",
+      "variety": "Variety",
+      "plantingDate": "Planting date",
+      "plantingType": "Planting type"
+    },
+    "satellite": {
+      "refreshData": "Refresh data",
+      "showTemperature": "Show temperature at satellite pass time (11h)"
+    }
   }
 }

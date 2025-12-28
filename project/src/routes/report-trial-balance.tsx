@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -49,6 +50,7 @@ const getAccountTypeColor = (accountType: string): string => {
 };
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -69,7 +71,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -88,10 +90,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: BookOpen, label: 'Trial Balance', isActive: true }
+            { icon: BookOpen, label: t('reportsModule.trialBalance.title', 'Trial Balance'), isActive: true }
           ]}
-          title="Trial Balance"
-          subtitle="List of all accounts with their debit and credit balances"
+          title={t('reportsModule.trialBalance.title', 'Trial Balance')}
+          subtitle={t('reportsModule.trialBalance.subtitle', 'List of all accounts with their debit and credit balances')}
         />
 
         <div className="p-6 space-y-6">
@@ -102,7 +104,7 @@ const AppContent: React.FC = () => {
                 <div className="flex-1 min-w-[200px]">
                   <Label htmlFor="as_of_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />
-                    As of Date
+                    {t('reportsModule.trialBalance.asOfDate', 'As of Date')}
                   </Label>
                   <Input
                     id="as_of_date"
@@ -114,7 +116,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <Button variant="outline" className="gap-2" disabled>
                   <Download className="h-4 w-4" />
-                  Export PDF
+                  {t('reportsModule.trialBalance.exportPdf', 'Export PDF')}
                 </Button>
               </div>
             </CardContent>
@@ -124,7 +126,7 @@ const AppContent: React.FC = () => {
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading trial balance...</span>
+              <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.loading', 'Loading trial balance...')}</span>
             </div>
           )}
 
@@ -155,19 +157,19 @@ const AppContent: React.FC = () => {
                       )}
                       <div>
                         <h3 className={`text-lg font-semibold ${report.totals.is_balanced ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                          {report.totals.is_balanced ? 'Books are Balanced' : 'Books are NOT Balanced'}
+                          {report.totals.is_balanced ? t('reportsModule.trialBalance.balanced', 'Books are Balanced') : t('reportsModule.trialBalance.notBalanced', 'Books are NOT Balanced')}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {report.totals.is_balanced
-                            ? 'Total debits equal total credits'
-                            : `Difference: ${formatCurrency(Math.abs(report.totals.total_debit - report.totals.total_credit), currencySymbol)}`
+                            ? t('reportsModule.trialBalance.debitsEqualCredits', 'Total debits equal total credits')
+                            : `${t('reportsModule.trialBalance.difference', 'Difference')}: ${formatCurrency(Math.abs(report.totals.total_debit - report.totals.total_credit), currencySymbol)}`
                           }
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">As of {new Date(report.as_of_date).toLocaleDateString('fr-FR')}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{report.accounts.length} accounts with balances</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{t('reportsModule.trialBalance.asOf', 'As of')} {new Date(report.as_of_date).toLocaleDateString('fr-FR')}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{report.accounts.length} {t('reportsModule.trialBalance.accountsWithBalances', 'accounts with balances')}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -177,7 +179,7 @@ const AppContent: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Debits</CardTitle>
+                    <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('reportsModule.trialBalance.totalDebits', 'Total Debits')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
@@ -187,7 +189,7 @@ const AppContent: React.FC = () => {
                 </Card>
                 <Card className="border-purple-200 bg-purple-50 dark:bg-purple-900/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Credits</CardTitle>
+                    <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400">{t('reportsModule.trialBalance.totalCredits', 'Total Credits')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
@@ -202,26 +204,26 @@ const AppContent: React.FC = () => {
                 <CardHeader className="bg-gray-100 dark:bg-gray-800">
                   <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
-                    Account Details
+                    {t('reportsModule.trialBalance.accountDetails', 'Account Details')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {report.accounts.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
                       <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p>No accounts with balances found.</p>
-                      <p className="text-sm">Post journal entries to see account balances.</p>
+                      <p>{t('reportsModule.trialBalance.noAccounts', 'No accounts with balances found.')}</p>
+                      <p className="text-sm">{t('reportsModule.trialBalance.postJournalEntries', 'Post journal entries to see account balances.')}</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr>
-                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
-                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
-                            <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Type</th>
-                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Debit</th>
-                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">Credit</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.code', 'Code')}</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.accountName', 'Account Name')}</th>
+                            <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.type', 'Type')}</th>
+                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.debit', 'Debit')}</th>
+                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.credit', 'Credit')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -253,7 +255,7 @@ const AppContent: React.FC = () => {
                         <tfoot className="bg-gray-100 dark:bg-gray-700 font-bold">
                           <tr>
                             <td colSpan={3} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                              TOTALS
+                              {t('reportsModule.trialBalance.totals', 'TOTALS')}
                             </td>
                             <td className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
                               {formatCurrency(report.totals.total_debit, currencySymbol)}
@@ -272,11 +274,9 @@ const AppContent: React.FC = () => {
               {/* Explanation */}
               <Card>
                 <CardContent className="pt-6">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">About Trial Balance</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('reportsModule.trialBalance.about.title', 'About Trial Balance')}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    A trial balance is a bookkeeping worksheet listing all account balances at a specific point in time.
-                    In double-entry accounting, total debits must equal total credits. If they don't balance, there may be
-                    errors in the journal entries that need to be investigated.
+                    {t('reportsModule.trialBalance.about.description', 'A trial balance is a bookkeeping worksheet listing all account balances at a specific point in time. In double-entry accounting, total debits must equal total credits. If they don\'t balance, there may be errors in the journal entries that need to be investigated.')}
                   </p>
                 </CardContent>
               </Card>

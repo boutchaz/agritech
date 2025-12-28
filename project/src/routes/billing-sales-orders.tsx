@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -25,6 +26,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -97,7 +99,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading organization...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -117,10 +119,10 @@ const AppContent: React.FC = () => {
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: ShoppingCart, label: 'Sales Orders', isActive: true }
+              { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
             ]}
-            title="Sales Orders"
-            subtitle="Manage customer orders and fulfillment"
+            title={t('billingModule.salesOrders.title', 'Sales Orders')}
+            subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
           />
           <div className="p-6 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -135,8 +137,8 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">Error loading sales orders</p>
-          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-red-600 dark:text-red-400">{t('billingModule.salesOrders.error.loading', 'Error loading sales orders')}</p>
+          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.salesOrders.error.unknown', 'Unknown error')}</p>
         </div>
       </div>
     );
@@ -155,25 +157,25 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: ShoppingCart, label: 'Sales Orders', isActive: true }
+            { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
           ]}
-          title="Sales Orders"
-          subtitle="Manage customer orders and fulfillment"
+          title={t('billingModule.salesOrders.title', 'Sales Orders')}
+          subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
         />
 
         <div className="p-6 space-y-6">
           {/* Header Actions */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Sales Orders</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Track orders from confirmation to completion
+                {t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline">
                 <Filter className="mr-2 h-4 w-4" />
-                Filter
+                {t('app.filter', 'Filter')}
               </Button>
             </div>
           </div>
@@ -183,7 +185,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Orders
+                  {t('billingModule.salesOrders.stats.totalOrders', 'Total Orders')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -193,7 +195,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Draft
+                  {t('billingModule.salesOrders.stats.draft', 'Draft')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -203,7 +205,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Confirmed
+                  {t('billingModule.salesOrders.stats.confirmed', 'Confirmed')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -213,7 +215,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  In Progress
+                  {t('billingModule.salesOrders.stats.inProgress', 'In Progress')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -223,7 +225,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Shipped
+                  {t('billingModule.salesOrders.stats.shipped', 'Shipped')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -233,7 +235,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Completed
+                  {t('billingModule.salesOrders.stats.completed', 'Completed')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -243,7 +245,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Value
+                  {t('billingModule.salesOrders.stats.totalValue', 'Total Value')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -257,9 +259,9 @@ const AppContent: React.FC = () => {
           {/* Order List */}
           <Card>
             <CardHeader>
-              <CardTitle>All Sales Orders</CardTitle>
+              <CardTitle>{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</CardTitle>
               <CardDescription>
-                View and manage your sales orders
+                {t('billingModule.salesOrders.viewAndManage', 'View and manage your sales orders')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -268,28 +270,28 @@ const AppContent: React.FC = () => {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Order #
+                        {t('billingModule.salesOrders.table.orderNumber', 'Order #')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Customer
+                        {t('billingModule.salesOrders.table.customer', 'Customer')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Order Date
+                        {t('billingModule.salesOrders.table.orderDate', 'Order Date')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Expected Date
+                        {t('billingModule.salesOrders.table.expectedDate', 'Expected Date')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Amount
+                        {t('billingModule.salesOrders.table.amount', 'Amount')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Invoiced
+                        {t('billingModule.salesOrders.table.invoiced', 'Invoiced')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Status
+                        {t('billingModule.salesOrders.table.status', 'Status')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Actions
+                        {t('billingModule.salesOrders.table.actions', 'Actions')}
                       </th>
                     </tr>
                   </thead>
@@ -337,7 +339,7 @@ const AppContent: React.FC = () => {
                             }}
                           >
                             <Eye className="h-4 w-4 mr-1" />
-                            View
+                            {t('app.view', 'View')}
                           </Button>
                         </td>
                       </tr>
@@ -345,7 +347,7 @@ const AppContent: React.FC = () => {
                     {orders.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          No sales orders found. Orders are created from accepted quotes.
+                          {t('billingModule.salesOrders.empty', 'No sales orders found. Orders are created from accepted quotes.')}
                         </td>
                       </tr>
                     )}

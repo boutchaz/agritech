@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { organizationUsersApi, type AssignableUser } from '../lib/api/organization-users';
-import { supabase } from '../lib/supabase';
+import { tasksApi } from '../lib/api/tasks';
 
 export type { AssignableUser };
 
@@ -29,24 +29,20 @@ export const useAssignableUsers = (organizationId: string | null) => {
       }
     },
     enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
 /**
- * Get tasks assigned to the current user
+ * Get tasks assigned to the current user across all organizations
  */
 export const useMyTasks = () => {
   return useQuery({
     queryKey: ['my-tasks'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .rpc('get_user_tasks', { user_uuid: user.id });
-
-      if (error) throw error;
-      return data || [];
+      const tasks = await tasksApi.getMyTasks();
+      return tasks || [];
     },
+    staleTime: 2 * 60 * 1000,
   });
 };

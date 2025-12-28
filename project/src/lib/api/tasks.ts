@@ -24,6 +24,13 @@ export interface TaskApiFilters {
 
 export const tasksApi = {
   /**
+   * Get all tasks assigned to the current user across all organizations
+   */
+  async getMyTasks(): Promise<TaskSummary[]> {
+    return apiClient.get<TaskSummary[]>('/api/v1/my-tasks');
+  },
+
+  /**
    * Get all tasks for an organization
    */
   async getAll(organizationId: string, filters?: TaskFilters): Promise<TaskSummary[]> {

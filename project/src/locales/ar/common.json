@@ -732,6 +732,86 @@
       }
     }
   },
+  "landing": {
+    "hero": {
+      "title": "حوّل زراعتك مع",
+      "titleHighlight": "البيانات",
+      "subtitle": "منصة إدارة زراعية متكاملة. القطع، الفرق، المخزون، تحليل الأقمار الصناعية، التربة والربحية. كل شيء في مكان واحد.",
+      "ctaPrimary": "ابدأ الآن",
+      "ctaSecondary": "اكتشف الميزات",
+      "freeTrial": "تجربة مجانية",
+      "noCommitment": "بدون التزام",
+      "supportIncluded": "دعم متضمن"
+    },
+    "features": {
+      "title": "ميزات شاملة",
+      "subtitle": "جميع الأدوات التي تحتاجها لإدارة مزرعتك",
+      "parcelManagement": "إدارة القطع",
+      "parcelDesc": "أدر قطعك بدقة. تتبع المحاصيل والمساحات والبيانات الجغرافية المكانية.",
+      "teamManagement": "إدارة الفريق",
+      "teamDesc": "الموظفون الدائمون والعمال اليوميون. الحضور والأجور والجدولة المحسّنة.",
+      "satelliteAnalysis": "التحليل عبر الأقمار الصناعية",
+      "satelliteDesc": "مؤشرات NDVI و NDWI و NDMI لمراقبة صحة المحاصيل عبر الأقمار الصناعية.",
+      "soilAnalysis": "تحليل التربة",
+      "soilDesc": "الأس الهيدروجيني، الرطوبة، NPK، المادة العضوية. تحليلات مخبرية وميدانية.",
+      "stockManagement": "إدارة المخزون",
+      "stockDesc": "المدخلات، الأسمدة، البذور. تنبيهات المخزون المنخفض وإدارة الصلاحية.",
+      "profitability": "ربحية القطع",
+      "profitabilityDesc": "احسب التكاليف والإيرادات لكل قطعة. حسّن ربحيتك.",
+      "analytics": "التقارير والتحليلات",
+      "analyticsDesc": "لوحات تحكم قابلة للتخصيص. صدّر بياناتك وتقاريرك.",
+      "infrastructure": "إدارة البنية التحتية",
+      "infrastructureDesc": "المعدات، المباني، أنظمة الري. الصيانة والتتبع.",
+      "weather": "الطقس والخدمات",
+      "weatherDesc": "توقعات الطقس المتكاملة والخدمات المساعدة لمزرعتك.",
+      "multiOrg": "متعدد المنظمات",
+      "multiOrgDesc": "أدر عدة مزارع. الصلاحيات والأدوار حسب المنظمة.",
+      "secure": "آمن ومتوافق",
+      "secureDesc": "مصادقة آمنة، RLS Supabase. بياناتك محمية.",
+      "realtime": "الوقت الفعلي",
+      "realtimeDesc": "تحديثات في الوقت الفعلي مع React Query. واجهة تفاعلية."
+    },
+    "benefits": {
+      "title": "لماذا تختار AgriTech؟",
+      "productivity": "إنتاجية متزايدة",
+      "productivityDesc": "أتمت مهامك ووفر الوقت في الإدارة اليومية.",
+      "costReduction": "تخفيض التكاليف",
+      "costReductionDesc": "حسّن مدخلاتك وقلل الهدر من خلال البيانات.",
+      "betterYields": "محاصيل أفضل",
+      "betterYieldsDesc": "اتخذ قرارات مبنية على البيانات لتعظيم حصادك.",
+      "sustainable": "زراعة مستدامة",
+      "sustainableDesc": "قلل أثرك البيئي من خلال الإدارة الدقيقة."
+    },
+    "pricing": {
+      "title": "أسعار بسيطة وشفافة",
+      "subtitle": "اختر الخطة التي تناسب احتياجاتك",
+      "mostPopular": "الأكثر شعبية",
+      "perMonth": "/شهر",
+      "getStarted": "ابدأ",
+      "contactUs": "تواصل معنا"
+    },
+    "cta": {
+      "title": "هل أنت مستعد لتحديث زراعتك؟",
+      "subtitle": "انضم إلى مئات المزارعين الذين يحسّنون عملياتهم بالفعل.",
+      "button": "ابدأ مجاناً"
+    },
+    "footer": {
+      "tagline": "المنصة الشاملة لتحديث زراعتك.",
+      "product": "المنتج",
+      "features": "الميزات",
+      "pricing": "الأسعار",
+      "freeTrial": "تجربة مجانية",
+      "support": "الدعم",
+      "documentation": "التوثيق",
+      "contact": "اتصل بنا",
+      "faq": "الأسئلة الشائعة",
+      "legal": "قانوني",
+      "privacy": "الخصوصية",
+      "terms": "شروط الخدمة",
+      "legalNotice": "الإشعار القانوني",
+      "copyright": "جميع الحقوق محفوظة."
+    }
+  },
   "suppliers": {
     "title": "إدارة الموردين",
     "subtitle": "إدارة الموردين للمشتريات والمخزون",
@@ -1690,6 +1770,203 @@
         "downloadError": "فشل تحميل عرض السعر: {{error}}",
         "locked": "تم {{status}} هذا العرض. تم قفل إجراءات سير العمل المتبقية."
       }
+    }
+  },
+  "accountingModule": {
+    "dashboard": {
+      "title": "لوحة التحكم المحاسبية",
+      "subtitle": "نظرة عامة على أدائك المالي"
+    },
+    "accounts": {
+      "title": "دليل الحسابات",
+      "subtitle": "إدارة التسلسل الهرمي للحسابات",
+      "searchPlaceholder": "البحث بالرمز أو الاسم...",
+      "filterByType": "تصفية حسب النوع",
+      "parentAccount": "لا شيء (حساب رئيسي)",
+      "descriptionPlaceholder": "وصف اختياري"
+    },
+    "journal": {
+      "title": "القيود اليومية",
+      "subtitle": "إدارة قيود دفتر الأستاذ",
+      "date": "التاريخ",
+      "referenceType": "نوع المرجع",
+      "referenceNumber": "رقم المرجع",
+      "remarks": "ملاحظات",
+      "label": "البيان",
+      "placeholders": {
+        "referenceType": "مثال: فاتورة، دفعة، تسوية...",
+        "referenceNumber": "مثال: FAC-001",
+        "remarks": "وصف أو ملاحظات...",
+        "label": "البيان..."
+      }
+    },
+    "customers": {
+      "title": "العملاء",
+      "subtitle": "إدارة عملائك لفواتير المبيعات",
+      "searchPlaceholder": "البحث بالاسم أو البريد أو الهاتف...",
+      "fields": {
+        "name": "اسم العميل",
+        "code": "رمز العميل",
+        "codePlaceholder": "رمز مرجعي اختياري",
+        "type": "نوع العميل",
+        "contactPerson": "جهة الاتصال",
+        "email": "البريد الإلكتروني",
+        "phone": "الهاتف",
+        "mobile": "الجوال",
+        "website": "الموقع الإلكتروني"
+      }
+    },
+    "payments": {
+      "title": "المدفوعات",
+      "subtitle": "تتبع وإدارة المدفوعات الواردة والصادرة",
+      "referencePlaceholder": "رقم الشيك، معرف المعاملة، إلخ.",
+      "notesPlaceholder": "ملاحظات إضافية حول هذه الدفعة"
+    },
+    "reports": {
+      "title": "التقارير المالية",
+      "subtitle": "الوصول إلى التقارير المالية والتحليلات الشاملة"
+    },
+    "invoice": {
+      "selectItem": "اختر مادة",
+      "descriptionPlaceholder": "الوصف",
+      "remarksPlaceholder": "ملاحظات اختيارية"
+    }
+  },
+  "billingModule": {
+    "salesOrders": {
+      "title": "أوامر المبيعات",
+      "subtitle": "إدارة طلبات العملاء والتنفيذ",
+      "selectWarehouse": "اختر مستودع..."
+    },
+    "purchaseOrders": {
+      "title": "أوامر الشراء",
+      "subtitle": "إدارة أوامر الشراء من الموردين واستلام البضائع",
+      "shippingPlaceholder": "أدخل عنوان التسليم...",
+      "selectItem": "اختر مادة",
+      "descriptionPlaceholder": "الوصف",
+      "notesPlaceholder": "إضافة ملاحظات داخلية...",
+      "commentsPlaceholder": "إضافة تعليقات داخلية أو تعليمات الاستلام"
+    }
+  },
+  "reportsModule": {
+    "trialBalance": {
+      "title": "ميزان المراجعة",
+      "subtitle": "قائمة جميع الحسابات مع أرصدتها المدينة والدائنة"
+    },
+    "profitLoss": {
+      "title": "قائمة الأرباح والخسائر",
+      "subtitle": "قائمة الدخل تظهر الإيرادات والمصروفات وصافي الدخل",
+      "revenue": "الإيرادات",
+      "expenses": "المصروفات"
+    },
+    "balanceSheet": {
+      "title": "الميزانية العمومية",
+      "subtitle": "بيان المركز المالي يظهر الأصول والخصوم وحقوق الملكية",
+      "assets": "الأصول",
+      "liabilities": "الخصوم",
+      "equity": "حقوق الملكية"
+    }
+  },
+  "qualityControl": {
+    "title": "مراقبة الجودة",
+    "subtitle": "إدارة فحوصات الجودة وعمليات الرقابة"
+  },
+  "productionIntelligence": {
+    "title": "ذكاء الإنتاج",
+    "subtitle": "تتبع المحصول والتنبؤات ومعايير الأداء",
+    "observationsPlaceholder": "ملاحظات إضافية...",
+    "benchmarkPlaceholder": "سياق إضافي لهذا المعيار...",
+    "forecastPlaceholder": "سياق أو افتراضات إضافية لهذا التنبؤ..."
+  },
+  "authPages": {
+    "login": {
+      "title": "تسجيل الدخول إلى Agritech",
+      "subtitle": "مرحباً بعودتك",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "passwordPlaceholder": "أدخل كلمة المرور"
+    },
+    "register": {
+      "title": "إنشاء حساب Agritech",
+      "subtitle": "ابدأ في دقائق",
+      "organizationLabel": "اسم المنظمة",
+      "organizationPlaceholder": "التعاونية الزراعية الخضراء",
+      "passwordPlaceholder": "أنشئ كلمة مرور قوية",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور"
+    },
+    "forgotPassword": {
+      "title": "إعادة تعيين كلمة المرور",
+      "subtitle": "الجميع ينسى أحياناً",
+      "emailLabel": "البريد الإلكتروني"
+    },
+    "setPassword": {
+      "passwordPlaceholder": "أدخل كلمة المرور",
+      "confirmPlaceholder": "تأكيد كلمة المرور"
+    }
+  },
+  "common": {
+    "views": {
+      "map": "عرض الخريطة",
+      "list": "عرض القائمة",
+      "grid": "عرض الشبكة",
+      "cards": "عرض البطاقات",
+      "grouped": "عرض مجمع",
+      "dashboard": "عرض لوحة التحكم"
+    },
+    "actions": {
+      "refresh": "تحديث",
+      "download": "تحميل",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "manage": "إدارة",
+      "manageRoles": "إدارة الأدوار",
+      "editFarm": "تعديل المزرعة",
+      "deleteFarm": "حذف المزرعة",
+      "editRole": "تعديل الدور",
+      "removeRole": "إزالة الدور",
+      "createReceptionBatch": "إنشاء دفعة استلام",
+      "viewDetails": "عرض التفاصيل",
+      "payWage": "دفع الأجر",
+      "deactivate": "إلغاء التفعيل",
+      "editToEnableAccess": "تعديل لتفعيل الوصول",
+      "downloadReport": "تحميل التقرير",
+      "downloadInvoice": "تحميل الفاتورة",
+      "downloadMap": "تحميل الخريطة",
+      "filtersAndSort": "الفلاتر والترتيب",
+      "goToMyLocation": "الانتقال إلى موقعي",
+      "searchLocation": "البحث عن موقع",
+      "exitFullscreen": "الخروج من ملء الشاشة (Esc)",
+      "addNewAccount": "إضافة حساب جديد",
+      "addNewTax": "إضافة ضريبة جديدة",
+      "changeLanguage": "تغيير اللغة"
+    },
+    "placeholders": {
+      "searchLocation": "البحث عن مكان في المغرب...",
+      "parcelName": "اسم القطعة",
+      "cropType": "مثال: طماطم",
+      "rootstock": "مثال: GF677",
+      "search": "بحث...",
+      "selectDate": "اختر تاريخ ببيانات قمر صناعي",
+      "searchArticles": "البحث في المقالات...",
+      "searchFiles": "البحث عن ملف...",
+      "selectBucket": "اختر حاوية",
+      "typeOrganizationName": "اكتب اسم المنظمة",
+      "additionalNotes": "ملاحظات إضافية..."
+    },
+    "form": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "area": "المساحة",
+      "unit": "الوحدة",
+      "soilType": "نوع التربة",
+      "irrigationType": "نوع الري",
+      "variety": "الصنف",
+      "plantingDate": "تاريخ الزراعة",
+      "plantingType": "نوع الزراعة"
+    },
+    "satellite": {
+      "refreshData": "تحديث البيانات",
+      "showTemperature": "عرض درجة الحرارة وقت مرور القمر الصناعي (11 صباحاً)"
     }
   }
 }

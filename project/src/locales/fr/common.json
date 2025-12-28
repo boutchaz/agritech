@@ -1771,6 +1771,203 @@
         "locked": "Ce devis a été {{status}}. Les actions de workflow restantes sont verrouillées."
       }
     }
+  },
+  "accountingModule": {
+    "dashboard": {
+      "title": "Tableau de bord comptable",
+      "subtitle": "Aperçu de votre performance financière"
+    },
+    "accounts": {
+      "title": "Plan Comptable",
+      "subtitle": "Gérez votre hiérarchie de comptes",
+      "searchPlaceholder": "Rechercher par code ou nom...",
+      "filterByType": "Filtrer par type",
+      "parentAccount": "Aucun (Compte Racine)",
+      "descriptionPlaceholder": "Description optionnelle"
+    },
+    "journal": {
+      "title": "Écritures Comptables",
+      "subtitle": "Gérer les écritures du grand livre",
+      "date": "Date",
+      "referenceType": "Type de référence",
+      "referenceNumber": "Numéro de référence",
+      "remarks": "Remarques",
+      "label": "Libellé",
+      "placeholders": {
+        "referenceType": "Ex : Facture, Paiement, Ajustement...",
+        "referenceNumber": "Ex : FAC-001",
+        "remarks": "Description ou notes...",
+        "label": "Libellé..."
+      }
+    },
+    "customers": {
+      "title": "Clients",
+      "subtitle": "Gérez vos clients pour les factures de vente",
+      "searchPlaceholder": "Rechercher par nom, email ou téléphone...",
+      "fields": {
+        "name": "Nom du client",
+        "code": "Code client",
+        "codePlaceholder": "Code de référence optionnel",
+        "type": "Type de client",
+        "contactPerson": "Personne de contact",
+        "email": "Email",
+        "phone": "Téléphone",
+        "mobile": "Mobile",
+        "website": "Site web"
+      }
+    },
+    "payments": {
+      "title": "Paiements",
+      "subtitle": "Suivez et gérez les paiements entrants et sortants",
+      "referencePlaceholder": "Numéro de chèque, ID de transaction, etc.",
+      "notesPlaceholder": "Notes supplémentaires sur ce paiement"
+    },
+    "reports": {
+      "title": "Rapports Financiers",
+      "subtitle": "Accédez aux rapports financiers et analyses complètes"
+    },
+    "invoice": {
+      "selectItem": "Sélectionner un article",
+      "descriptionPlaceholder": "Description",
+      "remarksPlaceholder": "Remarques ou notes optionnelles"
+    }
+  },
+  "billingModule": {
+    "salesOrders": {
+      "title": "Commandes de Vente",
+      "subtitle": "Gérez les commandes clients et l'exécution",
+      "selectWarehouse": "Sélectionner un entrepôt..."
+    },
+    "purchaseOrders": {
+      "title": "Commandes d'Achat",
+      "subtitle": "Gérez les commandes fournisseurs et la réception des marchandises",
+      "shippingPlaceholder": "Entrez l'adresse de livraison...",
+      "selectItem": "Sélectionner un article",
+      "descriptionPlaceholder": "Description",
+      "notesPlaceholder": "Ajouter des notes internes...",
+      "commentsPlaceholder": "Ajouter des commentaires internes ou instructions de réception"
+    }
+  },
+  "reportsModule": {
+    "trialBalance": {
+      "title": "Balance Comptable",
+      "subtitle": "Liste de tous les comptes avec leurs soldes débiteurs et créditeurs"
+    },
+    "profitLoss": {
+      "title": "Compte de Résultat",
+      "subtitle": "État des revenus, dépenses et résultat net",
+      "revenue": "Revenus",
+      "expenses": "Dépenses"
+    },
+    "balanceSheet": {
+      "title": "Bilan",
+      "subtitle": "État de la situation financière : actifs, passifs et capitaux propres",
+      "assets": "Actifs",
+      "liabilities": "Passifs",
+      "equity": "Capitaux Propres"
+    }
+  },
+  "qualityControl": {
+    "title": "Contrôle Qualité",
+    "subtitle": "Gérez les inspections et les processus de contrôle qualité"
+  },
+  "productionIntelligence": {
+    "title": "Intelligence de Production",
+    "subtitle": "Suivi des rendements, prévisions et benchmarks de performance",
+    "observationsPlaceholder": "Observations supplémentaires...",
+    "benchmarkPlaceholder": "Contexte supplémentaire pour ce benchmark...",
+    "forecastPlaceholder": "Contexte ou hypothèses supplémentaires pour cette prévision..."
+  },
+  "authPages": {
+    "login": {
+      "title": "Connectez-vous à Agritech",
+      "subtitle": "Bon retour",
+      "emailLabel": "Adresse email",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Entrez votre mot de passe"
+    },
+    "register": {
+      "title": "Créez votre compte Agritech",
+      "subtitle": "Démarrez en quelques minutes",
+      "organizationLabel": "Nom de l'organisation",
+      "organizationPlaceholder": "Coopérative Agricole Verte",
+      "passwordPlaceholder": "Créez un mot de passe sécurisé",
+      "confirmPasswordPlaceholder": "Confirmez votre mot de passe"
+    },
+    "forgotPassword": {
+      "title": "Réinitialisez votre mot de passe",
+      "subtitle": "Ça arrive à tout le monde",
+      "emailLabel": "Adresse email"
+    },
+    "setPassword": {
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "confirmPlaceholder": "Confirmez votre mot de passe"
+    }
+  },
+  "common": {
+    "views": {
+      "map": "Vue carte",
+      "list": "Vue liste",
+      "grid": "Vue grille",
+      "cards": "Vue cartes",
+      "grouped": "Vue groupée",
+      "dashboard": "Vue tableau de bord"
+    },
+    "actions": {
+      "refresh": "Actualiser",
+      "download": "Télécharger",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "manage": "Gérer",
+      "manageRoles": "Gérer les rôles",
+      "editFarm": "Modifier la ferme",
+      "deleteFarm": "Supprimer la ferme",
+      "editRole": "Modifier le rôle",
+      "removeRole": "Supprimer le rôle",
+      "createReceptionBatch": "Créer un lot de réception",
+      "viewDetails": "Voir les détails",
+      "payWage": "Payer le salaire",
+      "deactivate": "Désactiver",
+      "editToEnableAccess": "Modifier pour activer l'accès",
+      "downloadReport": "Télécharger le rapport",
+      "downloadInvoice": "Télécharger la facture",
+      "downloadMap": "Télécharger la carte",
+      "filtersAndSort": "Filtres et tri",
+      "goToMyLocation": "Aller à ma position",
+      "searchLocation": "Rechercher un lieu",
+      "exitFullscreen": "Quitter le plein écran (Échap)",
+      "addNewAccount": "Ajouter un nouveau compte",
+      "addNewTax": "Ajouter une nouvelle taxe",
+      "changeLanguage": "Changer de langue"
+    },
+    "placeholders": {
+      "searchLocation": "Rechercher un lieu au Maroc...",
+      "parcelName": "Nom de la parcelle",
+      "cropType": "Ex : Tomates",
+      "rootstock": "Ex : GF677",
+      "search": "Rechercher...",
+      "selectDate": "Sélectionner une date avec données satellite",
+      "searchArticles": "Rechercher des articles...",
+      "searchFiles": "Rechercher un fichier...",
+      "selectBucket": "Sélectionner un bucket",
+      "typeOrganizationName": "Tapez le nom de l'organisation",
+      "additionalNotes": "Notes supplémentaires..."
+    },
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "area": "Surface",
+      "unit": "Unité",
+      "soilType": "Type de sol",
+      "irrigationType": "Type d'irrigation",
+      "variety": "Variété",
+      "plantingDate": "Date de plantation",
+      "plantingType": "Type de plantation"
+    },
+    "satellite": {
+      "refreshData": "Actualiser les données",
+      "showTemperature": "Afficher la température au moment du passage satellite (11h)"
+    }
   }
 }
 

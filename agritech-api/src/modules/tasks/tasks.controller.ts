@@ -23,9 +23,17 @@ import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 @ApiTags('tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('organizations/:organizationId/tasks')
+@Controller()
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
+
+  @Get('my-tasks')
+  @ApiOperation({ summary: 'Get all tasks assigned to the current user across all organizations' })
+  async getMyTasks(@Request() req) {
+    return this.tasksService.findMyTasks(req.user.id);
+  }
+
+  @Get('organizations/:organizationId/tasks')
 
   @Get()
   @ApiOperation({ summary: 'Get all tasks for an organization' })

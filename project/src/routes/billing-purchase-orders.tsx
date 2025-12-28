@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -37,6 +38,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -169,7 +171,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading organization...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
         </div>
       </div>
     );
@@ -189,10 +191,10 @@ const AppContent: React.FC = () => {
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Package, label: 'Purchase Orders', isActive: true }
+              { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
             ]}
-            title="Purchase Orders"
-            subtitle="Manage supplier purchase orders"
+            title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
+            subtitle={t('billingModule.purchaseOrders.loading', 'Manage supplier purchase orders')}
           />
           <div className="p-6 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -207,8 +209,8 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">Error loading purchase orders</p>
-          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-red-600 dark:text-red-400">{t('billingModule.purchaseOrders.error.loading', 'Error loading purchase orders')}</p>
+          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.purchaseOrders.error.unknown', 'Unknown error')}</p>
         </div>
       </div>
     );
@@ -226,17 +228,17 @@ const AppContent: React.FC = () => {
       />
       <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
         {/* Mobile Navigation Bar */}
-        <MobileNavBar title="Purchase Orders" />
+        <MobileNavBar title={t('billingModule.purchaseOrders.title', 'Purchase Orders')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Package, label: 'Purchase Orders', isActive: true }
+              { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
             ]}
-            title="Purchase Orders"
-            subtitle="Manage supplier purchase orders and goods receipt"
+            title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
+            subtitle={t('billingModule.purchaseOrders.subtitle', 'Manage supplier purchase orders and goods receipt')}
           />
         </div>
 
@@ -244,19 +246,19 @@ const AppContent: React.FC = () => {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">All Purchase Orders</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Create and track purchase orders from suppliers
+                {t('billingModule.purchaseOrders.trackOrders', 'Create and track purchase orders from suppliers')}
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <Button variant="outline" className="hidden sm:flex">
-                Filter
+                {t('app.filter', 'Filter')}
               </Button>
               <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">New Purchase Order</span>
-                <span className="sm:hidden">New PO</span>
+                <span className="hidden sm:inline">{t('billingModule.purchaseOrders.newOrder', 'New Purchase Order')}</span>
+                <span className="sm:hidden">{t('billingModule.purchaseOrders.newOrderShort', 'New PO')}</span>
               </Button>
             </div>
           </div>
@@ -266,7 +268,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Orders
+                  {t('billingModule.purchaseOrders.stats.totalOrders', 'Total Orders')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -276,7 +278,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Draft
+                  {t('billingModule.purchaseOrders.stats.draft', 'Draft')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -286,7 +288,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Submitted
+                  {t('billingModule.purchaseOrders.stats.submitted', 'Submitted')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -296,7 +298,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Approved
+                  {t('billingModule.purchaseOrders.stats.approved', 'Approved')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -306,7 +308,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  In Transit
+                  {t('billingModule.purchaseOrders.stats.inTransit', 'In Transit')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -316,7 +318,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Received
+                  {t('billingModule.purchaseOrders.stats.received', 'Received')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -326,7 +328,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Completed
+                  {t('billingModule.purchaseOrders.stats.completed', 'Completed')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -336,7 +338,7 @@ const AppContent: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Value
+                  {t('billingModule.purchaseOrders.stats.totalValue', 'Total Value')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -350,9 +352,9 @@ const AppContent: React.FC = () => {
           {/* Order List */}
           <Card>
             <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
-              <CardTitle className="text-lg sm:text-xl">All Purchase Orders</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">{t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}</CardTitle>
               <CardDescription className="text-sm">
-                View and manage your purchase orders
+                {t('billingModule.purchaseOrders.viewAndManage', 'View and manage your purchase orders')}
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
@@ -362,28 +364,28 @@ const AppContent: React.FC = () => {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        PO #
+                        {t('billingModule.purchaseOrders.table.poNumber', 'PO #')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Supplier
+                        {t('billingModule.purchaseOrders.table.supplier', 'Supplier')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Order Date
+                        {t('billingModule.purchaseOrders.table.orderDate', 'Order Date')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Expected Date
+                        {t('billingModule.purchaseOrders.table.expectedDate', 'Expected Date')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Amount
+                        {t('billingModule.purchaseOrders.table.amount', 'Amount')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Billed
+                        {t('billingModule.purchaseOrders.table.billed', 'Billed')}
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Status
+                        {t('billingModule.purchaseOrders.table.status', 'Status')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Actions
+                        {t('billingModule.purchaseOrders.table.actions', 'Actions')}
                       </th>
                     </tr>
                   </thead>
@@ -446,7 +448,7 @@ const AppContent: React.FC = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                <DropdownMenuLabel>{t('billingModule.purchaseOrders.actions.changeStatus', 'Change Status')}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {order.status === 'draft' && (
                                   <DropdownMenuItem onClick={() => {
@@ -454,7 +456,7 @@ const AppContent: React.FC = () => {
                                     setDetailDialogOpen(true);
                                   }}>
                                     <Send className="mr-2 h-4 w-4" />
-                                    Submit for Approval
+                                    {t('billingModule.purchaseOrders.actions.submitForApproval', 'Submit for Approval')}
                                   </DropdownMenuItem>
                                 )}
                                 {order.status === 'submitted' && (
@@ -463,7 +465,7 @@ const AppContent: React.FC = () => {
                                     setDetailDialogOpen(true);
                                   }}>
                                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Confirm Order
+                                    {t('billingModule.purchaseOrders.actions.confirmOrder', 'Confirm Order')}
                                   </DropdownMenuItem>
                                 )}
                                 {['confirmed', 'partially_received'].includes(order.status) && (
@@ -472,7 +474,7 @@ const AppContent: React.FC = () => {
                                     setDetailDialogOpen(true);
                                   }}>
                                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Mark as Received
+                                    {t('billingModule.purchaseOrders.actions.markAsReceived', 'Mark as Received')}
                                   </DropdownMenuItem>
                                 )}
                                 {order.status !== 'cancelled' && order.status !== 'billed' && (
@@ -486,7 +488,7 @@ const AppContent: React.FC = () => {
                                       className="text-red-600 dark:text-red-400"
                                     >
                                       <XCircle className="mr-2 h-4 w-4" />
-                                      Cancel Order
+                                      {t('billingModule.purchaseOrders.actions.cancelOrder', 'Cancel Order')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -499,7 +501,7 @@ const AppContent: React.FC = () => {
                     {orders.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          No purchase orders found. Create your first purchase order to get started.
+                          {t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                         </td>
                       </tr>
                     )}
@@ -511,7 +513,7 @@ const AppContent: React.FC = () => {
               <div className="md:hidden space-y-3">
                 {orders.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No purchase orders found. Create your first purchase order to get started.
+                    {t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                   </div>
                 ) : (
                   orders.map((order) => (
@@ -541,25 +543,25 @@ const AppContent: React.FC = () => {
                       {/* Details Grid */}
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Order Date</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{t('billingModule.purchaseOrders.table.orderDate', 'Order Date')}</p>
                           <p className="font-medium text-gray-900 dark:text-white">
                             {order.order_date ? new Date(order.order_date).toLocaleDateString('fr-FR') : '-'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Expected Date</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{t('billingModule.purchaseOrders.table.expectedDate', 'Expected Date')}</p>
                           <p className="font-medium text-gray-900 dark:text-white">
                             {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR') : '-'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{t('billingModule.purchaseOrders.table.amount', 'Amount')}</p>
                           <p className="font-semibold text-gray-900 dark:text-white">
                             {order.currency_code} {Number(order.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Billed</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{t('billingModule.purchaseOrders.table.billed', 'Billed')}</p>
                           <p className="font-medium text-gray-900 dark:text-white">
                             {order.currency_code} {Number(order.billed_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                           </p>
@@ -578,7 +580,7 @@ const AppContent: React.FC = () => {
                           className="flex-1"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          View
+                          {t('app.view', 'View')}
                         </Button>
                         <Button
                           variant="outline"
@@ -597,7 +599,7 @@ const AppContent: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t('billingModule.purchaseOrders.actions.changeStatus', 'Change Status')}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {order.status === 'draft' && (
                               <DropdownMenuItem onClick={() => {
@@ -605,7 +607,7 @@ const AppContent: React.FC = () => {
                                 setDetailDialogOpen(true);
                               }}>
                                 <Send className="mr-2 h-4 w-4" />
-                                Submit for Approval
+                                {t('billingModule.purchaseOrders.actions.submitForApproval', 'Submit for Approval')}
                               </DropdownMenuItem>
                             )}
                             {order.status === 'submitted' && (
@@ -614,7 +616,7 @@ const AppContent: React.FC = () => {
                                 setDetailDialogOpen(true);
                               }}>
                                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Confirm Order
+                                {t('billingModule.purchaseOrders.actions.confirmOrder', 'Confirm Order')}
                               </DropdownMenuItem>
                             )}
                             {['confirmed', 'partially_received'].includes(order.status) && (
@@ -623,7 +625,7 @@ const AppContent: React.FC = () => {
                                 setDetailDialogOpen(true);
                               }}>
                                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Mark as Received
+                                {t('billingModule.purchaseOrders.actions.markAsReceived', 'Mark as Received')}
                               </DropdownMenuItem>
                             )}
                             {order.status !== 'cancelled' && order.status !== 'billed' && (
@@ -637,7 +639,7 @@ const AppContent: React.FC = () => {
                                   className="text-red-600 dark:text-red-400"
                                 >
                                   <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel Order
+                                  {t('billingModule.purchaseOrders.actions.cancelOrder', 'Cancel Order')}
                                 </DropdownMenuItem>
                               </>
                             )}

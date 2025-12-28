@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -71,6 +72,7 @@ const customerSchema = z.object({
 type CustomerFormData = z.infer<typeof customerSchema>;
 
 function CustomersPage() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { data: customers = [], isLoading } = useCustomers();
   const createCustomer = useCreateCustomer();
@@ -237,7 +239,7 @@ function CustomersPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization ? 'Loading organization...' : 'Loading customers...'}
+            {!currentOrganization ? t('dashboard.loading', 'Loading organization...') : t('accountingModule.customers.loading', 'Loading customers...')}
           </p>
         </div>
       </div>
@@ -257,10 +259,10 @@ function CustomersPage() {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Users, label: 'Customers', isActive: true }
+            { icon: Users, label: t('nav.customers', 'Customers'), isActive: true }
           ]}
-          title="Customers"
-          subtitle="Manage your customers for sales invoices"
+          title={t('accountingModule.customers.title', 'Customers')}
+          subtitle={t('accountingModule.customers.subtitle', 'Manage your customers for sales invoices')}
         />
 
         <div className="p-6 space-y-6">
@@ -268,7 +270,7 @@ function CustomersPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
               <Input
-                placeholder="Search customers by name, email, or phone..."
+                placeholder={t('accountingModule.customers.searchPlaceholder', 'Search customers by name, email, or phone...')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="max-w-md bg-white dark:bg-gray-800"
@@ -276,7 +278,7 @@ function CustomersPage() {
             </div>
             <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Customer
+              {t('accountingModule.customers.addCustomer', 'Add Customer')}
             </Button>
           </div>
 
@@ -284,14 +286,14 @@ function CustomersPage() {
           {filteredCustomers.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No customers</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.noCustomers', 'No customers')}</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Get started by creating a new customer.
+                {t('accountingModule.customers.getStarted', 'Get started by creating a new customer.')}
               </p>
               <div className="mt-6">
                 <Button onClick={() => handleOpenDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Customer
+                  {t('accountingModule.customers.addCustomer', 'Add Customer')}
                 </Button>
               </div>
             </div>
@@ -367,21 +369,21 @@ function CustomersPage() {
           <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
+                <DialogTitle>{editingCustomer ? t('accountingModule.customers.editCustomer', 'Edit Customer') : t('accountingModule.customers.addNewCustomer', 'Add New Customer')}</DialogTitle>
                 <DialogDescription>
                   {editingCustomer
-                    ? 'Update customer information'
-                    : 'Add a new customer for sales invoices'}
+                    ? t('accountingModule.customers.updateInfo', 'Update customer information')
+                    : t('accountingModule.customers.addForInvoices', 'Add a new customer for sales invoices')}
                 </DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">Basic Information</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.sections.basicInfo', 'Basic Information')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      label="Customer Name *"
+                      label={`${t('accountingModule.customers.fields.name', 'Customer Name')} *`}
                       error={form.formState.errors.name?.message}
                     >
                       <Input
@@ -391,20 +393,20 @@ function CustomersPage() {
                       />
                     </FormField>
                     <FormField
-                      label="Customer Code"
+                      label={t('accountingModule.customers.fields.code', 'Customer Code')}
                       error={form.formState.errors.customer_code?.message}
                     >
                       <Input
                         id="customer_code"
                         {...form.register('customer_code')}
-                        placeholder="Optional reference code"
+                        placeholder={t('accountingModule.customers.fields.codePlaceholder', 'Optional reference code')}
                       />
                     </FormField>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      label="Customer Type"
+                      label={t('accountingModule.customers.fields.type', 'Customer Type')}
                       error={form.formState.errors.customer_type?.message}
                     >
                       <Select
@@ -412,15 +414,15 @@ function CustomersPage() {
                         {...form.register('customer_type')}
                         className={form.formState.errors.customer_type ? 'border-red-500' : ''}
                       >
-                        <option value="">Select type</option>
-                        <option value="individual">Individual</option>
-                        <option value="business">Business</option>
-                        <option value="government">Government</option>
-                        <option value="other">Other</option>
+                        <option value="">{t('accountingModule.customers.fields.selectType', 'Select type')}</option>
+                        <option value="individual">{t('accountingModule.customers.types.individual', 'Individual')}</option>
+                        <option value="business">{t('accountingModule.customers.types.business', 'Business')}</option>
+                        <option value="government">{t('accountingModule.customers.types.government', 'Government')}</option>
+                        <option value="other">{t('accountingModule.customers.types.other', 'Other')}</option>
                       </Select>
                     </FormField>
                     <FormField
-                      label="Contact Person"
+                      label={t('accountingModule.customers.fields.contactPerson', 'Contact Person')}
                       error={form.formState.errors.contact_person?.message}
                     >
                       <Input
@@ -433,10 +435,10 @@ function CustomersPage() {
 
                 {/* Contact Details */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">Contact Details</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.sections.contactDetails', 'Contact Details')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      label="Email"
+                      label={t('accountingModule.customers.fields.email', 'Email')}
                       error={form.formState.errors.email?.message}
                     >
                       <Input
@@ -447,7 +449,7 @@ function CustomersPage() {
                       />
                     </FormField>
                     <FormField
-                      label="Phone"
+                      label={t('accountingModule.customers.fields.phone', 'Phone')}
                       error={form.formState.errors.phone?.message}
                     >
                       <Input
@@ -459,7 +461,7 @@ function CustomersPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      label="Mobile"
+                      label={t('accountingModule.customers.fields.mobile', 'Mobile')}
                       error={form.formState.errors.mobile?.message}
                     >
                       <Input
@@ -468,7 +470,7 @@ function CustomersPage() {
                       />
                     </FormField>
                     <FormField
-                      label="Website"
+                      label={t('accountingModule.customers.fields.website', 'Website')}
                       error={form.formState.errors.website?.message}
                     >
                       <Input
@@ -484,9 +486,9 @@ function CustomersPage() {
 
                 {/* Address */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">Address</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.sections.address', 'Address')}</h3>
                   <div>
-                    <Label htmlFor="address">Street Address</Label>
+                    <Label htmlFor="address">{t('accountingModule.customers.fields.streetAddress', 'Street Address')}</Label>
                     <Input
                       id="address"
                       {...form.register('address')}
@@ -495,14 +497,14 @@ function CustomersPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="city">{t('accountingModule.customers.fields.city', 'City')}</Label>
                       <Input
                         id="city"
                         {...form.register('city')}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="state_province">State/Province</Label>
+                      <Label htmlFor="state_province">{t('accountingModule.customers.fields.stateProvince', 'State/Province')}</Label>
                       <Input
                         id="state_province"
                         {...form.register('state_province')}
@@ -512,14 +514,14 @@ function CustomersPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="postal_code">Postal Code</Label>
+                      <Label htmlFor="postal_code">{t('accountingModule.customers.fields.postalCode', 'Postal Code')}</Label>
                       <Input
                         id="postal_code"
                         {...form.register('postal_code')}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="country">Country</Label>
+                      <Label htmlFor="country">{t('accountingModule.customers.fields.country', 'Country')}</Label>
                       <Input
                         id="country"
                         {...form.register('country')}
@@ -530,23 +532,23 @@ function CustomersPage() {
 
                 {/* Financial Terms */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">Financial Terms</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.sections.financialTerms', 'Financial Terms')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="tax_id">Tax ID / ICE</Label>
+                      <Label htmlFor="tax_id">{t('accountingModule.customers.fields.taxId', 'Tax ID / ICE')}</Label>
                       <Input
                         id="tax_id"
                         {...form.register('tax_id')}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="payment_terms">Payment Terms</Label>
+                      <Label htmlFor="payment_terms">{t('accountingModule.customers.fields.paymentTerms', 'Payment Terms')}</Label>
                       <Select
                         id="payment_terms"
                         {...form.register('payment_terms')}
                       >
-                        <option value="">Select terms</option>
-                        <option value="Cash on Delivery">Cash on Delivery</option>
+                        <option value="">{t('accountingModule.customers.fields.selectTerms', 'Select terms')}</option>
+                        <option value="Cash on Delivery">{t('accountingModule.customers.terms.cod', 'Cash on Delivery')}</option>
                         <option value="Net 15">Net 15</option>
                         <option value="Net 30">Net 30</option>
                         <option value="Net 60">Net 60</option>
@@ -556,7 +558,7 @@ function CustomersPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="credit_limit">Credit Limit ({currentOrganization?.currency_symbol || 'MAD'})</Label>
+                    <Label htmlFor="credit_limit">{t('accountingModule.customers.fields.creditLimit', 'Credit Limit')} ({currentOrganization?.currency_symbol || 'MAD'})</Label>
                     <Input
                       id="credit_limit"
                       type="number"
@@ -569,7 +571,7 @@ function CustomersPage() {
 
                 {/* Notes */}
                 <div>
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t('accountingModule.customers.fields.notes', 'Notes')}</Label>
                   <Textarea
                     id="notes"
                     {...form.register('notes')}
@@ -579,10 +581,10 @@ function CustomersPage() {
 
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
+                    {t('app.cancel', 'Cancel')}
                   </Button>
                   <Button type="submit">
-                    {editingCustomer ? 'Update Customer' : 'Create Customer'}
+                    {editingCustomer ? t('accountingModule.customers.updateCustomer', 'Update Customer') : t('accountingModule.customers.createCustomer', 'Create Customer')}
                   </Button>
                 </DialogFooter>
               </form>
