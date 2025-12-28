@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "intended_uses",
+  "info": {
+    "singularName": "intended-use",
+    "pluralName": "intended-uses",
+    "displayName": "Intended Use",
+    "description": "Intended use/destination for harvests"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

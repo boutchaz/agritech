@@ -1,0 +1,56 @@
+{
+  "kind": "collectionType",
+  "collectionName": "units_of_measure",
+  "info": {
+    "singularName": "unit-of-measure",
+    "pluralName": "units-of-measure",
+    "displayName": "Unit of Measure",
+    "description": "Units for measuring quantities (kg, tons, liters, etc.)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["weight", "volume", "count", "area", "length"],
+      "default": "weight"
+    },
+    "base_unit": {
+      "type": "string"
+    },
+    "conversion_factor": {
+      "type": "decimal"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

@@ -202,4 +202,179 @@ export class ReferenceDataController {
   async getVarieties(@Query('crop_type_id') cropTypeId?: string) {
     return this.referenceDataService.getVarieties(cropTypeId);
   }
+
+  @Get('units-of-measure')
+  @ApiOperation({ summary: 'Get all units of measure' })
+  @ApiResponse({ status: 200, description: 'Units of measure retrieved successfully' })
+  async getUnitsOfMeasure() {
+    return this.referenceDataService.getUnitsOfMeasure();
+  }
+
+  @Get('quality-grades')
+  @ApiOperation({ summary: 'Get all quality grades' })
+  @ApiResponse({ status: 200, description: 'Quality grades retrieved successfully' })
+  async getQualityGrades() {
+    return this.referenceDataService.getQualityGrades();
+  }
+
+  @Get('harvest-statuses')
+  @ApiOperation({ summary: 'Get all harvest statuses' })
+  @ApiResponse({ status: 200, description: 'Harvest statuses retrieved successfully' })
+  async getHarvestStatuses() {
+    return this.referenceDataService.getHarvestStatuses();
+  }
+
+  @Get('intended-uses')
+  @ApiOperation({ summary: 'Get all intended uses for harvests' })
+  @ApiResponse({ status: 200, description: 'Intended uses retrieved successfully' })
+  async getIntendedUses() {
+    return this.referenceDataService.getIntendedUses();
+  }
+
+  @Get('utility-types')
+  @ApiOperation({ summary: 'Get all utility types' })
+  @ApiResponse({ status: 200, description: 'Utility types retrieved successfully' })
+  async getUtilityTypes() {
+    return this.referenceDataService.getUtilityTypes();
+  }
+
+  @Get('infrastructure-types')
+  @ApiOperation({ summary: 'Get all infrastructure types' })
+  @ApiResponse({ status: 200, description: 'Infrastructure types retrieved successfully' })
+  async getInfrastructureTypes() {
+    return this.referenceDataService.getInfrastructureTypes();
+  }
+
+  @Get('basin-shapes')
+  @ApiOperation({ summary: 'Get all basin shapes' })
+  @ApiResponse({ status: 200, description: 'Basin shapes retrieved successfully' })
+  async getBasinShapes() {
+    return this.referenceDataService.getBasinShapes();
+  }
+
+  @Get('payment-methods')
+  @ApiOperation({ summary: 'Get all payment methods' })
+  @ApiResponse({ status: 200, description: 'Payment methods retrieved successfully' })
+  async getPaymentMethods() {
+    return this.referenceDataService.getPaymentMethods();
+  }
+
+  @Get('payment-statuses')
+  @ApiOperation({ summary: 'Get all payment statuses' })
+  @ApiResponse({ status: 200, description: 'Payment statuses retrieved successfully' })
+  async getPaymentStatuses() {
+    return this.referenceDataService.getPaymentStatuses();
+  }
+
+  @Get('task-priorities')
+  @ApiOperation({ summary: 'Get all task priorities' })
+  @ApiResponse({ status: 200, description: 'Task priorities retrieved successfully' })
+  async getTaskPriorities() {
+    return this.referenceDataService.getTaskPriorities();
+  }
+
+  @Get('worker-types')
+  @ApiOperation({ summary: 'Get all worker types' })
+  @ApiResponse({ status: 200, description: 'Worker types retrieved successfully' })
+  async getWorkerTypes() {
+    return this.referenceDataService.getWorkerTypes();
+  }
+
+  @Get('metayage-types')
+  @ApiOperation({ summary: 'Get all metayage (sharecropping) types' })
+  @ApiResponse({ status: 200, description: 'Metayage types retrieved successfully' })
+  async getMetayageTypes() {
+    return this.referenceDataService.getMetayageTypes();
+  }
+
+  @Get('document-types')
+  @ApiOperation({ summary: 'Get all document types' })
+  @ApiResponse({ status: 200, description: 'Document types retrieved successfully' })
+  async getDocumentTypes() {
+    return this.referenceDataService.getDocumentTypes();
+  }
+
+  @Get('currencies')
+  @ApiOperation({ summary: 'Get all currencies' })
+  @ApiResponse({ status: 200, description: 'Currencies retrieved successfully' })
+  async getCurrencies() {
+    return this.referenceDataService.getCurrencies();
+  }
+
+  @Get('timezones')
+  @ApiOperation({ summary: 'Get all timezones' })
+  @ApiResponse({ status: 200, description: 'Timezones retrieved successfully' })
+  async getTimezones() {
+    return this.referenceDataService.getTimezones();
+  }
+
+  @Get('languages')
+  @ApiOperation({ summary: 'Get all languages' })
+  @ApiResponse({ status: 200, description: 'Languages retrieved successfully' })
+  async getLanguages() {
+    return this.referenceDataService.getLanguages();
+  }
+
+  @Get('lab-service-categories')
+  @ApiOperation({ summary: 'Get all lab service categories' })
+  @ApiResponse({ status: 200, description: 'Lab service categories retrieved successfully' })
+  async getLabServiceCategories() {
+    return this.referenceDataService.getLabServiceCategories();
+  }
+
+  @Get('soil-textures')
+  @ApiOperation({ summary: 'Get all soil textures' })
+  @ApiResponse({ status: 200, description: 'Soil textures retrieved successfully' })
+  async getSoilTextures() {
+    return this.referenceDataService.getSoilTextures();
+  }
+
+  @Get('cost-categories')
+  @ApiOperation({ summary: 'Get all cost categories' })
+  @ApiResponse({ status: 200, description: 'Cost categories retrieved successfully' })
+  async getCostCategories() {
+    return this.referenceDataService.getCostCategories();
+  }
+
+  @Get('revenue-categories')
+  @ApiOperation({ summary: 'Get all revenue categories' })
+  @ApiResponse({ status: 200, description: 'Revenue categories retrieved successfully' })
+  async getRevenueCategories() {
+    return this.referenceDataService.getRevenueCategories();
+  }
+
+  @Get('sale-types')
+  @ApiOperation({ summary: 'Get all sale types' })
+  @ApiResponse({ status: 200, description: 'Sale types retrieved successfully' })
+  async getSaleTypes() {
+    return this.referenceDataService.getSaleTypes();
+  }
+
+  @Get('experience-levels')
+  @ApiOperation({ summary: 'Get all experience levels' })
+  @ApiResponse({ status: 200, description: 'Experience levels retrieved successfully' })
+  async getExperienceLevels() {
+    return this.referenceDataService.getExperienceLevels();
+  }
+
+  @Get('seasonalities')
+  @ApiOperation({ summary: 'Get all seasonalities' })
+  @ApiResponse({ status: 200, description: 'Seasonalities retrieved successfully' })
+  async getSeasonalities() {
+    return this.referenceDataService.getSeasonalities();
+  }
+
+  @Get('delivery-types')
+  @ApiOperation({ summary: 'Get all delivery types' })
+  @ApiResponse({ status: 200, description: 'Delivery types retrieved successfully' })
+  async getDeliveryTypes() {
+    return this.referenceDataService.getDeliveryTypes();
+  }
+
+  @Get('delivery-statuses')
+  @ApiOperation({ summary: 'Get all delivery statuses' })
+  @ApiResponse({ status: 200, description: 'Delivery statuses retrieved successfully' })
+  async getDeliveryStatuses() {
+    return this.referenceDataService.getDeliveryStatuses();
+  }
 }

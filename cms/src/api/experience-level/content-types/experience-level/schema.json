@@ -1,0 +1,56 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experience_levels",
+  "info": {
+    "singularName": "experience-level",
+    "pluralName": "experience-levels",
+    "displayName": "Experience Level",
+    "description": "Worker experience levels"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "level": {
+      "type": "integer",
+      "default": 0
+    },
+    "wage_multiplier": {
+      "type": "decimal",
+      "default": 1.0
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

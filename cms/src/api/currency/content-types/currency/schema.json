@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "currencies",
+  "info": {
+    "singularName": "currency",
+    "pluralName": "currencies",
+    "displayName": "Currency",
+    "description": "Available currencies"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "symbol": {
+      "type": "string",
+      "required": true
+    },
+    "symbol_position": {
+      "type": "enumeration",
+      "enum": ["before", "after"],
+      "default": "before"
+    },
+    "decimal_places": {
+      "type": "integer",
+      "default": 2
+    },
+    "decimal_separator": {
+      "type": "string",
+      "default": "."
+    },
+    "thousands_separator": {
+      "type": "string",
+      "default": ","
+    },
+    "icon": {
+      "type": "string"
+    },
+    "country_code": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

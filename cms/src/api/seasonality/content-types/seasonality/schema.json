@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "seasonalities",
+  "info": {
+    "singularName": "seasonality",
+    "pluralName": "seasonalities",
+    "displayName": "Seasonality",
+    "description": "Seasonal periods (spring, summer, autumn, winter, year-round)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "start_month": {
+      "type": "integer"
+    },
+    "end_month": {
+      "type": "integer"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}
