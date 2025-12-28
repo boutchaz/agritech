@@ -110,26 +110,15 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     enabled: !!organizationId
   });
 
-  // Fetch farm hierarchy using NestJS API
   const { data: farms = [], isLoading } = useQuery({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
-      console.log('🔍 Fetching farms for organization:', organizationId);
-
-      // Call NestJS API using apiClient
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
-      console.log('📡 Calling API:', url);
 
-      const result = await apiClient.get<{ success: boolean; farms: unknown[] }>(url);
-      console.log('✅ API Response:', result);
+      const result = await apiClient.get<{ success: boolean; farms: unknown[] }>(url, {}, organizationId);
 
       const data = result.farms || [];
-      console.log('✅ Farms fetched:', data.length, 'farms');
-
-      if (data.length === 0) {
-        console.warn('⚠️ No farms returned. Check if farms were imported to this organization ID.');
-      }
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();

@@ -72,20 +72,14 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
         throw new Error('Non authentifié');
       }
 
-      // Call NestJS API to import farm
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      console.log('📤 Importing farms to organization:', organizationId);
-      console.log('📊 Export data:', {
-        farms: exportData.farms?.length,
-        parcels: exportData.parcels?.length,
-        satellite_aois: exportData.satellite_aois?.length,
-      });
 
       const response = await fetch(`${apiUrl}/api/v1/farms/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          'X-Organization-Id': organizationId,
         },
         body: JSON.stringify({
           organization_id: organizationId,
@@ -101,8 +95,6 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
 
       const data = await response.json();
 
-      console.log('✅ Import response:', data);
-
       if (data?.success) {
         const imported = data.imported;
         let message = `Import réussi!\n`;
@@ -114,14 +106,8 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
           message += `\n\nAvertissements:\n${data.warnings.join('\n')}`;
         }
 
-        if (data.errors && data.errors.length > 0) {
-          console.error('⚠️ Import errors:', data.errors);
-        }
-
         setSuccess(message);
 
-        // Immediately call onSuccess to invalidate queries
-        console.log('🔄 Invalidating queries and refetching...');
         onSuccess();
 
         // Wait a bit before closing to show success message

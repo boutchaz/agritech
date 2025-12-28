@@ -44,13 +44,13 @@ export const useSubscriptionCheck = (feature?: string) => {
           };
         }
 
-        // Call NestJS API to check subscription
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const response = await fetch(`${apiUrl}/api/v1/subscriptions/check`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
+            'X-Organization-Id': currentOrganization.id,
           },
           body: JSON.stringify({
             organizationId: currentOrganization.id,

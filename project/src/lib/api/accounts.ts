@@ -4,30 +4,15 @@ import type { Database } from '@/types/database.types';
 type Tables = Database['public']['Tables'];
 type Account = Tables['accounts']['Row'];
 
-/**
- * Accounts API Client
- * Handles chart of accounts operations
- */
 export const accountsApi = {
-  /**
-   * Get all accounts for an organization
-   */
-  async getAll(_organizationId: string): Promise<Account[]> {
-    return apiClient.get<Account[]>(`/api/v1/accounts`, {
-      params: { is_active: 'true' }
-    });
+  async getAll(organizationId: string): Promise<Account[]> {
+    return apiClient.get<Account[]>(`/api/v1/accounts`, {}, organizationId);
   },
 
-  /**
-   * Get a single account by ID
-   */
-  async getById(accountId: string): Promise<Account> {
-    return apiClient.get<Account>(`/api/v1/accounts/${accountId}`);
+  async getById(accountId: string, organizationId?: string): Promise<Account> {
+    return apiClient.get<Account>(`/api/v1/accounts/${accountId}`, {}, organizationId);
   },
 
-  /**
-   * Create a new account
-   */
   async create(account: {
     code: string;
     name: string;
@@ -39,32 +24,23 @@ export const accountsApi = {
     currency_code: string;
     description_fr?: string;
     description_ar?: string;
-  }): Promise<Account> {
-    return apiClient.post<Account>(`/api/v1/accounts`, account);
+  }, organizationId?: string): Promise<Account> {
+    return apiClient.post<Account>(`/api/v1/accounts`, account, {}, organizationId);
   },
 
-  /**
-   * Update an existing account
-   */
-  async update(accountId: string, updates: Partial<Account>): Promise<Account> {
-    return apiClient.patch<Account>(`/api/v1/accounts/${accountId}`, updates);
+  async update(accountId: string, updates: Partial<Account>, organizationId?: string): Promise<Account> {
+    return apiClient.patch<Account>(`/api/v1/accounts/${accountId}`, updates, {}, organizationId);
   },
 
-  /**
-   * Delete an account
-   */
-  async delete(accountId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/accounts/${accountId}`);
+  async delete(accountId: string, organizationId?: string): Promise<void> {
+    await apiClient.delete(`/api/v1/accounts/${accountId}`, {}, organizationId);
   },
 
-  /**
-   * Seed Moroccan Chart of Accounts
-   */
-  async seedMoroccanChart(_organizationId: string): Promise<{
+  async seedMoroccanChart(organizationId: string): Promise<{
     accounts_created: number;
     success: boolean;
     message: string;
   }> {
-    return apiClient.post(`/api/v1/accounts/seed-moroccan-chart`, {});
+    return apiClient.post(`/api/v1/accounts/seed-moroccan-chart`, {}, {}, organizationId);
   },
 };

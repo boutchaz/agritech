@@ -21,7 +21,6 @@ export class CaslAbilityFactory {
             });
         }
 
-        // Fetch user role for this organization
         const client = this.databaseService.getAdminClient();
         const { data: orgUser, error } = await client
             .from('organization_users')
@@ -31,8 +30,15 @@ export class CaslAbilityFactory {
             .eq('is_active', true)
             .single();
 
+        console.log('[CaslAbilityFactory] User role lookup:', {
+            userId: user.id,
+            organizationId,
+            foundRole: orgUser ? (orgUser.roles as Record<string, unknown>)?.name : null,
+            error: error?.message || null,
+        });
+
         if (error || !orgUser) {
-            // User is not a member of this organization
+            console.warn('[CaslAbilityFactory] User not found in organization_users or inactive');
             return build({
                 detectSubjectType: (item) => item.constructor as ExtractSubjectType<Subjects>,
             });
