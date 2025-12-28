@@ -47,7 +47,15 @@ export class FarmsService {
       `Listing farms for organization ${organizationId}, user ${userId}`,
     );
 
-    // Verify user has access to this organization
+    this.logger.debug(`[listFarms] Checking membership - userId: "${userId}", orgId: "${organizationId}", types: userId=${typeof userId}, orgId=${typeof organizationId}`);
+    
+    const { data: allUserOrgs } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId);
+    
+    this.logger.debug(`[listFarms] All user orgs: ${JSON.stringify(allUserOrgs)}`);
+    
     const { data: orgUser, error: orgError } = await this.supabaseAdmin
       .from('organization_users')
       .select('organization_id, role_id, is_active')
@@ -56,8 +64,10 @@ export class FarmsService {
       .eq('is_active', true)
       .maybeSingle();
 
+    this.logger.debug(`[listFarms] Specific org check - orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgError)}`);
+
     if (orgError || !orgUser) {
-      this.logger.error('User not authorized for organization', orgError);
+      this.logger.error(`User ${userId} not authorized for organization ${organizationId}. Error: ${JSON.stringify(orgError)}`);
       throw new ForbiddenException(
         'You do not have access to this organization',
       );

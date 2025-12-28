@@ -337,20 +337,30 @@ export class SubscriptionsService {
       `Getting subscription for user ${userId} and organization ${organizationId}`,
     );
 
-    // Verify user belongs to the organization
+    this.logger.debug(`[getSubscription] Checking membership - userId: "${userId}", orgId: "${organizationId}", types: userId=${typeof userId}, orgId=${typeof organizationId}`);
+    
+    const { data: allUserOrgs } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId);
+    
+    this.logger.debug(`[getSubscription] All user orgs: ${JSON.stringify(allUserOrgs)}`);
+    
     const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
       .from('organization_users')
       .select('organization_id, role_id, is_active')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
+
+    this.logger.debug(`[getSubscription] Specific org check - orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgUserError)}`);
 
     if (orgUserError || !orgUser) {
       this.logger.error(
-        `User ${userId} does not have access to organization ${organizationId}`,
+        `User ${userId} does not have access to organization ${organizationId}. Error: ${JSON.stringify(orgUserError)}`,
       );
-      throw new ForbiddenException('Access denied to organization');
+      throw new ForbiddenException('You do not have access to this organization');
     }
 
     // Get subscription details
