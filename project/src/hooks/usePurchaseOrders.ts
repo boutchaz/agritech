@@ -89,11 +89,11 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
       const response = await purchaseOrdersApi.getPurchaseOrders({
         status: status,
         page: 1,
-        limit: 1000, // TODO: Add pagination support
+        limit: 1000,
       }, currentOrganization.id);
 
-      // Normalize each purchase order to ensure consistent field names
-      return (response.data || []).map((po: any) => normalizePurchaseOrder(po)) as PurchaseOrderWithItems[];
+      const purchaseOrders = Array.isArray(response) ? response : (response?.data || []);
+      return purchaseOrders.map((po: any) => normalizePurchaseOrder(po)) as PurchaseOrderWithItems[];
     },
     enabled: !!currentOrganization?.id,
   });
