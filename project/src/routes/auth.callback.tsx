@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { authSupabase } from '../lib/auth-supabase';
 import { Input } from '../components/ui/Input';
@@ -89,7 +89,7 @@ function AuthCallbackPage() {
     return undefined;
   }, [passwordUpdated, nextPath]);
 
-  const handlePasswordUpdate = async (event: React.FormEvent) => {
+  const handlePasswordUpdate = async (event: FormEvent) => {
     event.preventDefault();
     setPasswordError(null);
 

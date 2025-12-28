@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 import InfrastructureManagement from '../components/InfrastructureManagement'
-import OrganizationSwitcher from '../components/OrganizationSwitcher'
+
 import { MobileNavBar } from '../components/MobileNavBar'
 import ModernPageHeader from '../components/ModernPageHeader'
 import { useState } from 'react'
@@ -29,7 +29,7 @@ const mockModules: Module[] = [
 
 const AppContent: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentOrganization, currentFarm: _currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('infrastructure');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);

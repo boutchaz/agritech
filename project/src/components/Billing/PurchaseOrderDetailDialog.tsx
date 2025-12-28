@@ -513,7 +513,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       const today = new Date().toISOString().split('T')[0];
 
       // Call the database function to create material receipt
-      const { data, error } = await supabase.rpc('create_material_receipt_from_po', {
+      const { error } = await supabase.rpc('create_material_receipt_from_po', {
         p_purchase_order_id: po.id,
         p_warehouse_id: warehouseId,
         p_receipt_date: today

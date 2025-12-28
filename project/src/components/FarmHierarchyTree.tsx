@@ -15,7 +15,7 @@ import { Can } from '../lib/casl';
 
 // Type aliases from generated database types
 type Farm = Database['public']['Tables']['farms']['Row'];
-type FarmInsert = Database['public']['Tables']['farms']['Insert'];
+type _FarmInsert = Database['public']['Tables']['farms']['Insert'];
 // type ParcelRow = Database['public']['Tables']['parcels']['Row'];
 // type Organization = Database['public']['Tables']['organizations']['Row'];
 
@@ -103,8 +103,6 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
       const data = await farmsService.getFarmHierarchy(organizationId);
-
-      if (error) throw error;
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();

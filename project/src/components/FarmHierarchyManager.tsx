@@ -209,8 +209,6 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
     setError(null);
 
     try {
-      let farmId: string;
-
       const farmData = {
         name: newFarm.name,
         location: newFarm.location,
@@ -223,7 +221,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
       };
 
       const createdFarm = await farmsService.createFarm(organizationId, farmData);
-      farmId = createdFarm.id;
+      const farmId = createdFarm.id;
 
       // Reset form and refresh data
       setNewFarm({

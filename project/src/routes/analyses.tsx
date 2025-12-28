@@ -33,7 +33,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentOrganization, currentFarm: _currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('analyses');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);

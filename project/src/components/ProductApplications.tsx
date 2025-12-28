@@ -37,7 +37,7 @@ const ProductApplications: React.FC = () => {
       fetchParcels();
       fetchUserFarm();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [currentOrganization?.id]);
 
   const fetchParcels = async () => {

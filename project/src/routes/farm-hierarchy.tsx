@@ -6,7 +6,7 @@ import ModernPageHeader from '../components/ModernPageHeader';
 import ModernFarmHierarchy from '../components/FarmHierarchy/ModernFarmHierarchy';
 import FarmRoleManager from '../components/FarmRoleManager';
 import { useState } from 'react';
-import { Building2, Settings } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import type { Module } from '../types';
 
 const mockModules: Module[] = [

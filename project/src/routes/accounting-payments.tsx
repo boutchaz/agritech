@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, CreditCard, Plus, Filter, CheckCircle2, Clock, XCircle, Eye, Edit } from 'lucide-react';
+import { Building2, CreditCard, Plus, Filter, CheckCircle2, Clock, XCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';

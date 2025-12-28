@@ -27,7 +27,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
   isSelected = false,
   onSelect,
   onToggleSelection,
-  onManage,
+  onManage: _onManage,
   onViewParcels,
   onDelete,
 }) => {
