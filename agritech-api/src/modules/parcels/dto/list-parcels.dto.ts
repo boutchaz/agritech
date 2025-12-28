@@ -25,6 +25,15 @@ export class ParcelDto {
   @ApiProperty({ description: 'Crop type', required: false })
   crop_type?: string;
 
+  @ApiProperty({ description: 'Tree type (for orchards)', required: false })
+  tree_type?: string;
+
+  @ApiProperty({ description: 'Tree count', required: false })
+  tree_count?: number;
+
+  @ApiProperty({ description: 'Planting density', required: false })
+  planting_density?: number;
+
   @ApiProperty({ description: 'Crop variety', required: false })
   variety?: string;
 
