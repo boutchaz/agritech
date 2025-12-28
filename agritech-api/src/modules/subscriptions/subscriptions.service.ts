@@ -360,10 +360,12 @@ export class SubscriptionsService {
     this.logger.debug(`[getSubscription] Specific org check - found: ${!!orgUser}, orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgUserError)}`);
 
     if (orgUserError || !orgUser) {
-      this.logger.error(
-        `User ${userId} does not have access to organization ${organizationId}. Error: ${JSON.stringify(orgUserError)}`,
+      // Return null instead of 403 for users without organization membership
+      // This supports the onboarding flow where users may not have organization_users record yet
+      this.logger.warn(
+        `User ${userId} not found in organization ${organizationId}, returning null subscription`,
       );
-      throw new ForbiddenException('You do not have access to this organization');
+      return null;
     }
 
     // Get subscription details
