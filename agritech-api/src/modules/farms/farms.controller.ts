@@ -55,7 +55,8 @@ export class FarmsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  // Note: No @CheckPolicies here - the service validates organization membership internally
+  // This allows new users to list farms during trial setup flow
   async listFarms(
     @Request() req,
     @Query('organization_id') organizationId: string,

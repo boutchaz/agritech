@@ -67,10 +67,14 @@ export class FarmsService {
     this.logger.debug(`[listFarms] Specific org check - orgUser: ${JSON.stringify(orgUser)}, error: ${JSON.stringify(orgError)}`);
 
     if (orgError || !orgUser) {
-      this.logger.error(`User ${userId} not authorized for organization ${organizationId}. Error: ${JSON.stringify(orgError)}`);
-      throw new ForbiddenException(
-        'You do not have access to this organization',
-      );
+      // Return empty list instead of 403 for users without organization membership
+      // This supports the onboarding flow where users may not have organization_users record yet
+      this.logger.warn(`User ${userId} not found in organization ${organizationId}, returning empty farms list`);
+      return {
+        success: true,
+        farms: [],
+        total: 0,
+      };
     }
 
     // Fetch all farms for the organization with parcel counts

@@ -39,7 +39,8 @@ export class SubscriptionsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   @ApiResponse({ status: 404, description: 'No subscription found' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
+  // Note: No @CheckPolicies here - the service validates organization membership internally
+  // This allows new users to check subscription status during trial setup flow
   async getSubscription(@Request() req) {
     console.log('[SubscriptionsController] GET /subscriptions called', {
       userId: req.user?.id,
