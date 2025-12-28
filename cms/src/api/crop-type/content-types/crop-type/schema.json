@@ -14,8 +14,16 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "scientific_name": {
+      "type": "string"
     },
     "value": {
       "type": "string",
@@ -24,9 +32,41 @@
     "description": {
       "type": "text"
     },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "growing_season": {
+      "type": "json"
+    },
+    "climate_requirements": {
+      "type": "json"
+    },
+    "soil_preferences": {
+      "type": "json"
+    },
+    "water_requirements": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"]
+    },
+    "growth_cycle_days": {
+      "type": "integer"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    },
     "organization_id": {
-      "type": "string",
-      "required": false
+      "type": "string"
     },
     "crop_category": {
       "type": "relation",

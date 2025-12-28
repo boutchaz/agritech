@@ -5,7 +5,7 @@
     "singularName": "tree",
     "pluralName": "trees",
     "displayName": "Tree",
-    "description": "Catalog of tree species"
+    "description": "Tree species catalog for orchards and plantations"
   },
   "options": {
     "draftAndPublish": false
@@ -16,9 +16,77 @@
       "type": "string",
       "required": true
     },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
+    },
+    "scientific_name": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "origin": {
+      "type": "string"
+    },
+    "climate_zones": {
+      "type": "json"
+    },
+    "soil_preferences": {
+      "type": "json"
+    },
+    "water_requirements": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"]
+    },
+    "growth_rate": {
+      "type": "enumeration",
+      "enum": ["slow", "medium", "fast"]
+    },
+    "mature_height_m": {
+      "type": "decimal"
+    },
+    "lifespan_years": {
+      "type": "integer"
+    },
+    "harvest_season": {
+      "type": "json"
+    },
+    "yield_kg_per_tree": {
+      "type": "json"
+    },
+    "spacing_m": {
+      "type": "decimal"
+    },
     "characteristics": {
-      "type": "json",
-      "required": false
+      "type": "json"
+    },
+    "varieties": {
+      "type": "json"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
     },
     "tree_category": {
       "type": "relation",

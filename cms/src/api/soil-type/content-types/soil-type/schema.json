@@ -5,7 +5,7 @@
     "singularName": "soil-type",
     "pluralName": "soil-types",
     "displayName": "Soil Type",
-    "description": "Types of soil for parcels"
+    "description": "Types of soil for agricultural parcels"
   },
   "options": {
     "draftAndPublish": false
@@ -14,8 +14,13 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
     },
     "value": {
       "type": "string",
@@ -25,9 +30,42 @@
     "description": {
       "type": "text"
     },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "characteristics": {
+      "type": "json"
+    },
+    "suitable_crops": {
+      "type": "json"
+    },
+    "drainage_rating": {
+      "type": "enumeration",
+      "enum": ["poor", "moderate", "good", "excellent"]
+    },
+    "water_retention": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high"]
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    },
     "organization_id": {
-      "type": "string",
-      "required": false
+      "type": "string"
     }
   }
 }

@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "account_mapping_templates",
+  "info": {
+    "singularName": "account-mapping-template",
+    "pluralName": "account-mapping-templates",
+    "displayName": "Account Mapping Template",
+    "description": "Default account mappings for chart of accounts templates"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "country_code": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 3
+    },
+    "version": {
+      "type": "string",
+      "required": true,
+      "default": "1.0.0"
+    },
+    "mappings": {
+      "type": "json",
+      "required": true
+    },
+    "category_mappings": {
+      "type": "json"
+    },
+    "transaction_type_mappings": {
+      "type": "json"
+    }
+  }
+}

@@ -5,7 +5,7 @@
     "singularName": "variety",
     "pluralName": "varieties",
     "displayName": "Variety",
-    "description": "Varieties of crop types"
+    "description": "Specific varieties of crop types"
   },
   "options": {
     "draftAndPublish": false
@@ -14,8 +14,13 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false
+      "required": true
+    },
+    "name_fr": {
+      "type": "string"
+    },
+    "name_ar": {
+      "type": "string"
     },
     "value": {
       "type": "string",
@@ -24,15 +29,44 @@
     "description": {
       "type": "text"
     },
+    "description_fr": {
+      "type": "text"
+    },
+    "description_ar": {
+      "type": "text"
+    },
     "origin": {
       "type": "string"
     },
     "main_use": {
       "type": "string"
     },
+    "characteristics": {
+      "type": "json"
+    },
+    "maturity_days": {
+      "type": "integer"
+    },
+    "yield_potential": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high", "very_high"]
+    },
+    "disease_resistance": {
+      "type": "json"
+    },
+    "climate_adaptability": {
+      "type": "json"
+    },
+    "sort_order": {
+      "type": "integer",
+      "default": 0
+    },
+    "is_global": {
+      "type": "boolean",
+      "default": true
+    },
     "organization_id": {
-      "type": "string",
-      "required": false
+      "type": "string"
     },
     "crop_type": {
       "type": "relation",
