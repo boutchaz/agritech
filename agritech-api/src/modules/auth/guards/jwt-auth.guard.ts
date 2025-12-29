@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 
@@ -9,6 +9,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
+    const request = context.switchToHttp().getRequest();
+    console.log('[JwtAuthGuard] canActivate called for:', request.url);
+
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
@@ -16,9 +19,31 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     ]);
 
     if (isPublic) {
+      console.log('[JwtAuthGuard] Route is public, allowing access');
       return true;
     }
 
+    console.log('[JwtAuthGuard] Calling passport JWT strategy');
     return super.canActivate(context);
+  }
+
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    const request = context.switchToHttp().getRequest();
+    console.log('[JwtAuthGuard] handleRequest:', {
+      url: request.url,
+      hasError: !!err,
+      hasUser: !!user,
+      userId: user?.id,
+      info: info?.message || info,
+    });
+
+    if (err || !user) {
+      console.error('[JwtAuthGuard] Authentication failed:', {
+        error: err?.message || err,
+        info: info?.message || info,
+      });
+      throw err || new UnauthorizedException('Authentication failed');
+    }
+    return user;
   }
 }
