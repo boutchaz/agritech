@@ -15,6 +15,25 @@ async function bootstrap() {
   // Get config service
   const configService = app.get(ConfigService);
 
+  // Global request logger middleware - logs every incoming request
+  app.use((req, res, next) => {
+    const start = Date.now();
+    console.log(`[Request] ${req.method} ${req.url}`, {
+      headers: {
+        authorization: req.headers.authorization ? 'Bearer ***' : 'missing',
+        'x-organization-id': req.headers['x-organization-id'] || 'missing',
+      },
+    });
+
+    // Log response when finished
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`[Response] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+    });
+
+    next();
+  });
+
   // Security middleware - Helmet sets various HTTP headers
   app.use(
     helmet({
