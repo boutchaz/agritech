@@ -339,6 +339,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Set default organization when organizations load
   useEffect(() => {
+    console.log('[AuthProvider] Organization effect:', {
+      organizationsCount: organizations.length,
+      hasCurrentOrg: !!currentOrganization,
+      organizations: organizations.map(o => ({ id: o.id, name: o.name })),
+    });
+
     if (organizations.length > 0 && !currentOrganization) {
       // Try to restore from Zustand store first, then localStorage
       const storedOrg = useOrganizationStore.getState().currentOrganization;
@@ -369,6 +375,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       // Use restored org or default to first organization
       const finalOrg = orgToRestore || organizations[0];
+      console.log('[AuthProvider] Setting current organization:', finalOrg);
       setCurrentOrganization(finalOrg);
 
       // IMPORTANT: Also save to localStorage so services can read it immediately
@@ -499,6 +506,23 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       (subscriptionQuery.error.message?.includes('Failed to fetch') ||
         subscriptionQuery.error.message?.includes('NetworkError'));
 
+    // Debug logging for subscription redirect decision
+    console.log('[AuthProvider] Subscription redirect check:', {
+      loading,
+      subscriptionLoading,
+      isSubscriptionQueryLoading,
+      hasSubscriptionError,
+      hasUser: !!user,
+      hasCurrentOrg: !!currentOrganization,
+      currentOrgId: currentOrganization?.id,
+      subscription,
+      subscriptionQueryStatus: subscriptionQuery?.status,
+      isOnSelectTrialPage,
+      isPublicRoute,
+      isOnSetPasswordPage,
+      pathname: location.pathname,
+    });
+
     // Don't redirect if:
     // 1. Still loading subscription
     // 2. Subscription query has network errors (might be temporary)
@@ -509,9 +533,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     if (!loading && !isSubscriptionQueryLoading && !hasSubscriptionError && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
       // User has an organization but no subscription - redirect to trial selection
       // Only redirect if subscription query has completed without errors
+      console.log('[AuthProvider] Redirecting to /select-trial - no subscription found');
       window.location.href = '/select-trial';
     }
-  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage, queryClient]);
+  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage, queryClient, location.pathname]);
 
   const value = {
     user,

@@ -57,9 +57,27 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
 
   const data: LoginResponse = await response.json();
 
-  await authSupabase.auth.setSession({
+  // Set the session in Supabase client
+  const { error: sessionError } = await authSupabase.auth.setSession({
     access_token: data.access_token,
     refresh_token: data.refresh_token,
+  });
+
+  if (sessionError) {
+    console.error('Failed to set session:', sessionError);
+    throw new Error('Failed to establish session');
+  }
+
+  // Verify the session was set correctly
+  const { data: sessionData } = await authSupabase.auth.getSession();
+  if (!sessionData.session) {
+    console.error('Session not established after setSession');
+    throw new Error('Session verification failed');
+  }
+
+  console.log('Session established successfully:', {
+    userId: sessionData.session.user.id,
+    email: sessionData.session.user.email,
   });
 
   return data;
