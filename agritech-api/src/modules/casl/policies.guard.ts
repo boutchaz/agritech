@@ -14,10 +14,11 @@ export class PoliciesGuard implements CanActivate {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        console.log('[PoliciesGuard] canActivate START');
+        console.log('[PoliciesGuard] ========== canActivate START ==========');
         const request = context.switchToHttp().getRequest();
         const requestId = (request as any).requestId || 'unknown';
         console.log(`[PoliciesGuard #${requestId}] canActivate called for:`, request.url);
+        console.log(`[PoliciesGuard #${requestId}] User on request:`, request.user?.id, request.user?.email);
 
         try {
             const policyHandlers =
