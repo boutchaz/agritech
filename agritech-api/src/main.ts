@@ -1,9 +1,51 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+
+// Global exception filter to log all 403 exceptions with stack traces
+@Catch()
+class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const request = ctx.getRequest();
+    const requestId = (request as any).requestId || 'unknown';
+
+    let status = 500;
+    let message = 'Internal server error';
+    let stack = '';
+
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      message = typeof exceptionResponse === 'string' ? exceptionResponse : JSON.stringify(exceptionResponse);
+      stack = exception.stack || '';
+    } else if (exception instanceof Error) {
+      message = exception.message;
+      stack = exception.stack || '';
+    }
+
+    // Log 403 errors with full details to identify the source
+    if (status === 403) {
+      console.error(`\n========== [EXCEPTION FILTER #${requestId}] 403 FORBIDDEN ==========`);
+      console.error(`URL: ${request.method} ${request.url}`);
+      console.error(`Message: ${message}`);
+      console.error(`Exception Type: ${exception?.constructor?.name}`);
+      console.error(`Stack trace (first 15 lines):\n${stack.split('\n').slice(0, 15).join('\n')}`);
+      console.error(`==========================================================\n`);
+    }
+
+    response.status(status).json({
+      statusCode: status,
+      message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    });
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -58,6 +100,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global exception filter to capture and log 403 errors with stack traces
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Enable CORS
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');
