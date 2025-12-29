@@ -21,9 +21,15 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
-  const { data: { session } } = await authSupabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await authSupabase.auth.getSession();
+
+  if (sessionError) {
+    console.error('[API Client] Error getting session:', sessionError);
+    throw new Error(`Session error: ${sessionError.message}`);
+  }
 
   if (!session?.access_token) {
+    console.error('[API Client] No active session found');
     throw new Error('No active session');
   }
 
