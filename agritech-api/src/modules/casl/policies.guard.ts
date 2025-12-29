@@ -13,7 +13,8 @@ export class PoliciesGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
-        console.log('[PoliciesGuard] canActivate called for:', request.url);
+        const requestId = (request as any).requestId || 'unknown';
+        console.log(`[PoliciesGuard #${requestId}] canActivate called for:`, request.url);
 
         try {
             const policyHandlers =
@@ -22,7 +23,7 @@ export class PoliciesGuard implements CanActivate {
                     context.getHandler(),
                 ) || [];
 
-            console.log('[PoliciesGuard] Policy handlers count:', policyHandlers.length, 'for', request.url);
+            console.log(`[PoliciesGuard #${requestId}] Policy handlers count:`, policyHandlers.length, 'for', request.url);
 
             if (policyHandlers.length === 0) {
                 console.log('[PoliciesGuard] No policies defined, allowing access for:', request.url);

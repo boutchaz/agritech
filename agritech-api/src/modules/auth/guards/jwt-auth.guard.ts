@@ -10,7 +10,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    console.log('[JwtAuthGuard] canActivate called for:', request.url);
+    const requestId = (request as any).requestId || 'unknown';
+    console.log(`[JwtAuthGuard #${requestId}] canActivate called for:`, request.url);
 
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
@@ -29,7 +30,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    console.log('[JwtAuthGuard] handleRequest:', {
+    const requestId = (request as any).requestId || 'unknown';
+    console.log(`[JwtAuthGuard #${requestId}] handleRequest:`, {
       url: request.url,
       hasError: !!err,
       hasUser: !!user,
