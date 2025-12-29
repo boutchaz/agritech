@@ -63,11 +63,26 @@ export class PoliciesGuard implements CanActivate {
 
         const ability = await this.caslAbilityFactory.createForUser(user, organizationId);
 
-        const isAllowed = policyHandlers.every((handler) =>
-            this.execPolicyHandler(handler, ability),
-        );
+        // Log each policy check result for debugging
+        const results = policyHandlers.map((handler, index) => {
+            const result = this.execPolicyHandler(handler, ability);
+            console.log(`[PoliciesGuard] Policy ${index} check:`, {
+                url: request.url,
+                handlerType: typeof handler,
+                result,
+            });
+            return result;
+        });
+
+        const isAllowed = results.every(Boolean);
 
         if (!isAllowed) {
+            console.error('[PoliciesGuard] Permission denied:', {
+                url: request.url,
+                userId: user?.id,
+                organizationId,
+                policyResults: results,
+            });
             throw new ForbiddenException('You do not have sufficient permissions (CASL)');
         }
 

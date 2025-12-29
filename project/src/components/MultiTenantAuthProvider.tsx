@@ -502,9 +502,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   useEffect(() => {
     const subscriptionQuery = queryClient.getQueryState(['subscription', currentOrganization?.id || 'none']);
     const isSubscriptionQueryLoading = subscriptionQuery?.status === 'pending' || subscriptionLoading;
+    // Treat 403 errors as temporary (auth timing issue) to prevent false redirect to trial
     const hasSubscriptionError = subscriptionQuery?.error && subscriptionQuery.error instanceof Error &&
       (subscriptionQuery.error.message?.includes('Failed to fetch') ||
-        subscriptionQuery.error.message?.includes('NetworkError'));
+        subscriptionQuery.error.message?.includes('NetworkError') ||
+        subscriptionQuery.error.message?.includes('403') ||
+        subscriptionQuery.error.message?.includes('Forbidden'));
 
     // Debug logging for subscription redirect decision
     console.log('[AuthProvider] Subscription redirect check:', {

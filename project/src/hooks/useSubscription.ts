@@ -67,10 +67,20 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         )) {
           throw error;
         }
-        // For other errors, return null (e.g., 404 means no subscription found)
+        // For 404 errors, return null (no subscription found is expected)
         if (error instanceof Error && error.message?.includes('404')) {
           console.log('[useSubscription] 404 - no subscription found (expected)');
           return null; // No subscription found - this is expected
+        }
+        // For 403 errors, re-throw to prevent false "no subscription" state
+        // This is an auth issue, not "no subscription found"
+        if (error instanceof Error && (
+          error.message?.includes('403') ||
+          error.message?.includes('Forbidden') ||
+          error.message?.includes('permission')
+        )) {
+          console.error('[useSubscription] 403 Forbidden - auth issue, re-throwing');
+          throw error;
         }
         console.error('❌ Error fetching subscription:', error);
         return null;
@@ -81,11 +91,13 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
-      // Retry up to 3 times for network errors
+      // Retry up to 3 times for network errors and auth errors (may be timing issue)
       if (failureCount < 3 && error instanceof Error && (
         error.message?.includes('Failed to fetch') ||
         error.message?.includes('NetworkError') ||
-        error.message?.includes('Network request failed')
+        error.message?.includes('Network request failed') ||
+        error.message?.includes('403') ||
+        error.message?.includes('Forbidden')
       )) {
         return true;
       }
