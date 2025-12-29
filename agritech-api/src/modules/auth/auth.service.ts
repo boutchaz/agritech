@@ -3,9 +3,9 @@ import {
   UnauthorizedException,
   Logger,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { createClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { SignupDto } from './dto/signup.dto';
 import { UsersService } from '../users/users.service';
@@ -18,7 +18,7 @@ export class AuthService {
 
   constructor(
     private databaseService: DatabaseService,
-    private jwtService: JwtService,
+    private configService: ConfigService,
     private usersService: UsersService,
     private organizationsService: OrganizationsService,
     private demoDataService: DemoDataService,
@@ -28,12 +28,25 @@ export class AuthService {
    * Login - Authenticate user with email and password
    */
   async login(email: string, password: string) {
-    const client = this.databaseService.getClient();
+    // IMPORTANT: Create a fresh Supabase client for each login attempt
+    // Using the shared client causes issues because:
+    // 1. It's a singleton with persistSession: false
+    // 2. Concurrent logins can interfere with each other
+    // 3. The session state is shared across requests
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+
+    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     this.logger.log(`Login attempt for email: ${email}`);
 
     try {
-      const { data, error } = await client.auth.signInWithPassword({
+      const { data, error } = await freshClient.auth.signInWithPassword({
         email,
         password,
       });

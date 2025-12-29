@@ -12,6 +12,7 @@ import { DemoDataModule } from '../demo-data/demo-data.module';
 
 @Module({
   imports: [
+    ConfigModule,
     DatabaseModule,
     UsersModule,
     OrganizationsModule,
