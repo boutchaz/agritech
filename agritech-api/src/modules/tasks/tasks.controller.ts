@@ -23,7 +23,7 @@ import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 @ApiTags('tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller()
+@Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
@@ -33,14 +33,12 @@ export class TasksController {
     return this.tasksService.findMyTasks(req.user.id);
   }
 
-  @Get('organizations/:organizationId/tasks')
-
   @Get()
   @ApiOperation({ summary: 'Get all tasks for an organization' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiQuery({ name: 'organization_id', required: true, description: 'Organization ID' })
   async getTasks(
     @Request() req,
-    @Param('organizationId') organizationId: string,
+    @Query('organization_id') organizationId: string,
     @Query() filters: TaskFiltersDto,
   ) {
     return this.tasksService.findAll(req.user.id, organizationId, filters);
@@ -48,98 +46,88 @@ export class TasksController {
 
   @Get('statistics')
   @ApiOperation({ summary: 'Get task statistics for an organization' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
-  async getTaskStatistics(
-    @Request() req,
-    @Param('organizationId') organizationId: string,
-  ) {
+  async getTaskStatistics(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.getStatistics(req.user.id, organizationId);
   }
 
   @Get(':taskId')
   @ApiOperation({ summary: 'Get a task by ID' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async getTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.findOne(req.user.id, organizationId, taskId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   async createTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Body() createTaskDto: CreateTaskDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.create(req.user.id, organizationId, createTaskDto);
   }
 
   @Patch(':taskId')
   @ApiOperation({ summary: 'Update a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async updateTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
     @Body() updateTaskDto: UpdateTaskDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.update(req.user.id, organizationId, taskId, updateTaskDto);
   }
 
   @Patch(':taskId/assign')
   @ApiOperation({ summary: 'Assign a task to a worker' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async assignTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
     @Body() assignTaskDto: AssignTaskDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.assign(req.user.id, organizationId, taskId, assignTaskDto);
   }
 
   @Patch(':taskId/complete')
   @ApiOperation({ summary: 'Complete a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async completeTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
     @Body() completeTaskDto: CompleteTaskDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.complete(req.user.id, organizationId, taskId, completeTaskDto);
   }
 
   @Post(':taskId/complete-with-harvest')
   @ApiOperation({ summary: 'Complete a harvest task and create harvest record' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async completeHarvestTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
     @Body() completeDto: CompleteHarvestTaskDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.completeWithHarvest(req.user.id, organizationId, taskId, completeDto);
   }
 
   @Delete(':taskId')
   @ApiOperation({ summary: 'Delete a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async deleteTask(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.remove(req.user.id, organizationId, taskId);
   }
 
@@ -149,21 +137,18 @@ export class TasksController {
 
   @Get('categories/all')
   @ApiOperation({ summary: 'Get all task categories for an organization' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
-  async getTaskCategories(
-    @Param('organizationId') organizationId: string,
-  ) {
+  async getTaskCategories(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.getCategories(organizationId);
   }
 
   @Post('categories')
   @ApiOperation({ summary: 'Create a new task category' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   async createTaskCategory(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Body() createCategoryDto: any,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.createCategory(req.user.id, organizationId, createCategoryDto);
   }
 
@@ -173,7 +158,6 @@ export class TasksController {
 
   @Get(':taskId/comments')
   @ApiOperation({ summary: 'Get all comments for a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async getTaskComments(
     @Param('taskId') taskId: string,
@@ -183,7 +167,6 @@ export class TasksController {
 
   @Post(':taskId/comments')
   @ApiOperation({ summary: 'Add a comment to a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async addTaskComment(
     @Request() req,
@@ -199,7 +182,6 @@ export class TasksController {
 
   @Get(':taskId/time-logs')
   @ApiOperation({ summary: 'Get all time logs for a task' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async getTaskTimeLogs(
     @Param('taskId') taskId: string,
@@ -209,20 +191,18 @@ export class TasksController {
 
   @Post(':taskId/clock-in')
   @ApiOperation({ summary: 'Clock in to a task (start time tracking)' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async clockIn(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('taskId') taskId: string,
     @Body() clockInDto: any,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.clockIn(req.user.id, organizationId, taskId, clockInDto);
   }
 
   @Patch('time-logs/:timeLogId/clock-out')
   @ApiOperation({ summary: 'Clock out from a task (end time tracking)' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'timeLogId', description: 'Time Log ID' })
   async clockOut(
     @Request() req,
