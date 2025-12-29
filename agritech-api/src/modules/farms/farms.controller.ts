@@ -33,7 +33,7 @@ import { ApiParam } from '@nestjs/swagger';
 
 @ApiTags('farms')
 @Controller('farms')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard)
 export class FarmsController {
   constructor(private farmsService: FarmsService) { }
 
@@ -55,7 +55,7 @@ export class FarmsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
-  // Note: No @CheckPolicies here - the service validates organization membership internally
+  // Note: No PoliciesGuard here - the service validates organization membership internally
   // This allows new users to list farms during trial setup flow
   async listFarms(
     @Request() req,
@@ -72,6 +72,7 @@ export class FarmsController {
 
   @Get(':id')
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Get farm details by ID',
     description: 'Get detailed information about a specific farm',
@@ -99,6 +100,7 @@ export class FarmsController {
 
   @Get(':id/related-data-counts')
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Get related data counts for a farm',
     description: 'Get counts of related data (parcels, workers, tasks, etc.) for a specific farm',
@@ -126,6 +128,7 @@ export class FarmsController {
 
   @Post()
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({ summary: 'Create a new farm' })
   @ApiResponse({ status: 201, description: 'Farm created successfully' })
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'Farm'))
@@ -136,6 +139,7 @@ export class FarmsController {
 
   @Delete()
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Delete a farm',
     description:
@@ -157,6 +161,7 @@ export class FarmsController {
 
   @Post('import')
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Import farms, parcels, and satellite AOIs',
     description:
@@ -182,6 +187,7 @@ export class FarmsController {
 
   @Post('batch-delete')
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Batch delete multiple farms',
     description:
@@ -208,6 +214,7 @@ export class FarmsController {
 
   @Post('export')
   @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
   @ApiOperation({
     summary: 'Export farm data',
     description:

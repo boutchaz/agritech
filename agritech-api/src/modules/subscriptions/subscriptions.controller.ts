@@ -15,14 +15,12 @@ import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
 } from './dto/check-subscription.dto';
-import { PoliciesGuard } from '../casl/policies.guard';
-import { CheckPolicies } from '../casl/check-policies.decorator';
-import { Action } from '../casl/action.enum';
-import { AppAbility } from '../casl/casl-ability.factory';
+// PoliciesGuard removed - subscription endpoints validate org membership in service layer
+// This allows the trial setup flow to work before full CASL permissions are established
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard)
 export class SubscriptionsController {
   constructor(private subscriptionsService: SubscriptionsService) {}
 
@@ -76,7 +74,7 @@ export class SubscriptionsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Subscription'))
+  // Service validates organization membership internally
   async getUsageCounts(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
