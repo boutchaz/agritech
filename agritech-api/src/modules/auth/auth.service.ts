@@ -80,20 +80,51 @@ export class AuthService {
    */
   async validateToken(token: string): Promise<any> {
     try {
-      // Use admin client to verify the token - it can validate any user's token
-      const adminClient = this.databaseService.getAdminClient();
-      const {
-        data: { user },
-        error,
-      } = await adminClient.auth.getUser(token);
+      // Create a fresh client to validate the token
+      // Using admin client's getUser works but may have issues in some cases
+      const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+      const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
 
-      if (error || !user) {
-        this.logger.error(`Token validation error: ${error?.message}`);
+      const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+
+      // Set the session using the token
+      const { data: sessionData, error: sessionError } = await freshClient.auth.setSession({
+        access_token: token,
+        refresh_token: '', // We don't have refresh token, but that's ok for validation
+      });
+
+      if (sessionError) {
+        this.logger.error(`Token session error: ${sessionError.message}`);
+        // Try admin client as fallback
+        const adminClient = this.databaseService.getAdminClient();
+        const { data: { user }, error } = await adminClient.auth.getUser(token);
+
+        if (error || !user) {
+          this.logger.error(`Admin token validation also failed: ${error?.message}`);
+          throw new UnauthorizedException('Invalid token');
+        }
+
+        this.logger.log(`Token validated via admin client for user: ${user.id}`);
+        return user;
+      }
+
+      const user = sessionData?.user;
+      if (!user) {
+        this.logger.error('Token validation: no user in session data');
         throw new UnauthorizedException('Invalid token');
       }
 
+      this.logger.debug(`Token validated successfully for user: ${user.id}`);
       return user;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       this.logger.error(`Token validation failed: ${error.message}`);
       throw new UnauthorizedException('Invalid token');
     }
