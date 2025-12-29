@@ -9,9 +9,12 @@ export class PoliciesGuard implements CanActivate {
     constructor(
         private reflector: Reflector,
         private caslAbilityFactory: CaslAbilityFactory,
-    ) { }
+    ) {
+        console.log('[PoliciesGuard] Constructor called, caslAbilityFactory:', !!caslAbilityFactory);
+    }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        console.log('[PoliciesGuard] canActivate START');
         const request = context.switchToHttp().getRequest();
         const requestId = (request as any).requestId || 'unknown';
         console.log(`[PoliciesGuard #${requestId}] canActivate called for:`, request.url);
