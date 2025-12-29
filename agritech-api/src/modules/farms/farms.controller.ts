@@ -61,6 +61,7 @@ export class FarmsController {
     @Request() req,
     @Query('organization_id') organizationId: string,
   ) {
+    console.log('========== [FarmsController] GET /farms ENTERED ==========');
     console.log('[FarmsController] GET /farms called', {
       userId: req.user?.id,
       organizationId,

@@ -42,6 +42,7 @@ export class SubscriptionsController {
   // Note: No @CheckPolicies here - the service validates organization membership internally
   // This allows new users to check subscription status during trial setup flow
   async getSubscription(@Request() req) {
+    console.log('========== [SubscriptionsController] GET /subscriptions ENTERED ==========');
     console.log('[SubscriptionsController] GET /subscriptions called', {
       userId: req.user?.id,
       userObject: req.user,

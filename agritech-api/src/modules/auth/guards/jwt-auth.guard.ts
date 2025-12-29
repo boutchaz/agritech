@@ -24,8 +24,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    console.log('[JwtAuthGuard] Calling passport JWT strategy');
-    return super.canActivate(context);
+    console.log(`[JwtAuthGuard #${requestId}] Calling passport JWT strategy`);
+    const result = super.canActivate(context);
+
+    // Log when the guard result is a Promise
+    if (result instanceof Promise) {
+      return result.then(res => {
+        console.log(`[JwtAuthGuard #${requestId}] canActivate resolved to:`, res);
+        return res;
+      }).catch(err => {
+        console.error(`[JwtAuthGuard #${requestId}] canActivate threw:`, err.message);
+        throw err;
+      });
+    }
+
+    console.log(`[JwtAuthGuard #${requestId}] canActivate returned:`, result);
+    return result;
   }
 
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
@@ -46,6 +60,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       });
       throw err || new UnauthorizedException('Authentication failed');
     }
+
+    // Attach user to request
+    request.user = user;
+    console.log(`[JwtAuthGuard #${requestId}] User attached to request, proceeding to next guard`);
     return user;
   }
 }
