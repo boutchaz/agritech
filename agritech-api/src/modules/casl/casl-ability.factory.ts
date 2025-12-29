@@ -49,19 +49,29 @@ export class CaslAbilityFactory {
 
         if (roleName === 'system_admin' || roleName === 'organization_admin') {
             can(Action.Manage, 'all'); // Admin can do anything
+            console.log('[CaslAbilityFactory] Granting manage:all for admin role');
         } else if (roleName === 'farm_manager') {
             can(Action.Manage, 'Farm');
             can(Action.Manage, 'Parcel');
             can(Action.Read, 'all');
+            console.log('[CaslAbilityFactory] Granting farm_manager permissions');
         } else if (roleName === 'viewer') {
             can(Action.Read, 'all');
+            console.log('[CaslAbilityFactory] Granting viewer permissions');
         } else {
             // Default for other roles (worker, etc.) - adjust as needed
             can(Action.Read, 'all');
+            console.log('[CaslAbilityFactory] Granting default read-all permissions for role:', roleName);
         }
 
-        return build({
+        const ability = build({
             detectSubjectType: (item) => item.constructor as ExtractSubjectType<Subjects>,
         });
+
+        // Log a test of the ability to verify it works
+        console.log('[CaslAbilityFactory] Testing ability - can manage all:', ability.can(Action.Manage, 'all'));
+        console.log('[CaslAbilityFactory] Testing ability - can read Farm:', ability.can(Action.Read, 'Farm'));
+
+        return ability;
     }
 }
