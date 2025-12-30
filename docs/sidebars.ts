@@ -50,7 +50,17 @@ const sidebars: SidebarsConfig = {
       items: [
         'features/farm-management',
         'features/satellite-analysis',
+        'features/agricultural-accounting',
         'features/task-management',
+        'features/inventory',
+        'features/workers',
+        'features/profitability',
+        'features/weather',
+        'features/accounting',
+        'features/billing-cycle',
+        'features/production-intelligence-data-flow',
+        'features/quality-control',
+        'features/subscriptions',
       ],
     },
     {
@@ -60,6 +70,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'guides/adding-new-route',
         'guides/creating-component',
+        'guides/data-fetching',
         'guides/database-migration',
         'guides/adding-feature',
       ],

@@ -1,11 +1,21 @@
 version: "3.8"
+
 services:
   docs:
     image: nginx:alpine
     container_name: agritech-docs
     ports:
-      - "8080:80"
+      - "${DOCS_PORT:-8080}:80"
     volumes:
       - ../build:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.htpasswd:/etc/nginx/.htpasswd:ro
+    environment:
+      - NGINX_HOST=${DOCS_HOST:-localhost}
     restart: unless-stopped
-
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

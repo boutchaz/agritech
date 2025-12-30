@@ -13,12 +13,19 @@ AgriTech Platform is a full-stack web application designed to help agricultural 
 
 - **Multi-Tenant Architecture**: Organizations, farms, and parcels with role-based access control
 - **Satellite Data Analysis**: Real-time vegetation indices (NDVI, NDRE, NDMI, etc.) via Google Earth Engine
+- **Agricultural Accounting**: Campaigns, crop cycles, biological assets, and fiscal year management
 - **Task Management**: Comprehensive task tracking with cost allocation
 - **Inventory Management**: Stock tracking with automatic product creation
 - **Accounting Module**: Full double-entry bookkeeping with invoices, payments, and financial reports
+- **Billing & Sales**: Purchase orders, sales orders, and quotes management
+- **Production Intelligence**: Data-driven insights for crop yield and performance
+- **Profitability Analysis**: Real-time P&L tracking per parcel and crop cycle
+- **Weather Analytics**: Historical weather data and forecasting for precise farm management
 - **Worker Management**: Track permanent workers and day laborers
 - **Harvest Tracking**: Record harvests and calculate profitability
 - **Subscription System**: Feature gating with Polar.sh integration
+- **Marketplace**: Connect producers with buyers and service providers
+- **Quality Control**: Lab services, reception batches, and quality tracking
 
 ## Tech Stack
 
@@ -48,10 +55,24 @@ AgriTech Platform is a full-stack web application designed to help agricultural 
 ### 🌍 Satellite Analysis
 Leverage Google Earth Engine to analyze crop health with 12+ vegetation indices. Get cloud-free imagery, historical time series, and export GeoTIFF files for GIS software.
 
-### 📊 Accounting
+### 💰 Agricultural Accounting
+Advanced financial management for agriculture:
+- **Campaigns**: Multi-year agricultural campaigns
+- **Crop Cycles**: Track costs and revenues per specific crop cycle
+- **Biological Assets**: Manage and value trees, livestock, and permanent crops
+- **Fiscal Years**: Standardized financial periods and closing procedures
+
+### 💹 Profitability & Intelligence
+Data-driven decision making:
+- **Parcel Profitability**: Real-time P&L analysis per parcel
+- **Production Intelligence**: Comparative analysis of yields and inputs
+- **Weather Analytics**: Correlate weather patterns with crop performance
+
+### 📊 Accounting & Billing
 Full double-entry bookkeeping system with:
 - Chart of Accounts hierarchy
 - Sales and purchase invoices
+- Purchase Orders & Sales Orders
 - Payment tracking and allocation
 - Financial reports (Balance Sheet, P&L, Trial Balance)
 - Multi-currency support
@@ -59,6 +80,7 @@ Full double-entry bookkeeping system with:
 ### 🌾 Farm Management
 Organize your agricultural operations with:
 - Multi-level hierarchy (Organizations → Farms → Parcels → Sub-parcels)
+- Tree management and mapping
 - Role-based access control (6 role levels)
 - Cost center tracking per farm/parcel
 - Geospatial boundaries with GeoJSON
@@ -71,15 +93,22 @@ Track all farm activities:
 - Payment status tracking
 - Calendar view
 
-### 📦 Inventory
-Smart inventory management:
+### 📦 Inventory & QC
+Smart inventory management and quality control:
 - Automatic product creation from purchases
 - Packaging type support (bidon, sac, etc.)
 - Stock level alerts
-- Supplier and warehouse management
+- Reception batches and quality control (QC)
+- Lab services integration
 - Invoice attachments via Supabase Storage
 
-### 💰 Subscriptions
+### 🛒 Marketplace
+Platform for agricultural commerce:
+- Quote requests and bidding
+- Order management
+- Supplier/Buyer networking
+
+### 💳 Subscriptions
 Monetize with feature gating:
 - Plans: Free, Basic, Pro, Enterprise
 - Usage limits (farms, parcels, users, reports)
@@ -109,6 +138,7 @@ graph TB
         B[Supabase<br/>PostgreSQL + Auth]
         C[Satellite Service<br/>FastAPI + GEE]
         D[Edge Functions<br/>Deno]
+        H[NestJS API<br/>Business Logic]
     end
 
     subgraph "External Services"
@@ -120,9 +150,11 @@ graph TB
     A --> B
     A --> C
     A --> D
+    A --> H
     C --> E
     B --> F
     B --> G
+    H --> B
 ```
 
 ## Documentation Structure

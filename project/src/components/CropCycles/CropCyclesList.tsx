@@ -318,25 +318,25 @@ export function CropCyclesList() {
       </div>
 
       <div className="flex flex-wrap gap-4">
-        <Select value={filterCampaignId} onValueChange={setFilterCampaignId}>
+        <Select value={filterCampaignId || '__all__'} onValueChange={(v) => setFilterCampaignId(v === '__all__' ? '' : v)}>
           <SelectTrigger className="w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder={t('cropCycles.filter.campaign', 'All Campaigns')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t('cropCycles.filter.allCampaigns', 'All Campaigns')}</SelectItem>
+            <SelectItem value="__all__">{t('cropCycles.filter.allCampaigns', 'All Campaigns')}</SelectItem>
             {campaigns.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus || '__all__'} onValueChange={(v) => setFilterStatus(v === '__all__' ? '' : v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder={t('cropCycles.filter.status', 'All Statuses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t('cropCycles.filter.allStatuses', 'All Statuses')}</SelectItem>
+            <SelectItem value="__all__">{t('cropCycles.filter.allStatuses', 'All Statuses')}</SelectItem>
             <SelectItem value="planned">{t('cropCycles.status.planned', 'Planned')}</SelectItem>
             <SelectItem value="growing">{t('cropCycles.status.growing', 'Growing')}</SelectItem>
             <SelectItem value="harvesting">{t('cropCycles.status.harvesting', 'Harvesting')}</SelectItem>
@@ -479,15 +479,15 @@ export function CropCyclesList() {
               <div>
                 <Label>{t('cropCycles.form.parcel', 'Parcel')}</Label>
                 <Select
-                  value={form.watch('parcel_id') || ''}
-                  onValueChange={(value) => form.setValue('parcel_id', value)}
+                  value={form.watch('parcel_id') || '__none__'}
+                  onValueChange={(value) => form.setValue('parcel_id', value === '__none__' ? '' : value)}
                   disabled={!selectedFarmId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('cropCycles.form.selectParcel', 'Select parcel...')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    <SelectItem value="__none__">{t('common.none', 'None')}</SelectItem>
                     {parcels.map((parcel) => (
                       <SelectItem key={parcel.id} value={parcel.id}>{parcel.name}</SelectItem>
                     ))}
@@ -555,14 +555,14 @@ export function CropCyclesList() {
               <div>
                 <Label>{t('cropCycles.form.campaign', 'Campaign')}</Label>
                 <Select
-                  value={form.watch('campaign_id') || ''}
-                  onValueChange={(value) => form.setValue('campaign_id', value)}
+                  value={form.watch('campaign_id') || '__none__'}
+                  onValueChange={(value) => form.setValue('campaign_id', value === '__none__' ? '' : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('cropCycles.form.selectCampaign', 'Select...')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    <SelectItem value="__none__">{t('common.none', 'None')}</SelectItem>
                     {campaigns.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
@@ -572,14 +572,14 @@ export function CropCyclesList() {
               <div>
                 <Label>{t('cropCycles.form.fiscalYear', 'Fiscal Year')}</Label>
                 <Select
-                  value={form.watch('fiscal_year_id') || ''}
-                  onValueChange={(value) => form.setValue('fiscal_year_id', value)}
+                  value={form.watch('fiscal_year_id') || '__none__'}
+                  onValueChange={(value) => form.setValue('fiscal_year_id', value === '__none__' ? '' : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('cropCycles.form.selectFiscalYear', 'Select...')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    <SelectItem value="__none__">{t('common.none', 'None')}</SelectItem>
                     {fiscalYears.map((fy) => (
                       <SelectItem key={fy.id} value={fy.id}>{fy.name}</SelectItem>
                     ))}
