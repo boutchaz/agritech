@@ -502,5 +502,6 @@ cd backend-service && pytest
 - [Multi-Tenancy Architecture](./multi-tenancy)
 - [Frontend Architecture](./frontend)
 - [Backend Architecture](./backend)
+- [NestJS API Architecture](./nestjs-api)
 - [Database Architecture](./database)
 - [Satellite Service](./satellite-service)

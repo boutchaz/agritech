@@ -5,17 +5,17 @@
       "plugin": "138e0e15"
     }
   },
-  "/-f6f": {
+  "/-3cd": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-866": {
+  "/-9dd": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-929": {
+  "/-49e": {
     "__comp": "a94703ab"
   },
   "/api/hooks-732": {
@@ -45,6 +45,10 @@
   "/architecture/multi-tenancy-277": {
     "__comp": "17896441",
     "content": "50260c19"
+  },
+  "/architecture/nestjs-api-491": {
+    "__comp": "17896441",
+    "content": "0fcba9dc"
   },
   "/architecture/overview-f3c": {
     "__comp": "17896441",

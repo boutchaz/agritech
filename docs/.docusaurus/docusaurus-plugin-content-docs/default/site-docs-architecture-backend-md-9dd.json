@@ -20,7 +20,7 @@
     "permalink": "/architecture/frontend"
   },
   "next": {
-    "title": "Database Architecture",
-    "permalink": "/architecture/database"
+    "title": "NestJS API Architecture",
+    "permalink": "/architecture/nestjs-api"
   }
 }

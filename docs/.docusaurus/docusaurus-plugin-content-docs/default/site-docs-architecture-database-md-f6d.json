@@ -16,8 +16,8 @@
   },
   "sidebar": "docs",
   "previous": {
-    "title": "Backend Architecture",
-    "permalink": "/architecture/backend"
+    "title": "NestJS API Architecture",
+    "permalink": "/architecture/nestjs-api"
   },
   "next": {
     "title": "Satellite Service Architecture",

@@ -1,0 +1,26 @@
+{
+  "id": "architecture/nestjs-api",
+  "title": "NestJS API Architecture",
+  "description": "NestJS business logic service architecture, modules, authentication, and API design",
+  "source": "@site/docs/architecture/nestjs-api.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/nestjs-api",
+  "permalink": "/architecture/nestjs-api",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "NestJS API Architecture",
+    "description": "NestJS business logic service architecture, modules, authentication, and API design"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Backend Architecture",
+    "permalink": "/architecture/backend"
+  },
+  "next": {
+    "title": "Database Architecture",
+    "permalink": "/architecture/database"
+  }
+}

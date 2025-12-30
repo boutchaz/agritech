@@ -25,6 +25,7 @@ const sidebars: SidebarsConfig = {
         'architecture/multi-tenancy',
         'architecture/frontend',
         'architecture/backend',
+        'architecture/nestjs-api',
         'architecture/database',
         'architecture/satellite-service',
       ],

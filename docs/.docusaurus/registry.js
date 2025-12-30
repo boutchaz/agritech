@@ -5,6 +5,7 @@ export default {
   "0b1ac180": [() => import(/* webpackChunkName: "0b1ac180" */ "@site/docs/architecture/overview.md"), "@site/docs/architecture/overview.md", require.resolveWeak("@site/docs/architecture/overview.md")],
   "0b2b7749": [() => import(/* webpackChunkName: "0b2b7749" */ "@site/docs/testing/tax-calculations.md"), "@site/docs/testing/tax-calculations.md", require.resolveWeak("@site/docs/testing/tax-calculations.md")],
   "0e384e19": [() => import(/* webpackChunkName: "0e384e19" */ "@site/docs/intro.md"), "@site/docs/intro.md", require.resolveWeak("@site/docs/intro.md")],
+  "0fcba9dc": [() => import(/* webpackChunkName: "0fcba9dc" */ "@site/docs/architecture/nestjs-api.md"), "@site/docs/architecture/nestjs-api.md", require.resolveWeak("@site/docs/architecture/nestjs-api.md")],
   "138e0e15": [() => import(/* webpackChunkName: "138e0e15" */ "@generated/@easyops-cn/docusaurus-search-local/default/__plugin.json"), "@generated/@easyops-cn/docusaurus-search-local/default/__plugin.json", require.resolveWeak("@generated/@easyops-cn/docusaurus-search-local/default/__plugin.json")],
   "13f9f791": [() => import(/* webpackChunkName: "13f9f791" */ "@site/docs/frontend/authorization.md"), "@site/docs/frontend/authorization.md", require.resolveWeak("@site/docs/frontend/authorization.md")],
   "17896441": [() => import(/* webpackChunkName: "17896441" */ "@theme/DocItem"), "@theme/DocItem", require.resolveWeak("@theme/DocItem")],

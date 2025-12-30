@@ -9,15 +9,15 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', 'f6f'),
+    component: ComponentCreator('/', '3cd'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', '866'),
+        component: ComponentCreator('/', '9dd'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '929'),
+            component: ComponentCreator('/', '49e'),
             routes: [
               {
                 path: '/api/hooks',
@@ -55,6 +55,12 @@ export default [
               {
                 path: '/architecture/multi-tenancy',
                 component: ComponentCreator('/architecture/multi-tenancy', '277'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/architecture/nestjs-api',
+                component: ComponentCreator('/architecture/nestjs-api', '491'),
                 exact: true,
                 sidebar: "docs"
               },

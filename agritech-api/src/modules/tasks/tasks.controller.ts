@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -20,8 +20,13 @@ import { AssignTaskDto } from './dto/assign-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
 import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 
-@ApiTags('tasks')
-@ApiBearerAuth()
+@ApiTags('Workforce - Tasks')
+@ApiBearerAuth('JWT-auth')
+@ApiHeader({
+  name: 'x-organization-id',
+  description: 'Organization ID for multi-tenant context',
+  required: true,
+})
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
 export class TasksController {
@@ -29,6 +34,8 @@ export class TasksController {
 
   @Get('my-tasks')
   @ApiOperation({ summary: 'Get all tasks assigned to the current user across all organizations' })
+  @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMyTasks(@Request() req) {
     return this.tasksService.findMyTasks(req.user.id);
   }
@@ -36,6 +43,9 @@ export class TasksController {
   @Get()
   @ApiOperation({ summary: 'Get all tasks for an organization' })
   @ApiQuery({ name: 'organization_id', required: true, description: 'Organization ID' })
+  @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async getTasks(
     @Request() req,
     @Query('organization_id') organizationId: string,
@@ -46,6 +56,8 @@ export class TasksController {
 
   @Get('statistics')
   @ApiOperation({ summary: 'Get task statistics for an organization' })
+  @ApiResponse({ status: 200, description: 'Task statistics retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getTaskStatistics(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.getStatistics(req.user.id, organizationId);
@@ -54,6 +66,9 @@ export class TasksController {
   @Get(':taskId')
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async getTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -64,6 +79,9 @@ export class TasksController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
+  @ApiResponse({ status: 201, description: 'Task created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createTask(
     @Request() req,
     @Body() createTaskDto: CreateTaskDto,
@@ -75,6 +93,10 @@ export class TasksController {
   @Patch(':taskId')
   @ApiOperation({ summary: 'Update a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async updateTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -87,6 +109,10 @@ export class TasksController {
   @Patch(':taskId/assign')
   @ApiOperation({ summary: 'Assign a task to a worker' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task assigned successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - worker not available' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task or worker not found' })
   async assignTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -99,6 +125,10 @@ export class TasksController {
   @Patch(':taskId/complete')
   @ApiOperation({ summary: 'Complete a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task completed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - task cannot be completed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async completeTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -111,6 +141,10 @@ export class TasksController {
   @Post(':taskId/complete-with-harvest')
   @ApiOperation({ summary: 'Complete a harvest task and create harvest record' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Harvest task completed and harvest record created' })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid harvest data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async completeHarvestTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -123,6 +157,9 @@ export class TasksController {
   @Delete(':taskId')
   @ApiOperation({ summary: 'Delete a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async deleteTask(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -137,6 +174,8 @@ export class TasksController {
 
   @Get('categories/all')
   @ApiOperation({ summary: 'Get all task categories for an organization' })
+  @ApiResponse({ status: 200, description: 'Task categories retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getTaskCategories(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.getCategories(organizationId);
@@ -144,6 +183,9 @@ export class TasksController {
 
   @Post('categories')
   @ApiOperation({ summary: 'Create a new task category' })
+  @ApiResponse({ status: 201, description: 'Task category created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createTaskCategory(
     @Request() req,
     @Body() createCategoryDto: any,
@@ -159,6 +201,9 @@ export class TasksController {
   @Get(':taskId/comments')
   @ApiOperation({ summary: 'Get all comments for a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Task comments retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskComments(
     @Param('taskId') taskId: string,
   ) {
@@ -168,6 +213,10 @@ export class TasksController {
   @Post(':taskId/comments')
   @ApiOperation({ summary: 'Add a comment to a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 201, description: 'Comment added successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async addTaskComment(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -183,6 +232,9 @@ export class TasksController {
   @Get(':taskId/time-logs')
   @ApiOperation({ summary: 'Get all time logs for a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Time logs retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskTimeLogs(
     @Param('taskId') taskId: string,
   ) {
@@ -192,6 +244,10 @@ export class TasksController {
   @Post(':taskId/clock-in')
   @ApiOperation({ summary: 'Clock in to a task (start time tracking)' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 201, description: 'Clock-in recorded successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - already clocked in' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   async clockIn(
     @Request() req,
     @Param('taskId') taskId: string,
@@ -204,6 +260,10 @@ export class TasksController {
   @Patch('time-logs/:timeLogId/clock-out')
   @ApiOperation({ summary: 'Clock out from a task (end time tracking)' })
   @ApiParam({ name: 'timeLogId', description: 'Time Log ID' })
+  @ApiResponse({ status: 200, description: 'Clock-out recorded successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - not clocked in' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Time log not found' })
   async clockOut(
     @Request() req,
     @Param('timeLogId') timeLogId: string,
