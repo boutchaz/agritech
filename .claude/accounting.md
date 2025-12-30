@@ -667,9 +667,113 @@ Biological assets support:
 - Depreciation for bearer plants under cost model
 - Fair value change tracking with journal entry links
 
+## Global Accounting System (Multi-Country Templates)
+
+### Overview
+
+The system supports worldwide chart of accounts through a template-driven approach:
+
+1. **Global Templates** (`account_templates` table) - Pre-configured chart of accounts for each country/standard
+2. **Global Mappings** (`account_mappings` with `organization_id = NULL`) - Country-level account mappings
+3. **Organization-Specific Mappings** (`account_mappings` with `organization_id` set) - Org-level overrides
+
+### Supported Countries
+
+Templates are seeded for:
+- **MA** (Morocco) - PCEC/CGNC standard
+- **TN** (Tunisia) - PCN standard
+- **FR** (France) - PCG standard
+- **SN** (Senegal) - SYSCOHADA standard
+- **US** (United States) - GAAP standard
+- **GB** (United Kingdom) - FRS 102 standard
+
+### Template Application Flow
+
+1. Admin selects country template
+2. System calls `applyTemplate(countryCode, organizationId)`
+3. Accounts are copied from `account_templates` to `accounts` table
+4. Default account mappings are created via:
+   - `create_task_cost_mappings()` - Maps task types to expense accounts
+   - `create_harvest_sales_mappings()` - Maps revenue types and cash accounts
+
+### Account Mappings
+
+**Table**: `account_mappings`
+
+**Dual-Purpose Structure**:
+- `organization_id IS NULL` → Global template (country-level)
+- `organization_id IS NOT NULL` → Organization-specific override
+
+**Mapping Types**:
+- `cost_type` - Maps task types (planting, harvesting, labor) to expense accounts
+- `revenue_type` - Maps revenue streams to income accounts
+- `harvest_sale` - Maps sale channels (market, export, wholesale) to revenue accounts
+- `cash` - Maps cash/bank accounts for payment entries
+
+**API Endpoints** (NestJS):
+- `GET /account-mappings` - List org mappings
+- `POST /account-mappings` - Create mapping
+- `PATCH /account-mappings/:id` - Update mapping
+- `DELETE /account-mappings/:id` - Delete mapping
+- `POST /account-mappings/initialize?country_code=MA` - Initialize defaults
+
+**Frontend**:
+- Route: `/settings/account-mappings`
+- Component: `AccountMappingsManagement`
+
+### Cost Centers
+
+**Table**: `cost_centers`
+
+Track costs by organizational unit for profitability analysis.
+
+**Fields**:
+- `code` - Unique code within organization
+- `name` - Cost center name
+- `description` - Optional description
+- `parent_id` - For hierarchical cost centers
+- `farm_id` - Link to specific farm
+- `parcel_id` - Link to specific parcel
+- `crop_cycle_id` - Link to crop production cycle
+
+**API Endpoints** (NestJS):
+- `GET /cost-centers` - List cost centers
+- `POST /cost-centers` - Create cost center
+- `PATCH /cost-centers/:id` - Update cost center
+- `DELETE /cost-centers/:id` - Delete (fails if used in journal items)
+
+**Frontend**:
+- Route: `/settings/cost-centers`
+- Component: `CostCenterManagement`
+
+### Database Functions
+
+```sql
+-- Get account mapping (falls back to global template)
+SELECT * FROM get_account_mapping(org_id, 'cost_type', 'labor');
+
+-- Initialize org mappings from global templates
+SELECT initialize_org_account_mappings(org_id, 'MA');
+
+-- Create default task cost mappings
+SELECT create_task_cost_mappings(org_id, 'MA');
+
+-- Create default revenue/cash mappings
+SELECT create_harvest_sales_mappings(org_id, 'MA');
+```
+
+### RLS Policies
+
+Account mappings have proper RLS:
+- **Read**: Global templates (org_id IS NULL) readable by all authenticated users
+- **Read**: Org-specific mappings only by org members
+- **Write**: Only organization admins can create/update/delete org mappings
+- **Protected**: Global templates cannot be modified by regular users
+
 ## Future Enhancements (Roadmap)
 - Bank reconciliation module
 - Budget vs. Actual reporting
 - Cash flow statement
 - Multi-company consolidation
 - Advanced cost allocation (overhead, depreciation)
+- CMS-driven chart of accounts templates with versioning

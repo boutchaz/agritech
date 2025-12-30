@@ -94,6 +94,8 @@ export class CostCentersService {
           name: dto.name,
           description: dto.description,
           parent_id: dto.parent_id,
+          farm_id: dto.farm_id,
+          parcel_id: dto.parcel_id,
           is_active: dto.is_active ?? true,
           organization_id: dto.organization_id,
           created_by: dto.created_by,
@@ -138,7 +140,7 @@ export class CostCentersService {
         }
       }
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
 
@@ -146,6 +148,8 @@ export class CostCentersService {
       if (dto.name) updateData.name = dto.name;
       if (dto.description !== undefined) updateData.description = dto.description;
       if (dto.parent_id !== undefined) updateData.parent_id = dto.parent_id;
+      if (dto.farm_id !== undefined) updateData.farm_id = dto.farm_id;
+      if (dto.parcel_id !== undefined) updateData.parcel_id = dto.parcel_id;
       if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
 
       const { data, error } = await supabaseClient
