@@ -14,6 +14,8 @@ export interface CreateCostCenterInput {
   name: string;
   description?: string;
   parent_id?: string;
+  farm_id?: string;
+  parcel_id?: string;
   is_active?: boolean;
 }
 
@@ -22,6 +24,8 @@ export interface UpdateCostCenterInput {
   name?: string;
   description?: string;
   parent_id?: string;
+  farm_id?: string;
+  parcel_id?: string;
   is_active?: boolean;
 }
 

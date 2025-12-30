@@ -409,10 +409,34 @@ export class AccountsService {
 
       this.logger.log(`Applied template ${countryCode} to organization ${organizationId}: ${accountsCreated} accounts created`);
 
+      let accountMappingsCreated = 0;
+      let costCentersCreated = 0;
+
+      if (options.includeAccountMappings !== false) {
+        try {
+          const taskMappingsResult = await client.query(
+            'SELECT create_task_cost_mappings($1, $2) as count',
+            [organizationId, countryCode.toUpperCase().substring(0, 2)]
+          );
+          const harvestMappingsResult = await client.query(
+            'SELECT create_harvest_sales_mappings($1, $2) as count',
+            [organizationId, countryCode.toUpperCase().substring(0, 2)]
+          );
+          accountMappingsCreated = 
+            (taskMappingsResult.rows[0]?.count || 0) + 
+            (harvestMappingsResult.rows[0]?.count || 0);
+          this.logger.log(`Created ${accountMappingsCreated} account mappings for organization ${organizationId}`);
+        } catch (mappingError) {
+          this.logger.warn(`Could not create account mappings: ${mappingError.message}`);
+        }
+      }
+
       return {
         success: true,
         accounts_created: accountsCreated,
-        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts`,
+        account_mappings_created: accountMappingsCreated,
+        cost_centers_created: costCentersCreated,
+        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts${accountMappingsCreated > 0 ? ` and ${accountMappingsCreated} account mappings` : ''}`,
       };
     } catch (error) {
       await client.query('ROLLBACK');
