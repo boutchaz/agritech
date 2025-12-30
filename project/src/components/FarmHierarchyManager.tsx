@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { supabase } from '../lib/supabase';
+import React, { useState } from 'react';
 import { farmsService } from '../services/farmsService';
+import { useFarmHierarchy, useUserFarmRoles, type HierarchyFarm } from '../hooks/useFarmHierarchy';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
   Plus,
@@ -15,28 +15,6 @@ import {
   TreePine
 } from 'lucide-react';
 
-interface Farm {
-  farm_id: string;
-  farm_name: string;
-  farm_location: string;
-  farm_size: number;
-  farm_type: 'main' | 'sub';
-  parent_farm_id: string | null;
-  hierarchy_level: number;
-  manager_name: string;
-  sub_farms_count: number;
-  is_active: boolean;
-}
-
-interface FarmRole {
-  farm_id: string;
-  farm_name: string;
-  role: string;
-  permissions: any;
-  assigned_at: string;
-  is_active: boolean;
-}
-
 interface FarmHierarchyManagerProps {
   organizationId: string;
   currentUserId: string;
@@ -48,17 +26,12 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
   currentUserId,
   onManageRoles
 }) => {
-  const { t } = useTranslation();
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [userRoles, setUserRoles] = useState<FarmRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [expandedFarms, setExpandedFarms] = useState<Set<string>>(new Set());
   const [showCreateFarm, setShowCreateFarm] = useState(false);
   const [_showManageRoles, setShowManageRoles] = useState<string | null>(null);
   const [selectedParentFarm, setSelectedParentFarm] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // New farm form state
   const [newFarm, setNewFarm] = useState({
     name: '',
     location: '',
@@ -69,129 +42,40 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
     manager_id: ''
   });
 
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchFarmHierarchy();
-      // Wait for farms to be loaded before fetching roles
-      await fetchUserRoles();
-    };
-    loadData();
-  }, [organizationId]);
+  const { data: farms = [], isLoading: farmsLoading, error: farmsError } = useFarmHierarchy(organizationId);
+  const { data: userRoles = [] } = useUserFarmRoles(currentUserId, farms);
 
-  // Refetch roles when farms change (for the basic roles implementation)
-  useEffect(() => {
-    if (farms.length > 0 && userRoles.length === 0) {
-      fetchUserRoles();
-    }
-  }, [farms]);
-
-  const fetchFarmHierarchy = async () => {
-    try {
-      const data = await farmsService.getFarmHierarchy(organizationId);
-      setFarms(data || []);
-    } catch (error: any) {
-      console.error('Error fetching farm hierarchy:', error);
-      // Fallback to basic fetch if API fails (optional, but good for resilience during migration)
-      await fetchBasicFarms();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBasicFarms = async () => {
-    try {
-      // Use basic get_organization_farms function
-      const { data, error } = await supabase.rpc('get_organization_farms', {
-        org_uuid: organizationId
+  const createFarmMutation = useMutation({
+    mutationFn: async (farmData: {
+      name: string;
+      location: string;
+      size: number;
+      size_unit: string;
+      description: string;
+      farm_type: 'main' | 'sub';
+      parent_farm_id: string | null;
+      manager_id: string | null;
+    }) => {
+      return farmsService.createFarm(farmData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
+      setNewFarm({
+        name: '',
+        location: '',
+        size: 0,
+        size_unit: 'hectares',
+        description: '',
+        farm_type: 'main',
+        manager_id: ''
       });
+      setSelectedParentFarm(null);
+      setShowCreateFarm(false);
+    },
+  });
 
-      if (error) throw error;
-
-      // Transform to hierarchy format
-      const hierarchyFarms: Farm[] = (data || []).map((farm: any) => ({
-        farm_id: farm.farm_id,
-        farm_name: farm.farm_name,
-        farm_location: farm.farm_location,
-        farm_size: farm.farm_size || 0,
-        farm_type: farm.farm_type || 'main',
-        parent_farm_id: farm.parent_farm_id || null,
-        hierarchy_level: farm.hierarchy_level || 1,
-        manager_name: farm.manager_name || t('farmHierarchy.farm.noManager'),
-        sub_farms_count: farm.sub_farms_count || 0,
-        is_active: true
-      }));
-
-      setFarms(hierarchyFarms);
-    } catch (error: any) {
-      console.error('Error fetching basic farms:', error);
-      setError('Failed to load farms');
-    }
-  };
-
-  const fetchUserRoles = async () => {
-    try {
-      // Try the hierarchy function first, fallback to basic implementation
-      const { data, error } = await supabase.rpc('get_user_farm_roles', {
-        user_uuid: currentUserId
-      });
-
-      if (error && error.code === 'PGRST202') {
-        // Function doesn't exist, implement basic roles system
-        await createBasicUserRoles();
-        return;
-      }
-
-      if (error) throw error;
-      setUserRoles(data || []);
-    } catch (error: any) {
-      console.error('Error fetching user roles:', error);
-      // Fallback to basic roles
-      await createBasicUserRoles();
-    }
-  };
-
-  const createBasicUserRoles = async () => {
-    try {
-      // Get organization membership to determine basic role
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('role_id, role:roles!organization_users_role_id_fkey(name)')
-        .eq('organization_id', organizationId)
-        .eq('user_id', currentUserId)
-        .single();
-
-      if (orgError) {
-        console.error('Error fetching organization role:', orgError);
-        setUserRoles([]);
-        return;
-      }
-
-      // Create basic roles based on organization membership
-      const basicRoles: FarmRole[] = farms.map(farm => ({
-        farm_id: farm.farm_id,
-        farm_name: farm.farm_name,
-        role: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin' ? 'main_manager' :
-          orgUser.role?.name === 'manager' || orgUser.role?.name === 'farm_manager' ? 'sub_manager' : 'supervisor',
-        permissions: {
-          manage_farms: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin',
-          manage_sub_farms: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
-          manage_users: orgUser.role?.name === 'admin' || orgUser.role?.name === 'organization_admin',
-          view_reports: true,
-          manage_crops: true,
-          manage_parcels: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
-          manage_inventory: orgUser.role?.name !== 'member' && orgUser.role?.name !== 'viewer',
-          manage_activities: true
-        },
-        assigned_at: new Date().toISOString(),
-        is_active: true
-      }));
-
-      setUserRoles(basicRoles);
-    } catch (error) {
-      console.error('Error creating basic roles:', error);
-      setUserRoles([]);
-    }
-  };
+  const loading = farmsLoading || createFarmMutation.isPending;
+  const error = farmsError?.message || createFarmMutation.error?.message || null;
 
   const toggleFarmExpansion = (farmId: string) => {
     const newExpanded = new Set(expandedFarms);
@@ -205,48 +89,20 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
   const handleCreateFarm = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
 
-    try {
-      const farmData = {
-        name: newFarm.name,
-        location: newFarm.location,
-        size: newFarm.size,
-        size_unit: newFarm.size_unit,
-        description: newFarm.description,
-        farm_type: newFarm.farm_type,
-        parent_farm_id: newFarm.farm_type === 'sub' ? selectedParentFarm : null,
-        manager_id: newFarm.manager_id || null
-      };
-
-      const createdFarm = await farmsService.createFarm(organizationId, farmData);
-      const farmId = createdFarm.id;
-
-      // Reset form and refresh data
-      setNewFarm({
-        name: '',
-        location: '',
-        size: 0,
-        size_unit: 'hectares',
-        description: '',
-        farm_type: 'main',
-        manager_id: ''
-      });
-      setSelectedParentFarm(null);
-      setShowCreateFarm(false);
-
-      console.log('Farm created successfully with ID:', farmId);
-      await fetchFarmHierarchy();
-    } catch (error: any) {
-      console.error('Error creating farm:', error);
-      setError(error.message || 'Failed to create farm');
-    } finally {
-      setLoading(false);
-    }
+    createFarmMutation.mutate({
+      name: newFarm.name,
+      location: newFarm.location,
+      size: newFarm.size,
+      size_unit: newFarm.size_unit,
+      description: newFarm.description,
+      farm_type: newFarm.farm_type,
+      parent_farm_id: newFarm.farm_type === 'sub' ? selectedParentFarm : null,
+      manager_id: newFarm.manager_id || null
+    });
   };
 
-  const renderFarmNode = (farm: Farm, level: number = 0) => {
+  const renderFarmNode = (farm: HierarchyFarm, level: number = 0) => {
     const hasChildren = farm.sub_farms_count > 0;
     const isExpanded = expandedFarms.has(farm.farm_id);
     const userRole = userRoles.find(role => role.farm_id === farm.farm_id);

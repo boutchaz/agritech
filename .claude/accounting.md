@@ -596,6 +596,77 @@ Invoices grouped by age (current, 30 days, 60 days, 90+ days).
 
 **Usage**: Transactions in foreign currencies converted to base currency for reporting.
 
+## Agricultural Financial Year Accounting
+
+### Multi-Time Dimension Model
+
+The system supports three concurrent time dimensions for agricultural accounting:
+
+1. **Fiscal Year** - Legal/tax year (typically Jan-Dec)
+2. **Agricultural Campaign** - Production season (e.g., "Campagne 2024/2025" Sep-Aug)
+3. **Crop Cycle** - Individual production cycle from planting to sale
+
+### Database Tables
+
+#### Time Dimension Tables
+- `fiscal_years` - Legal fiscal year management with org-specific start months
+- `fiscal_periods` - Sub-periods (monthly/quarterly) within fiscal years
+- `agricultural_campaigns` - Campagne Agricole entity spanning calendar years
+
+#### Production Cycle Tables
+- `crop_cycles` - Production cycles with full cost/revenue attribution
+- `crop_cycle_allocations` - Partial cost allocation for shared resources
+
+#### Biological Assets (IAS 41)
+- `biological_assets` - Perennial assets (orchards, vineyards, livestock)
+- `biological_asset_valuations` - Fair value tracking per IAS 41
+
+### Key Relationships
+
+```
+fiscal_years
+    └── fiscal_periods
+    └── agricultural_campaigns (may span 2 fiscal years)
+        └── crop_cycles
+            ├── costs (via crop_cycle_id)
+            ├── revenues (via crop_cycle_id)
+            └── harvest_records (via crop_cycle_id)
+```
+
+### Morocco/MENA Specifics
+
+Campaign dates typically:
+- **Start**: September (after summer)
+- **End**: August (after harvest)
+
+Function `create_morocco_campaign()` generates properly formatted campaigns.
+
+### Hooks
+
+- `useFiscalYears()` - Fetch fiscal years
+- `useCurrentFiscalYear()` - Get current fiscal year
+- `useCampaigns()` - Fetch agricultural campaigns
+- `useCurrentCampaign()` - Get current campaign
+- `useCropCycles()` - Fetch crop cycles with filters
+- `useCropCyclePnL()` - Fetch P&L by crop cycle
+- `useBiologicalAssets()` - Fetch biological assets
+- `useBiologicalAssetValuations()` - Fair value history
+
+### Report Views
+
+- `crop_cycle_pnl` - Profitability by crop cycle
+- `campaign_summary` - Aggregated campaign metrics
+- `fiscal_campaign_reconciliation` - Compare fiscal year vs campaign accounting
+
+### IAS 41 Compliance
+
+Biological assets support:
+- Initial recognition at cost
+- Subsequent measurement at fair value or cost model
+- Fair value levels (1, 2, 3) per IFRS 13
+- Depreciation for bearer plants under cost model
+- Fair value change tracking with journal entry links
+
 ## Future Enhancements (Roadmap)
 - Bank reconciliation module
 - Budget vs. Actual reporting

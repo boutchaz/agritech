@@ -19,6 +19,8 @@ export type Subject =
   // Accounting subjects
   | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
   | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport' | 'AccountMapping'
+  // Agricultural Accounting subjects
+  | 'FiscalYear' | 'Campaign' | 'CropCycle' | 'BiologicalAsset'
   // Work units (piece-work payment)
   | 'WorkUnit' | 'PieceWork'
   // Harvest & Reception subjects
@@ -113,6 +115,12 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Harvest');
     can('manage', 'ReceptionBatch');
     can('manage', 'QualityControl');
+
+    // Agricultural Accounting - Full access for organization admins
+    can('manage', 'FiscalYear');
+    can('manage', 'Campaign');
+    can('manage', 'CropCycle');
+    can('manage', 'BiologicalAsset');
   }
 
   // Farm Manager - Manage assigned farms
@@ -160,6 +168,14 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Harvest');
     can('manage', 'ReceptionBatch');
     can('manage', 'QualityControl');
+
+    // Agricultural Accounting - Farm managers can view fiscal years/campaigns and manage crop cycles
+    can('read', 'FiscalYear');
+    can('read', 'Campaign');
+    can('manage', 'CropCycle'); // Can manage crop cycles for their farms
+    can('read', 'BiologicalAsset');
+    can('create', 'BiologicalAsset');
+    can('update', 'BiologicalAsset');
   }
 
   // Farm Worker - Basic operations
@@ -199,6 +215,12 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'ReceptionBatch');
     can('create', 'ReceptionBatch');
     can('read', 'QualityControl');
+
+    // Agricultural Accounting - Farm workers can view production tracking data
+    can('read', 'FiscalYear');
+    can('read', 'Campaign');
+    can('read', 'CropCycle');
+    can('read', 'BiologicalAsset');
   }
 
   // Day Laborer - Very limited access (only tasks and profile)
@@ -245,6 +267,12 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Harvest');
     can('read', 'ReceptionBatch');
     can('read', 'QualityControl');
+
+    // Agricultural Accounting - Viewers can only read
+    can('read', 'FiscalYear');
+    can('read', 'Campaign');
+    can('read', 'CropCycle');
+    can('read', 'BiologicalAsset');
   }
 
   // ============================================

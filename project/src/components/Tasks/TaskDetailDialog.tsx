@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { useUpdateTask } from '../../hooks/useTasks';
 import { tasksApi } from '../../lib/api/tasks';
-import { cropsApi, type Crop } from '../../lib/api/crops';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCropsForTask, type Crop } from '../../hooks/useCrops';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
 import {
   getTaskStatusLabel,
@@ -74,21 +74,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     }
   }, [showHarvestForm, lotNumber, task.parcel_id, task.farm_id]);
 
-  // Fetch crops for the task's farm (don't filter by parcel to show all available crops)
-  const { data: crops = [] } = useQuery({
-    queryKey: ['crops', organizationId, task.farm_id],
-    queryFn: async () => {
-      // First try to get crops for the specific parcel
-      if (task.parcel_id) {
-        const parcelCrops = await cropsApi.getAll(organizationId, task.farm_id, task.parcel_id);
-        if (parcelCrops.length > 0) {
-          return parcelCrops;
-        }
-      }
-      // Fall back to all crops for the farm
-      return cropsApi.getAll(organizationId, task.farm_id);
-    },
-    enabled: !!organizationId && !!task.farm_id,
+  const { data: crops = [] } = useCropsForTask({
+    farmId: task.farm_id,
+    parcelId: task.parcel_id,
+    enabled: !!task.farm_id,
   });
 
   // Harvest completion form data

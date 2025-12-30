@@ -40,7 +40,9 @@ import { Route as FarmHierarchyRouteImport } from './routes/farm-hierarchy'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DayLaborersRouteImport } from './routes/day-laborers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CropCyclesRouteImport } from './routes/crop-cycles'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout-success'
+import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BillingSalesOrdersRouteImport } from './routes/billing-sales-orders'
 import { Route as BillingQuotesRouteImport } from './routes/billing-quotes'
@@ -77,11 +79,13 @@ import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsPreferencesRouteImport } from './routes/settings.preferences'
 import { Route as SettingsOrganizationRouteImport } from './routes/settings.organization'
 import { Route as SettingsModulesRouteImport } from './routes/settings.modules'
+import { Route as SettingsFiscalYearsRouteImport } from './routes/settings.fiscal-years'
 import { Route as SettingsFilesRouteImport } from './routes/settings.files'
 import { Route as SettingsDocumentsRouteImport } from './routes/settings.documents'
 import { Route as SettingsDashboardRouteImport } from './routes/settings.dashboard'
 import { Route as SettingsDangerZoneRouteImport } from './routes/settings.danger-zone'
 import { Route as SettingsCostCentersRouteImport } from './routes/settings.cost-centers'
+import { Route as SettingsBiologicalAssetsRouteImport } from './routes/settings.biological-assets'
 import { Route as SettingsAccountMappingsRouteImport } from './routes/settings.account-mappings'
 import { Route as ParcelsParcelIdRouteImport } from './routes/parcels.$parcelId'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -253,9 +257,19 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CropCyclesRoute = CropCyclesRouteImport.update({
+  id: '/crop-cycles',
+  path: '/crop-cycles',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout-success',
   path: '/checkout-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsRoute = CampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogRoute = BlogRouteImport.update({
@@ -437,6 +451,11 @@ const SettingsModulesRoute = SettingsModulesRouteImport.update({
   path: '/modules',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsFiscalYearsRoute = SettingsFiscalYearsRouteImport.update({
+  id: '/fiscal-years',
+  path: '/fiscal-years',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsFilesRoute = SettingsFilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -462,6 +481,12 @@ const SettingsCostCentersRoute = SettingsCostCentersRouteImport.update({
   path: '/cost-centers',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsBiologicalAssetsRoute =
+  SettingsBiologicalAssetsRouteImport.update({
+    id: '/biological-assets',
+    path: '/biological-assets',
+    getParentRoute: () => SettingsRoute,
+  } as any)
 const SettingsAccountMappingsRoute = SettingsAccountMappingsRouteImport.update({
   id: '/account-mappings',
   path: '/account-mappings',
@@ -558,7 +583,9 @@ export interface FileRoutesByFullPath {
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/blog': typeof BlogRouteWithChildren
+  '/campaigns': typeof CampaignsRoute
   '/checkout-success': typeof CheckoutSuccessRoute
+  '/crop-cycles': typeof CropCyclesRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -594,11 +621,13 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/biological-assets': typeof SettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/files': typeof SettingsFilesRoute
+  '/settings/fiscal-years': typeof SettingsFiscalYearsRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -647,7 +676,9 @@ export interface FileRoutesByTo {
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/blog': typeof BlogRouteWithChildren
+  '/campaigns': typeof CampaignsRoute
   '/checkout-success': typeof CheckoutSuccessRoute
+  '/crop-cycles': typeof CropCyclesRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -678,11 +709,13 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/biological-assets': typeof SettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/files': typeof SettingsFilesRoute
+  '/settings/fiscal-years': typeof SettingsFiscalYearsRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -732,7 +765,9 @@ export interface FileRoutesById {
   '/billing-quotes': typeof BillingQuotesRoute
   '/billing-sales-orders': typeof BillingSalesOrdersRoute
   '/blog': typeof BlogRouteWithChildren
+  '/campaigns': typeof CampaignsRoute
   '/checkout-success': typeof CheckoutSuccessRoute
+  '/crop-cycles': typeof CropCyclesRoute
   '/dashboard': typeof DashboardRoute
   '/day-laborers': typeof DayLaborersRoute
   '/employees': typeof EmployeesRoute
@@ -768,11 +803,13 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/parcels/$parcelId': typeof ParcelsParcelIdRouteWithChildren
   '/settings/account-mappings': typeof SettingsAccountMappingsRoute
+  '/settings/biological-assets': typeof SettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof SettingsCostCentersRoute
   '/settings/danger-zone': typeof SettingsDangerZoneRoute
   '/settings/dashboard': typeof SettingsDashboardRoute
   '/settings/documents': typeof SettingsDocumentsRoute
   '/settings/files': typeof SettingsFilesRoute
+  '/settings/fiscal-years': typeof SettingsFiscalYearsRoute
   '/settings/modules': typeof SettingsModulesRoute
   '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
@@ -823,7 +860,9 @@ export interface FileRouteTypes {
     | '/billing-quotes'
     | '/billing-sales-orders'
     | '/blog'
+    | '/campaigns'
     | '/checkout-success'
+    | '/crop-cycles'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -859,11 +898,13 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/parcels/$parcelId'
     | '/settings/account-mappings'
+    | '/settings/biological-assets'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
+    | '/settings/fiscal-years'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -912,7 +953,9 @@ export interface FileRouteTypes {
     | '/billing-quotes'
     | '/billing-sales-orders'
     | '/blog'
+    | '/campaigns'
     | '/checkout-success'
+    | '/crop-cycles'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -943,11 +986,13 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/blog/$slug'
     | '/settings/account-mappings'
+    | '/settings/biological-assets'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
+    | '/settings/fiscal-years'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -996,7 +1041,9 @@ export interface FileRouteTypes {
     | '/billing-quotes'
     | '/billing-sales-orders'
     | '/blog'
+    | '/campaigns'
     | '/checkout-success'
+    | '/crop-cycles'
     | '/dashboard'
     | '/day-laborers'
     | '/employees'
@@ -1032,11 +1079,13 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/parcels/$parcelId'
     | '/settings/account-mappings'
+    | '/settings/biological-assets'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
+    | '/settings/fiscal-years'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1087,7 +1136,9 @@ export interface RootRouteChildren {
   BillingQuotesRoute: typeof BillingQuotesRoute
   BillingSalesOrdersRoute: typeof BillingSalesOrdersRoute
   BlogRoute: typeof BlogRouteWithChildren
+  CampaignsRoute: typeof CampaignsRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  CropCyclesRoute: typeof CropCyclesRoute
   DashboardRoute: typeof DashboardRoute
   DayLaborersRoute: typeof DayLaborersRoute
   EmployeesRoute: typeof EmployeesRoute
@@ -1341,11 +1392,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/crop-cycles': {
+      id: '/crop-cycles'
+      path: '/crop-cycles'
+      fullPath: '/crop-cycles'
+      preLoaderRoute: typeof CropCyclesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout-success': {
       id: '/checkout-success'
       path: '/checkout-success'
       fullPath: '/checkout-success'
       preLoaderRoute: typeof CheckoutSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns': {
+      id: '/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof CampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog': {
@@ -1600,6 +1665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsModulesRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/fiscal-years': {
+      id: '/settings/fiscal-years'
+      path: '/fiscal-years'
+      fullPath: '/settings/fiscal-years'
+      preLoaderRoute: typeof SettingsFiscalYearsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/files': {
       id: '/settings/files'
       path: '/files'
@@ -1633,6 +1705,13 @@ declare module '@tanstack/react-router' {
       path: '/cost-centers'
       fullPath: '/settings/cost-centers'
       preLoaderRoute: typeof SettingsCostCentersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/biological-assets': {
+      id: '/settings/biological-assets'
+      path: '/biological-assets'
+      fullPath: '/settings/biological-assets'
+      preLoaderRoute: typeof SettingsBiologicalAssetsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/account-mappings': {
@@ -1816,11 +1895,13 @@ const ParcelsRouteWithChildren =
 
 interface SettingsRouteChildren {
   SettingsAccountMappingsRoute: typeof SettingsAccountMappingsRoute
+  SettingsBiologicalAssetsRoute: typeof SettingsBiologicalAssetsRoute
   SettingsCostCentersRoute: typeof SettingsCostCentersRoute
   SettingsDangerZoneRoute: typeof SettingsDangerZoneRoute
   SettingsDashboardRoute: typeof SettingsDashboardRoute
   SettingsDocumentsRoute: typeof SettingsDocumentsRoute
   SettingsFilesRoute: typeof SettingsFilesRoute
+  SettingsFiscalYearsRoute: typeof SettingsFiscalYearsRoute
   SettingsModulesRoute: typeof SettingsModulesRoute
   SettingsOrganizationRoute: typeof SettingsOrganizationRoute
   SettingsPreferencesRoute: typeof SettingsPreferencesRoute
@@ -1833,11 +1914,13 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountMappingsRoute: SettingsAccountMappingsRoute,
+  SettingsBiologicalAssetsRoute: SettingsBiologicalAssetsRoute,
   SettingsCostCentersRoute: SettingsCostCentersRoute,
   SettingsDangerZoneRoute: SettingsDangerZoneRoute,
   SettingsDashboardRoute: SettingsDashboardRoute,
   SettingsDocumentsRoute: SettingsDocumentsRoute,
   SettingsFilesRoute: SettingsFilesRoute,
+  SettingsFiscalYearsRoute: SettingsFiscalYearsRoute,
   SettingsModulesRoute: SettingsModulesRoute,
   SettingsOrganizationRoute: SettingsOrganizationRoute,
   SettingsPreferencesRoute: SettingsPreferencesRoute,
@@ -1931,7 +2014,9 @@ const rootRouteChildren: RootRouteChildren = {
   BillingQuotesRoute: BillingQuotesRoute,
   BillingSalesOrdersRoute: BillingSalesOrdersRoute,
   BlogRoute: BlogRouteWithChildren,
+  CampaignsRoute: CampaignsRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  CropCyclesRoute: CropCyclesRoute,
   DashboardRoute: DashboardRoute,
   DayLaborersRoute: DayLaborersRoute,
   EmployeesRoute: EmployeesRoute,

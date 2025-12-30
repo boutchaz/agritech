@@ -76,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     getInitialSectionState(['/workers', '/tasks'])
   );
   const [showProduction, setShowProduction] = useState(() =>
-    getInitialSectionState(['/harvests', '/reception-batches', '/quality-control'])
+    getInitialSectionState(['/campaigns', '/crop-cycles', '/harvests', '/reception-batches', '/quality-control'])
   );
   const [showSalesPurchasing, setShowSalesPurchasing] = useState(() =>
     getInitialSectionState(['/billing-quotes', '/billing-sales-orders', '/billing-purchase-orders'])
@@ -100,7 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setShowPersonnel(true);
     }
     // Production section
-    if (['/harvests', '/reception-batches', '/quality-control'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+    if (['/campaigns', '/crop-cycles', '/harvests', '/reception-batches', '/quality-control'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowProduction(true);
     }
     // Sales & Purchasing section
@@ -432,6 +432,24 @@ const Sidebar: React.FC<SidebarProps> = ({
               </Button>
               {showProduction && (
                 <>
+                  <ProtectedNavItem action="read" subject="Campaign">
+                    <Button
+                      variant="ghost"
+                      className={getSubItemClassName(currentPath === '/campaigns')}
+                      onClick={(e) => handleNavigation('/campaigns', e)}
+                    >
+                      {renderText(t('nav.campaigns', 'Campaigns'))}
+                    </Button>
+                  </ProtectedNavItem>
+                  <ProtectedNavItem action="read" subject="CropCycle">
+                    <Button
+                      variant="ghost"
+                      className={getSubItemClassName(currentPath === '/crop-cycles')}
+                      onClick={(e) => handleNavigation('/crop-cycles', e)}
+                    >
+                      {renderText(t('nav.cropCycles', 'Crop Cycles'))}
+                    </Button>
+                  </ProtectedNavItem>
                   <ProtectedNavItem action="read" subject="Harvest">
                     <Button
                       variant="ghost"

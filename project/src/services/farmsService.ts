@@ -75,6 +75,25 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class FarmsService {
+  async getFarmHierarchy(organizationId: string): Promise<Array<{
+    farm_id: string;
+    farm_name: string;
+    farm_location: string;
+    farm_size: number;
+    farm_type: 'main' | 'sub';
+    parent_farm_id: string | null;
+    hierarchy_level: number;
+    manager_name: string;
+    sub_farms_count: number;
+    is_active: boolean;
+  }>> {
+    return apiClient.get(
+      `/api/v1/farms/hierarchy?organization_id=${organizationId}`,
+      {},
+      organizationId
+    );
+  }
+
   async getFarm(farmId: string, organizationId?: string): Promise<Farm> {
     // Pass organizationId in header if provided
     const orgId = organizationId || getCurrentOrganizationId();

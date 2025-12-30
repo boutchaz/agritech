@@ -78,7 +78,9 @@
     "harvestReception": "الحصاد والاستلام",
     "harvests": "الحصاد",
     "receptionBatches": "دفعات الاستلام",
-    "qualityControl": "مراقبة الجودة"
+    "qualityControl": "مراقبة الجودة",
+    "campaigns": "الحملات الزراعية",
+    "cropCycles": "دورات المحاصيل"
   },
   "stock": {
     "title": "إدارة المخزون",
@@ -1057,7 +1059,11 @@
       "dashboard": "لوحة التحكم",
       "dashboardDescription": "تكوين لوحة التحكم",
       "documents": "قوالب المستندات",
-      "documentsDescription": "تخصيص الرؤوس والتذييلات"
+      "documentsDescription": "تخصيص الرؤوس والتذييلات",
+      "fiscalYears": "السنوات المالية",
+      "fiscalYearsDescription": "إدارة السنوات المالية وفترات المحاسبة",
+      "biologicalAssets": "الأصول البيولوجية",
+      "biologicalAssetsDescription": "إدارة البساتين والماشية والأصول المستدامة"
     }
   },
   "profile": {
@@ -1857,7 +1863,19 @@
       "title": "قائمة الأرباح والخسائر",
       "subtitle": "قائمة الدخل تظهر الإيرادات والمصروفات وصافي الدخل",
       "revenue": "الإيرادات",
-      "expenses": "المصروفات"
+      "expenses": "المصروفات",
+      "campaign": "الحملة الزراعية",
+      "allCampaigns": "جميع الحملات",
+      "fiscalYear": "السنة المالية",
+      "allFiscalYears": "جميع السنوات",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "exportPdf": "تصدير PDF",
+      "loading": "جاري تحميل قائمة الأرباح والخسائر...",
+      "totalRevenue": "إجمالي الإيرادات",
+      "totalExpenses": "إجمالي المصروفات",
+      "netIncome": "صافي الدخل",
+      "netLoss": "صافي الخسارة"
     },
     "balanceSheet": {
       "title": "الميزانية العمومية",
