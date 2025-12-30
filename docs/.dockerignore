@@ -1,0 +1,8 @@
+node_modules
+build
+.docusaurus
+.git
+*.md
+!README.md
+.env
+.htpasswd

@@ -1,6 +1,0 @@
-# Never commit credentials
-.htpasswd
-.env
-
-# Keep examples
-!.env.example
