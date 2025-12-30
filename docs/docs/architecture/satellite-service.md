@@ -11,7 +11,7 @@ The AgriTech Platform includes a specialized FastAPI service for satellite image
 
 The Satellite Indices Service is a Python-based FastAPI application that acts as a bridge between the frontend and Google Earth Engine, providing vegetation analysis capabilities for agricultural parcels.
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/`
+**Location:** `backend-service/`
 
 ```mermaid
 graph TB
@@ -78,7 +78,7 @@ graph TB
 ## Project Structure
 
 ```
-satellite-indices-service/
+backend-service/
 ├── app/
 │   ├── main.py                    # FastAPI application entry point
 │   ├── api/                       # API route handlers
@@ -105,9 +105,7 @@ satellite-indices-service/
 │   │   ├── config.py              # Settings and environment
 │   │   └── gee_auth.py            # GEE authentication
 │   └── tasks.py                   # Celery tasks
-├── research/                      # Jupyter notebooks
-│   ├── index_exploration.ipynb
-│   └── cloud_masking_tests.ipynb
+├── research/                      # Jupyter notebooks & GEE research
 ├── tests/                         # Unit and integration tests
 ├── requirements.txt               # Python dependencies
 └── Dockerfile                     # Container configuration
@@ -117,7 +115,7 @@ satellite-indices-service/
 
 ### 1. FastAPI Application
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/main.py`
+**Location:** `backend-service/app/main.py`
 
 ```python
 from fastapi import FastAPI
@@ -152,7 +150,7 @@ async def health_check():
 
 ### 2. Google Earth Engine Service
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/services/gee_service.py`
+**Location:** `backend-service/app/services/gee_service.py`
 
 The GEE service handles all interactions with Google Earth Engine:
 
@@ -295,7 +293,7 @@ class GEEService:
 
 ### 3. Vegetation Indices Calculator
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/services/indices_calculator.py`
+**Location:** `backend-service/app/services/indices_calculator.py`
 
 The calculator implements various vegetation indices:
 
@@ -569,7 +567,7 @@ graph TD
 
 ### Cloud Masking Implementation
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/services/cloud_masking.py`
+**Location:** `backend-service/app/services/cloud_masking.py`
 
 ```python
 import ee
@@ -693,7 +691,7 @@ Default configuration in API requests:
 
 ### Celery Configuration
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/tasks.py`
+**Location:** `backend-service/app/tasks.py`
 
 ```python
 from celery import Celery
@@ -929,6 +927,6 @@ logger.error('Failed to calculate index', extra={
 
 ## Related Documentation
 
-- [Backend Architecture](./backend.md)
-- [API Reference](../api/satellite-api.md)
+- [Backend Architecture](./backend)
+- [Database Architecture](./database)
 - [Google Earth Engine Documentation](https://developers.google.com/earth-engine)

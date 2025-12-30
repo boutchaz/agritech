@@ -692,7 +692,7 @@ EXECUTE FUNCTION validate_journal_balance();
 
 Migrations are managed using Supabase CLI:
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/supabase/migrations/`
+**Location:** `project/supabase/migrations/`
 
 **Naming Convention:**
 ```
@@ -805,7 +805,7 @@ npm run db:generate-types
 npm run db:generate-types-remote
 ```
 
-**Output:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/types/database.types.ts`
+**Output:** `project/src/types/database.types.ts`
 
 **Usage:**
 ```typescript
@@ -823,6 +823,6 @@ type FarmUpdate = UpdateDto<'farms'>;
 
 ## Related Documentation
 
-- [Multi-Tenancy Architecture](./multi-tenancy.md)
-- [Backend Architecture](./backend.md)
-- [Database Migrations Guide](/database/migrations)
+- [Multi-Tenancy Architecture](./multi-tenancy)
+- [Backend Architecture](./backend)
+- [Frontend Architecture](./frontend)
