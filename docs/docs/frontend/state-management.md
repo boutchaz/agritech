@@ -23,6 +23,89 @@ The AgriTech Platform uses a dual state management approach: **TanStack Query** 
 └─────────────────────────────────────────────────┘
 ```
 
+## Data Fetching Architecture
+
+The platform follows a three-layer pattern for data fetching:
+
+1.  **API Layer** (`src/lib/api/`): Encapsulates raw Supabase or REST API calls.
+2.  **Hook Layer** (`src/hooks/`): Wraps API calls in TanStack Query hooks.
+3.  **Component Layer**: Consumes hooks to display data.
+
+### API Layer Pattern
+
+All data fetching logic is encapsulated in the `lib/api/` directory. Each module exports an object containing related API methods.
+
+```typescript
+// project/src/lib/api/farms.ts
+import { supabase } from '../supabase';
+
+export const farmsApi = {
+  getAll: async (orgId: string) => {
+    const { data, error } = await supabase
+      .from('farms')
+      .select('*')
+      .eq('organization_id', orgId);
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  getOne: async (id: string) => {
+    const { data, error } = await supabase
+      .from('farms')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
+};
+```
+
+### Hook Layer Pattern
+
+Custom hooks use TanStack Query to manage the lifecycle and caching of API requests.
+
+```typescript
+// project/src/hooks/useFarms.ts
+import { useQuery } from '@tanstack/react-query';
+import { farmsApi } from '@/lib/api/farms';
+
+export function useFarms(orgId: string) {
+  return useQuery({
+    queryKey: ['farms', orgId],
+    queryFn: () => farmsApi.getAll(orgId),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!orgId,
+  });
+}
+```
+
+### Component Usage
+
+Components never call Supabase or the API layer directly. They only use custom hooks.
+
+```typescript
+// project/src/components/FarmList.tsx
+import { useFarms } from '@/hooks/useFarms';
+
+function FarmList({ orgId }: { orgId: string }) {
+  const { data: farms, isLoading, error } = useFarms(orgId);
+
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <ul>
+      {farms?.map(farm => (
+        <li key={farm.id}>{farm.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
 ## TanStack Query (React Query)
 
 TanStack Query manages all server-side data with automatic caching, synchronization, and optimistic updates.
@@ -64,26 +147,25 @@ function App() {
 
 Consistent query key naming ensures proper caching and invalidation.
 
-**Convention:** `[resource, filters/params]`
+**Convention:** `[resource, organizationId, ...params/filters]`
 
 ```typescript
 // Auth-related
-['auth', 'profile', userId]
-['auth', 'organizations', userId]
-['auth', 'farms', organizationId]
+['users', 'me']
+['users', 'organizations']
 
 // Features
-['parcels', { organizationId, farmId }]
-['workers', { organizationId }]
-['tasks', { parcelId }]
-['satellite-data', parcelId, { startDate, endDate, indices }]
-['invoices', { organizationId, status }]
-['inventory', { warehouseId }]
+['farms', organizationId]
+['parcels', organizationId, { farmId }]
+['crops', organizationId, farmId, parcelId]
+['tasks', organizationId, filters]
+['workers', organizationId]
 
 // Detail queries
-['parcel', parcelId]
-['worker', workerId]
-['task', taskId]
+['farm', organizationId, farmId]
+['parcel', organizationId, parcelId]
+['task', organizationId, taskId]
+['crop', organizationId, cropId]
 ```
 
 ### Query Configuration
@@ -121,124 +203,81 @@ const { data: satelliteData } = useQuery({
 
 ### Custom Query Hooks
 
-Encapsulate query logic in custom hooks for reusability.
+Encapsulate query logic in custom hooks for reusability. Hooks should always use the API layer and the `useAuth` hook for context.
 
-**Example: `useAuthQueries.ts`**
+**Example: `useCrops.ts`**
 
 ```typescript
-// src/hooks/useAuthQueries.ts
-import { useQuery } from '@tanstack/react-query'
-import { authSupabase } from '@/lib/auth-supabase'
+// src/hooks/useCrops.ts
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { cropsApi } from '@/lib/api/crops';
 
-export const useUserProfile = (userId: string | undefined) => {
+export function useCrops(options?: {
+  farmId?: string;
+  parcelId?: string;
+  enabled?: boolean;
+}) {
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['auth', 'profile', userId],
-    queryFn: async () => {
-      if (!userId) return null
-      const { data, error } = await authSupabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    enabled: !!userId,
-    staleTime: 1000 * 60 * 5,
-    retry: 1,
-  })
-}
-
-export const useUserOrganizations = (userId: string | undefined) => {
-  return useQuery({
-    queryKey: ['auth', 'organizations', userId],
-    queryFn: async () => {
-      if (!userId) return []
-      const { data, error } = await authSupabase
-        .rpc('get_user_organizations', { user_id: userId })
-
-      if (error) throw error
-      return data
-    },
-    enabled: !!userId,
-    staleTime: 1000 * 60 * 5,
-  })
+    queryKey: ['crops', organizationId, options?.farmId, options?.parcelId],
+    queryFn: () => cropsApi.getAll(organizationId!, options?.farmId, options?.parcelId),
+    enabled: !!organizationId && (options?.enabled !== false),
+    staleTime: 5 * 60 * 1000,
+  });
 }
 ```
 
 **Usage:**
 
 ```typescript
-import { useUserProfile, useUserOrganizations } from '@/hooks/useAuthQueries'
+import { useCrops } from '@/hooks/useCrops';
 
-function ProfileComponent() {
-  const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id)
-  const { data: organizations, isLoading: orgsLoading } = useUserOrganizations(user?.id)
+function CropList({ farmId }: { farmId: string }) {
+  const { data: crops, isLoading } = useCrops({ farmId });
 
-  if (profileLoading || orgsLoading) return <Spinner />
+  if (isLoading) return <Spinner />;
 
   return (
     <div>
-      <h1>{profile.first_name} {profile.last_name}</h1>
-      <p>Organizations: {organizations.length}</p>
+      <h1>Crops ({crops?.length || 0})</h1>
+      {crops?.map(crop => (
+        <CropCard key={crop.id} crop={crop} />
+      ))}
     </div>
-  )
+  );
 }
 ```
 
 ### Mutations
 
-Mutations modify server data with automatic cache invalidation.
+Mutations modify server data with automatic cache invalidation. They should also use the API layer.
 
 ```typescript
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tasksApi } from '@/lib/api/tasks';
 
-function useCreateParcel() {
-  const queryClient = useQueryClient()
+export function useCreateTask() {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (newParcel: NewParcel) => {
-      return supabase.from('parcels').insert(newParcel).select().single()
+    mutationFn: async (request: CreateTaskRequest & { organizationId: string }) => {
+      const { organizationId, ...taskData } = request;
+      return tasksApi.create(organizationId, taskData);
     },
-    onSuccess: (data, variables) => {
-      // Invalidate and refetch parcels list
-      queryClient.invalidateQueries({
-        queryKey: ['parcels', { farmId: variables.farmId }]
-      })
-
-      // Optionally add the new parcel to the cache immediately
-      queryClient.setQueryData(
-        ['parcel', data.id],
-        data
-      )
+    onSuccess: (data) => {
+      // Invalidate and refetch tasks list for this organization
+      queryClient.invalidateQueries({ 
+        queryKey: ['tasks', data.organization_id] 
+      });
+      // Update statistics
+      queryClient.invalidateQueries({ 
+        queryKey: ['task-statistics', data.organization_id] 
+      });
     },
-    onError: (error) => {
-      console.error('Error creating parcel:', error)
-    },
-  })
-}
-
-// Usage
-function CreateParcelForm() {
-  const createParcel = useCreateParcel()
-
-  const handleSubmit = (values: NewParcel) => {
-    createParcel.mutate(values, {
-      onSuccess: () => {
-        toast.success('Parcel created!')
-      },
-    })
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {/* Form fields */}
-      <button type="submit" disabled={createParcel.isPending}>
-        {createParcel.isPending ? 'Creating...' : 'Create Parcel'}
-      </button>
-    </form>
-  )
+  });
 }
 ```
 
@@ -247,85 +286,73 @@ function CreateParcelForm() {
 Update the UI immediately before the server responds:
 
 ```typescript
-function useUpdateTask() {
-  const queryClient = useQueryClient()
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, updates }: { taskId: string; updates: Partial<Task> }) => {
-      return supabase.from('tasks').update(updates).eq('id', taskId).select().single()
+    mutationFn: ({ taskId, organizationId, updates }: { 
+      taskId: string; 
+      organizationId: string; 
+      updates: Partial<Task> 
+    }) => {
+      return tasksApi.update(organizationId, taskId, updates);
     },
-    onMutate: async ({ taskId, updates }) => {
+    onMutate: async ({ taskId, organizationId, updates }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['tasks'] })
+      await queryClient.cancelQueries({ queryKey: ['tasks', organizationId] });
 
       // Snapshot the previous value
-      const previousTasks = queryClient.getQueryData(['tasks', { parcelId }])
+      const previousTasks = queryClient.getQueryData(['tasks', organizationId]);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(['tasks', { parcelId }], (old: Task[]) =>
-        old.map(task => task.id === taskId ? { ...task, ...updates } : task)
-      )
+      queryClient.setQueryData(['tasks', organizationId], (old: Task[]) =>
+        old?.map(task => task.id === taskId ? { ...task, ...updates } : task)
+      );
 
       // Return a context object with the snapshot
-      return { previousTasks }
+      return { previousTasks };
     },
     onError: (err, variables, context) => {
       // Rollback on error
       if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks', { parcelId }], context.previousTasks)
+        queryClient.setQueryData(
+          ['tasks', variables.organizationId], 
+          context.previousTasks
+        );
       }
     },
-    onSettled: () => {
+    onSettled: (data) => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ 
+        queryKey: ['tasks', data?.organization_id] 
+      });
     },
-  })
+  });
 }
 ```
 
 ### Pagination
 
-Handle paginated data with `useInfiniteQuery`:
+Handle paginated data with `useInfiniteQuery` by passing the page parameters to the API layer:
 
 ```typescript
-function useParcels(farmId: string) {
+export function useParcelsInfinite(organizationId: string, farmId: string) {
   return useInfiniteQuery({
-    queryKey: ['parcels', { farmId }],
+    queryKey: ['parcels', 'infinite', organizationId, farmId],
     queryFn: ({ pageParam = 0 }) => {
-      const limit = 20
-      return supabase
-        .from('parcels')
-        .select('*')
-        .eq('farm_id', farmId)
-        .range(pageParam * limit, (pageParam + 1) * limit - 1)
+      return parcelsApi.getAll({ 
+        organization_id: organizationId, 
+        farm_id: farmId,
+        page: pageParam,
+        limit: 20
+      });
     },
     getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length === 20 ? allPages.length : undefined
+      return lastPage.length === 20 ? allPages.length : undefined;
     },
     initialPageParam: 0,
-  })
-}
-
-// Usage
-function ParcelsList() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useParcels(farmId)
-
-  return (
-    <div>
-      {data?.pages.map((page, i) => (
-        <div key={i}>
-          {page.map(parcel => (
-            <ParcelCard key={parcel.id} parcel={parcel} />
-          ))}
-        </div>
-      ))}
-      {hasNextPage && (
-        <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-          {isFetchingNextPage ? 'Loading...' : 'Load More'}
-        </button>
-      )}
-    </div>
-  )
+    enabled: !!organizationId && !!farmId,
+  });
 }
 ```
 
@@ -334,39 +361,43 @@ function ParcelsList() {
 Execute queries in sequence when one depends on another:
 
 ```typescript
-function ParcelDetails({ parcelId }: { parcelId: string }) {
+function ParcelDetails({ parcelId, organizationId }: { 
+  parcelId: string; 
+  organizationId: string 
+}) {
   // First query: Get parcel
   const { data: parcel } = useQuery({
-    queryKey: ['parcel', parcelId],
-    queryFn: () => fetchParcel(parcelId),
-  })
+    queryKey: ['parcel', organizationId, parcelId],
+    queryFn: () => parcelsApi.getOne(parcelId, organizationId),
+    enabled: !!parcelId,
+  });
 
   // Second query: Get analyses for this parcel (depends on parcel.id)
   const { data: analyses } = useQuery({
-    queryKey: ['analyses', { parcelId: parcel?.id }],
-    queryFn: () => fetchAnalyses(parcel!.id),
+    queryKey: ['analyses', organizationId, { parcelId: parcel?.id }],
+    queryFn: () => analysesApi.getAll({ parcelId: parcel!.id }, organizationId),
     enabled: !!parcel, // Only run when parcel exists
-  })
+  });
 
-  return <div>{/* Render parcel and analyses */}</div>
+  return <div>{/* Render parcel and analyses */}</div>;
 }
 ```
 
 ### Real-time Updates with Supabase
 
-Combine TanStack Query with Supabase real-time subscriptions:
+Combine TanStack Query with Supabase real-time subscriptions. The subscription should invalidate the relevant TanStack Query keys.
 
 ```typescript
-function useParcelsRealtime(farmId: string) {
-  const queryClient = useQueryClient()
+function useParcelsRealtime(organizationId: string, farmId: string) {
+  const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['parcels', { farmId }],
-    queryFn: () => fetchParcels(farmId),
-  })
+    queryKey: ['parcels', organizationId, { farmId }],
+    queryFn: () => parcelsApi.getAll({ farm_id: farmId }, organizationId),
+  });
 
   useEffect(() => {
-    if (!farmId) return
+    if (!farmId) return;
 
     const channel = supabase
       .channel(`parcels:${farmId}`)
@@ -380,17 +411,19 @@ function useParcelsRealtime(farmId: string) {
         },
         () => {
           // Invalidate query on any change
-          queryClient.invalidateQueries({ queryKey: ['parcels', { farmId }] })
+          queryClient.invalidateQueries({ 
+            queryKey: ['parcels', organizationId, { farmId }] 
+          });
         }
       )
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [farmId, queryClient])
+      supabase.removeChannel(channel);
+    };
+  }, [farmId, organizationId, queryClient]);
 
-  return query
+  return query;
 }
 ```
 

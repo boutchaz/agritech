@@ -4,7 +4,13 @@ Complete reference for all TanStack Query (React Query) hooks used in the AgriTe
 
 ## Overview
 
-The platform uses TanStack Query v5 for server state management. All data fetching is done through custom hooks that wrap `useQuery` and `useMutation`.
+The platform uses TanStack Query v5 for server state management. The data fetching follows a 3-layer architecture:
+
+1.  **API Layer** (`src/lib/api/`): Encapsulates network requests.
+2.  **Hook Layer** (`src/hooks/`): Wraps API calls in TanStack Query hooks.
+3.  **Component Layer**: Consumes hooks to display data.
+
+All data fetching is done through custom hooks that wrap `useQuery` and `useMutation` using the API layer.
 
 **Key Benefits**:
 - Automatic caching and background refetching
@@ -458,6 +464,83 @@ Fetch journal entries with filters.
 **Query Key**: `['journal_entries', organizationId, filters]`
 
 **Returns**: `JournalEntry[]`
+
+---
+
+## Agricultural Accounting Hooks
+
+### useCampaigns
+
+Fetch all agricultural campaigns for the organization.
+
+**Query Key**: `['campaigns', organizationId]`
+
+**Returns**: `Campaign[]`
+
+---
+
+### useCropCycles
+
+Fetch crop cycles with optional filters (campaign, farm, status).
+
+**Parameters**:
+- `filters?`: `CropCycleFilters`
+
+**Query Key**: `['crop-cycles', organizationId, filters]`
+
+**Returns**: `CropCycle[]`
+
+---
+
+### useBiologicalAssets
+
+Fetch biological assets (trees, etc.) for the organization.
+
+**Query Key**: `['biological-assets', organizationId, filters]`
+
+**Returns**: `BiologicalAsset[]`
+
+---
+
+## Profitability & Analytics Hooks
+
+### useProfitabilityData
+
+Fetch comprehensive profitability analysis for a specific parcel.
+
+**Parameters**:
+- `parcelId`: `string`
+- `startDate`: `string`
+- `endDate`: `string`
+- `organizationId`: `string`
+
+**Query Key**: `['profitability', parcelId, startDate, endDate, organizationId]`
+
+**Returns**: `ParcelProfitabilityData`
+
+---
+
+## Weather & Climate Hooks
+
+### useWeatherAnalytics
+
+Fetch historical weather analytics for a parcel boundary.
+
+**Parameters**:
+- `options`: `UseWeatherAnalyticsOptions`
+
+**Returns**: `{ data: WeatherAnalyticsData | null, loading: boolean, error: string | null }`
+
+---
+
+### useWeatherForecast
+
+Fetch hyper-local weather forecast for a parcel.
+
+**Parameters**:
+- `parcelId`: `string`
+
+**Returns**: `{ forecast: WeatherForecastData | null, isLoading: boolean }`
 
 ---
 
@@ -1036,16 +1119,16 @@ Update UI immediately before server response:
 
 ```typescript
 const updateTask = useMutation({
-  mutationFn: (updates) => supabase.from('tasks').update(updates)....,
+  mutationFn: (updates) => tasksApi.update(organizationId, taskId, updates),
   onMutate: async (newData) => {
     // Cancel outgoing refetches
-    await queryClient.cancelQueries({ queryKey: ['tasks'] });
+    await queryClient.cancelQueries({ queryKey: ['tasks', organizationId] });
 
     // Snapshot current value
-    const previousTasks = queryClient.getQueryData(['tasks']);
+    const previousTasks = queryClient.getQueryData(['tasks', organizationId]);
 
     // Optimistically update
-    queryClient.setQueryData(['tasks'], (old) => {
+    queryClient.setQueryData(['tasks', organizationId], (old) => {
       return old.map(task =>
         task.id === newData.id ? { ...task, ...newData } : task
       );
@@ -1055,11 +1138,11 @@ const updateTask = useMutation({
   },
   onError: (err, newData, context) => {
     // Rollback on error
-    queryClient.setQueryData(['tasks'], context.previousTasks);
+    queryClient.setQueryData(['tasks', organizationId], context.previousTasks);
   },
   onSettled: () => {
     // Refetch after mutation
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks', organizationId] });
   }
 });
 ```

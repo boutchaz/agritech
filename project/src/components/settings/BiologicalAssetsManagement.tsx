@@ -365,23 +365,23 @@ export function BiologicalAssetsManagement() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Select value={selectedFarmFilter} onValueChange={setSelectedFarmFilter}>
+              <Select value={selectedFarmFilter || '__all__'} onValueChange={(v) => setSelectedFarmFilter(v === '__all__' ? '' : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('biologicalAssets.filters.allFarms', 'All Farms')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('biologicalAssets.filters.allFarms', 'All Farms')}</SelectItem>
+                  <SelectItem value="__all__">{t('biologicalAssets.filters.allFarms', 'All Farms')}</SelectItem>
                   {farms.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>{farm.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedAssetType} onValueChange={(v) => setSelectedAssetType(v as BiologicalAssetType | '')}>
+              <Select value={selectedAssetType || '__all__'} onValueChange={(v) => setSelectedAssetType(v === '__all__' ? '' : v as BiologicalAssetType | '')}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t('biologicalAssets.filters.allTypes', 'All Types')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('biologicalAssets.filters.allTypes', 'All Types')}</SelectItem>
+                  <SelectItem value="__all__">{t('biologicalAssets.filters.allTypes', 'All Types')}</SelectItem>
                   {ASSET_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                   ))}

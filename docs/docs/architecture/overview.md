@@ -103,46 +103,35 @@ The monorepo is organized into three main directories:
 
 ```
 agritech/
-├── project/                              # React frontend (main application)
+├── project/                              # Main React frontend (SaaS application)
 │   ├── src/
 │   │   ├── routes/                       # TanStack Router file-based routes
 │   │   ├── components/                   # React components (organized by feature)
-│   │   │   ├── ui/                       # Reusable UI primitives
-│   │   │   ├── SatelliteAnalysis/        # Satellite feature components
-│   │   │   ├── FarmHierarchy/            # Organization/farm/parcel components
-│   │   │   ├── authorization/            # Permission guards and wrappers
-│   │   │   └── ...                       # Other feature components
-│   │   ├── hooks/                        # Custom React hooks
-│   │   ├── lib/                          # Utilities and API clients
+│   │   ├── hooks/                        # Custom React hooks (TanStack Query)
+│   │   ├── lib/                          # Utilities and shared logic
+│   │   │   ├── api/                      # API Layer (50+ modules for data fetching)
 │   │   │   ├── supabase.ts               # Supabase client
-│   │   │   ├── satellite-api.ts          # Satellite service client
 │   │   │   ├── casl/                     # Authorization logic
 │   │   │   └── utils/                    # Helper functions
-│   │   ├── schemas/                      # Zod validation schemas
-│   │   ├── types/                        # TypeScript types
-│   │   │   └── database.types.ts         # Generated DB types
+│   │   ├── types/                        # TypeScript types and interfaces
 │   │   └── locales/                      # i18n translations (en, fr, ar)
-│   ├── supabase/                         # Supabase configuration
-│   │   ├── migrations/                   # Database migrations
-│   │   └── functions/                    # Edge functions
-│   └── package.json
+│   └── supabase/                         # Local Supabase config & migrations
 │
-├── satellite-indices-service/            # FastAPI backend
-│   ├── app/
-│   │   ├── api/                          # FastAPI route handlers
-│   │   │   ├── indices/                  # Vegetation indices endpoints
-│   │   │   └── analysis/                 # Analysis endpoints
-│   │   ├── services/                     # Business logic
-│   │   │   ├── gee_service.py            # Google Earth Engine integration
-│   │   │   └── cloud_masking.py          # Cloud filtering logic
-│   │   ├── models/                       # Pydantic models
-│   │   └── core/                         # Configuration
-│   ├── research/                         # Jupyter notebooks for GEE research
-│   └── requirements.txt
+├── agritech-api/                         # NestJS Backend API
+│   ├── src/
+│   │   ├── modules/                      # Feature-based modules
+│   │   └── main.ts                       # Entry point
 │
-└── supabase/                             # Shared Supabase resources
-    ├── migrations/                       # Database schema migrations
-    └── functions/                        # Shared edge functions
+├── backend-service/                      # Python Satellite & Analysis Service
+│   ├── app/                              # FastAPI application
+│   │   ├── api/                          # Route handlers
+│   │   └── services/                     # Satellite analysis logic
+│   └── research/                         # GEE research & notebooks
+│
+├── marketplace-frontend/                 # Next.js Marketplace application
+├── admin-app/                            # Internal admin dashboard
+├── cms/                                  # Strapi CMS for blog and content
+└── docs/                                 # Docusaurus documentation (this site)
 ```
 
 ## Component Architecture
@@ -199,8 +188,15 @@ graph LR
 - Permission-aware rendering via CASL
 - Responsive and accessible design
 
+#### API Layer (`src/lib/api/`)
+- Encapsulation of all data fetching logic
+- 59+ modules handling different domain entities (Accounting, Satellite, Billing, etc.)
+- Support for multiple backend services (Supabase, NestJS, Python)
+- Consistent error handling and response transformation
+- Type-safe request and response interfaces
+
 #### Hooks Layer (`src/hooks/`)
-- Custom hooks for data fetching (TanStack Query)
+- 62+ custom hooks for data fetching (TanStack Query)
 - Business logic encapsulation
 - Reusable state management patterns
 - Multi-tenant context access

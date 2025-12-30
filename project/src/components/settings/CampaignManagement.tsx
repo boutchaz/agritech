@@ -358,14 +358,14 @@ export function CampaignManagement() {
               <div>
                 <Label>{t('campaigns.form.primaryFiscalYear', 'Primary Fiscal Year')}</Label>
                 <Select
-                  value={form.watch('primary_fiscal_year_id') || ''}
-                  onValueChange={(value) => form.setValue('primary_fiscal_year_id', value || undefined)}
+                  value={form.watch('primary_fiscal_year_id') || '__none__'}
+                  onValueChange={(value) => form.setValue('primary_fiscal_year_id', value === '__none__' ? undefined : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('campaigns.form.selectFiscalYear', 'Select...')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    <SelectItem value="__none__">{t('common.none', 'None')}</SelectItem>
                     {fiscalYears.map((fy) => (
                       <SelectItem key={fy.id} value={fy.id}>{fy.name}</SelectItem>
                     ))}
