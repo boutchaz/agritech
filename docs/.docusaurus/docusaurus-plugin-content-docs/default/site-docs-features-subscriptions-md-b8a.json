@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Quality Control & Lab Services",
+    "permalink": "/features/quality-control"
+  },
+  "next": {
+    "title": "Adding a New Route",
+    "permalink": "/guides/adding-new-route"
+  }
 }

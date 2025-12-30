@@ -13,8 +13,8 @@
   "frontMatter": {},
   "sidebar": "docs",
   "previous": {
-    "title": "Task Management",
-    "permalink": "/features/task-management"
+    "title": "Subscriptions and Feature Gating",
+    "permalink": "/features/subscriptions"
   },
   "next": {
     "title": "Creating Components",

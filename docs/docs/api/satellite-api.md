@@ -1054,7 +1054,7 @@ if (userClicksDetails) {
 
 ## Related Resources
 
-- [Satellite Analysis Guide](/guides/satellite-analysis)
+- [Satellite Analysis Feature](/features/satellite-analysis)
 - [Google Earth Engine Documentation](https://developers.google.com/earth-engine)
 - [Sentinel-2 Band Information](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi/resolutions/radiometric)
 - [Vegetation Indices Overview](/features/satellite-analysis#vegetation-indices)

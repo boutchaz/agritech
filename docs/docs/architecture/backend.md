@@ -906,4 +906,4 @@ logger.error('Database query failed', {
 
 - [Database Architecture](./database.md)
 - [Satellite Service Architecture](./satellite-service.md)
-- [API Reference](../api/overview.md)
+- [Satellite API Reference](/api/satellite-api)

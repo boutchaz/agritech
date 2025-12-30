@@ -674,10 +674,9 @@ psql -h your-project.supabase.co -U postgres -d postgres < backup-20240101.sql
 
 ## Next Steps
 
-- [Configure Monitoring and Alerts](../deployment/monitoring.md)
-- [Set Up CI/CD Pipeline](../deployment/ci-cd.md)
-- [Performance Optimization](../deployment/optimization.md)
-- [Security Best Practices](../deployment/security.md)
+- [Configure Monitoring and Alerts](/deployment/monitoring)
+- [Staging Deployment](/deployment/staging)
+- [Production Deployment](/deployment/production)
 
 ## Additional Resources
 

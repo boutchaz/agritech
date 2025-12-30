@@ -3,56 +3,21 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 
 export default [
   {
-    path: '/__docusaurus/debug',
-    component: ComponentCreator('/__docusaurus/debug', '5ff'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/config',
-    component: ComponentCreator('/__docusaurus/debug/config', '5ba'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/content',
-    component: ComponentCreator('/__docusaurus/debug/content', 'a2b'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/globalData',
-    component: ComponentCreator('/__docusaurus/debug/globalData', 'c3c'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/metadata',
-    component: ComponentCreator('/__docusaurus/debug/metadata', '156'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/registry',
-    component: ComponentCreator('/__docusaurus/debug/registry', '88c'),
-    exact: true
-  },
-  {
-    path: '/__docusaurus/debug/routes',
-    component: ComponentCreator('/__docusaurus/debug/routes', '000'),
-    exact: true
-  },
-  {
     path: '/search',
     component: ComponentCreator('/search', '822'),
     exact: true
   },
   {
     path: '/',
-    component: ComponentCreator('/', 'e16'),
+    component: ComponentCreator('/', 'f6f'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', '6e5'),
+        component: ComponentCreator('/', '866'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '63d'),
+            component: ComponentCreator('/', '929'),
             routes: [
               {
                 path: '/api/hooks',
@@ -189,13 +154,21 @@ export default [
               },
               {
                 path: '/features/accounting',
-                component: ComponentCreator('/features/accounting', 'b87'),
-                exact: true
+                component: ComponentCreator('/features/accounting', 'acd'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/agricultural-accounting',
+                component: ComponentCreator('/features/agricultural-accounting', 'f15'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/features/billing-cycle',
-                component: ComponentCreator('/features/billing-cycle', '129'),
-                exact: true
+                component: ComponentCreator('/features/billing-cycle', '54f'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/features/enhanced-parcel-planting-systems',
@@ -210,13 +183,27 @@ export default [
               },
               {
                 path: '/features/inventory',
-                component: ComponentCreator('/features/inventory', '630'),
-                exact: true
+                component: ComponentCreator('/features/inventory', 'a01'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/features/production-intelligence-data-flow',
-                component: ComponentCreator('/features/production-intelligence-data-flow', '09d'),
-                exact: true
+                component: ComponentCreator('/features/production-intelligence-data-flow', 'ab5'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/profitability',
+                component: ComponentCreator('/features/profitability', '930'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/quality-control',
+                component: ComponentCreator('/features/quality-control', '2fc'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/features/satellite-analysis',
@@ -226,8 +213,9 @@ export default [
               },
               {
                 path: '/features/subscriptions',
-                component: ComponentCreator('/features/subscriptions', '933'),
-                exact: true
+                component: ComponentCreator('/features/subscriptions', '9e9'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/features/task-management',
@@ -236,9 +224,16 @@ export default [
                 sidebar: "docs"
               },
               {
+                path: '/features/weather',
+                component: ComponentCreator('/features/weather', 'b22'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
                 path: '/features/workers',
-                component: ComponentCreator('/features/workers', 'aa2'),
-                exact: true
+                component: ComponentCreator('/features/workers', '8ce'),
+                exact: true,
+                sidebar: "docs"
               },
               {
                 path: '/frontend/authentication',
@@ -333,6 +328,12 @@ export default [
               {
                 path: '/guides/creating-component',
                 component: ComponentCreator('/guides/creating-component', 'dac'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/guides/data-fetching',
+                component: ComponentCreator('/guides/data-fetching', '5c1'),
                 exact: true,
                 sidebar: "docs"
               },

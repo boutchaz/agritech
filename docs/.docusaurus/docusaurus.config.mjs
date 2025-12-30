@@ -8,7 +8,7 @@ export default {
   "tagline": "Comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights",
   "url": "https://docs.agritech.example.com",
   "baseUrl": "/",
-  "favicon": "img/favicon.ico",
+  "favicon": "img/logo.svg",
   "organizationName": "agritech",
   "projectName": "agritech-platform",
   "onBrokenLinks": "throw",

@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Weather Analytics",
+    "permalink": "/features/weather"
+  },
+  "next": {
+    "title": "Billing Cycle: Quotes, Orders, and Bills",
+    "permalink": "/features/billing-cycle"
+  }
 }

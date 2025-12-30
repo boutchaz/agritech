@@ -534,7 +534,5 @@ Convert a purchase order to a bill (purchase invoice).
 
 ## See Also
 
-- [Invoices](/features/invoicing)
-- [Payments](/features/payments)
 - [Tax Calculations](/testing/tax-calculations)
 - [Accounting Module](/features/accounting)

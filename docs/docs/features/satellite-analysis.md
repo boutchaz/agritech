@@ -623,7 +623,6 @@ const AvailableDatesCalendar = ({ parcel, dateRange }) => {
 
 - [Farm Management](./farm-management.md) - Define parcels for analysis
 - [Task Management](./task-management.md) - Create tasks based on satellite insights
-- [Reports](./reports.md) - Generate professional analysis reports
 - [Subscriptions](./subscriptions.md) - Usage limits for satellite analyses
 
 ## Troubleshooting

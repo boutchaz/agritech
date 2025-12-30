@@ -1,0 +1,26 @@
+{
+  "id": "features/profitability",
+  "title": "Profitability Analysis",
+  "description": "Real-time financial performance tracking for parcels and crop cycles",
+  "source": "@site/docs/features/profitability.md",
+  "sourceDirName": "features",
+  "slug": "/features/profitability",
+  "permalink": "/features/profitability",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Profitability Analysis",
+    "description": "Real-time financial performance tracking for parcels and crop cycles"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Workers Management",
+    "permalink": "/features/workers"
+  },
+  "next": {
+    "title": "Weather Analytics",
+    "permalink": "/features/weather"
+  }
+}

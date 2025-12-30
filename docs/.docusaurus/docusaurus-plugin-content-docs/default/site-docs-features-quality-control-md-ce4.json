@@ -1,0 +1,26 @@
+{
+  "id": "features/quality-control",
+  "title": "Quality Control & Lab Services",
+  "description": "Tracking harvest quality, lab results, and reception batches",
+  "source": "@site/docs/features/quality-control.md",
+  "sourceDirName": "features",
+  "slug": "/features/quality-control",
+  "permalink": "/features/quality-control",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Quality Control & Lab Services",
+    "description": "Tracking harvest quality, lab results, and reception batches"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Production Intelligence - Data Flow & Population",
+    "permalink": "/features/production-intelligence-data-flow"
+  },
+  "next": {
+    "title": "Subscriptions and Feature Gating",
+    "permalink": "/features/subscriptions"
+  }
+}

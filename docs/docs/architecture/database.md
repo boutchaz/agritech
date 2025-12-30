@@ -825,4 +825,4 @@ type FarmUpdate = UpdateDto<'farms'>;
 
 - [Multi-Tenancy Architecture](./multi-tenancy.md)
 - [Backend Architecture](./backend.md)
-- [Database Migrations Guide](../guides/database-migrations.md)
+- [Database Migrations Guide](/database/migrations)

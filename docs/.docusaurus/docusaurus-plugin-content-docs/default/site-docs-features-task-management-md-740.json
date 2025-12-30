@@ -13,11 +13,11 @@
   "frontMatter": {},
   "sidebar": "docs",
   "previous": {
-    "title": "Satellite Analysis",
-    "permalink": "/features/satellite-analysis"
+    "title": "Agricultural Accounting",
+    "permalink": "/features/agricultural-accounting"
   },
   "next": {
-    "title": "Adding a New Route",
-    "permalink": "/guides/adding-new-route"
+    "title": "Inventory Management",
+    "permalink": "/features/inventory"
   }
 }

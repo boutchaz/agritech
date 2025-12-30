@@ -1,0 +1,26 @@
+{
+  "id": "features/agricultural-accounting",
+  "title": "Agricultural Accounting",
+  "description": "Management of agricultural campaigns, crop cycles, biological assets, and fiscal years",
+  "source": "@site/docs/features/agricultural-accounting.md",
+  "sourceDirName": "features",
+  "slug": "/features/agricultural-accounting",
+  "permalink": "/features/agricultural-accounting",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Agricultural Accounting",
+    "description": "Management of agricultural campaigns, crop cycles, biological assets, and fiscal years"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Satellite Analysis",
+    "permalink": "/features/satellite-analysis"
+  },
+  "next": {
+    "title": "Task Management",
+    "permalink": "/features/task-management"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "guides/data-fetching",
+  "title": "Data Fetching Guide",
+  "description": "Best practices and patterns for fetching data in the AgriTech Platform",
+  "source": "@site/docs/guides/data-fetching.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/data-fetching",
+  "permalink": "/guides/data-fetching",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Data Fetching Guide",
+    "description": "Best practices and patterns for fetching data in the AgriTech Platform"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Creating Components",
+    "permalink": "/guides/creating-component"
+  },
+  "next": {
+    "title": "Database Migration Guide",
+    "permalink": "/guides/database-migration"
+  }
+}

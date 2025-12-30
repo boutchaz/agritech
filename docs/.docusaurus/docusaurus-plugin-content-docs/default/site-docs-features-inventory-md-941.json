@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Task Management",
+    "permalink": "/features/task-management"
+  },
+  "next": {
+    "title": "Workers Management",
+    "permalink": "/features/workers"
+  }
 }

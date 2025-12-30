@@ -454,5 +454,5 @@ class Settings(BaseSettings):
 ## Next Steps
 
 - [First Deployment Guide](./first-deployment.md) - Deploy to production
-- [Database Configuration](../database/configuration.md) - Configure database settings
-- [Architecture Overview](../architecture/overview.md) - Understand the system architecture
+- [Database Schema](/database/schema) - Configure database settings
+- [Architecture Overview](/architecture/overview) - Understand the system architecture

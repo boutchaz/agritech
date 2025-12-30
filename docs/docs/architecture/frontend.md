@@ -896,5 +896,5 @@ test('user can create a new parcel', async ({ page }) => {
 
 - [Multi-Tenancy Architecture](./multi-tenancy.md)
 - [Backend Architecture](./backend.md)
-- [Component Guide](../guides/components.md)
-- [State Management Guide](../guides/state-management.md)
+- [Component Guide](/frontend/components)
+- [State Management Guide](/frontend/state-management)
