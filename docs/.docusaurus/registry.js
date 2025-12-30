@@ -62,7 +62,6 @@ export default {
   "ce42c03a": [() => import(/* webpackChunkName: "ce42c03a" */ "@site/docs/features/quality-control.md"), "@site/docs/features/quality-control.md", require.resolveWeak("@site/docs/features/quality-control.md")],
   "d841af02": [() => import(/* webpackChunkName: "d841af02" */ "@site/docs/frontend/styling.md"), "@site/docs/frontend/styling.md", require.resolveWeak("@site/docs/frontend/styling.md")],
   "dd1d75a4": [() => import(/* webpackChunkName: "dd1d75a4" */ "@site/docs/frontend/internationalization.md"), "@site/docs/frontend/internationalization.md", require.resolveWeak("@site/docs/frontend/internationalization.md")],
-  "deef5f22": [() => import(/* webpackChunkName: "deef5f22" */ "@site/docs/api/supabase-functions.md"), "@site/docs/api/supabase-functions.md", require.resolveWeak("@site/docs/api/supabase-functions.md")],
   "e4439411": [() => import(/* webpackChunkName: "e4439411" */ "@site/docs/guides/testing.md"), "@site/docs/guides/testing.md", require.resolveWeak("@site/docs/guides/testing.md")],
   "eb44cfb8": [() => import(/* webpackChunkName: "eb44cfb8" */ "@site/docs/features/farm-management.md"), "@site/docs/features/farm-management.md", require.resolveWeak("@site/docs/features/farm-management.md")],
   "eeae4b08": [() => import(/* webpackChunkName: "eeae4b08" */ "@site/docs/features/accounting.md"), "@site/docs/features/accounting.md", require.resolveWeak("@site/docs/features/accounting.md")],

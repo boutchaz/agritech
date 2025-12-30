@@ -1365,6 +1365,5 @@ useQuery({
 ## Related Resources
 
 - [TanStack Query Documentation](https://tanstack.com/query/latest)
-- [Supabase Functions API](/api/supabase-functions)
 - [State Management Guide](/frontend/state-management)
 - [Performance Optimization](/development/performance)

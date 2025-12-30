@@ -612,12 +612,11 @@ has been blocked by CORS policy
    )
    ```
 
-3. **Use Supabase Edge Functions** as proxy:
+3. **Use Python backend service** which handles CORS properly:
    ```typescript
-   // Instead of direct API call
-   const response = await supabase.functions.invoke('satellite-proxy', {
-     body: { /* request data */ },
-   });
+   // The satellite-api.ts client handles this automatically
+   import { satelliteApi } from '@/lib/satellite-api';
+   const response = await satelliteApi.calculateIndices({ /* request data */ });
    ```
 
 ### Environment Variables Not Available

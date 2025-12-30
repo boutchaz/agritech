@@ -109,19 +109,7 @@ RLS policies are automatically created via migrations, but verify they're in pla
 2. Check that policies exist for all tables
 3. Policies should restrict access based on organization membership
 
-### Step 6: Set Up Edge Functions (Optional)
-
-Deploy Supabase Edge Functions:
-
-```bash
-# Deploy all functions
-npx supabase functions deploy
-
-# Or deploy specific function
-npx supabase functions deploy generate-index-image
-```
-
-### Step 7: Get Production Credentials
+### Step 6: Get Production Credentials
 
 Collect your Supabase credentials:
 
@@ -503,17 +491,17 @@ Set up webhooks to sync subscription status:
 
 1. Go to your Polar.sh dashboard
 2. Navigate to **Settings** → **Webhooks**
-3. Add webhook URL: `https://your-project.supabase.co/functions/v1/polar-webhook`
+3. Add webhook URL: `https://your-api-domain.com/api/v1/billing/polar-webhook`
 4. Select events:
    - `subscription.created`
    - `subscription.updated`
    - `subscription.cancelled`
 5. Save the webhook secret
 
-Add the webhook secret to your Supabase secrets:
+Add the webhook secret to your NestJS API environment:
 
 ```bash
-npx supabase secrets set POLAR_WEBHOOK_SECRET=your_webhook_secret
+POLAR_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ### Step 4: Set Up Monitoring

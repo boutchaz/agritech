@@ -291,7 +291,6 @@ All endpoints are documented with:
 
 - [Business Logic Analysis](../BUSINESS_LOGIC_ANALYSIS.md) - Detailed analysis of migrated logic
 - [Migration Summary](../MIGRATION_SUMMARY.md) - Executive migration overview
-- [Supabase Edge Functions](../project/supabase/functions/) - Original implementations
 
 ## 🤝 Contributing
 
