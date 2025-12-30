@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Accounting Module",
+    "permalink": "/features/accounting"
+  },
+  "next": {
+    "title": "Production Intelligence - Data Flow & Population",
+    "permalink": "/features/production-intelligence-data-flow"
+  }
 }

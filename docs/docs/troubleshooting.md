@@ -813,7 +813,7 @@ If you're still experiencing issues:
 
 1. Check the [GitHub Issues](https://github.com/yourusername/agritech/issues)
 2. Review [Supabase Status](https://status.supabase.com/)
-3. Consult the [CLAUDE.md](/Users/boutchaz/Documents/CodeLovers/agritech/CLAUDE.md) file
+3. Consult the project's AGENTS.md file for development guidelines
 4. Join the community Discord (if available)
 5. Contact support at support@agritech.example.com
 

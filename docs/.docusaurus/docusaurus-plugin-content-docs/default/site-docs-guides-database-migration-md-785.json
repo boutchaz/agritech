@@ -13,8 +13,8 @@
   "frontMatter": {},
   "sidebar": "docs",
   "previous": {
-    "title": "Creating Components",
-    "permalink": "/guides/creating-component"
+    "title": "Data Fetching Guide",
+    "permalink": "/guides/data-fetching"
   },
   "next": {
     "title": "Adding a Complete Feature",

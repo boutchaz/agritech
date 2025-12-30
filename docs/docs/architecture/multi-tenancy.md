@@ -682,6 +682,6 @@ describe('RLS Policies', () => {
 
 ## Related Documentation
 
-- [Authorization System](../guides/authorization.md)
+- [Authorization System](/frontend/authorization)
 - [Database Architecture](./database.md)
 - [Frontend Architecture](./frontend.md)

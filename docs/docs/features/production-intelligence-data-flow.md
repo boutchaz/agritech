@@ -46,7 +46,7 @@ INSERT INTO harvests (
 -- 2. performance_alert if underperforming
 ```
 
-**Code Location**: [project/supabase/migrations/20251030131000_auto_create_yield_from_harvest.sql](/Users/boutchaz/Documents/CodeLovers/agritech/project/supabase/migrations/20251030131000_auto_create_yield_from_harvest.sql)
+**Code Location**: `project/supabase/migrations/20251030131000_auto_create_yield_from_harvest.sql`
 
 ---
 
@@ -77,7 +77,7 @@ Used when:
 - Target yield defaults to active benchmark for crop type if not specified
 - Variance and performance rating auto-calculated via trigger
 
-**Code Location**: [project/src/components/ProductionIntelligence/YieldHistoryForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/YieldHistoryForm.tsx:69-80)
+**Code Location**: `project/src/components/ProductionIntelligence/YieldHistoryForm.tsx`
 
 ---
 
@@ -116,7 +116,7 @@ Used for:
 4. Review and update annually
 5. Document data sources in "Source" field
 
-**Code Location**: [project/src/components/ProductionIntelligence/BenchmarkForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/BenchmarkForm.tsx:69-80)
+**Code Location**: `project/src/components/ProductionIntelligence/BenchmarkForm.tsx`
 
 ---
 
@@ -160,7 +160,7 @@ Used for:
 3. **Auto-calculated** → Forecast accuracy % (actual vs predicted)
 4. **Status updated** → `completed` or `cancelled`
 
-**Code Location**: [project/src/components/ProductionIntelligence/HarvestForecastForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/HarvestForecastForm.tsx:69-145)
+**Code Location**: `project/src/components/ProductionIntelligence/HarvestForecastForm.tsx`
 
 ---
 
@@ -540,22 +540,20 @@ const { data: forecasts } = useHarvestForecasts({
 
 ## Related Documentation
 
-- [Harvest Management](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/features/harvest-tracking.md)
-- [Accounting Integration](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/features/accounting.md)
-- [Database Schema](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/database/schema.md)
-- [Production Intelligence API](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/api/production-intelligence.md)
+- [Accounting Integration](/features/accounting)
+- [Database Schema](/database/schema)
 
 ---
 
 ## Code References
 
-- **Dashboard**: [ProductionDashboard.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/ProductionDashboard.tsx)
+- **Dashboard**: `project/src/components/ProductionIntelligence/ProductionDashboard.tsx`
 - **Forms**:
-  - [YieldHistoryForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/YieldHistoryForm.tsx)
-  - [BenchmarkForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/BenchmarkForm.tsx)
-  - [HarvestForecastForm.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ProductionIntelligence/HarvestForecastForm.tsx)
-- **Hooks**: [useProductionIntelligence.ts](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/hooks/useProductionIntelligence.ts)
+  - `project/src/components/ProductionIntelligence/YieldHistoryForm.tsx`
+  - `project/src/components/ProductionIntelligence/BenchmarkForm.tsx`
+  - `project/src/components/ProductionIntelligence/HarvestForecastForm.tsx`
+- **Hooks**: `project/src/hooks/useProductionIntelligence.ts`
 - **Migrations**:
-  - [20251030130000_create_production_intelligence.sql](/Users/boutchaz/Documents/CodeLovers/agritech/project/supabase/migrations/20251030130000_create_production_intelligence.sql)
-  - [20251030131000_auto_create_yield_from_harvest.sql](/Users/boutchaz/Documents/CodeLovers/agritech/project/supabase/migrations/20251030131000_auto_create_yield_from_harvest.sql)
-- **Route**: [production-intelligence.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/routes/production-intelligence.tsx)
+  - `project/supabase/migrations/20251030130000_create_production_intelligence.sql`
+  - `project/supabase/migrations/20251030131000_auto_create_yield_from_harvest.sql`
+- **Route**: `project/src/routes/production-intelligence.tsx`

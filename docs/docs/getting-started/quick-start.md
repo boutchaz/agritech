@@ -359,5 +359,5 @@ docker volume prune  # Remove Supabase data volumes
 
 - [Environment Setup Guide](./environment-setup.md)
 - [First Deployment Guide](./first-deployment.md)
-- [Development Guidelines](../development/guidelines.md)
-- [Architecture Overview](../architecture/overview.md)
+- [Coding Standards](/development/coding-standards)
+- [Architecture Overview](/architecture/overview)

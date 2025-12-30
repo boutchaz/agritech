@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Inventory Management",
+    "permalink": "/features/inventory"
+  },
+  "next": {
+    "title": "Profitability Analysis",
+    "permalink": "/features/profitability"
+  }
 }

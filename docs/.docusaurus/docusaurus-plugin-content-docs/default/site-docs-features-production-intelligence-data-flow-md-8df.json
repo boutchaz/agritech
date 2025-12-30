@@ -10,5 +10,14 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "frontMatter": {},
+  "sidebar": "docs",
+  "previous": {
+    "title": "Billing Cycle: Quotes, Orders, and Bills",
+    "permalink": "/features/billing-cycle"
+  },
+  "next": {
+    "title": "Quality Control & Lab Services",
+    "permalink": "/features/quality-control"
+  }
 }

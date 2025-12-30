@@ -1,0 +1,26 @@
+{
+  "id": "features/weather",
+  "title": "Weather Analytics",
+  "description": "Historical weather patterns and forecasting for precision agriculture",
+  "source": "@site/docs/features/weather.md",
+  "sourceDirName": "features",
+  "slug": "/features/weather",
+  "permalink": "/features/weather",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Weather Analytics",
+    "description": "Historical weather patterns and forecasting for precision agriculture"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Profitability Analysis",
+    "permalink": "/features/profitability"
+  },
+  "next": {
+    "title": "Accounting Module",
+    "permalink": "/features/accounting"
+  }
+}

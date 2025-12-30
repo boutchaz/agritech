@@ -120,11 +120,18 @@
             },
             {
               "id": "features/accounting",
-              "path": "/features/accounting"
+              "path": "/features/accounting",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/agricultural-accounting",
+              "path": "/features/agricultural-accounting",
+              "sidebar": "docs"
             },
             {
               "id": "features/billing-cycle",
-              "path": "/features/billing-cycle"
+              "path": "/features/billing-cycle",
+              "sidebar": "docs"
             },
             {
               "id": "features/enhanced-parcel-planting-systems",
@@ -137,11 +144,23 @@
             },
             {
               "id": "features/inventory",
-              "path": "/features/inventory"
+              "path": "/features/inventory",
+              "sidebar": "docs"
             },
             {
               "id": "features/production-intelligence-data-flow",
-              "path": "/features/production-intelligence-data-flow"
+              "path": "/features/production-intelligence-data-flow",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/profitability",
+              "path": "/features/profitability",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/quality-control",
+              "path": "/features/quality-control",
+              "sidebar": "docs"
             },
             {
               "id": "features/satellite-analysis",
@@ -150,7 +169,8 @@
             },
             {
               "id": "features/subscriptions",
-              "path": "/features/subscriptions"
+              "path": "/features/subscriptions",
+              "sidebar": "docs"
             },
             {
               "id": "features/task-management",
@@ -158,8 +178,14 @@
               "sidebar": "docs"
             },
             {
+              "id": "features/weather",
+              "path": "/features/weather",
+              "sidebar": "docs"
+            },
+            {
               "id": "features/workers",
-              "path": "/features/workers"
+              "path": "/features/workers",
+              "sidebar": "docs"
             },
             {
               "id": "frontend/authentication",
@@ -239,6 +265,11 @@
             {
               "id": "guides/creating-component",
               "path": "/guides/creating-component",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/data-fetching",
+              "path": "/guides/data-fetching",
               "sidebar": "docs"
             },
             {

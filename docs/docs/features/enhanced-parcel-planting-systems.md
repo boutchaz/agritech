@@ -64,7 +64,7 @@ project/src/
         └── ParcelManagementModal.tsx  # Enhanced parcel creation form
 ```
 
-### Planting System Data ([plantingSystemData.ts](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/lib/plantingSystemData.ts))
+### Planting System Data (`project/src/lib/plantingSystemData.ts`)
 
 Provides structured data from `data/agritech_production.json`:
 
@@ -436,14 +436,13 @@ POST /api/parcels/recommend-system
 
 ## Related Documentation
 
-- [Farm Hierarchy](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/features/farm-management.md)
-- [Production Intelligence](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/features/production-intelligence-data-flow.md)
-- [Harvest Management](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/features/harvest-tracking.md)
-- [Database Schema](/Users/boutchaz/Documents/CodeLovers/agritech/docs/docs/database/schema.md)
+- [Farm Hierarchy](/features/farm-management)
+- [Production Intelligence](/features/production-intelligence-data-flow)
+- [Database Schema](/database/schema)
 
 ## Code References
 
-- **Migration**: [20251030140000_enhance_parcel_planting_systems.sql](/Users/boutchaz/Documents/CodeLovers/agritech/project/supabase/migrations/20251030140000_enhance_parcel_planting_systems.sql)
-- **Data Library**: [plantingSystemData.ts](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/lib/plantingSystemData.ts)
-- **UI Component**: [ParcelManagementModal.tsx](/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/FarmHierarchy/ParcelManagementModal.tsx)
-- **Source Data**: [agritech_production.json](/Users/boutchaz/Documents/CodeLovers/agritech/data/agritech_production.json)
+- **Migration**: `project/supabase/migrations/20251030140000_enhance_parcel_planting_systems.sql`
+- **Data Library**: `project/src/lib/plantingSystemData.ts`
+- **UI Component**: `project/src/components/FarmHierarchy/ParcelManagementModal.tsx`
+- **Source Data**: `data/agritech_production.json`

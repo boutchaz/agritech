@@ -1,296 +1,273 @@
 {
-  "/__docusaurus/debug-5ff": {
-    "__comp": "__comp---theme-debug-config-23-a-2ff",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/config-5ba": {
-    "__comp": "__comp---theme-debug-config-23-a-2ff",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/content-a2b": {
-    "__comp": "__comp---theme-debug-contentba-8-ce7",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    },
-    "__props": "__props---docusaurus-debug-content-3-c-0-be2"
-  },
-  "/__docusaurus/debug/globalData-c3c": {
-    "__comp": "__comp---theme-debug-global-dataede-0fa",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/metadata-156": {
-    "__comp": "__comp---theme-debug-site-metadata-68-e-3d4",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/registry-88c": {
-    "__comp": "__comp---theme-debug-registry-679-501",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/routes-000": {
-    "__comp": "__comp---theme-debug-routes-946-699",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
   "/search-822": {
-    "__comp": "__comp---theme-search-page-1-a-4-d6f",
+    "__comp": "1a4e3797",
     "__context": {
-      "plugin": "plugin---search-138-688"
+      "plugin": "138e0e15"
     }
   },
-  "/-e16": {
-    "__comp": "__comp---theme-docs-root-5-e-9-0b6",
+  "/-f6f": {
+    "__comp": "5e95c892",
     "__context": {
-      "plugin": "plugin---aba-d70"
+      "plugin": "aba21aa0"
     }
   },
-  "/-6e5": {
-    "__comp": "__comp---theme-doc-version-roota-7-b-5de",
-    "__props": "__props---22-d-307"
+  "/-866": {
+    "__comp": "a7bd4aaa",
+    "__props": "22dd74f7"
   },
-  "/-63d": {
-    "__comp": "__comp---theme-doc-roota-94-67a"
+  "/-929": {
+    "__comp": "a94703ab"
   },
   "/api/hooks-732": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---api-hooks-068-c2a"
+    "__comp": "17896441",
+    "content": "0685996c"
   },
   "/api/satellite-api-83a": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---api-satellite-api-204-316"
+    "__comp": "17896441",
+    "content": "204ccb1c"
   },
   "/api/supabase-functions-ec5": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---api-supabase-functionsdee-14b"
+    "__comp": "17896441",
+    "content": "deef5f22"
   },
   "/architecture/backend-3b4": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-backend-9-dd-9d3"
+    "__comp": "17896441",
+    "content": "9dd2f382"
   },
   "/architecture/database-f31": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-databasef-6-d-125"
+    "__comp": "17896441",
+    "content": "f6da1e1d"
   },
   "/architecture/frontend-b82": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-frontendf-96-82c"
+    "__comp": "17896441",
+    "content": "f964e206"
   },
   "/architecture/multi-tenancy-277": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-multi-tenancy-502-6c2"
+    "__comp": "17896441",
+    "content": "50260c19"
   },
   "/architecture/overview-f3c": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-overview-0-b-1-d38"
+    "__comp": "17896441",
+    "content": "0b1ac180"
   },
   "/architecture/satellite-service-2a8": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---architecture-satellite-service-5-e-5-447"
+    "__comp": "17896441",
+    "content": "5e59c55d"
   },
   "/contributing-159": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---contributing-4-d-5-a7f"
+    "__comp": "17896441",
+    "content": "4d54d076"
   },
   "/database/functions-36a": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-functions-600-bde"
+    "__comp": "17896441",
+    "content": "60070010"
   },
   "/database/migrations-db6": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-migrations-539-006"
+    "__comp": "17896441",
+    "content": "5390b312"
   },
   "/database/rls-policies-49d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-rls-policies-945-246"
+    "__comp": "17896441",
+    "content": "945d8bb2"
   },
   "/database/schema-6c3": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-schemaa-9-b-714"
+    "__comp": "17896441",
+    "content": "a9b4524a"
   },
   "/database/triggers-bc5": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-triggers-1-f-6-0fe"
+    "__comp": "17896441",
+    "content": "1f6e35fe"
   },
   "/database/type-generation-f63": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---database-type-generation-036-e65"
+    "__comp": "17896441",
+    "content": "03661aba"
   },
   "/deployment/environment-variables-334": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---deployment-environment-variables-8-c-0-6c7"
+    "__comp": "17896441",
+    "content": "8c074c3c"
   },
   "/deployment/monitoring-dcd": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---deployment-monitoring-2-fd-21b"
+    "__comp": "17896441",
+    "content": "2fd99a78"
   },
   "/deployment/production-7c6": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---deployment-production-197-9ed"
+    "__comp": "17896441",
+    "content": "1973956f"
   },
   "/deployment/staging-223": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---deployment-staging-713-747"
+    "__comp": "17896441",
+    "content": "7136399c"
   },
   "/development/coding-standards-2bb": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---development-coding-standards-948-d31"
+    "__comp": "17896441",
+    "content": "948a5165"
   },
   "/development/debugging-7e5": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---development-debuggingb-54-87a"
+    "__comp": "17896441",
+    "content": "b540f618"
   },
   "/development/git-workflow-2cd": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---development-git-workflow-1-a-1-257"
+    "__comp": "17896441",
+    "content": "1a1f3b01"
   },
   "/development/performance-8ee": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---development-performancebf-7-b1c"
+    "__comp": "17896441",
+    "content": "bf75f4d4"
   },
   "/development/testing-strategy-6f5": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---development-testing-strategya-52-fbd"
+    "__comp": "17896441",
+    "content": "a527c3a9"
   },
-  "/features/accounting-b87": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-accountingeea-47e"
+  "/features/accounting-acd": {
+    "__comp": "17896441",
+    "content": "eeae4b08"
   },
-  "/features/billing-cycle-129": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-billing-cycle-9-e-4-229"
+  "/features/agricultural-accounting-f15": {
+    "__comp": "17896441",
+    "content": "5b2e7858"
+  },
+  "/features/billing-cycle-54f": {
+    "__comp": "17896441",
+    "content": "9e442115"
   },
   "/features/enhanced-parcel-planting-systems-f65": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-enhanced-parcel-planting-systems-56-c-4a5"
+    "__comp": "17896441",
+    "content": "56c410da"
   },
   "/features/farm-management-842": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-farm-managementeb-4-fca"
+    "__comp": "17896441",
+    "content": "eb44cfb8"
   },
-  "/features/inventory-630": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-inventory-941-ac4"
+  "/features/inventory-a01": {
+    "__comp": "17896441",
+    "content": "94120069"
   },
-  "/features/production-intelligence-data-flow-09d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-production-intelligence-data-flow-8-df-ead"
+  "/features/production-intelligence-data-flow-ab5": {
+    "__comp": "17896441",
+    "content": "8df03cef"
+  },
+  "/features/profitability-930": {
+    "__comp": "17896441",
+    "content": "0b09a1de"
+  },
+  "/features/quality-control-2fc": {
+    "__comp": "17896441",
+    "content": "ce42c03a"
   },
   "/features/satellite-analysis-1b8": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-satellite-analysis-4-bc-e52"
+    "__comp": "17896441",
+    "content": "4bccd3fa"
   },
-  "/features/subscriptions-933": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-subscriptionsb-8-a-c02"
+  "/features/subscriptions-9e9": {
+    "__comp": "17896441",
+    "content": "b8a79ce1"
   },
   "/features/task-management-db0": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-task-management-740-861"
+    "__comp": "17896441",
+    "content": "7402a10c"
   },
-  "/features/workers-aa2": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---features-workers-7-e-2-8ca"
+  "/features/weather-b22": {
+    "__comp": "17896441",
+    "content": "7cfc34a4"
+  },
+  "/features/workers-8ce": {
+    "__comp": "17896441",
+    "content": "7e24f425"
   },
   "/frontend/authentication-ac1": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-authentication-6-cd-3e7"
+    "__comp": "17896441",
+    "content": "6cdde7c7"
   },
   "/frontend/authorization-bfa": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-authorization-13-f-5ff"
+    "__comp": "17896441",
+    "content": "13f9f791"
   },
   "/frontend/components-2ca": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-components-2-fe-541"
+    "__comp": "17896441",
+    "content": "2fed089c"
   },
   "/frontend/forms-dd4": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-formsaf-2-bee"
+    "__comp": "17896441",
+    "content": "af21bf87"
   },
   "/frontend/internationalization-53f": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-internationalizationdd-1-3de"
+    "__comp": "17896441",
+    "content": "dd1d75a4"
   },
   "/frontend/routing-198": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-routing-4-a-2-cfc"
+    "__comp": "17896441",
+    "content": "4a2cf9ac"
   },
   "/frontend/state-management-2f6": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-state-managementf-46-85b"
+    "__comp": "17896441",
+    "content": "f46fd0e3"
   },
   "/frontend/styling-e70": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-stylingd-84-857"
+    "__comp": "17896441",
+    "content": "d841af02"
   },
   "/frontend/tech-stack-9f3": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---frontend-tech-stackfb-2-888"
+    "__comp": "17896441",
+    "content": "fb2f7885"
   },
   "/getting-started/environment-setup-596": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---getting-started-environment-setup-7-ca-78b"
+    "__comp": "17896441",
+    "content": "7caf9634"
   },
   "/getting-started/first-deployment-c75": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---getting-started-first-deployment-5-aa-ad5"
+    "__comp": "17896441",
+    "content": "5aa12780"
   },
   "/getting-started/installation-e0c": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---getting-started-installation-54-f-988"
+    "__comp": "17896441",
+    "content": "54f44165"
   },
   "/getting-started/quick-start-5eb": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---getting-started-quick-start-588-9db"
+    "__comp": "17896441",
+    "content": "588bd741"
   },
   "/guides/adding-feature-816": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-adding-feature-6-d-8-807"
+    "__comp": "17896441",
+    "content": "6d844230"
   },
   "/guides/adding-new-route-cc8": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-adding-new-routef-32-deb"
+    "__comp": "17896441",
+    "content": "f326630d"
   },
   "/guides/creating-component-dac": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-creating-componentc-17-18b"
+    "__comp": "17896441",
+    "content": "c1774488"
+  },
+  "/guides/data-fetching-5c1": {
+    "__comp": "17896441",
+    "content": "3eef3149"
   },
   "/guides/database-migration-23a": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-database-migration-785-edf"
+    "__comp": "17896441",
+    "content": "785f8437"
   },
   "/guides/deployment-f82": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-deploymentcaa-f86"
+    "__comp": "17896441",
+    "content": "caaf7770"
   },
   "/guides/satellite-integration-363": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-satellite-integration-32-f-afb"
+    "__comp": "17896441",
+    "content": "32f88b6f"
   },
   "/guides/testing-64d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---guides-testinge-44-b1b"
+    "__comp": "17896441",
+    "content": "e4439411"
   },
   "/testing/tax-calculations-13c": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---testing-tax-calculations-0-b-2-62d"
+    "__comp": "17896441",
+    "content": "0b2b7749"
   },
   "/troubleshooting-ab5": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---troubleshooting-9-d-9-b37"
+    "__comp": "17896441",
+    "content": "9d9f8394"
   },
   "/-7da": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---0-e-3-279"
+    "__comp": "17896441",
+    "content": "0e384e19"
   }
 }

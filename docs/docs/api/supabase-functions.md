@@ -1159,6 +1159,6 @@ $$;
 ## Related Resources
 
 - [Database Schema Reference](/database/schema)
-- [Authentication Guide](/guides/authentication)
+- [Authentication Guide](/frontend/authentication)
 - [Subscription Management](/features/subscriptions)
 - [Supabase RPC Documentation](https://supabase.com/docs/guides/database/functions)

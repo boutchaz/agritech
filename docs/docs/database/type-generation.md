@@ -277,4 +277,4 @@ npm run db:generate-types-remote
 
 - [Schema](./schema.md) - Complete database schema
 - [Migrations](./migrations.md) - Migration workflow
-- [Frontend Integration](../frontend/data-fetching.md) - Using types in application
+- [Data Fetching Guide](/guides/data-fetching) - Using types in application
