@@ -5,7 +5,7 @@ description: Backend services, API design, authentication flow, and service inte
 
 # Backend Architecture
 
-The AgriTech Platform backend is composed of multiple services, each handling specific concerns. This document details the architecture of Supabase (primary backend), the FastAPI satellite service, and their integration patterns.
+The AgriTech Platform backend is composed of multiple services, each handling specific concerns. This document details the architecture of Supabase (primary backend), the NestJS business logic API, the FastAPI satellite service, and their integration patterns.
 
 ## Backend Services Overview
 
@@ -13,22 +13,24 @@ The AgriTech Platform backend is composed of multiple services, each handling sp
 graph TB
     subgraph "Client Layer"
         WebApp[React Web Application]
+        Marketplace[Next.js Marketplace]
+        AdminApp[Admin Dashboard]
     end
 
-    subgraph "API Gateway"
+    subgraph "API Services"
         Supabase[Supabase Platform]
+        NestAPI[NestJS Business API<br/>agritech-api/]
+        SatService[Satellite Service<br/>backend-service/]
     end
 
-    subgraph "Core Services"
+    subgraph "Supabase Services"
         Auth[Supabase Auth<br/>JWT Authentication]
         DB[(PostgreSQL Database<br/>with RLS)]
         Storage[Supabase Storage<br/>S3-compatible]
-        EdgeFn[Edge Functions<br/>Deno Runtime]
         Realtime[Realtime<br/>WebSocket]
     end
 
-    subgraph "Specialized Services"
-        SatService[Satellite Indices Service<br/>FastAPI + Python]
+    subgraph "Background Processing"
         Celery[Celery Workers<br/>Background Jobs]
         Redis[(Redis<br/>Task Queue)]
     end
@@ -39,28 +41,135 @@ graph TB
     end
 
     WebApp -->|REST API| Supabase
+    WebApp -->|REST API| NestAPI
     WebApp -->|HTTP| SatService
     WebApp -->|Checkout| Polar
+    Marketplace -->|REST API| Supabase
+    AdminApp -->|REST API| NestAPI
 
     Supabase --> Auth
     Supabase --> DB
     Supabase --> Storage
-    Supabase --> EdgeFn
     Supabase --> Realtime
 
-    EdgeFn -->|Proxy| SatService
+    NestAPI --> DB
+    SatService --> DB
     SatService --> GEE
     SatService --> Redis
     Redis --> Celery
     Celery --> GEE
-    Celery --> DB
 
-    Polar -->|Webhooks| EdgeFn
+    Polar -->|Webhooks| NestAPI
 
     style Supabase fill:#3ecf8e
-    style SatService fill:#ff6b6b
+    style NestAPI fill:#ef4444
+    style SatService fill:#8b5cf6
     style GEE fill:#4285f4
 ```
+
+## Service Overview
+
+| Service | Technology | Port | Purpose |
+|---------|-----------|------|---------|
+| **Supabase** | PostgreSQL + APIs | N/A | Database, Auth, Storage, Realtime |
+| **NestJS API** | NestJS 11 + TypeScript | 3000 | Business logic, Accounting, Sequences |
+| **Satellite Service** | FastAPI + Python | 8001 | Vegetation analysis, GEE integration |
+| **CMS** | Strapi 5.31 | 1337 | Blog content, Marketing pages |
+
+## NestJS Business Logic API
+
+**Location:** `agritech-api/`
+
+The NestJS API handles complex business logic that requires transaction management, multi-step operations, and advanced validation.
+
+### Architecture
+
+```mermaid
+graph TB
+    subgraph "NestJS API"
+        Controller[Controllers]
+        Service[Services]
+        Guard[Auth Guards]
+        Module[Feature Modules]
+    end
+
+    subgraph "Modules"
+        SeqMod[Sequences]
+        AccMod[Accounts]
+        JEMod[Journal Entries]
+        InvMod[Invoices]
+        PayMod[Payments]
+        PImod[Production Intelligence]
+        WorkMod[Workers]
+        StockMod[Stock Entries]
+    end
+
+    subgraph "External"
+        SupaDB[(Supabase DB)]
+        SupaAuth[Supabase Auth]
+    end
+
+    Controller --> Guard
+    Guard --> Service
+    Service --> Module
+
+    Module --> SeqMod
+    Module --> AccMod
+    Module --> JEMod
+    Module --> InvMod
+    Module --> PayMod
+    Module --> PImod
+    Module --> WorkMod
+    Module --> StockMod
+
+    Service --> SupaDB
+    Guard --> SupaAuth
+
+    style Controller fill:#ef4444
+    style SupaDB fill:#3ecf8e
+```
+
+### Key Modules
+
+#### Sequences Module
+Generates unique sequential numbers for business documents:
+
+```typescript
+// POST /api/v1/sequences/invoice
+{
+  "organizationId": "uuid"
+}
+// Response: { "invoiceNumber": "INV-2025-00001" }
+```
+
+Supported sequence types:
+- `INV-` - Invoices
+- `QUO-` - Quotes
+- `SO-` - Sales Orders
+- `PO-` - Purchase Orders
+- `JE-` - Journal Entries
+- `PAY-` - Payments
+- `SE-` - Stock Entries
+
+#### Accounting Modules
+- **Accounts**: Chart of accounts management (OHADA, IFRS support)
+- **Journal Entries**: Double-entry bookkeeping with validation
+- **Invoices**: Invoice creation with automatic journal entries
+- **Payments**: Payment allocation to invoices
+
+#### Financial Reports
+- Balance Sheet generation
+- Profit & Loss statements
+- Trial Balance reports
+
+### API Documentation
+
+**Swagger UI:** `http://localhost:3000/api/docs`
+
+All endpoints documented with:
+- Request/response schemas
+- Authentication requirements
+- Example payloads
 
 ## Supabase Backend
 
@@ -193,7 +302,7 @@ const { data, error } = await supabase.storage
 
 #### 4. Edge Functions
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/supabase/functions/`
+**Location:** `project/supabase/functions/`
 
 Edge functions provide serverless compute for server-side logic.
 
@@ -277,7 +386,7 @@ subscription.unsubscribe();
 
 #### Client Configuration
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/lib/supabase.ts`
+**Location:** `project/src/lib/supabase.ts`
 
 ```typescript
 import { createClient } from '@supabase/supabase-js';
@@ -385,7 +494,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 The satellite service is a FastAPI application that integrates with Google Earth Engine for vegetation analysis.
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/`
+**Location:** `backend-service/`
 
 ### Service Architecture
 
@@ -592,7 +701,7 @@ Content-Type: application/json
 
 ### Service Implementation
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/services/gee_service.py`
+**Location:** `backend-service/app/services/gee_service.py`
 
 ```python
 import ee
@@ -666,7 +775,7 @@ class GEEService:
 
 ### Background Jobs (Celery)
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/satellite-indices-service/app/tasks.py`
+**Location:** `backend-service/app/tasks.py`
 
 ```python
 from celery import Celery
@@ -707,7 +816,7 @@ celery -A app.tasks worker --loglevel=info
 
 ### Frontend Client
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/lib/satellite-api.ts`
+**Location:** `project/src/lib/satellite-api.ts`
 
 ```typescript
 import axios from 'axios';
@@ -743,9 +852,9 @@ class SatelliteAPI {
 export const satelliteApi = new SatelliteAPI();
 ```
 
-## Accounting API
+## Accounting API Client
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/lib/accounting-api.ts`
+**Location:** `project/src/lib/api/accounting.ts`
 
 The accounting module provides a dedicated API client for double-entry bookkeeping operations:
 
@@ -904,6 +1013,6 @@ logger.error('Database query failed', {
 
 ## Related Documentation
 
-- [Database Architecture](./database.md)
-- [Satellite Service Architecture](./satellite-service.md)
-- [Satellite API Reference](/api/satellite-api)
+- [Database Architecture](./database)
+- [Satellite Service Architecture](./satellite-service)
+- [Multi-Tenancy Architecture](./multi-tenancy)

@@ -13,15 +13,16 @@ The AgriTech Platform frontend is built with React 19 and TypeScript, following 
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| React | 19.x | UI framework with concurrent features |
+| React | 19.2 | UI framework with concurrent features |
 | TypeScript | 5.x | Type safety and developer experience |
-| Vite | 5.x | Build tool and dev server |
-| TanStack Router | 1.x | Type-safe file-based routing |
-| TanStack Query | 5.x | Server state management and caching |
+| Vite | 7.x | Build tool and dev server |
+| TanStack Router | 1.131+ | Type-safe file-based routing |
+| TanStack Query | 5.87+ | Server state management and caching |
 | React Hook Form | 7.x | Form state management |
-| Zod | 3.x | Schema validation |
+| Zod | 4.x | Schema validation |
 | Tailwind CSS | 3.x | Utility-first styling |
 | Jotai | 2.x | Atomic state management |
+| Zustand | 5.x | Store-based state management |
 
 ### Supporting Libraries
 
@@ -151,7 +152,7 @@ graph TD
 
 ### Root Layout
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/routes/__root.tsx`
+**Location:** `project/src/routes/__root.tsx`
 
 The root layout wraps the entire application with essential providers:
 
@@ -190,7 +191,7 @@ function RootLayout() {
 
 ### Protected Routes
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/routes/_authenticated.tsx`
+**Location:** `project/src/routes/_authenticated.tsx`
 
 The `_authenticated` layout protects all child routes:
 
@@ -534,7 +535,7 @@ See [Multi-Tenancy Architecture](./multi-tenancy.md) for detailed information.
 
 ### UI Component Library
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/ui/`
+**Location:** `project/src/components/ui/`
 
 The `ui/` directory contains reusable, accessible primitives built on Radix UI:
 
@@ -633,7 +634,7 @@ export function SatelliteViewer({ parcelId, date, index }: SatelliteViewerProps)
 
 ### Authorization Components
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/authorization/`
+**Location:** `project/src/components/authorization/`
 
 These components integrate CASL permissions:
 
@@ -894,7 +895,6 @@ test('user can create a new parcel', async ({ page }) => {
 
 ## Related Documentation
 
-- [Multi-Tenancy Architecture](./multi-tenancy.md)
-- [Backend Architecture](./backend.md)
-- [Component Guide](/frontend/components)
-- [State Management Guide](/frontend/state-management)
+- [Multi-Tenancy Architecture](./multi-tenancy)
+- [Backend Architecture](./backend)
+- [Database Architecture](./database)

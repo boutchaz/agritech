@@ -252,7 +252,7 @@ graph TD
 
 The `MultiTenantAuthProvider` component is the core of the multi-tenant context system. It manages authentication state, organization/farm selection, and provides tenant-aware context throughout the application.
 
-**Location:** `/Users/boutchaz/Documents/CodeLovers/agritech/project/src/components/MultiTenantAuthProvider.tsx`
+**Location:** `project/src/components/MultiTenantAuthProvider.tsx`
 
 ### Provider Architecture
 
@@ -682,6 +682,6 @@ describe('RLS Policies', () => {
 
 ## Related Documentation
 
-- [Authorization System](/frontend/authorization)
-- [Database Architecture](./database.md)
-- [Frontend Architecture](./frontend.md)
+- [Database Architecture](./database)
+- [Frontend Architecture](./frontend)
+- [Backend Architecture](./backend)

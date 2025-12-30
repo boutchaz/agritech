@@ -5,234 +5,287 @@ description: System architecture, technology stack, and component overview of th
 
 # Architecture Overview
 
-The AgriTech Platform is a comprehensive agricultural technology solution built with a modern, scalable architecture. This document provides a high-level overview of the system's design, technology choices, and key architectural decisions.
+The AgriTech Platform is a comprehensive multi-tenant agricultural SaaS solution built with a modern, scalable architecture. This document provides a high-level overview of the system's design, technology choices, and key architectural decisions.
 
 ## System Architecture
 
-The platform follows a microservices-inspired architecture with a React frontend, PostgreSQL database via Supabase, and a specialized FastAPI satellite service.
+The platform follows a microservices architecture with multiple specialized services:
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        WebApp[React Web Application]
+    subgraph "Client Applications"
+        WebApp[React SaaS App<br/>project/]
+        Marketplace[Next.js Marketplace<br/>marketplace-frontend/]
+        AdminApp[Admin Dashboard<br/>admin-app/]
     end
 
-    subgraph "API Gateway Layer"
+    subgraph "API Layer"
+        NestAPI[NestJS Business API<br/>agritech-api/]
+        SatService[Python Satellite Service<br/>backend-service/]
+    end
+
+    subgraph "Backend Services"
         Supabase[Supabase Platform]
-        EdgeFn[Edge Functions]
-    end
-
-    subgraph "Application Services"
         Auth[Supabase Auth]
         DB[(PostgreSQL + RLS)]
         Storage[Supabase Storage]
-        SatService[Satellite Indices Service]
-        Payments[Polar.sh]
+        Realtime[Supabase Realtime]
+    end
+
+    subgraph "Content Management"
+        CMS[Strapi CMS<br/>cms/]
+        Docs[Docusaurus<br/>docs/]
     end
 
     subgraph "External Services"
         GEE[Google Earth Engine]
         Sentinel[Sentinel-2 Imagery]
+        Polar[Polar.sh Payments]
     end
 
     WebApp --> Supabase
+    WebApp --> NestAPI
     WebApp --> SatService
-    WebApp --> Payments
+    WebApp --> CMS
+    Marketplace --> Supabase
+    Marketplace --> CMS
+    AdminApp --> Supabase
+    AdminApp --> NestAPI
+
     Supabase --> Auth
     Supabase --> DB
     Supabase --> Storage
-    Supabase --> EdgeFn
-    EdgeFn --> SatService
+    Supabase --> Realtime
+
+    NestAPI --> DB
+    SatService --> DB
     SatService --> GEE
     GEE --> Sentinel
 
-    style WebApp fill:#e1f5ff
+    WebApp --> Polar
+
+    style WebApp fill:#3b82f6
+    style Marketplace fill:#10b981
+    style AdminApp fill:#f59e0b
+    style NestAPI fill:#ef4444
+    style SatService fill:#8b5cf6
     style Supabase fill:#3ecf8e
-    style SatService fill:#ff6b6b
-    style GEE fill:#4285f4
+    style CMS fill:#4945ff
 ```
 
 ## Technology Stack
 
-### Frontend Stack
+### Frontend Applications
 
-The frontend is built with React 19 and TypeScript, leveraging modern tooling and libraries:
+| Application | Stack | Purpose |
+|-------------|-------|---------|
+| **Main SaaS** (`project/`) | React 19.2 + Vite 7 + TypeScript | Primary multi-tenant farm management application |
+| **Marketplace** (`marketplace-frontend/`) | Next.js 16 + React 19 | Agricultural marketplace for buying/selling |
+| **Admin Dashboard** (`admin-app/`) | React 19 + Vite + TypeScript | Internal administration and system management |
 
-| Category | Technology | Purpose |
-|----------|-----------|---------|
-| **Framework** | React 19 + TypeScript | Component-based UI with type safety |
-| **Build Tool** | Vite | Fast development server and optimized builds |
-| **Routing** | TanStack Router v1 | File-based routing with type-safe navigation |
-| **State Management** | TanStack Query (React Query) | Server state caching and synchronization |
-| | Jotai | Atomic global state management |
-| **Forms** | React Hook Form v7+ | Performant forms with minimal re-renders |
-| | Zod | Schema validation and type inference |
-| **UI Components** | Custom + Radix UI | Accessible, composable primitives |
-| **Styling** | Tailwind CSS | Utility-first CSS framework |
-| **Authentication** | Supabase Auth | JWT-based authentication with multi-tenant support |
-| **Authorization** | CASL | Isomorphic authorization with subscription enforcement |
-| **Internationalization** | react-i18next | Multi-language support (EN, FR, AR) |
-| **Maps** | Leaflet + OpenLayers | Interactive maps and geospatial visualization |
-| **Charts** | ECharts + Recharts | Data visualization and analytics |
+### Main Frontend Stack (project/)
 
-### Backend Stack
+| Category | Technology | Version | Purpose |
+|----------|-----------|---------|---------|
+| **Framework** | React + TypeScript | 19.2 | Component-based UI with type safety |
+| **Build Tool** | Vite | 7.x | Fast development server and optimized builds |
+| **Routing** | TanStack Router | 1.131+ | File-based routing with type-safe navigation |
+| **Server State** | TanStack Query | 5.87+ | Server state caching and synchronization |
+| **Client State** | Jotai + Zustand | Latest | Atomic and store-based state management |
+| **Forms** | React Hook Form + Zod | 7.x / 4.x | Performant forms with schema validation |
+| **UI Components** | Radix UI + Custom | Latest | Accessible, composable primitives |
+| **Styling** | Tailwind CSS | 3.x | Utility-first CSS framework |
+| **Authentication** | Supabase Auth | 2.x | JWT-based auth with multi-tenant support |
+| **Authorization** | CASL | 6.7+ | Isomorphic authorization with subscription enforcement |
+| **i18n** | react-i18next | 16.x | Multi-language support (EN, FR, AR) |
+| **Maps** | Leaflet + OpenLayers | Latest | Interactive maps and geospatial visualization |
+| **Charts** | ECharts + Recharts | Latest | Data visualization and analytics |
+| **PDF** | jsPDF + AutoTable | Latest | Report generation |
 
-The backend consists of multiple services, each handling specific concerns:
+### Backend Services
 
 | Service | Technology | Purpose |
 |---------|-----------|---------|
-| **Database** | Supabase (PostgreSQL) | Primary data store with real-time capabilities |
-| **Row Level Security** | PostgreSQL RLS | Tenant isolation and data security |
-| **Satellite Service** | FastAPI + Python | Vegetation analysis and GEE integration |
+| **Business API** (`agritech-api/`) | NestJS 11 + TypeScript | Complex business logic, sequences, accounting |
+| **Satellite Service** (`backend-service/`) | FastAPI + Python | Vegetation indices, GEE integration |
+| **Database** | Supabase (PostgreSQL 15) | Primary data store with RLS |
+| **Auth** | Supabase Auth | Authentication and user management |
 | **Storage** | Supabase Storage | Document and file management |
-| **Background Jobs** | Celery + Redis | Batch processing for satellite analysis |
-| **Payments** | Polar.sh | Subscription management and billing |
-| **Edge Functions** | Deno | Serverless functions for server-side logic |
+| **Realtime** | Supabase Realtime | Live subscriptions and updates |
+| **Background Jobs** | Celery + Redis | Batch satellite processing |
 
-### External Services
+### Content & Documentation
+
+| Service | Technology | Purpose |
+|---------|-----------|---------|
+| **CMS** (`cms/`) | Strapi 5.31 | Blog content, marketing pages |
+| **Documentation** (`docs/`) | Docusaurus 3 | Technical documentation |
+
+### External Integrations
 
 | Service | Purpose |
 |---------|---------|
 | **Google Earth Engine** | Satellite imagery processing and analysis |
 | **Sentinel-2** | Multi-spectral satellite imagery source |
-| **Polar.sh** | Payment processing and subscription management |
+| **Polar.sh** | Subscription billing and payment processing |
 
 ## Project Structure
 
-The monorepo is organized into three main directories:
+The monorepo contains 7 applications and shared configuration:
 
 ```
 agritech/
-├── project/                              # Main React frontend (SaaS application)
+├── project/                          # Main React SaaS Application
 │   ├── src/
-│   │   ├── routes/                       # TanStack Router file-based routes
-│   │   ├── components/                   # React components (organized by feature)
-│   │   ├── hooks/                        # Custom React hooks (TanStack Query)
-│   │   ├── lib/                          # Utilities and shared logic
-│   │   │   ├── api/                      # API Layer (50+ modules for data fetching)
-│   │   │   ├── supabase.ts               # Supabase client
-│   │   │   ├── casl/                     # Authorization logic
-│   │   │   └── utils/                    # Helper functions
-│   │   ├── types/                        # TypeScript types and interfaces
-│   │   └── locales/                      # i18n translations (en, fr, ar)
-│   └── supabase/                         # Local Supabase config & migrations
+│   │   ├── routes/                   # 80+ TanStack Router routes
+│   │   │   ├── dashboard.tsx
+│   │   │   ├── farm-hierarchy.tsx
+│   │   │   ├── accounting*.tsx       # Full accounting module
+│   │   │   ├── billing-*.tsx         # Quotes, orders, invoices
+│   │   │   ├── parcels.*.tsx         # Parcel management & analysis
+│   │   │   ├── workers.tsx           # Workforce management
+│   │   │   ├── tasks.*.tsx           # Task management
+│   │   │   ├── harvests.tsx          # Harvest tracking
+│   │   │   ├── stock.tsx             # Inventory management
+│   │   │   ├── production-intelligence.tsx
+│   │   │   ├── satellite-analysis.tsx
+│   │   │   ├── quality-control.tsx
+│   │   │   ├── marketplace.*.tsx     # Marketplace integration
+│   │   │   └── settings.*.tsx        # Configuration pages
+│   │   ├── components/               # Feature-organized components
+│   │   │   ├── ui/                   # Reusable UI primitives
+│   │   │   ├── Accounting/
+│   │   │   ├── FarmHierarchy/
+│   │   │   ├── SatelliteAnalysis/
+│   │   │   ├── ProductionIntelligence/
+│   │   │   └── ...
+│   │   ├── hooks/                    # 60+ custom React hooks
+│   │   ├── lib/
+│   │   │   ├── api/                  # 50+ API modules
+│   │   │   ├── supabase.ts           # Supabase client
+│   │   │   ├── casl/                 # Authorization rules
+│   │   │   └── utils/
+│   │   ├── types/
+│   │   │   └── database.types.ts     # Auto-generated from Supabase
+│   │   └── locales/                  # i18n (en, fr, ar)
+│   ├── supabase/
+│   │   └── migrations/               # 100+ database migrations
+│   └── e2e/                          # Playwright E2E tests
 │
-├── agritech-api/                         # NestJS Backend API
-│   ├── src/
-│   │   ├── modules/                      # Feature-based modules
-│   │   └── main.ts                       # Entry point
+├── agritech-api/                     # NestJS Business Logic API
+│   └── src/
+│       ├── modules/
+│       │   ├── auth/                 # JWT authentication
+│       │   ├── database/             # Supabase client
+│       │   ├── sequences/            # Document numbering
+│       │   ├── accounts/             # Chart of accounts
+│       │   ├── journal-entries/      # Double-entry bookkeeping
+│       │   ├── invoices/             # Invoice operations
+│       │   ├── payments/             # Payment processing
+│       │   ├── financial-reports/    # Balance sheet, P&L
+│       │   ├── production-intelligence/
+│       │   ├── harvests/
+│       │   ├── tasks/
+│       │   ├── workers/
+│       │   └── stock-entries/
+│       └── common/                   # Shared utilities
 │
-├── backend-service/                      # Python Satellite & Analysis Service
-│   ├── app/                              # FastAPI application
-│   │   ├── api/                          # Route handlers
-│   │   └── services/                     # Satellite analysis logic
-│   └── research/                         # GEE research & notebooks
+├── backend-service/                  # Python Satellite Service
+│   ├── app/
+│   │   ├── api/                      # FastAPI routes
+│   │   ├── services/                 # GEE integration
+│   │   └── models/                   # Pydantic models
+│   └── research/                     # GEE notebooks
 │
-├── marketplace-frontend/                 # Next.js Marketplace application
-├── admin-app/                            # Internal admin dashboard
-├── cms/                                  # Strapi CMS for blog and content
-└── docs/                                 # Docusaurus documentation (this site)
+├── marketplace-frontend/             # Next.js Marketplace
+│   └── src/app/                      # App router pages
+│
+├── admin-app/                        # Admin Dashboard
+│   └── src/
+│       ├── routes/
+│       └── components/
+│
+├── cms/                              # Strapi CMS
+│   ├── config/
+│   └── src/
+│       └── api/                      # Content types
+│
+└── docs/                             # Docusaurus Documentation
+    └── docs/
+        ├── architecture/
+        ├── features/
+        ├── database/
+        └── api/
 ```
 
-## Component Architecture
+## Feature Modules
 
-The system is composed of several key components that work together:
+The platform includes comprehensive agricultural management features:
 
-```mermaid
-graph LR
-    subgraph "Frontend Components"
-        Routes[Routes Layer]
-        Components[Component Layer]
-        Hooks[Hooks Layer]
-        State[State Management]
-    end
+### Core Farm Management
+- **Farm Hierarchy**: Organizations → Farms → Parcels → Sub-parcels
+- **Parcel Management**: Crop types, planting systems, area tracking
+- **Infrastructure**: Buildings, equipment, utilities
+- **Crop Cycles**: Seasonal planning and tracking
 
-    subgraph "API Clients"
-        SupabaseClient[Supabase Client]
-        SatelliteClient[Satellite API Client]
-        PolarClient[Polar API Client]
-    end
+### Financial Management
+- **Chart of Accounts**: Multi-country accounting standards (OHADA, IFRS)
+- **Journal Entries**: Double-entry bookkeeping with auto-balancing
+- **Invoicing**: Sales invoices with PDF generation
+- **Payments**: Payment tracking and allocation
+- **Billing**: Quotes, sales orders, purchase orders
+- **Financial Reports**: Balance sheet, P&L, trial balance
+- **Cost Centers**: Department-level cost tracking
 
-    subgraph "Business Logic"
-        Auth[Authentication]
-        Authorization[Authorization]
-        DataSync[Data Synchronization]
-    end
+### Production & Operations
+- **Harvest Tracking**: Quantity, quality, destination tracking
+- **Production Intelligence**: Yield analytics, benchmarks, forecasts
+- **Quality Control**: Lab results, grade tracking
+- **Stock Management**: FIFO/LIFO inventory valuation
+- **Task Management**: Assignment, scheduling, calendar view
 
-    Routes --> Components
-    Components --> Hooks
-    Hooks --> State
-    Hooks --> SupabaseClient
-    Hooks --> SatelliteClient
-    Components --> Auth
-    Components --> Authorization
-    SupabaseClient --> DataSync
-    State --> DataSync
+### Workforce Management
+- **Workers**: Employee profiles and contracts
+- **Day Laborers**: Temporary workforce tracking
+- **Piece Work**: Task-based compensation
+- **Work Units**: Configurable work metrics
 
-    style Routes fill:#e1f5ff
-    style Auth fill:#ffeb3b
-    style Authorization fill:#ff9800
-```
+### Satellite & Analytics
+- **Satellite Analysis**: 12+ vegetation indices (NDVI, NDRE, etc.)
+- **Weather Integration**: Local weather data
+- **Soil Analysis**: Lab integration
+- **Profitability Analysis**: Per-parcel financial performance
 
-### Layer Responsibilities
-
-#### Routes Layer (`src/routes/`)
-- File-based routing with TanStack Router
-- Route-level authentication and authorization checks
-- Layout composition and nested routing
-- Lazy loading for code splitting
-
-#### Component Layer (`src/components/`)
-- Feature-based organization (SatelliteAnalysis, Tasks, Workers, etc.)
-- Reusable UI primitives (`ui/` directory)
-- Permission-aware rendering via CASL
-- Responsive and accessible design
-
-#### API Layer (`src/lib/api/`)
-- Encapsulation of all data fetching logic
-- 59+ modules handling different domain entities (Accounting, Satellite, Billing, etc.)
-- Support for multiple backend services (Supabase, NestJS, Python)
-- Consistent error handling and response transformation
-- Type-safe request and response interfaces
-
-#### Hooks Layer (`src/hooks/`)
-- 62+ custom hooks for data fetching (TanStack Query)
-- Business logic encapsulation
-- Reusable state management patterns
-- Multi-tenant context access
-
-#### State Management
-- **Server State**: TanStack Query for all API data
-- **Global State**: Jotai atoms for UI state and preferences
-- **Form State**: React Hook Form for form management
-- **Auth Context**: MultiTenantAuthProvider for user, org, and farm context
+### Platform Features
+- **Marketplace**: B2B agricultural trading
+- **Blog**: CMS-powered content
+- **Multi-language**: English, French, Arabic
+- **Subscriptions**: Tiered feature access via Polar.sh
 
 ## Data Flow
 
-### Request Flow
+### Authentication Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant React
-    participant TanStackQuery
-    participant Supabase
+    participant Frontend
+    participant Supabase Auth
+    participant NestJS API
     participant Database
 
-    User->>React: Interact with UI
-    React->>TanStackQuery: Trigger query/mutation
-    TanStackQuery->>TanStackQuery: Check cache
-    alt Cache valid
-        TanStackQuery-->>React: Return cached data
-    else Cache stale/missing
-        TanStackQuery->>Supabase: API request with JWT
-        Supabase->>Database: Query with RLS
-        Database-->>Supabase: Data (filtered by tenant)
-        Supabase-->>TanStackQuery: Response
-        TanStackQuery->>TanStackQuery: Update cache
-        TanStackQuery-->>React: Return data
-    end
-    React-->>User: Update UI
+    User->>Frontend: Login with credentials
+    Frontend->>Supabase Auth: signInWithPassword()
+    Supabase Auth-->>Frontend: JWT token + user
+    Frontend->>Frontend: Store session
+    
+    Note over Frontend,Database: Subsequent requests
+    
+    Frontend->>NestJS API: Request + Bearer token
+    NestJS API->>NestJS API: Validate JWT
+    NestJS API->>Database: Query with user context
+    Database-->>NestJS API: RLS-filtered data
+    NestJS API-->>Frontend: Response
 ```
 
 ### Satellite Analysis Flow
@@ -241,146 +294,213 @@ sequenceDiagram
 sequenceDiagram
     participant User
     participant Frontend
-    participant SatelliteAPI
+    participant Satellite API
     participant GEE
-    participant Supabase
+    participant Database
 
-    User->>Frontend: Request satellite analysis
-    Frontend->>SatelliteAPI: POST /api/indices/available-dates
-    SatelliteAPI->>GEE: Query available Sentinel-2 images
-    GEE-->>SatelliteAPI: Return date list
-    SatelliteAPI-->>Frontend: Available dates
+    User->>Frontend: Select parcel & date range
+    Frontend->>Satellite API: POST /api/indices/available-dates
+    Satellite API->>GEE: Query Sentinel-2 catalog
+    GEE-->>Satellite API: Available dates
+    Satellite API-->>Frontend: Date options
 
-    User->>Frontend: Select date and indices
-    Frontend->>SatelliteAPI: POST /api/indices/calculate
-    SatelliteAPI->>GEE: Fetch imagery and calculate indices
-    GEE-->>SatelliteAPI: Computed statistics
-    SatelliteAPI->>Supabase: Save to satellite_data table
-    SatelliteAPI-->>Frontend: Analysis results
-    Frontend-->>User: Display heatmaps and charts
+    User->>Frontend: Select dates & indices
+    Frontend->>Satellite API: POST /api/indices/calculate
+    Satellite API->>GEE: Fetch imagery & compute
+    GEE-->>Satellite API: Index values + statistics
+    Satellite API->>Database: Store satellite_data
+    Satellite API-->>Frontend: Results + heatmap data
+    Frontend-->>User: Render visualization
+```
+
+### Accounting Transaction Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant NestJS API
+    participant Database
+
+    User->>Frontend: Create invoice
+    Frontend->>NestJS API: POST /api/v1/sequences/invoice
+    NestJS API->>Database: Get next sequence
+    Database-->>NestJS API: INV-2025-00001
+    NestJS API-->>Frontend: Invoice number
+
+    Frontend->>NestJS API: POST /api/v1/invoices
+    NestJS API->>NestJS API: Validate totals
+    NestJS API->>Database: Create invoice + journal entry
+    Database-->>NestJS API: Created records
+    NestJS API-->>Frontend: Invoice created
 ```
 
 ## Security Architecture
 
-The platform implements security at multiple layers:
+### Multi-Layer Security
 
-### Authentication
-- JWT-based authentication via Supabase Auth
-- Secure token storage in httpOnly cookies
-- Automatic token refresh
-- Multi-factor authentication support
+```mermaid
+graph TB
+    subgraph "Layer 1: Authentication"
+        JWT[JWT Token Validation]
+        Session[Session Management]
+    end
 
-### Authorization
-- Two-layer system: CASL for UI + RLS for database
-- Role hierarchy: system_admin → organization_admin → farm_manager → farm_worker → day_laborer → viewer
-- Subscription-based feature gating
-- Resource-level permissions
+    subgraph "Layer 2: Authorization"
+        CASL[CASL UI Rules]
+        RLS[PostgreSQL RLS]
+        Roles[Role Hierarchy]
+    end
 
-### Data Isolation
-- Row Level Security (RLS) enforced at database level
-- Organization-based tenant isolation
-- User can only access their organization's data
-- Cross-tenant queries blocked by RLS policies
+    subgraph "Layer 3: Data Isolation"
+        OrgFilter[Organization Filter]
+        TenantRLS[Tenant RLS Policies]
+    end
 
-### API Security
-- All API requests require valid JWT
-- Edge functions verify user authentication
-- Satellite service validates requests via Supabase client
-- Rate limiting on expensive operations
+    JWT --> CASL
+    JWT --> RLS
+    CASL --> Roles
+    RLS --> OrgFilter
+    OrgFilter --> TenantRLS
+```
 
-## Scalability Considerations
+### Role Hierarchy
 
-### Frontend Scalability
-- **Code Splitting**: Routes lazy-loaded for smaller initial bundle
-- **Query Caching**: TanStack Query reduces redundant API calls
-- **Virtual Scrolling**: For long lists (workers, parcels, tasks)
-- **Debounced Inputs**: Search and filter operations optimized
-- **CDN Delivery**: Static assets served via CDN
+| Role | Permissions |
+|------|-------------|
+| `system_admin` | Full platform access |
+| `organization_admin` | Full organization access |
+| `farm_manager` | Farm-level management |
+| `farm_worker` | Operational tasks |
+| `day_laborer` | Limited task access |
+| `viewer` | Read-only access |
 
-### Backend Scalability
-- **Connection Pooling**: Supabase handles database connections
-- **Background Jobs**: Celery for long-running satellite analysis
-- **Batch Processing**: Process multiple parcels in parallel
-- **Caching**: Query results cached with strategic staleTime
-- **Read Replicas**: PostgreSQL read replicas for analytics (future)
+### Row Level Security
 
-### Database Scalability
-- **Indexes**: Strategic indexing on foreign keys and query columns
-- **Partitioning**: Large tables (satellite_data, journal_items) can be partitioned
-- **Materialized Views**: For complex aggregations and reports
-- **Archive Strategy**: Old data moved to cold storage
+Every table with tenant data has RLS policies:
 
-## Performance Optimization
+```sql
+-- Example: farms table RLS
+CREATE POLICY "Users can view farms in their organization"
+ON farms FOR SELECT
+USING (organization_id IN (
+  SELECT organization_id FROM organization_members
+  WHERE user_id = auth.uid()
+));
+```
 
-### Frontend Performance
-- React 19 with automatic batching and transitions
-- Memoization for expensive computations
-- Lazy loading of heavy components (maps, charts)
-- Image optimization (WebP format, lazy loading)
-- Tree-shaking for smaller bundle size
+## Deployment Architecture
 
-### API Performance
-- Query optimization with proper SELECT fields
-- Batch operations where possible
-- Pagination for large datasets
-- Strategic use of database functions (RPC)
-- Cloud-optimized GeoTIFF for satellite exports
+```mermaid
+graph TB
+    subgraph "CDN / Edge"
+        CF[Cloudflare]
+    end
 
-### Monitoring and Observability
-- Error tracking (planned: Sentry integration)
-- Performance monitoring (planned: Web Vitals)
-- Database query performance (Supabase dashboard)
-- API response times tracked
-- User analytics for feature usage
+    subgraph "Application Hosting"
+        Frontend[Vite Build<br/>Static Hosting]
+        Marketplace[Next.js<br/>Vercel/Docker]
+        NestJS[NestJS API<br/>Docker]
+        Python[FastAPI<br/>Docker]
+        CMS[Strapi<br/>Docker]
+        Docs[Docusaurus<br/>Docker]
+    end
 
-## Development Philosophy
+    subgraph "Supabase Cloud"
+        SupaDB[(PostgreSQL)]
+        SupaAuth[Auth]
+        SupaStorage[Storage]
+    end
 
-### Type Safety First
-- TypeScript throughout the stack
-- Generated types from database schema
-- Zod for runtime validation
-- Pydantic for Python API validation
+    subgraph "External"
+        GEE[Google Earth Engine]
+        Polar[Polar.sh]
+    end
 
-### Developer Experience
-- Fast development server (Vite)
-- Hot module replacement (HMR)
-- Type checking in editor (LSP)
-- Automated linting and formatting
-- Clear error messages
+    CF --> Frontend
+    CF --> Marketplace
+    CF --> NestJS
+    CF --> Python
+    CF --> CMS
+    CF --> Docs
 
-### Testing Strategy
-- Unit tests with Vitest for utilities and hooks
-- Component tests with React Testing Library
-- E2E tests with Playwright for critical flows
-- Manual testing before production deployment
+    Frontend --> SupaDB
+    NestJS --> SupaDB
+    Python --> SupaDB
+    Python --> GEE
+    Frontend --> Polar
+```
 
-### Documentation
-- Inline code comments for complex logic
-- JSDoc for public APIs
-- Architecture documentation (this guide)
-- README files in each major directory
+## Development Workflow
 
-## Future Considerations
+### Local Development
 
-### Planned Enhancements
-- Real-time collaboration features (Supabase Realtime)
-- Mobile application (React Native)
-- Advanced AI/ML features for crop predictions
-- Integration with IoT sensors for real-time monitoring
-- GraphQL API for third-party integrations
-- Multi-region deployment for global availability
+```bash
+# Frontend (project/)
+cd project && npm run dev          # http://localhost:5173
 
-### Technical Debt
-- Migrate older components to newer patterns
-- Increase test coverage to 80%+
-- Implement comprehensive error boundaries
-- Add more granular permission controls
-- Optimize satellite data storage and retrieval
+# NestJS API (agritech-api/)
+cd agritech-api && npm run start:dev  # http://localhost:3000
+
+# Satellite Service (backend-service/)
+cd backend-service && uvicorn app.main:app --reload --port 8001
+
+# CMS (cms/)
+cd cms && npm run develop          # http://localhost:1337
+
+# Documentation (docs/)
+cd docs && npm start               # http://localhost:3000
+```
+
+### Type Generation
+
+```bash
+# After any database schema change
+cd project && npm run db:generate-types-remote
+```
+
+### Testing
+
+```bash
+# Unit tests
+cd project && npm test
+
+# E2E tests
+cd project && npm run test:e2e
+
+# API tests
+cd agritech-api && npm test
+
+# Python tests
+cd backend-service && pytest
+```
+
+## Performance Optimizations
+
+### Frontend
+- Route-based code splitting (80+ lazy-loaded routes)
+- TanStack Query caching with strategic `staleTime`
+- Virtual scrolling for large lists
+- Image lazy loading and WebP format
+- Debounced search inputs
+
+### Backend
+- PostgreSQL connection pooling via Supabase
+- Redis caching for satellite data
+- Batch processing with Celery
+- Strategic database indexes
+- Materialized views for reports
+
+### Database
+- RLS policies optimized with security definer functions
+- Composite indexes on frequently queried columns
+- Partitioning for large tables (satellite_data, journal_items)
+- Query plan analysis and optimization
 
 ## Related Documentation
 
-- [Multi-Tenancy Architecture](./multi-tenancy.md)
-- [Frontend Architecture](./frontend.md)
-- [Backend Architecture](./backend.md)
-- [Database Architecture](./database.md)
-- [Satellite Service Architecture](./satellite-service.md)
+- [Multi-Tenancy Architecture](./multi-tenancy)
+- [Frontend Architecture](./frontend)
+- [Backend Architecture](./backend)
+- [Database Architecture](./database)
+- [Satellite Service](./satellite-service)
