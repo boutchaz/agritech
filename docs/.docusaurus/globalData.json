@@ -43,6 +43,11 @@
               "sidebar": "docs"
             },
             {
+              "id": "architecture/nestjs-api",
+              "path": "/architecture/nestjs-api",
+              "sidebar": "docs"
+            },
+            {
               "id": "architecture/overview",
               "path": "/architecture/overview",
               "sidebar": "docs"

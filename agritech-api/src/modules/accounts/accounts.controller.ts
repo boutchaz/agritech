@@ -1,18 +1,26 @@
 import { Controller, Get, Post, Patch, Delete, Query, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApplyTemplateDto } from './dto/apply-template.dto';
 
+@ApiTags('accounts')
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
+@ApiHeader({
+  name: 'X-Organization-Id',
+  description: 'Organization ID for multi-tenant operations',
+  required: true,
+})
 export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}
 
-  /**
-   * Get all accounts for an organization
-   * GET /api/v1/accounts?is_active=true
-   */
   @Get()
+  @ApiOperation({ summary: 'Get all accounts', description: 'Retrieve all accounts for the organization' })
+  @ApiQuery({ name: 'is_active', required: false, type: Boolean, description: 'Filter by active status' })
+  @ApiResponse({ status: 200, description: 'List of accounts returned successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(@Req() req: any, @Query('is_active') isActive?: string) {
     const organizationId = req.headers['x-organization-id'];
 
@@ -25,11 +33,11 @@ export class AccountsController {
     return this.accountsService.findAll(organizationId, isActiveBool);
   }
 
-  /**
-   * Get a single account by ID
-   * GET /api/v1/accounts/:id
-   */
   @Get(':id')
+  @ApiOperation({ summary: 'Get account by ID', description: 'Retrieve a single account by its ID' })
+  @ApiParam({ name: 'id', description: 'Account UUID' })
+  @ApiResponse({ status: 200, description: 'Account returned successfully' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
   async findOne(@Req() req: any, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
 
@@ -40,11 +48,11 @@ export class AccountsController {
     return this.accountsService.findOne(id, organizationId);
   }
 
-  /**
-   * Create a new account
-   * POST /api/v1/accounts
-   */
   @Post()
+  @ApiOperation({ summary: 'Create account', description: 'Create a new account in the chart of accounts' })
+  @ApiResponse({ status: 201, description: 'Account created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid account data' })
+  @ApiResponse({ status: 409, description: 'Account code already exists' })
   async create(@Req() req: any, @Body() accountData: any) {
     const organizationId = req.headers['x-organization-id'];
     const userId = req.user.userId || req.user.sub;
@@ -56,11 +64,11 @@ export class AccountsController {
     return this.accountsService.create(accountData, organizationId, userId);
   }
 
-  /**
-   * Update an existing account
-   * PATCH /api/v1/accounts/:id
-   */
   @Patch(':id')
+  @ApiOperation({ summary: 'Update account', description: 'Update an existing account' })
+  @ApiParam({ name: 'id', description: 'Account UUID' })
+  @ApiResponse({ status: 200, description: 'Account updated successfully' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
   async update(@Req() req: any, @Param('id') id: string, @Body() updates: any) {
     const organizationId = req.headers['x-organization-id'];
 
@@ -71,11 +79,12 @@ export class AccountsController {
     return this.accountsService.update(id, updates, organizationId);
   }
 
-  /**
-   * Delete an account
-   * DELETE /api/v1/accounts/:id
-   */
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete account', description: 'Delete an account (only if no transactions)' })
+  @ApiParam({ name: 'id', description: 'Account UUID' })
+  @ApiResponse({ status: 200, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  @ApiResponse({ status: 409, description: 'Account has transactions and cannot be deleted' })
   async delete(@Req() req: any, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
 
@@ -88,6 +97,8 @@ export class AccountsController {
   }
 
   @Post('seed-moroccan-chart')
+  @ApiOperation({ summary: 'Seed Moroccan chart of accounts', description: 'Initialize with Moroccan OHADA chart of accounts' })
+  @ApiResponse({ status: 201, description: 'Chart of accounts seeded successfully' })
   async seedMoroccanChart(@Req() req: any) {
     const organizationId = req.headers['x-organization-id'];
 
@@ -99,16 +110,27 @@ export class AccountsController {
   }
 
   @Get('templates')
+  @ApiOperation({ summary: 'Get available templates', description: 'List all available chart of accounts templates' })
+  @ApiResponse({ status: 200, description: 'Templates returned successfully' })
   async getTemplates() {
     return this.accountsService.getAvailableTemplates();
   }
 
   @Get('templates/:countryCode')
+  @ApiOperation({ summary: 'Get template by country', description: 'Get chart of accounts template for a specific country' })
+  @ApiParam({ name: 'countryCode', description: 'Country code (e.g., MA, FR, SN)' })
+  @ApiResponse({ status: 200, description: 'Template returned successfully' })
+  @ApiResponse({ status: 404, description: 'Template not found for country' })
   async getTemplateByCountry(@Param('countryCode') countryCode: string) {
     return this.accountsService.getTemplateByCountry(countryCode);
   }
 
   @Post('templates/:countryCode/apply')
+  @ApiOperation({ summary: 'Apply chart of accounts template', description: 'Apply a country-specific chart of accounts template to the organization' })
+  @ApiParam({ name: 'countryCode', description: 'Country code (e.g., MA, FR, SN)' })
+  @ApiResponse({ status: 201, description: 'Template applied successfully' })
+  @ApiResponse({ status: 404, description: 'Template not found' })
+  @ApiResponse({ status: 409, description: 'Chart of accounts already exists (use overwrite option)' })
   async applyTemplate(
     @Req() req: any,
     @Param('countryCode') countryCode: string,

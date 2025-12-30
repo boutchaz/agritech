@@ -187,21 +187,141 @@ async function bootstrap() {
   // Swagger API documentation
   const config = new DocumentBuilder()
     .setTitle('AgriTech API')
-    .setDescription('AgriTech Platform Business Logic API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('authentication', 'Authentication endpoints')
-    .addTag('sequences', 'Number sequence generation')
-    .addTag('accounts', 'Chart of accounts management')
-    .addTag('invoices', 'Invoice operations')
-    .addTag('journal-entries', 'Journal entry management')
-    .addTag('payments', 'Payment processing')
-    .addTag('financial-reports', 'Financial reports and analytics')
-    .addTag('production', 'Production intelligence')
-    .addTag('harvests', 'Harvest management')
-    .addTag('tasks', 'Task management')
-    .addTag('workers', 'Management')
-    .addTag('stock', 'Stock/Inventory management')
+    .setDescription(`
+# AgriTech Platform Business Logic API
+
+NestJS-based backend service handling complex business logic for the AgriTech multi-tenant agricultural SaaS platform.
+
+## Overview
+
+This API provides:
+- **Accounting**: Double-entry bookkeeping, journal entries, invoicing, payments
+- **Financial Reports**: Balance sheets, P&L statements, trial balances
+- **Farm Management**: Organizations, farms, parcels, structures
+- **Production**: Harvests, yield analytics, tree management
+- **Inventory**: Stock entries, warehouses, reception batches
+- **Workforce**: Workers, tasks, piece-work, work units
+- **CRM**: Customers, suppliers, marketplace
+- **Platform**: Subscriptions, notifications, document templates
+
+## Authentication
+
+All endpoints (except health checks) require a valid Supabase JWT token:
+
+\`\`\`
+Authorization: Bearer <supabase-jwt-token>
+\`\`\`
+
+## Multi-Tenancy
+
+Include the organization ID header for organization-scoped operations:
+
+\`\`\`
+X-Organization-Id: <organization-uuid>
+\`\`\`
+
+## Error Responses
+
+All errors follow a standard format:
+\`\`\`json
+{
+  "statusCode": 400,
+  "message": "Error description",
+  "timestamp": "2025-01-01T00:00:00.000Z",
+  "path": "/api/v1/endpoint"
+}
+\`\`\`
+    `)
+    .setVersion('1.0.0')
+    .setContact('AgriTech Team', 'https://agritech.thebzlab.online', 'support@thebzlab.online')
+    .setLicense('ISC', 'https://opensource.org/licenses/ISC')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter your Supabase JWT token',
+      },
+      'JWT-auth',
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-Organization-Id',
+        description: 'Organization ID for multi-tenant operations',
+      },
+      'X-Organization-Id',
+    )
+    // Authentication & Authorization
+    .addTag('auth', 'Authentication - Login, signup, password reset, session management')
+    .addTag('users', 'User Management - User profiles and preferences')
+    .addTag('roles', 'Role Management - Role definitions and permissions')
+    // Organization & Farm Management
+    .addTag('organizations', 'Organization Management - Multi-tenant organization operations')
+    .addTag('organization-users', 'Organization Users - User membership and roles within organizations')
+    .addTag('organization-modules', 'Organization Modules - Feature module access per organization')
+    .addTag('farms', 'Farm Management - Farm CRUD operations')
+    .addTag('parcels', 'Parcel Management - Agricultural parcel operations')
+    .addTag('structures', 'Farm Structures - Buildings, greenhouses, infrastructure')
+    .addTag('utilities', 'Farm Utilities - Irrigation, electricity, water systems')
+    // Accounting
+    .addTag('sequences', 'Document Sequences - Auto-generation of invoice, quote, and order numbers')
+    .addTag('accounts', 'Chart of Accounts - Account management (OHADA/IFRS support)')
+    .addTag('journal-entries', 'Journal Entries - Double-entry bookkeeping transactions')
+    .addTag('invoices', 'Invoices - Sales and purchase invoice management')
+    .addTag('payments', 'Payments - Payment processing and allocation')
+    .addTag('payment-records', 'Payment Records - Payment history and tracking')
+    .addTag('quotes', 'Quotes - Price quotation management')
+    .addTag('sales-orders', 'Sales Orders - Sales order processing')
+    .addTag('purchase-orders', 'Purchase Orders - Purchase order management')
+    .addTag('taxes', 'Taxes - Tax configuration and calculations')
+    .addTag('cost-centers', 'Cost Centers - Department/division cost tracking')
+    .addTag('account-mappings', 'Account Mappings - Automatic account assignment rules')
+    .addTag('bank-accounts', 'Bank Accounts - Bank account management')
+    .addTag('financial-reports', 'Financial Reports - Balance sheet, P&L, trial balance')
+    // Production
+    .addTag('harvests', 'Harvests - Harvest recording and tracking')
+    .addTag('production-intelligence', 'Production Intelligence - Yield analytics, benchmarks, forecasts')
+    .addTag('tree-management', 'Tree Management - Orchard and tree tracking')
+    .addTag('product-applications', 'Product Applications - Fertilizer, pesticide, irrigation applications')
+    .addTag('profitability', 'Profitability - Profitability analysis per parcel/crop')
+    // Inventory
+    .addTag('items', 'Items - Product and item catalog')
+    .addTag('stock-entries', 'Stock Entries - Inventory movements (in/out/transfer)')
+    .addTag('warehouses', 'Warehouses - Warehouse and storage location management')
+    .addTag('reception-batches', 'Reception Batches - Incoming goods reception')
+    .addTag('deliveries', 'Deliveries - Outgoing delivery management')
+    // Workforce
+    .addTag('workers', 'Workers - Employee and contractor management')
+    .addTag('tasks', 'Tasks - Task creation and management')
+    .addTag('task-assignments', 'Task Assignments - Worker task assignments')
+    .addTag('piece-work', 'Piece Work - Piece-rate work tracking and payment')
+    .addTag('work-units', 'Work Units - Work unit definitions (hours, kg, pieces)')
+    // CRM
+    .addTag('customers', 'Customers - Customer management')
+    .addTag('suppliers', 'Suppliers - Supplier management')
+    .addTag('marketplace', 'Marketplace - B2B agricultural marketplace')
+    // Analysis
+    .addTag('analyses', 'Analyses - General analysis operations')
+    .addTag('soil-analyses', 'Soil Analyses - Soil testing and results')
+    .addTag('satellite-indices', 'Satellite Indices - Vegetation index calculations (proxy to Python service)')
+    .addTag('lab-services', 'Lab Services - Laboratory service integrations')
+    // Platform
+    .addTag('subscriptions', 'Subscriptions - Subscription plan management')
+    .addTag('notifications', 'Notifications - Notification system')
+    .addTag('events', 'Events - Event handling and webhooks')
+    .addTag('files', 'Files - File upload and management')
+    .addTag('document-templates', 'Document Templates - Invoice, quote, report templates')
+    .addTag('reports', 'Reports - Report generation')
+    .addTag('dashboard', 'Dashboard - Dashboard data and widgets')
+    .addTag('admin', 'Admin - System administration operations')
+    .addTag('demo-data', 'Demo Data - Demo data generation for testing')
+    // Integrations
+    .addTag('blogs', 'Blogs - Blog content from Strapi CMS')
+    .addTag('reference-data', 'Reference Data - Reference data synchronization')
+    // Health
+    .addTag('health', 'Health - Health checks and status endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -1013,6 +1013,7 @@ logger.error('Database query failed', {
 
 ## Related Documentation
 
+- [NestJS API Architecture](./nestjs-api)
 - [Database Architecture](./database)
 - [Satellite Service Architecture](./satellite-service)
 - [Multi-Tenancy Architecture](./multi-tenancy)

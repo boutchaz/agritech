@@ -10,14 +10,14 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 
-@ApiTags('workers')
-@ApiBearerAuth()
+@ApiTags('Workforce - Workers')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('organizations/:organizationId/workers')
 export class WorkersController {
@@ -27,6 +27,9 @@ export class WorkersController {
   @ApiOperation({ summary: 'Get all workers for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiQuery({ name: 'farmId', required: false, description: 'Filter by farm ID' })
+  @ApiResponse({ status: 200, description: 'Workers retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async getWorkers(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -38,6 +41,8 @@ export class WorkersController {
   @Get('active')
   @ApiOperation({ summary: 'Get all active workers for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiResponse({ status: 200, description: 'Active workers retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getActiveWorkers(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -49,6 +54,9 @@ export class WorkersController {
   @ApiOperation({ summary: 'Get a worker by ID' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Worker retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async getWorker(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -61,6 +69,9 @@ export class WorkersController {
   @ApiOperation({ summary: 'Get worker statistics' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Worker statistics retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async getWorkerStats(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -72,6 +83,9 @@ export class WorkersController {
   @Post()
   @ApiOperation({ summary: 'Create a new worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiResponse({ status: 201, description: 'Worker created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createWorker(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -84,6 +98,10 @@ export class WorkersController {
   @ApiOperation({ summary: 'Update a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Worker updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async updateWorker(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -98,6 +116,10 @@ export class WorkersController {
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date (ISO format)' })
+  @ApiResponse({ status: 200, description: 'Worker deactivated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - worker has pending tasks' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async deactivateWorker(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -111,6 +133,10 @@ export class WorkersController {
   @ApiOperation({ summary: 'Delete a worker (hard delete)' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Worker deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - worker has linked records' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async deleteWorker(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -127,6 +153,9 @@ export class WorkersController {
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
   @ApiQuery({ name: 'startDate', required: false, description: 'Filter by start date (ISO format)' })
   @ApiQuery({ name: 'endDate', required: false, description: 'Filter by end date (ISO format)' })
+  @ApiResponse({ status: 200, description: 'Work records retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async getWorkRecords(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -141,6 +170,10 @@ export class WorkersController {
   @ApiOperation({ summary: 'Create a work record for a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 201, description: 'Work record created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async createWorkRecord(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -155,6 +188,10 @@ export class WorkersController {
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
   @ApiParam({ name: 'recordId', description: 'Work Record ID' })
+  @ApiResponse({ status: 200, description: 'Work record updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Work record not found' })
   async updateWorkRecord(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -171,6 +208,9 @@ export class WorkersController {
   @ApiOperation({ summary: 'Get métayage settlements for a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Métayage settlements retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async getMetayageSettlements(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -183,6 +223,10 @@ export class WorkersController {
   @ApiOperation({ summary: 'Create a métayage settlement for a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 201, description: 'Métayage settlement created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
   async createMetayageSettlement(
     @Request() req,
     @Param('organizationId') organizationId: string,
@@ -196,6 +240,10 @@ export class WorkersController {
   @ApiOperation({ summary: 'Calculate métayage share for a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Métayage share calculated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found or no métayage contract' })
   async calculateMetayageShare(
     @Request() req,
     @Param('organizationId') organizationId: string,
