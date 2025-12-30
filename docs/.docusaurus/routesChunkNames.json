@@ -5,17 +5,17 @@
       "plugin": "138e0e15"
     }
   },
-  "/-3cd": {
+  "/-8d3": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-9dd": {
+  "/-b55": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-49e": {
+  "/-5af": {
     "__comp": "a94703ab"
   },
   "/api/hooks-732": {
@@ -25,10 +25,6 @@
   "/api/satellite-api-83a": {
     "__comp": "17896441",
     "content": "204ccb1c"
-  },
-  "/api/supabase-functions-ec5": {
-    "__comp": "17896441",
-    "content": "deef5f22"
   },
   "/architecture/backend-3b4": {
     "__comp": "17896441",

@@ -9,15 +9,15 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', '3cd'),
+    component: ComponentCreator('/', '8d3'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', '9dd'),
+        component: ComponentCreator('/', 'b55'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '49e'),
+            component: ComponentCreator('/', '5af'),
             routes: [
               {
                 path: '/api/hooks',
@@ -27,11 +27,6 @@ export default [
               {
                 path: '/api/satellite-api',
                 component: ComponentCreator('/api/satellite-api', '83a'),
-                exact: true
-              },
-              {
-                path: '/api/supabase-functions',
-                component: ComponentCreator('/api/supabase-functions', 'ec5'),
                 exact: true
               },
               {

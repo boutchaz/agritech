@@ -19,10 +19,6 @@
               "path": "/api/satellite-api"
             },
             {
-              "id": "api/supabase-functions",
-              "path": "/api/supabase-functions"
-            },
-            {
               "id": "architecture/backend",
               "path": "/architecture/backend",
               "sidebar": "docs"

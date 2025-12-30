@@ -309,7 +309,7 @@ Three new comprehensive documentation files:
 
 1. **Monitor Logs:**
    - Check NestJS API logs for stock-related errors
-   - Monitor Supabase edge function logs
+   - Check Python satellite service logs
    - Watch for 400/500 errors in marketplace endpoints
 
 2. **User Testing:**

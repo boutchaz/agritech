@@ -108,12 +108,6 @@ npx supabase db reset
 npx supabase db push
 ```
 
-### Deploy Edge Function
-
-```bash
-npx supabase functions deploy generate-parcel-report
-```
-
 ## Future Enhancements
 
 1. **PDF Generation**: Integrate Puppeteer/Playwright for HTML to PDF conversion

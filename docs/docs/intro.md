@@ -162,7 +162,7 @@ graph TB
 - **Getting Started**: Installation, setup, and deployment guides
 - **Architecture**: System design, multi-tenancy, and component overview
 - **Frontend**: React components, routing, state management, and UI patterns
-- **Backend**: Supabase setup, satellite service, edge functions
+- **Backend**: Supabase setup, NestJS API, Python satellite service
 - **Database**: Schema, migrations, RLS policies, and type generation
 - **Features**: Detailed guides for each platform feature
 - **Guides**: Step-by-step tutorials for common tasks
