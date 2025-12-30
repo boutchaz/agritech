@@ -18,6 +18,7 @@ import { useAuth } from './MultiTenantAuthProvider';
 import { profitabilityApi } from '../lib/api/profitability';
 import type { Cost, Revenue, CreateCostDto, CreateRevenueDto } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
+import { useCropCycles } from '../hooks/useAgriculturalAccounting';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/Input';
@@ -67,7 +68,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     description: '',
-    notes: ''
+    notes: '',
+    crop_cycle_id: '' as string | undefined
   });
 
   const [newRevenue, setNewRevenue] = useState({
@@ -79,7 +81,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
     unit: 'kg',
     price_per_unit: 0,
     description: '',
-    notes: ''
+    notes: '',
+    crop_cycle_id: '' as string | undefined
   });
 
   // Fetch comprehensive profitability data (ledger + legacy)
@@ -130,8 +133,12 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       return profitabilityApi.getAccountMappings(currentOrganization.id);
     },
     enabled: !!currentOrganization,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch active crop cycles for this parcel
+  const { data: cropCycles = [] } = useCropCycles({ parcel_id: parcelId });
+  const activeCropCycles = cropCycles.filter(c => ['land_prep', 'growing', 'harvesting'].includes(c.status));
 
   // Add cost mutation
   const addCostMutation = useMutation({
@@ -223,7 +230,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         description: '',
-        notes: ''
+        notes: '',
+        crop_cycle_id: undefined
       });
     }
   });
@@ -322,7 +330,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
         unit: 'kg',
         price_per_unit: 0,
         description: '',
-        notes: ''
+        notes: '',
+        crop_cycle_id: undefined
       });
     }
   });
@@ -1041,6 +1050,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 onChange={(e) => setNewCost({ ...newCost, date: e.target.value })}
               />
             </div>
+            {activeCropCycles.length > 0 && (
+              <div>
+                <Label>{t('profitability.addCost.cropCycle', 'Crop Cycle (Optional)')}</Label>
+                <NativeSelect
+                  value={newCost.crop_cycle_id || ''}
+                  onChange={(e) => setNewCost({ ...newCost, crop_cycle_id: e.target.value || undefined })}
+                >
+                  <option value="">{t('profitability.addCost.noCropCycle', '-- No specific cycle --')}</option>
+                  {activeCropCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.cycle_code} - {cycle.crop_type} {cycle.cycle_name ? `(${cycle.cycle_name})` : ''}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            )}
             <div>
               <Label>{t('profitability.addCost.description')}</Label>
               <Input
@@ -1129,6 +1154,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 onChange={(e) => setNewRevenue({ ...newRevenue, date: e.target.value })}
               />
             </div>
+            {activeCropCycles.length > 0 && (
+              <div>
+                <Label>{t('profitability.addRevenue.cropCycle', 'Crop Cycle (Optional)')}</Label>
+                <NativeSelect
+                  value={newRevenue.crop_cycle_id || ''}
+                  onChange={(e) => setNewRevenue({ ...newRevenue, crop_cycle_id: e.target.value || undefined })}
+                >
+                  <option value="">{t('profitability.addRevenue.noCropCycle', '-- No specific cycle --')}</option>
+                  {activeCropCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.cycle_code} - {cycle.crop_type} {cycle.cycle_name ? `(${cycle.cycle_name})` : ''}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{t('profitability.addRevenue.quantity')}</Label>

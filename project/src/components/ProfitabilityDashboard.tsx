@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles, Wheat, CalendarRange } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './MultiTenantAuthProvider';
 import { profitabilityApi } from '../lib/api/profitability';
 import type { Cost, Revenue } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
+import { useCampaigns, useFiscalYears } from '../hooks/useAgriculturalAccounting';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/Input';
@@ -38,6 +39,33 @@ const ProfitabilityDashboard: React.FC = () => {
   });
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedParcel, setSelectedParcel] = useState<string>('all');
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('all');
+
+  const { data: campaigns = [] } = useCampaigns();
+  const { data: fiscalYears = [] } = useFiscalYears();
+
+  useEffect(() => {
+    if (selectedCampaign !== 'all') {
+      const campaign = campaigns.find(c => c.id === selectedCampaign);
+      if (campaign) {
+        setStartDate(campaign.start_date);
+        setEndDate(campaign.end_date);
+        setSelectedFiscalYear('all');
+      }
+    }
+  }, [selectedCampaign, campaigns]);
+
+  useEffect(() => {
+    if (selectedFiscalYear !== 'all') {
+      const fiscalYear = fiscalYears.find(fy => fy.id === selectedFiscalYear);
+      if (fiscalYear) {
+        setStartDate(fiscalYear.start_date);
+        setEndDate(fiscalYear.end_date);
+        setSelectedCampaign('all');
+      }
+    }
+  }, [selectedFiscalYear, fiscalYears]);
 
   // Fetch parcels
   const { data: parcels = [] } = useQuery({
@@ -189,7 +217,37 @@ const ProfitabilityDashboard: React.FC = () => {
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div>
+              <Label className="mb-2 flex items-center">
+                <Wheat className="h-4 w-4 mr-1" />
+                Campagne Agricole
+              </Label>
+              <NativeSelect
+                value={selectedCampaign}
+                onChange={(e) => setSelectedCampaign(e.target.value)}
+              >
+                <option value="all">Toutes les campagnes</option>
+                {campaigns.map(campaign => (
+                  <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div>
+              <Label className="mb-2 flex items-center">
+                <CalendarRange className="h-4 w-4 mr-1" />
+                Année Fiscale
+              </Label>
+              <NativeSelect
+                value={selectedFiscalYear}
+                onChange={(e) => setSelectedFiscalYear(e.target.value)}
+              >
+                <option value="all">Toutes les années</option>
+                {fiscalYears.map(fy => (
+                  <option key={fy.id} value={fy.id}>{fy.name}</option>
+                ))}
+              </NativeSelect>
+            </div>
             <div>
               <Label className="mb-2 flex items-center">
                 <Calendar className="h-4 w-4 mr-1" />

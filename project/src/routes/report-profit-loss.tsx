@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar } from 'lucide-react';
+import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/NativeSelect';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useProfitLoss, type ProfitLossRow } from '../hooks/useFinancialReports';
+import { useCampaigns, useFiscalYears } from '../hooks/useAgriculturalAccounting';
 
 const mockModules: Module[] = [
   {
@@ -94,10 +96,36 @@ const AppContent: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
 
-  // Default to first day of current year
   const currentYear = new Date().getFullYear();
   const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('all');
+
+  const { data: campaigns = [] } = useCampaigns();
+  const { data: fiscalYears = [] } = useFiscalYears();
+
+  useEffect(() => {
+    if (selectedCampaign !== 'all') {
+      const campaign = campaigns.find(c => c.id === selectedCampaign);
+      if (campaign) {
+        setStartDate(campaign.start_date);
+        setEndDate(campaign.end_date);
+        setSelectedFiscalYear('all');
+      }
+    }
+  }, [selectedCampaign, campaigns]);
+
+  useEffect(() => {
+    if (selectedFiscalYear !== 'all') {
+      const fiscalYear = fiscalYears.find(fy => fy.id === selectedFiscalYear);
+      if (fiscalYear) {
+        setStartDate(fiscalYear.start_date);
+        setEndDate(fiscalYear.end_date);
+        setSelectedCampaign('all');
+      }
+    }
+  }, [selectedFiscalYear, fiscalYears]);
 
   const { data: report, isLoading, error } = useProfitLoss(startDate, endDate);
 
@@ -143,6 +171,40 @@ const AppContent: React.FC = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-wrap items-end gap-4">
+                <div className="min-w-[200px]">
+                  <Label htmlFor="campaign" className="flex items-center gap-2 mb-2">
+                    <Wheat className="h-4 w-4" />
+                    {t('reportsModule.profitLoss.campaign', 'Agricultural Campaign')}
+                  </Label>
+                  <NativeSelect
+                    id="campaign"
+                    value={selectedCampaign}
+                    onChange={(e) => setSelectedCampaign(e.target.value)}
+                    className="max-w-xs"
+                  >
+                    <option value="all">{t('reportsModule.profitLoss.allCampaigns', 'All Campaigns')}</option>
+                    {campaigns.map(campaign => (
+                      <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="min-w-[200px]">
+                  <Label htmlFor="fiscal_year" className="flex items-center gap-2 mb-2">
+                    <CalendarRange className="h-4 w-4" />
+                    {t('reportsModule.profitLoss.fiscalYear', 'Fiscal Year')}
+                  </Label>
+                  <NativeSelect
+                    id="fiscal_year"
+                    value={selectedFiscalYear}
+                    onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                    className="max-w-xs"
+                  >
+                    <option value="all">{t('reportsModule.profitLoss.allFiscalYears', 'All Fiscal Years')}</option>
+                    {fiscalYears.map(fy => (
+                      <option key={fy.id} value={fy.id}>{fy.name}</option>
+                    ))}
+                  </NativeSelect>
+                </div>
                 <div className="min-w-[200px]">
                   <Label htmlFor="start_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />

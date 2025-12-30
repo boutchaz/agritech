@@ -20,6 +20,7 @@ export interface Cost {
   id: string;
   organization_id: string;
   parcel_id: string;
+  crop_cycle_id?: string;
   cost_type: CostType;
   amount: number;
   date: string;
@@ -38,12 +39,19 @@ export interface Cost {
     name: string;
     type: string;
   };
+  crop_cycle?: {
+    id: string;
+    cycle_code: string;
+    cycle_name?: string;
+    crop_type: string;
+  };
 }
 
 export interface Revenue {
   id: string;
   organization_id: string;
   parcel_id: string;
+  crop_cycle_id?: string;
   revenue_type: RevenueType;
   amount: number;
   date: string;
@@ -61,10 +69,17 @@ export interface Revenue {
     id: string;
     name: string;
   };
+  crop_cycle?: {
+    id: string;
+    cycle_code: string;
+    cycle_name?: string;
+    crop_type: string;
+  };
 }
 
 export interface CreateCostDto {
   parcel_id: string;
+  crop_cycle_id?: string;
   cost_type: CostType;
   amount: number;
   date: string;
@@ -76,6 +91,7 @@ export interface CreateCostDto {
 
 export interface CreateRevenueDto {
   parcel_id: string;
+  crop_cycle_id?: string;
   revenue_type: RevenueType;
   amount: number;
   date: string;

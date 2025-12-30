@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2, AlertTriangle, HardDrive } from 'lucide-react';
+import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2, AlertTriangle, HardDrive, Calendar, TreeDeciduous } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -88,6 +88,22 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       path: '/settings/account-mappings',
       description: t('settings.menu.accountMappingsDescription', 'Configure automatic journal entry mappings'),
       roles: ['system_admin', 'organization_admin'] // Admin only
+    },
+    {
+      id: 'fiscal-years',
+      name: t('settings.menu.fiscalYears', 'Fiscal Years'),
+      icon: Calendar,
+      path: '/settings/fiscal-years',
+      description: t('settings.menu.fiscalYearsDescription', 'Manage fiscal years for financial reporting'),
+      roles: ['system_admin', 'organization_admin']
+    },
+    {
+      id: 'biological-assets',
+      name: t('settings.menu.biologicalAssets', 'Biological Assets'),
+      icon: TreeDeciduous,
+      path: '/settings/biological-assets',
+      description: t('settings.menu.biologicalAssetsDescription', 'Manage orchards, livestock and perennial assets'),
+      roles: ['system_admin', 'organization_admin', 'farm_manager']
     },
     {
       id: 'dashboard',

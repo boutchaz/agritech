@@ -78,7 +78,9 @@
     "harvestReception": "Harvest & Reception",
     "harvests": "Harvests",
     "receptionBatches": "Reception Batches",
-    "qualityControl": "Quality Control"
+    "qualityControl": "Quality Control",
+    "campaigns": "Campaigns",
+    "cropCycles": "Crop Cycles"
   },
   "stock": {
     "title": "Stock Management",
@@ -1057,7 +1059,11 @@
       "dashboard": "Dashboard",
       "dashboardDescription": "Dashboard configuration",
       "documents": "Document Templates",
-      "documentsDescription": "Customize headers and footers"
+      "documentsDescription": "Customize headers and footers",
+      "fiscalYears": "Fiscal Years",
+      "fiscalYearsDescription": "Manage fiscal years and accounting periods",
+      "biologicalAssets": "Biological Assets",
+      "biologicalAssetsDescription": "Manage orchards, livestock and perennial assets"
     }
   },
   "profile": {
@@ -1857,7 +1863,19 @@
       "title": "Profit & Loss Statement",
       "subtitle": "Income statement showing revenue, expenses, and net income",
       "revenue": "Revenue",
-      "expenses": "Expenses"
+      "expenses": "Expenses",
+      "campaign": "Agricultural Campaign",
+      "allCampaigns": "All Campaigns",
+      "fiscalYear": "Fiscal Year",
+      "allFiscalYears": "All Fiscal Years",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "exportPdf": "Export PDF",
+      "loading": "Loading profit & loss statement...",
+      "totalRevenue": "Total Revenue",
+      "totalExpenses": "Total Expenses",
+      "netIncome": "Net Income",
+      "netLoss": "Net Loss"
     },
     "balanceSheet": {
       "title": "Balance Sheet",

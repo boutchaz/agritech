@@ -78,7 +78,9 @@
     "harvestReception": "Récolte & Réception",
     "harvests": "Récoltes",
     "receptionBatches": "Lots de Réception",
-    "qualityControl": "Contrôle Qualité"
+    "qualityControl": "Contrôle Qualité",
+    "campaigns": "Campagnes",
+    "cropCycles": "Cycles de Culture"
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -1057,7 +1059,11 @@
       "dashboard": "Tableau de bord",
       "dashboardDescription": "Configuration du tableau de bord",
       "documents": "Modèles de documents",
-      "documentsDescription": "Personnaliser les en-têtes et pieds de page"
+      "documentsDescription": "Personnaliser les en-têtes et pieds de page",
+      "fiscalYears": "Années Fiscales",
+      "fiscalYearsDescription": "Gérer les années fiscales et les périodes comptables",
+      "biologicalAssets": "Actifs Biologiques",
+      "biologicalAssetsDescription": "Gérer les vergers, le bétail et les actifs pérennes"
     }
   },
   "profile": {
@@ -1857,7 +1863,19 @@
       "title": "Compte de Résultat",
       "subtitle": "État des revenus, dépenses et résultat net",
       "revenue": "Revenus",
-      "expenses": "Dépenses"
+      "expenses": "Dépenses",
+      "campaign": "Campagne Agricole",
+      "allCampaigns": "Toutes les campagnes",
+      "fiscalYear": "Année Fiscale",
+      "allFiscalYears": "Toutes les années",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "exportPdf": "Exporter PDF",
+      "loading": "Chargement du compte de résultat...",
+      "totalRevenue": "Revenus Totaux",
+      "totalExpenses": "Dépenses Totales",
+      "netIncome": "Résultat Net",
+      "netLoss": "Perte Nette"
     },
     "balanceSheet": {
       "title": "Bilan",

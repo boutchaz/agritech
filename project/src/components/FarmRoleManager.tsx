@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   UserPlus,
@@ -11,28 +10,13 @@ import {
   Eye,
   Edit
 } from 'lucide-react';
-
-interface FarmRole {
-  id: string;
-  farm_id: string;
-  user_id: string;
-  role: 'main_manager' | 'sub_manager' | 'supervisor' | 'coordinator';
-  permissions: any;
-  assigned_by: string;
-  assigned_at: string;
-  is_active: boolean;
-  user_profile?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
-
-interface FarmPermission {
-  role: string;
-  permissions: any;
-  description: string;
-}
+import {
+  useFarmRoles,
+  useFarmPermissions,
+  useOrganizationUsersForFarm,
+  useAssignFarmRole,
+  useRemoveFarmRole,
+} from '../hooks/useFarmRoles';
 
 interface FarmRoleManagerProps {
   farmId: string;
@@ -45,222 +29,45 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   farmName, 
   onClose 
 }) => {
-  const [roles, setRoles] = useState<FarmRole[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<FarmPermission[]>([]);
-  const [organizationUsers, setOrganizationUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAssignRole, setShowAssignRole] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // New role assignment form
   const [newRole, setNewRole] = useState({
     user_id: '',
     role: 'sub_manager' as string,
-    permissions: {}
+    permissions: {} as Record<string, boolean>,
   });
 
-  useEffect(() => {
-    fetchFarmRoles();
-    fetchAvailableRoles();
-    fetchOrganizationUsers();
-  }, [farmId]);
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useFarmRoles(farmId);
+  const { data: availableRoles = [] } = useFarmPermissions();
+  const { data: organizationUsers = [] } = useOrganizationUsersForFarm(farmId);
+  
+  const assignRole = useAssignFarmRole();
+  const removeRole = useRemoveFarmRole();
 
-  const fetchFarmRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('farm_management_roles')
-        .select('*')
-        .eq('farm_id', farmId)
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      // Fetch user profiles separately
-      const userIds = data?.map(r => r.user_id).filter(id => id) || [];
-      if (userIds.length === 0) {
-        setRoles([]);
-        return;
-      }
-
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('id, first_name, last_name, email')
-        .in('id', userIds);
-
-      // Merge profiles with roles
-      const rolesWithProfiles = data?.map(role => ({
-        ...role,
-        user_profile: profiles?.find(p => p.id === role.user_id)
-      })) || [];
-
-      setRoles(rolesWithProfiles);
-    } catch (error: any) {
-      console.error('Error fetching farm roles:', error);
-      setError('Failed to load farm roles');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAvailableRoles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('farm_permissions')
-        .select('*')
-        .order('role');
-
-      if (error) throw error;
-      setAvailableRoles(data || []);
-    } catch (error: any) {
-      console.error('Error fetching available roles:', error);
-    }
-  };
-
-  const fetchOrganizationUsers = async () => {
-    try {
-      // Get organization ID from farm
-      const { data: farmData } = await supabase
-        .from('farms')
-        .select('organization_id')
-        .eq('id', farmId)
-        .single();
-
-      if (!farmData) return;
-
-      // Get organization users
-      const { data, error } = await supabase
-        .from('organization_users')
-        .select('user_id, role_id')
-        .eq('organization_id', farmData.organization_id)
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      // Fetch user profiles separately
-      const userIds = data?.map(u => u.user_id).filter(id => id) || [];
-      if (userIds.length === 0) {
-        setOrganizationUsers([]);
-        return;
-      }
-
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('id, first_name, last_name, email')
-        .in('id', userIds);
-
-      // Merge profiles with users
-      const usersWithProfiles = data?.map(user => ({
-        ...user,
-        user_profile: profiles?.find(p => p.id === user.user_id)
-      })) || [];
-
-      setOrganizationUsers(usersWithProfiles);
-    } catch (error: any) {
-      console.error('Error fetching organization users:', error);
-    }
-  };
+  const loading = rolesLoading || assignRole.isPending || removeRole.isPending;
+  const error = rolesError?.message || null;
 
   const handleAssignRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
 
-    try {
-      // Try the hierarchy function first
-      const { error } = await supabase.rpc('assign_farm_role', {
-        farm_id_param: farmId,
-        user_id_param: newRole.user_id,
-        role_param: newRole.role,
-        permissions_param: newRole.permissions
-      });
-
-      if (error && error.code === 'PGRST202') {
-        // Function doesn't exist, use basic table insert
-        await assignRoleBasic();
-        return;
+    assignRole.mutate(
+      {
+        farm_id: farmId,
+        user_id: newRole.user_id,
+        role: newRole.role,
+        permissions: newRole.permissions,
+      },
+      {
+        onSuccess: () => {
+          setNewRole({ user_id: '', role: 'sub_manager', permissions: {} });
+          setShowAssignRole(false);
+        },
       }
-
-      if (error) throw error;
-
-      // Reset form and refresh data
-      setNewRole({
-        user_id: '',
-        role: 'sub_manager',
-        permissions: {}
-      });
-      setShowAssignRole(false);
-      await fetchFarmRoles();
-    } catch (error: any) {
-      console.error('Error assigning role:', error);
-      // Try basic method as fallback
-      try {
-        await assignRoleBasic();
-      } catch (fallbackError: any) {
-        setError(fallbackError.message || 'Failed to assign role');
-      }
-    } finally {
-      setLoading(false);
-    }
-
-    async function assignRoleBasic() {
-      // Check if farm_management_roles table exists, if not just show success
-      const { error: tableError } = await supabase
-        .from('farm_management_roles')
-        .select('id')
-        .limit(1);
-
-      if (tableError && tableError.code === '42P01') {
-        // Table doesn't exist, simulate success for now
-        setNewRole({
-          user_id: '',
-          role: 'sub_manager',
-          permissions: {}
-        });
-        setShowAssignRole(false);
-        await fetchFarmRoles();
-        return;
-      }
-
-      // Insert into farm_management_roles table
-      const { error: insertError } = await supabase
-        .from('farm_management_roles')
-        .insert({
-          farm_id: farmId,
-          user_id: newRole.user_id,
-          role: newRole.role,
-          permissions: newRole.permissions || {},
-          assigned_by: (await supabase.auth.getUser()).data.user?.id,
-          is_active: true
-        });
-
-      if (insertError) throw insertError;
-
-      // Reset form and refresh data
-      setNewRole({
-        user_id: '',
-        role: 'sub_manager',
-        permissions: {}
-      });
-      setShowAssignRole(false);
-      await fetchFarmRoles();
-    }
+    );
   };
 
   const handleRemoveRole = async (roleId: string) => {
     if (!confirm('Are you sure you want to remove this role assignment?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('farm_management_roles')
-        .update({ is_active: false })
-        .eq('id', roleId);
-
-      if (error) throw error;
-      await fetchFarmRoles();
-    } catch (error: any) {
-      console.error('Error removing role:', error);
-      setError('Failed to remove role');
-    }
+    removeRole.mutate({ roleId, farmId });
   };
 
   const getRoleIcon = (role: string) => {
@@ -304,9 +111,11 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
     return permissionList || 'No specific permissions';
   };
 
-  // Get available users (exclude those already assigned to this farm)
-  const availableUsers = organizationUsers.filter(orgUser => 
-    !roles.some(role => role.user_id === orgUser.user_id)
+  const availableUsers = useMemo(
+    () => organizationUsers.filter(orgUser => 
+      !roles.some(role => role.user_id === orgUser.user_id)
+    ),
+    [organizationUsers, roles]
   );
 
   if (loading && roles.length === 0) {
