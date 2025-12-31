@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { supabase } from '@/lib/supabase';
 
@@ -68,31 +70,31 @@ const tourStyles = {
   },
 };
 
-const TOUR_DEFINITIONS: Record<TourId, Step[]> = {
+const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
   welcome: [
     {
       target: 'body',
       placement: 'center',
-      title: 'Bienvenue sur AgriTech! 🌾',
-      content: 'Découvrez comment gérer efficacement votre exploitation agricole. Cette visite guidée vous présentera les principales fonctionnalités de la plateforme.',
+      title: t('tour.welcome.step1.title'),
+      content: t('tour.welcome.step1.content'),
       disableBeacon: true,
     },
     {
       target: '[data-tour="sidebar"]',
-      title: 'Navigation principale',
-      content: 'Utilisez ce menu pour accéder à toutes les sections de l\'application : fermes, parcelles, tâches, stock, comptabilité et plus encore.',
+      title: t('tour.welcome.step2.title'),
+      content: t('tour.welcome.step2.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="org-switcher"]',
-      title: 'Changement d\'organisation',
-      content: 'Si vous gérez plusieurs exploitations, vous pouvez facilement basculer entre elles ici.',
+      title: t('tour.welcome.step3.title'),
+      content: t('tour.welcome.step3.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="user-menu"]',
-      title: 'Votre profil',
-      content: 'Accédez à vos paramètres, préférences et options de déconnexion depuis ce menu.',
+      title: t('tour.welcome.step4.title'),
+      content: t('tour.welcome.step4.content'),
       placement: 'bottom-end',
     },
   ],
@@ -100,417 +102,417 @@ const TOUR_DEFINITIONS: Record<TourId, Step[]> = {
     {
       target: 'body',
       placement: 'center',
-      title: 'Tour complet de l\'application 🌾',
-      content: 'Découvrez toutes les fonctionnalités d\'AgriTech en une visite guidée complète. Nous allons parcourir chaque module de la plateforme.',
+      title: t('tour.fullApp.step1.title'),
+      content: t('tour.fullApp.step1.content'),
       disableBeacon: true,
     },
     {
       target: '[data-tour="sidebar"]',
-      title: '1. Navigation principale',
-      content: 'Le menu latéral vous donne accès à tous les modules. Explorons ensemble chaque section de votre exploitation agricole.',
+      title: t('tour.fullApp.step2.title'),
+      content: t('tour.fullApp.step2.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="org-switcher"]',
-      title: '2. Multi-organisation',
-      content: 'AgriTech est multi-tenant. Gérez plusieurs exploitations agricoles depuis un seul compte et basculez facilement entre elles.',
+      title: t('tour.fullApp.step3.title'),
+      content: t('tour.fullApp.step3.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="nav-dashboard"]',
-      title: '3. Tableau de bord',
-      content: 'Votre centre de commande. Visualisez les statistiques clés, les tâches urgentes et l\'état de santé de vos cultures en un coup d\'œil.',
+      title: t('tour.fullApp.step4.title'),
+      content: t('tour.fullApp.step4.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-farms"]',
-      title: '4. Gestion des fermes',
-      content: 'Organisez vos exploitations en fermes et sous-fermes. Chaque ferme peut contenir plusieurs parcelles avec leurs propres cultures.',
+      title: t('tour.fullApp.step5.title'),
+      content: t('tour.fullApp.step5.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-parcels"]',
-      title: '5. Parcelles',
-      content: 'Définissez vos parcelles avec leurs limites géographiques, types de sol, systèmes d\'irrigation et cultures.',
+      title: t('tour.fullApp.step6.title'),
+      content: t('tour.fullApp.step6.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-stock"]',
-      title: '6. Inventaire',
-      content: 'Suivez votre stock d\'intrants : semences, engrais, produits phytosanitaires, équipements. Recevez des alertes de stock bas.',
+      title: t('tour.fullApp.step7.title'),
+      content: t('tour.fullApp.step7.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-infrastructure"]',
-      title: '7. Infrastructures',
-      content: 'Gérez vos bâtiments, puits, bassins, stations de pompage et autres équipements.',
+      title: t('tour.fullApp.step8.title'),
+      content: t('tour.fullApp.step8.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-personnel"]',
-      title: '8. Personnel',
-      content: 'Gérez votre équipe : ouvriers, tâches assignées. Suivez leurs heures et calculez leurs salaires.',
+      title: t('tour.fullApp.step9.title'),
+      content: t('tour.fullApp.step9.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-production"]',
-      title: '9. Production',
-      content: 'Suivez vos campagnes, cycles de culture, récoltes et contrôle qualité. Traçabilité complète de la production.',
+      title: t('tour.fullApp.step10.title'),
+      content: t('tour.fullApp.step10.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-billing"]',
-      title: '10. Ventes & Achats',
-      content: 'Créez des devis, bons de commande et gérez vos transactions commerciales.',
+      title: t('tour.fullApp.step11.title'),
+      content: t('tour.fullApp.step11.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-accounting"]',
-      title: '11. Comptabilité',
-      content: 'Comptabilité en partie double adaptée à l\'agriculture. Plan comptable, journaux, factures et rapports financiers.',
+      title: t('tour.fullApp.step12.title'),
+      content: t('tour.fullApp.step12.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-reports"]',
-      title: '12. Rapports',
-      content: 'Générez des rapports détaillés : production, rentabilité, main d\'œuvre. Exportez en PDF ou Excel.',
+      title: t('tour.fullApp.step13.title'),
+      content: t('tour.fullApp.step13.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="nav-settings"]',
-      title: '13. Configuration',
-      content: 'Gérez vos clients, fournisseurs, entrepôts et accédez aux paramètres de l\'application.',
+      title: t('tour.fullApp.step14.title'),
+      content: t('tour.fullApp.step14.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="user-menu"]',
-      title: '14. Votre profil',
-      content: 'Accédez à vos paramètres personnels, préférences et options de déconnexion.',
+      title: t('tour.fullApp.step15.title'),
+      content: t('tour.fullApp.step15.content'),
       placement: 'bottom',
     },
     {
       target: 'body',
       placement: 'center',
-      title: 'Prêt à commencer! 🚀',
-      content: 'Vous avez maintenant une vue d\'ensemble de toutes les fonctionnalités. Cliquez sur le bouton d\'aide (?) en bas à droite pour revoir cette visite ou accéder aux guides de chaque module.',
+      title: t('tour.fullApp.step16.title'),
+      content: t('tour.fullApp.step16.content'),
       disableBeacon: true,
     },
   ],
   dashboard: [
     {
       target: '[data-tour="dashboard-stats"]',
-      title: 'Statistiques clés',
-      content: 'Visualisez en un coup d\'œil les métriques importantes de votre exploitation : superficie, récoltes, revenus et tâches en cours.',
+      title: t('tour.dashboard.step1.title'),
+      content: t('tour.dashboard.step1.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="dashboard-tasks"]',
-      title: 'Tâches récentes',
-      content: 'Suivez les tâches urgentes et leur progression directement depuis le tableau de bord.',
+      title: t('tour.dashboard.step2.title'),
+      content: t('tour.dashboard.step2.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="dashboard-weather"]',
-      title: 'Météo',
-      content: 'Consultez les prévisions météo pour planifier vos activités agricoles.',
+      title: t('tour.dashboard.step3.title'),
+      content: t('tour.dashboard.step3.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="dashboard-parcels"]',
-      title: 'Aperçu des parcelles',
-      content: 'Visualisez l\'état de santé de vos cultures grâce aux indices satellite.',
+      title: t('tour.dashboard.step4.title'),
+      content: t('tour.dashboard.step4.content'),
       placement: 'top',
     },
   ],
   'farm-management': [
     {
       target: '[data-tour="farm-list"]',
-      title: 'Vos fermes',
-      content: 'Gérez toutes vos exploitations agricoles depuis cette vue. Chaque ferme peut contenir plusieurs parcelles.',
+      title: t('tour.farmManagement.step1.title'),
+      content: t('tour.farmManagement.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="add-farm"]',
-      title: 'Ajouter une ferme',
-      content: 'Cliquez ici pour créer une nouvelle ferme et définir ses caractéristiques : nom, localisation, superficie, type de sol, etc.',
+      title: t('tour.farmManagement.step2.title'),
+      content: t('tour.farmManagement.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="farm-map"]',
-      title: 'Vue cartographique',
-      content: 'Visualisez vos fermes et parcelles sur la carte. Vous pouvez dessiner les limites de vos parcelles directement sur la carte.',
+      title: t('tour.farmManagement.step3.title'),
+      content: t('tour.farmManagement.step3.content'),
       placement: 'left',
     },
   ],
   parcels: [
     {
       target: '[data-tour="parcel-list"]',
-      title: 'Liste des parcelles',
-      content: 'Toutes vos parcelles sont affichées ici avec leurs cultures actuelles, superficies et états de santé.',
+      title: t('tour.parcels.step1.title'),
+      content: t('tour.parcels.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="parcel-filters"]',
-      title: 'Filtres',
-      content: 'Filtrez vos parcelles par culture, ferme ou état pour trouver rapidement ce que vous cherchez.',
+      title: t('tour.parcels.step2.title'),
+      content: t('tour.parcels.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="parcel-actions"]',
-      title: 'Actions rapides',
-      content: 'Accédez rapidement aux analyses satellite, à la météo, aux tâches et à la rentabilité de chaque parcelle.',
+      title: t('tour.parcels.step3.title'),
+      content: t('tour.parcels.step3.content'),
       placement: 'left',
     },
   ],
   tasks: [
     {
       target: '[data-tour="task-list"]',
-      title: 'Gestion des tâches',
-      content: 'Planifiez et suivez toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements, etc.',
+      title: t('tour.tasks.step1.title'),
+      content: t('tour.tasks.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="task-calendar"]',
-      title: 'Vue calendrier',
-      content: 'Visualisez vos tâches sur un calendrier pour mieux planifier vos activités.',
+      title: t('tour.tasks.step2.title'),
+      content: t('tour.tasks.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="task-create"]',
-      title: 'Créer une tâche',
-      content: 'Créez de nouvelles tâches, assignez-les à des ouvriers et définissez des priorités et des échéances.',
+      title: t('tour.tasks.step3.title'),
+      content: t('tour.tasks.step3.content'),
       placement: 'bottom',
     },
   ],
   workers: [
     {
       target: '[data-tour="worker-list"]',
-      title: 'Gestion des ouvriers',
-      content: 'Gérez votre équipe : ouvriers permanents, journaliers, et métayers. Suivez leurs paiements et performances.',
+      title: t('tour.workers.step1.title'),
+      content: t('tour.workers.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="worker-payments"]',
-      title: 'Paiements',
-      content: 'Calculez automatiquement les salaires basés sur le temps travaillé, les tâches effectuées ou le travail à la pièce.',
+      title: t('tour.workers.step2.title'),
+      content: t('tour.workers.step2.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="worker-add"]',
-      title: 'Ajouter un ouvrier',
-      content: 'Enregistrez de nouveaux membres de votre équipe avec leurs informations et modalités de paiement.',
+      title: t('tour.workers.step3.title'),
+      content: t('tour.workers.step3.content'),
       placement: 'bottom',
     },
   ],
   inventory: [
     {
       target: '[data-tour="stock-overview"]',
-      title: 'Aperçu du stock',
-      content: 'Visualisez l\'état de votre inventaire : produits en stock, niveaux bas, et valeur totale.',
+      title: t('tour.inventory.step1.title'),
+      content: t('tour.inventory.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="stock-items"]',
-      title: 'Catalogue d\'articles',
-      content: 'Gérez votre catalogue de produits : intrants, engrais, semences, équipements, etc.',
+      title: t('tour.inventory.step2.title'),
+      content: t('tour.inventory.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="stock-warehouses"]',
-      title: 'Entrepôts',
-      content: 'Organisez votre stock par entrepôt et suivez les mouvements entre sites.',
+      title: t('tour.inventory.step3.title'),
+      content: t('tour.inventory.step3.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="stock-movements"]',
-      title: 'Mouvements de stock',
-      content: 'Enregistrez les entrées, sorties et transferts de stock avec traçabilité complète.',
+      title: t('tour.inventory.step4.title'),
+      content: t('tour.inventory.step4.content'),
       placement: 'top',
     },
   ],
   accounting: [
     {
       target: '[data-tour="accounting-overview"]',
-      title: 'Comptabilité',
-      content: 'Gérez toute votre comptabilité agricole : factures, paiements, journaux et rapports financiers.',
+      title: t('tour.accounting.step1.title'),
+      content: t('tour.accounting.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="accounting-invoices"]',
-      title: 'Factures',
-      content: 'Créez et gérez vos factures clients et fournisseurs. Suivez les paiements et les créances.',
+      title: t('tour.accounting.step2.title'),
+      content: t('tour.accounting.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="accounting-journal"]',
-      title: 'Journal comptable',
-      content: 'Enregistrez vos écritures comptables en partie double selon le plan comptable agricole.',
+      title: t('tour.accounting.step3.title'),
+      content: t('tour.accounting.step3.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="accounting-reports"]',
-      title: 'Rapports financiers',
-      content: 'Générez des rapports : bilan, compte de résultat, balance des comptes, et analyses de rentabilité.',
+      title: t('tour.accounting.step4.title'),
+      content: t('tour.accounting.step4.content'),
       placement: 'top',
     },
   ],
   satellite: [
     {
       target: '[data-tour="satellite-map"]',
-      title: 'Analyse satellite',
-      content: 'Visualisez la santé de vos cultures grâce aux images satellite. Les indices NDVI, NDWI et autres vous aident à détecter les problèmes.',
+      title: t('tour.satellite.step1.title'),
+      content: t('tour.satellite.step1.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="satellite-indices"]',
-      title: 'Indices de végétation',
-      content: 'Comparez différents indices pour comprendre l\'état de vos cultures : stress hydrique, vigueur végétative, etc.',
+      title: t('tour.satellite.step2.title'),
+      content: t('tour.satellite.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="satellite-timeline"]',
-      title: 'Historique',
-      content: 'Naviguez dans le temps pour voir l\'évolution de vos parcelles et détecter les tendances.',
+      title: t('tour.satellite.step3.title'),
+      content: t('tour.satellite.step3.content'),
       placement: 'top',
     },
   ],
   reports: [
     {
       target: '[data-tour="reports-list"]',
-      title: 'Rapports',
-      content: 'Accédez à tous vos rapports : production, finances, main d\'œuvre, et analyses de rentabilité.',
+      title: t('tour.reports.step1.title'),
+      content: t('tour.reports.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="reports-export"]',
-      title: 'Export',
-      content: 'Exportez vos rapports en PDF ou Excel pour les partager ou les archiver.',
+      title: t('tour.reports.step2.title'),
+      content: t('tour.reports.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="reports-filters"]',
-      title: 'Filtres et périodes',
-      content: 'Personnalisez vos rapports en filtrant par période, ferme, parcelle ou type de culture.',
+      title: t('tour.reports.step3.title'),
+      content: t('tour.reports.step3.content'),
       placement: 'left',
     },
   ],
   harvests: [
     {
       target: '[data-tour="harvest-stats"]',
-      title: 'Statistiques de récolte',
-      content: 'Visualisez le résumé de vos récoltes : quantités totales, valeur estimée, répartition par culture.',
+      title: t('tour.harvests.step1.title'),
+      content: t('tour.harvests.step1.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="harvest-list"]',
-      title: 'Liste des récoltes',
-      content: 'Toutes vos récoltes sont listées ici avec la date, parcelle, culture, quantité et qualité.',
+      title: t('tour.harvests.step2.title'),
+      content: t('tour.harvests.step2.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="harvest-add"]',
-      title: 'Nouvelle récolte',
-      content: 'Enregistrez une nouvelle récolte en spécifiant la parcelle, la quantité récoltée et la qualité du produit.',
+      title: t('tour.harvests.step3.title'),
+      content: t('tour.harvests.step3.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="harvest-filters"]',
-      title: 'Filtres',
-      content: 'Filtrez vos récoltes par période, ferme, culture ou statut pour retrouver rapidement les informations.',
+      title: t('tour.harvests.step4.title'),
+      content: t('tour.harvests.step4.content'),
       placement: 'left',
     },
   ],
   infrastructure: [
     {
       target: '[data-tour="infrastructure-list"]',
-      title: 'Vos infrastructures',
-      content: 'Gérez tous vos bâtiments et équipements : puits, bassins, stations de pompage, hangars, bureaux.',
+      title: t('tour.infrastructure.step1.title'),
+      content: t('tour.infrastructure.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="infrastructure-add"]',
-      title: 'Ajouter une infrastructure',
-      content: 'Créez de nouvelles infrastructures avec leur type, localisation, capacité et date de mise en service.',
+      title: t('tour.infrastructure.step2.title'),
+      content: t('tour.infrastructure.step2.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="infrastructure-maintenance"]',
-      title: 'Maintenance',
-      content: 'Planifiez et suivez la maintenance de vos équipements pour éviter les pannes et optimiser leur durée de vie.',
+      title: t('tour.infrastructure.step3.title'),
+      content: t('tour.infrastructure.step3.content'),
       placement: 'left',
     },
   ],
   billing: [
     {
       target: '[data-tour="billing-stats"]',
-      title: 'Aperçu facturation',
-      content: 'Visualisez le résumé de votre facturation : devis en cours, commandes à livrer, factures à encaisser.',
+      title: t('tour.billing.step1.title'),
+      content: t('tour.billing.step1.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="billing-quotes"]',
-      title: 'Devis',
-      content: 'Créez des devis professionnels pour vos clients. Suivez leur statut : envoyé, accepté, converti en commande.',
+      title: t('tour.billing.step2.title'),
+      content: t('tour.billing.step2.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="billing-orders"]',
-      title: 'Bons de commande',
-      content: 'Gérez vos commandes clients et fournisseurs. Suivez les livraisons et les réceptions.',
+      title: t('tour.billing.step3.title'),
+      content: t('tour.billing.step3.content'),
       placement: 'bottom',
     },
     {
       target: '[data-tour="billing-invoices"]',
-      title: 'Factures',
-      content: 'Émettez des factures et suivez les paiements. Gérez les relances et les créances clients.',
+      title: t('tour.billing.step4.title'),
+      content: t('tour.billing.step4.content'),
       placement: 'left',
     },
     {
       target: '[data-tour="billing-customers"]',
-      title: 'Clients et fournisseurs',
-      content: 'Gérez votre carnet d\'adresses : clients, fournisseurs, transporteurs avec leurs coordonnées et historique.',
+      title: t('tour.billing.step5.title'),
+      content: t('tour.billing.step5.content'),
       placement: 'top',
     },
   ],
   settings: [
     {
       target: '[data-tour="settings-menu"]',
-      title: 'Paramètres',
-      content: 'Accédez à tous les paramètres de votre organisation depuis ce menu.',
+      title: t('tour.settings.step1.title'),
+      content: t('tour.settings.step1.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="settings-organization"]',
-      title: 'Organisation',
-      content: 'Configurez les informations de votre exploitation : nom, adresse, logo, devise et année fiscale.',
+      title: t('tour.settings.step2.title'),
+      content: t('tour.settings.step2.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="settings-users"]',
-      title: 'Utilisateurs',
-      content: 'Gérez les membres de votre équipe, leurs rôles et permissions d\'accès à la plateforme.',
+      title: t('tour.settings.step3.title'),
+      content: t('tour.settings.step3.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="settings-subscription"]',
-      title: 'Abonnement',
-      content: 'Consultez votre formule actuelle, les fonctionnalités incluses et passez à un plan supérieur si besoin.',
+      title: t('tour.settings.step4.title'),
+      content: t('tour.settings.step4.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="settings-modules"]',
-      title: 'Modules',
-      content: 'Activez ou désactivez les modules selon vos besoins : comptabilité, satellite, métayage, etc.',
+      title: t('tour.settings.step5.title'),
+      content: t('tour.settings.step5.content'),
       placement: 'right',
     },
     {
       target: '[data-tour="settings-preferences"]',
-      title: 'Préférences',
-      content: 'Personnalisez votre expérience : langue, thème, format de date, notifications.',
+      title: t('tour.settings.step6.title'),
+      content: t('tour.settings.step6.content'),
       placement: 'left',
     },
   ],
-};
+});
 
 interface TourProviderProps {
   children: React.ReactNode;
@@ -518,12 +520,15 @@ interface TourProviderProps {
 
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     currentTour: null,
     isRunning: false,
     stepIndex: 0,
   });
+
+  const tourDefinitions = useMemo(() => getTourDefinitions(t), [t]);
 
   useEffect(() => {
     loadCompletedTours();
@@ -635,7 +640,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     await saveCompletedTours([]);
   }, []);
 
-  const currentSteps = tourState.currentTour ? TOUR_DEFINITIONS[tourState.currentTour] : [];
+  const currentSteps = tourState.currentTour ? tourDefinitions[tourState.currentTour] : [];
 
   return (
     <TourContext.Provider
@@ -664,12 +669,12 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         callback={handleJoyrideCallback}
         styles={tourStyles}
         locale={{
-          back: 'Précédent',
-          close: 'Fermer',
-          last: 'Terminer',
-          next: 'Suivant',
-          open: 'Ouvrir',
-          skip: 'Passer',
+          back: t('tour.buttons.back'),
+          close: t('tour.buttons.close'),
+          last: t('tour.buttons.last'),
+          next: t('tour.buttons.next'),
+          open: t('tour.buttons.open'),
+          skip: t('tour.buttons.skip'),
         }}
         floaterProps={{
           hideArrow: false,

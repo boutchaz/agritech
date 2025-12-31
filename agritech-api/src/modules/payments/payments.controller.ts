@@ -10,6 +10,7 @@ import {
     UseGuards,
     Headers,
     BadRequestException,
+    Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -18,10 +19,13 @@ import {
     AllocatePaymentDto,
     UpdatePaymentStatusDto,
 } from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('payments')
 @ApiBearerAuth()
 @Controller('payments')
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class PaymentsController {
     constructor(private readonly paymentsService: PaymentsService) { }
 
@@ -33,12 +37,18 @@ export class PaymentsController {
     })
     @ApiResponse({ status: 400, description: 'Bad request' })
     async create(
+        @Req() req,
         @Body() createPaymentDto: CreatePaymentDto,
         @Headers('x-organization-id') organizationId: string,
-        @Headers('x-user-id') userId: string,
     ) {
-        if (!organizationId || !userId) {
-            throw new BadRequestException('Organization ID and User ID are required');
+        if (!organizationId) {
+            throw new BadRequestException('Organization ID is required');
+        }
+
+        // Get user ID from JWT token (attached by JwtAuthGuard)
+        const userId = req.user?.id || req.user?.sub;
+        if (!userId) {
+            throw new BadRequestException('User ID not found in token');
         }
 
         return this.paymentsService.create(
@@ -61,13 +71,19 @@ export class PaymentsController {
     @ApiResponse({ status: 404, description: 'Payment not found' })
     @ApiResponse({ status: 400, description: 'Invalid allocation or missing GL accounts' })
     async allocatePayment(
+        @Req() req,
         @Param('id') id: string,
         @Body() allocatePaymentDto: AllocatePaymentDto,
         @Headers('x-organization-id') organizationId: string,
-        @Headers('x-user-id') userId: string,
     ) {
-        if (!organizationId || !userId) {
-            throw new BadRequestException('Organization ID and User ID are required');
+        if (!organizationId) {
+            throw new BadRequestException('Organization ID is required');
+        }
+
+        // Get user ID from JWT token (attached by JwtAuthGuard)
+        const userId = req.user?.id || req.user?.sub;
+        if (!userId) {
+            throw new BadRequestException('User ID not found in token');
         }
 
         return this.paymentsService.allocatePayment(

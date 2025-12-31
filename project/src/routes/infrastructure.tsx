@@ -11,21 +11,9 @@ import { Building2, Building } from 'lucide-react'
 import type { Module } from '../types'
 import { useTranslation } from 'react-i18next'
 
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-  // ... other modules would be here
-];
+// Note: These mock modules are not displayed in the infrastructure page
+// They are left for reference but not actively used
+const mockModules: Module[] = [];
 
 const AppContent: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -73,7 +61,7 @@ const AppContent: React.FC = () => {
               { icon: Building2, label: t('nav.infrastructure'), isActive: true }
             ]}
             title={t('nav.infrastructure')}
-            subtitle="Gérez vos infrastructures au niveau organisation ou ferme"
+            subtitle={t('infrastructure.subtitle')}
           />
         </div>
 

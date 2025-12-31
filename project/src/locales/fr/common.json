@@ -298,6 +298,27 @@
         "allInNorm": "Toutes les analyses sont dans les normes",
         "empty": "Aucune analyse du sol",
         "addAnalysis": "Ajouter une analyse"
+      },
+      "analysis": {
+        "title": "Analyses",
+        "tabs": {
+          "soil": "Sol",
+          "plant": "Plante",
+          "water": "Eau"
+        },
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Récentes",
+        "last30Days": "derniers 30j",
+        "needsAttention": "{{count}} analyse nécessite une attention",
+        "needsAttention_plural": "{{count}} analyses nécessitent une attention",
+        "outOfNorm": "Paramètres hors norme",
+        "latestAnalysis": "Dernière analyse",
+        "parcel": "Parcelle",
+        "allInNorm": "Toutes les analyses sont dans les normes",
+        "empty": "Aucune analyse disponible",
+        "addAnalysis": "Ajouter une analyse",
+        "chlorophyll": "Chlorophylle"
       }
     },
     "title": "Tableau de bord",
@@ -2205,6 +2226,90 @@
       "saveError": "Erreur lors de l'enregistrement de l'analyse.",
       "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette analyse ?",
       "deleteError": "Erreur lors de la suppression de l'analyse."
+    }
+  },
+  "workers": {
+    "title": "Gestion du Personnel",
+    "subtitle": "Gérez votre personnel agricole et calculez le métayage",
+    "loading": "Chargement...",
+    "loadingOrganization": "Chargement de l'organisation...",
+    "accessDenied": {
+      "title": "Accès Restreint",
+      "description": "Vous n'avez pas les permissions nécessaires pour accéder à la gestion du personnel.",
+      "requestAccess": "Demander l'accès",
+      "contactAdmin": "Contactez votre administrateur pour obtenir les permissions nécessaires. Les rôles suivants peuvent accéder à cette page : Administrateur, Gestionnaire de ferme."
+    },
+    "banner": {
+      "title": "Personnel vs Utilisateurs de la plateforme",
+      "description": "Cette page gère le personnel de ferme (ouvriers, métayers). Vous pouvez donner un accès plateforme limité aux travailleurs pour consulter leurs tâches. Gérez tous les utilisateurs via Paramètres → Utilisateurs.",
+      "usersButton": "Utilisateurs"
+    },
+    "tabs": {
+      "list": "Gestion du Personnel",
+      "calculator": "Calculateur Métayage"
+    },
+    "list": {
+      "title": "Gestion du Personnel",
+      "subtitle": "Gérez vos salariés, ouvriers et travailleurs en métayage",
+      "addWorker": "Ajouter un travailleur",
+      "restrictedAccess": "Accès restreint",
+      "search": "Rechercher...",
+      "noWorkersFound": "Aucun travailleur trouvé"
+    },
+    "stats": {
+      "total": "Total",
+      "fixedSalary": "Salariés fixes",
+      "dailyWorkers": "Ouvriers journaliers",
+      "sharecropping": "Métayage",
+      "platformAccess": "Accès plateforme"
+    },
+    "filters": {
+      "allTypes": "Tous les types",
+      "fixedSalary": "Salariés fixes",
+      "dailyWorker": "Ouvriers journaliers",
+      "metayage": "Métayage",
+      "allFarms": "Toutes les fermes",
+      "all": "Tous",
+      "active": "Actifs",
+      "inactive": "Inactifs",
+      "allPlatformAccess": "Tous (Accès plateforme)",
+      "withAccess": "Avec accès",
+      "withoutAccess": "Sans accès"
+    },
+    "table": {
+      "worker": "Travailleur",
+      "type": "Type",
+      "compensation": "Rémunération",
+      "farm": "Ferme",
+      "cnss": "CNSS",
+      "status": "Statut",
+      "platformAccess": "Accès plateforme",
+      "actions": "Actions",
+      "notSpecified": "Non spécifié",
+      "declared": "Déclaré",
+      "notDeclared": "Non déclaré",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "enabled": "Activé",
+      "notEnabled": "Non activé",
+      "farmWorker": "Travailleur de ferme",
+      "activate": "Activer",
+      "viewOnly": "Vue seule"
+    },
+    "actions": {
+      "paySalary": "Payer le salaire",
+      "edit": "Modifier",
+      "deactivate": "Désactiver",
+      "delete": "Supprimer"
+    },
+    "confirmations": {
+      "deactivate": "Êtes-vous sûr de vouloir désactiver ce travailleur?",
+      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible."
+    },
+    "workerTypes": {
+      "fixed_salary": "Salarié fixe",
+      "daily_worker": "Ouvrier journalier",
+      "metayage": "Métayage"
     }
   },
   "tasks": {
