@@ -2757,6 +2757,52 @@
         "description": "Configurez votre organisation"
       }
     }
+  },
+  "aiReport": {
+    "title": "Rapport IA Intelligent",
+    "subtitle": "Analyse approfondie de votre parcelle par intelligence artificielle",
+    "loadingProviders": "Chargement des fournisseurs IA...",
+    "noProvidersTitle": "Aucun fournisseur IA configuré",
+    "noProvidersDescription": "Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.",
+    "dateRange": "Période d'analyse",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "errorTitle": "Erreur de génération",
+    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
+    "generating": "Analyse en cours...",
+    "generateButton": "Générer le rapport IA",
+    "generatingHint": "L'IA analyse vos données satellites, analyses de sol et autres informations...",
+    "generatedWith": "Généré avec",
+    "regenerate": "Régénérer",
+    "exportPdf": "Exporter PDF",
+    "sections": {
+      "executiveSummary": "Résumé Exécutif",
+      "healthAssessment": "Évaluation de Santé",
+      "riskAlerts": "Alertes",
+      "recommendations": "Recommandations",
+      "actionItems": "Actions à Entreprendre"
+    },
+    "health": {
+      "soil": "Sol",
+      "vegetation": "Végétation",
+      "water": "Eau",
+      "notEvaluated": "Non évalué"
+    },
+    "priority": {
+      "high": "Priorité haute",
+      "medium": "Priorité moyenne",
+      "low": "Priorité basse"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "Modèle avancé pour des analyses détaillées"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "IA multimodale de Google"
+      }
+    }
   }
 }
 
