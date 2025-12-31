@@ -283,7 +283,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -349,7 +349,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Quote List - Desktop Table View */}
-          <Card className="hidden md:block">
+          <Card className="hidden md:block" data-tour="billing-quotes">
             <CardHeader>
               <CardTitle>{t('quotes.allQuotes')}</CardTitle>
               <CardDescription>

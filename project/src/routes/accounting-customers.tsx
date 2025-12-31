@@ -283,6 +283,7 @@ function CustomersPage() {
           </div>
 
           {/* Customer List */}
+          <div data-tour="billing-customers">
           {filteredCustomers.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <Building2 className="mx-auto h-12 w-12 text-gray-400" />
@@ -364,6 +365,7 @@ function CustomersPage() {
               ))}
             </div>
           )}
+          </div>
 
           {/* Add/Edit Dialog */}
           <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>

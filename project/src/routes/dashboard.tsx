@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { authSupabase } from '../lib/auth-supabase'
 import { withRouteProtection } from '../components/authorization/withRouteProtection'
 import { useTranslation } from 'react-i18next'
+import { useAutoStartTour } from '../contexts/TourContext'
 
 const mockModules: Module[] = [
   {
@@ -67,6 +68,9 @@ const AppContent: React.FC = () => {
   const [modules, _setModules] = useState(mockModules);
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
   const isRTL = i18n.language === 'ar';
+
+  // Auto-start welcome tour for new users (with 2 second delay)
+  useAutoStartTour('welcome', 2000);
 
   // Fetch dashboard settings from database
   const { data: dashboardSettings = defaultDashboardSettings } = useQuery({

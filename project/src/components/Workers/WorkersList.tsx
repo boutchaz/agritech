@@ -130,6 +130,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           }
         >
           <button
+            data-tour="worker-add"
             onClick={() => {
               setSelectedWorker(null);
               setShowForm(true);
@@ -260,7 +261,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           <p className="text-gray-600 dark:text-gray-400">Aucun travailleur trouvé</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" data-tour="worker-list">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900">

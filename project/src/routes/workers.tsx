@@ -180,7 +180,7 @@ function WorkersPage() {
                     <Users className="w-4 h-4" />
                     Gestion du Personnel
                   </TabsTrigger>
-                  <TabsTrigger value="calculator" className="flex items-center gap-2">
+                  <TabsTrigger value="calculator" className="flex items-center gap-2" data-tour="worker-payments">
                     <Calculator className="w-4 h-4" />
                     Calculateur Métayage
                   </TabsTrigger>

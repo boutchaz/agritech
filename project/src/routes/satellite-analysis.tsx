@@ -90,7 +90,7 @@ function SatelliteAnalysisPage() {
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="satellite-map">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Satellite className="w-6 h-6 text-blue-600" />
@@ -116,7 +116,7 @@ function SatelliteAnalysisPage() {
       </div>
 
       {/* Parcel Selection */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6" data-tour="satellite-indices">
         <h2 className="text-lg font-semibold mb-4">Select Parcel for Analysis</h2>
 
         {parcelsLoading ? (
@@ -192,7 +192,7 @@ function SatelliteAnalysisPage() {
           </div>
 
           {/* Time Series Analysis */}
-          <div>
+          <div data-tour="satellite-timeline">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-semibold">Historical Trends</h2>

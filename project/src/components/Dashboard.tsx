@@ -295,8 +295,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       )}
 
       {/* Main Widgets Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ParcelsOverviewWidget />
+      <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
         <WorkersActivityWidget />
         {settings.showStockAlerts && <StockAlertsWidget />}
         <HarvestSummaryWidget />
@@ -304,7 +304,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
 
       {/* Tasks and Soil Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.showTaskAlerts && <UpcomingTasksWidget />}
+        {settings.showTaskAlerts && <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>}
         {settings.showSoilData && <SoilAnalysisWidget />}
       </div>
 

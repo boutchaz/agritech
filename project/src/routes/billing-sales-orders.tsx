@@ -181,7 +181,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -257,7 +257,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Order List */}
-          <Card>
+          <Card data-tour="billing-orders">
             <CardHeader>
               <CardTitle>{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</CardTitle>
               <CardDescription>

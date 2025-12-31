@@ -75,6 +75,7 @@ const TasksList: React.FC<TasksListProps> = ({
         </div>
         {onCreateTask && (
           <button
+            data-tour="task-create"
             onClick={onCreateTask}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
@@ -165,7 +166,7 @@ const TasksList: React.FC<TasksListProps> = ({
           <p className="text-gray-600 dark:text-gray-400">Aucune tâche trouvée</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="task-list">
           {tasks.map((task) => (
             <div
               key={task.id}

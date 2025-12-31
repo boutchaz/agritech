@@ -5,7 +5,6 @@ import * as z from 'zod';
 import {
   Plus,
   Edit2,
-  Eye,
   Calendar,
   MapPin,
   Sprout,
@@ -55,7 +54,6 @@ import type {
   CropCycle,
   CropCycleStatus,
   Season,
-  CreateCropCycleInput,
 } from '@/types/agricultural-accounting';
 import { generateCycleCode, MOROCCO_CROP_TEMPLATES } from '@/types/agricultural-accounting';
 
@@ -126,7 +124,7 @@ export function CropCyclesList() {
   });
 
   const watchedFarmId = form.watch('farm_id');
-  const watchedCropType = form.watch('crop_type');
+  const _watchedCropType = form.watch('crop_type');
 
   if (watchedFarmId && watchedFarmId !== selectedFarmId) {
     setSelectedFarmId(watchedFarmId);

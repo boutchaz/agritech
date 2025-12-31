@@ -206,6 +206,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           actions={
             farms && farms.length > 1 ? (
               <select
+                data-tour="parcel-filters"
                 value={selectedFarmId || currentFarm?.id || ''}
                 onChange={(e) => setSelectedFarmId(e.target.value || null)}
                 className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
@@ -318,18 +319,18 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                     })()}.`
                     : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
                 </p>
-                {(currentFarm || selectedFarmId) && (
-                  <div className="space-x-3">
-                    <button
-                      data-testid="create-parcel-button"
-                      onClick={() => {
-                        setEditingBoundaryParcelId(null);
-                        setShowAddParcelMap(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Ajouter une parcelle
-                    </button>
+                  {(currentFarm || selectedFarmId) && (
+                    <div className="space-x-3" data-tour="parcel-actions">
+                      <button
+                        data-testid="create-parcel-button"
+                        onClick={() => {
+                          setEditingBoundaryParcelId(null);
+                          setShowAddParcelMap(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        Ajouter une parcelle
+                      </button>
                     <button
                       onClick={() => {
                         // Manual refresh of React Query cache
@@ -359,34 +360,36 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 </div>
               )}
 
-              <Map
-                center={[31.7917, -7.0926]}
-                zones={[]}
-                sensors={[]}
-                farmId={targetFarmId}
-                enableDrawing={true}
-                selectedParcelId={null}
-                onParcelSelect={handleParcelSelect}
-                parcels={parcels}
-                editingParcelId={editingBoundaryParcelId}
-                onParcelAdded={(newParcel) => {
-                  setShowAddParcelMap(false);
-                  setEditingBoundaryParcelId(null);
-                  // Navigate to the newly created parcel detail page
-                  if (newParcel?.id) {
-                    navigate({ to: `/parcels/${newParcel.id}` });
-                  }
-                }}
-                onBoundaryUpdated={() => {
-                  setShowAddParcelMap(false);
-                  setEditingBoundaryParcelId(null);
-                }}
-              />
+              <div data-tour="farm-map">
+                <Map
+                  center={[31.7917, -7.0926]}
+                  zones={[]}
+                  sensors={[]}
+                  farmId={targetFarmId}
+                  enableDrawing={true}
+                  selectedParcelId={null}
+                  onParcelSelect={handleParcelSelect}
+                  parcels={parcels}
+                  editingParcelId={editingBoundaryParcelId}
+                  onParcelAdded={(newParcel) => {
+                    setShowAddParcelMap(false);
+                    setEditingBoundaryParcelId(null);
+                    // Navigate to the newly created parcel detail page
+                    if (newParcel?.id) {
+                      navigate({ to: `/parcels/${newParcel.id}` });
+                    }
+                  }}
+                  onBoundaryUpdated={() => {
+                    setShowAddParcelMap(false);
+                    setEditingBoundaryParcelId(null);
+                  }}
+                />
+              </div>
 
               {/* Parcel selection now navigates to dedicated parcel detail pages */}
 
               {parcels.length > 0 && (
-                <div data-testid="parcels-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                <div data-testid="parcels-list" data-tour="parcel-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                   {parcels.map((parcel) => {
                     const farm = farms.find(f => f.id === parcel.farm_id);
                     return (

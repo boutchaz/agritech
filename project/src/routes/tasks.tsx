@@ -44,8 +44,8 @@ function TasksLayout() {
   }
 
   const navItems = [
-    { to: '/tasks', label: 'Liste', icon: CheckSquare },
-    { to: '/tasks/calendar', label: 'Calendrier', icon: Calendar },
+    { to: '/tasks', label: 'Liste', icon: CheckSquare, tourId: undefined },
+    { to: '/tasks/calendar', label: 'Calendrier', icon: Calendar, tourId: 'task-calendar' },
   ];
 
   return (
@@ -79,6 +79,7 @@ function TasksLayout() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    data-tour={item.tourId}
                     className={cn(
                       "flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors",
                       isActive

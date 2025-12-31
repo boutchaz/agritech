@@ -32,6 +32,11 @@ export enum PaymentStatus {
     CANCELLED = 'cancelled',
 }
 
+export enum PartyType {
+    CUSTOMER = 'customer',
+    SUPPLIER = 'supplier',
+}
+
 export class PaymentAllocationDto {
     @ApiProperty({ description: 'Invoice ID to allocate payment to', format: 'uuid' })
     @IsUUID()
@@ -70,6 +75,11 @@ export class CreatePaymentDto {
     @IsOptional()
     party_id?: string;
 
+    @ApiPropertyOptional({ description: 'Party type', enum: PartyType, example: PartyType.CUSTOMER })
+    @IsEnum(PartyType)
+    @IsOptional()
+    party_type?: PartyType;
+
     @ApiPropertyOptional({ description: 'Bank account ID', format: 'uuid' })
     @IsUUID()
     @IsOptional()
@@ -94,6 +104,11 @@ export class CreatePaymentDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @ApiPropertyOptional({ description: 'Notes (alias for remarks)' })
+    @IsString()
+    @IsOptional()
+    notes?: string;
 }
 
 export class AllocatePaymentDto {

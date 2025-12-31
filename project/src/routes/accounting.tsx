@@ -150,7 +150,7 @@ const AppContent: React.FC = () => {
           subtitle={t('accountingModule.dashboard.subtitle', 'Overview of your financial performance')}
         />
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6" data-tour="accounting-overview">
           {/* Alert Banner */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -203,7 +203,7 @@ const AppContent: React.FC = () => {
                   <BookOpen className="mr-2 h-4 w-4" />
                   {t('nav.chartOfAccounts', 'Chart of Accounts')}
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-invoices')}>
+                <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-invoices')} data-tour="accounting-invoices">
                   <Receipt className="mr-2 h-4 w-4" />
                   {t('accountingModule.dashboard.quickActions.createInvoice', 'Create Invoice')}
                 </Button>
@@ -211,7 +211,7 @@ const AppContent: React.FC = () => {
                   <CreditCard className="mr-2 h-4 w-4" />
                   {t('accountingModule.dashboard.quickActions.recordPayment', 'Record Payment')}
                 </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-journal')}>
+                <Button variant="outline" className="w-full justify-start" onClick={() => handleNavigation('/accounting-journal')} data-tour="accounting-journal">
                   <DollarSign className="mr-2 h-4 w-4" />
                   {t('accountingModule.dashboard.quickActions.createJournalEntry', 'Create Journal Entry')}
                 </Button>
