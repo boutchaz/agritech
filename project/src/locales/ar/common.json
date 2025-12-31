@@ -298,6 +298,27 @@
         "allInNorm": "جميع التحليلات ضمن المعايير",
         "empty": "لا يوجد تحليل للتربة",
         "addAnalysis": "إضافة تحليل"
+      },
+      "analysis": {
+        "title": "التحليلات",
+        "tabs": {
+          "soil": "التربة",
+          "plant": "النبات",
+          "water": "الماء"
+        },
+        "total": "الإجمالي",
+        "analyses": "تحليلات",
+        "recent": "حديثة",
+        "last30Days": "آخر 30 يوم",
+        "needsAttention": "{{count}} تحليل يحتاج إلى انتباه",
+        "needsAttention_plural": "{{count}} تحليلات تحتاج إلى انتباه",
+        "outOfNorm": "المعايير خارج النطاق الطبيعي",
+        "latestAnalysis": "آخر تحليل",
+        "parcel": "القطعة",
+        "allInNorm": "جميع التحليلات ضمن النطاق الطبيعي",
+        "empty": "لا توجد تحليلات متاحة",
+        "addAnalysis": "إضافة تحليل",
+        "chlorophyll": "الكلوروفيل"
       }
     },
     "title": "لوحة التحكم",
@@ -2034,10 +2055,59 @@
       "surface": "مضخة سطحية",
       "manual": "مضخة يدوية"
     },
+    "units": {
+      "meters": "م",
+      "cubicMeters": "م³",
+      "kilowatts": "كيلوواط"
+    },
+    "empty": {
+      "organizationTitle": "لا توجد بنية تحتية للمنظمة",
+      "organizationDescription": "البنية التحتية للمنظمة متاحة لجميع المزارع",
+      "farmTitle": "لا توجد بنية تحتية لهذه المزرعة",
+      "farmDescription": "أضف أول بنية تحتية للمزرعة المحددة",
+      "noFarmInfrastructure": "لا توجد بنية تحتية للمزارع",
+      "selectFarmToAdd": "اختر مزرعة أعلاه لإضافة بنية تحتية محددة"
+    },
+    "info": {
+      "organizationTitle": "البنية التحتية للمنظمة",
+      "organizationDescription": "هذه البنى التحتية مشتركة على مستوى المنظمة وغير مرتبطة بمزرعة محددة.",
+      "farmTitle": "البنية التحتية حسب المزرعة",
+      "farmDescription": "هذه البنى التحتية خاصة بمزرعة معينة وستُحذف إذا حُذفت المزرعة."
+    },
+    "modal": {
+      "addTitle": "بنية تحتية جديدة",
+      "editTitle": "تعديل المنشأة"
+    },
+    "select": "اختر...",
+    "more": "المزيد",
+    "infrastructure": "بنية تحتية",
+    "infrastructure_plural": "بنى تحتية",
+    "messages": {
+      "createSuccess": "تم إنشاء المنشأة بنجاح",
+      "updateSuccess": "تم تحديث المنشأة بنجاح",
+      "deleteSuccess": "تم حذف المنشأة بنجاح",
+      "createError": "فشل في إنشاء المنشأة",
+      "updateError": "فشل في تحديث المنشأة",
+      "deleteError": "فشل في حذف المنشأة",
+      "nameTypeRequired": "الاسم والنوع مطلوبان",
+      "deleteConfirm": "هل أنت متأكد من حذف هذه المنشأة؟"
+    },
+    "actions": {
+      "new": "بنية تحتية جديدة",
+      "add": "إضافة بنية تحتية",
+      "addButton": "إضافة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "update": "تحديث",
+      "cancel": "إلغاء",
+      "close": "إغلاق"
+    },
     "fields": {
       "name": "الاسم",
       "type": "نوع المنشأة",
       "farm": "المزرعة",
+      "filterByFarm": "تصفية حسب المزرعة",
+      "allFarms": "جميع المزارع",
       "installationDate": "تاريخ التركيب",
       "condition": "الحالة",
       "usage": "الاستخدام",
@@ -2050,65 +2120,15 @@
       "topWidth": "العرض العلوي",
       "bottomWidth": "العرض السفلي",
       "shape": "الشكل",
-      "volume": "الحجم المحسوب",
+      "volume": "الحجم",
+      "calculatedVolume": "الحجم المحسوب",
+      "dimensions": "الأبعاد",
       "constructionType": "نوع البناء",
       "equipment": "المعدات الموجودة",
       "equipmentHelper": "معدة واحدة في كل سطر",
       "pumpType": "نوع المضخة",
-      "pumpPower": "قوة المضخة"
-    },
-    "units": {
-      "meters": "م",
-      "cubicMeters": "م³",
-      "kilowatts": "كيلوواط"
-    },
-    "empty": {
-      "organization": {
-        "title": "لا توجد بنية تحتية للمنظمة",
-        "description": "البنية التحتية للمنظمة متاحة لجميع المزارع"
-      },
-      "farm": {
-        "title": "لا توجد بنية تحتية لهذه المزرعة",
-        "description": "أضف أول بنية تحتية للمزرعة المحددة"
-      },
-      "allFarms": {
-        "title": "لا توجد بنية تحتية للمزارع",
-        "description": "اختر مزرعة أعلاه لإضافة بنية تحتية محددة"
-      }
-    },
-    "info": {
-      "organization": {
-        "title": "البنية التحتية للمنظمة",
-        "description": "هذه البنى التحتية مشتركة على مستوى المنظمة وغير مرتبطة بمزرعة محددة."
-      },
-      "farm": {
-        "title": "البنية التحتية حسب المزرعة",
-        "description": "هذه البنى التحتية خاصة بمزرعة معينة وستُحذف إذا حُذفت المزرعة."
-      }
-    },
-    "filterByFarm": "تصفية حسب المزرعة",
-    "allFarms": "جميع المزارع",
-    "selectFarm": "اختر مزرعة",
-    "select": "اختر...",
-    "installation": "التركيب",
-    "dimensions": "الأبعاد",
-    "construction": "البناء",
-    "pump": "المضخة",
-    "infrastructureCount": "بنية تحتية | بنى تحتية",
-    "messages": {
-      "created": "تم إنشاء المنشأة بنجاح",
-      "updated": "تم تحديث المنشأة بنجاح",
-      "deleted": "تم حذف المنشأة بنجاح",
-      "createError": "فشل في إنشاء المنشأة",
-      "updateError": "فشل في تحديث المنشأة",
-      "deleteError": "فشل في حذف المنشأة",
-      "nameTypeRequired": "الاسم والنوع مطلوبان"
-    },
-    "actions": {
-      "add": "إضافة",
-      "update": "تحديث",
-      "cancel": "إلغاء",
-      "addInfrastructure": "إضافة بنية تحتية"
+      "pumpPower": "قوة المضخة",
+      "pump": "المضخة"
     }
   },
   "parcels": {
@@ -2206,6 +2226,90 @@
       "saveError": "خطأ في حفظ التحليل.",
       "deleteConfirm": "هل أنت متأكد من حذف هذا التحليل؟",
       "deleteError": "خطأ في حذف التحليل."
+    }
+  },
+  "workers": {
+    "title": "إدارة الموظفين",
+    "subtitle": "إدارة العمال الزراعيين وحساب المزارعة",
+    "loading": "جاري التحميل...",
+    "loadingOrganization": "جاري تحميل المنظمة...",
+    "accessDenied": {
+      "title": "الوصول مقيد",
+      "description": "ليس لديك الصلاحيات اللازمة للوصول إلى إدارة الموظفين.",
+      "requestAccess": "طلب الوصول",
+      "contactAdmin": "تواصل مع المسؤول للحصول على الصلاحيات اللازمة. الأدوار التالية يمكنها الوصول لهذه الصفحة: المسؤول، مدير المزرعة."
+    },
+    "banner": {
+      "title": "الموظفون مقابل مستخدمي المنصة",
+      "description": "تدير هذه الصفحة موظفي المزرعة (العمال، المزارعين). يمكنك منح وصول محدود للمنصة للعمال لعرض مهامهم. إدارة جميع المستخدمين عبر الإعدادات ← المستخدمون.",
+      "usersButton": "المستخدمون"
+    },
+    "tabs": {
+      "list": "إدارة الموظفين",
+      "calculator": "حاسبة المزارعة"
+    },
+    "list": {
+      "title": "إدارة الموظفين",
+      "subtitle": "إدارة الموظفين والعمال والمزارعين",
+      "addWorker": "إضافة عامل",
+      "restrictedAccess": "وصول مقيد",
+      "search": "بحث...",
+      "noWorkersFound": "لم يتم العثور على عمال"
+    },
+    "stats": {
+      "total": "الإجمالي",
+      "fixedSalary": "راتب ثابت",
+      "dailyWorkers": "عمال يوميون",
+      "sharecropping": "مزارعة",
+      "platformAccess": "وصول المنصة"
+    },
+    "filters": {
+      "allTypes": "جميع الأنواع",
+      "fixedSalary": "راتب ثابت",
+      "dailyWorker": "عمال يوميون",
+      "metayage": "مزارعة",
+      "allFarms": "جميع المزارع",
+      "all": "الكل",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "allPlatformAccess": "الكل (وصول المنصة)",
+      "withAccess": "مع وصول",
+      "withoutAccess": "بدون وصول"
+    },
+    "table": {
+      "worker": "العامل",
+      "type": "النوع",
+      "compensation": "التعويض",
+      "farm": "المزرعة",
+      "cnss": "الضمان الاجتماعي",
+      "status": "الحالة",
+      "platformAccess": "وصول المنصة",
+      "actions": "الإجراءات",
+      "notSpecified": "غير محدد",
+      "declared": "مُصرح",
+      "notDeclared": "غير مُصرح",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "enabled": "مُفعّل",
+      "notEnabled": "غير مُفعّل",
+      "farmWorker": "عامل مزرعة",
+      "activate": "تفعيل",
+      "viewOnly": "عرض فقط"
+    },
+    "actions": {
+      "paySalary": "دفع الراتب",
+      "edit": "تعديل",
+      "deactivate": "إلغاء التفعيل",
+      "delete": "حذف"
+    },
+    "confirmations": {
+      "deactivate": "هل أنت متأكد من إلغاء تفعيل هذا العامل؟",
+      "delete": "هل أنت متأكد من حذف هذا العامل نهائياً؟ لا يمكن التراجع عن هذا الإجراء."
+    },
+    "workerTypes": {
+      "fixed_salary": "راتب ثابت",
+      "daily_worker": "عامل يومي",
+      "metayage": "مزارعة"
     }
   },
   "tasks": {

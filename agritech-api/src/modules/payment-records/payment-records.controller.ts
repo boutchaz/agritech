@@ -128,8 +128,9 @@ export class PaymentRecordsController {
     @Param('organizationId') organizationId: string,
     @Body() createDto: any,
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.create(
-      req.user.userId,
+      userId,
       organizationId,
       createDto,
     );
@@ -146,8 +147,9 @@ export class PaymentRecordsController {
     @Param('paymentId') paymentId: string,
     @Body() approveDto: { notes?: string },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.approve(
-      req.user.userId,
+      userId,
       organizationId,
       paymentId,
       approveDto,
@@ -170,8 +172,9 @@ export class PaymentRecordsController {
       notes?: string;
     },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.process(
-      req.user.userId,
+      userId,
       organizationId,
       paymentId,
       processDto,
@@ -194,8 +197,9 @@ export class PaymentRecordsController {
       installments?: number;
     },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.requestAdvance(
-      req.user.userId,
+      userId,
       organizationId,
       advanceDto,
     );
@@ -217,8 +221,9 @@ export class PaymentRecordsController {
       notes?: string;
     },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.approveAdvance(
-      req.user.userId,
+      userId,
       organizationId,
       advanceId,
       approvalDto,
@@ -236,8 +241,9 @@ export class PaymentRecordsController {
     @Param('advanceId') advanceId: string,
     @Body() payDto: { payment_method: string },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.payAdvance(
-      req.user.userId,
+      userId,
       organizationId,
       advanceId,
       payDto.payment_method,

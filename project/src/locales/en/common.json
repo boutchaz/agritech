@@ -298,6 +298,27 @@
         "allInNorm": "All analyses are within norms",
         "empty": "No soil analysis",
         "addAnalysis": "Add an analysis"
+      },
+      "analysis": {
+        "title": "Analyses",
+        "tabs": {
+          "soil": "Soil",
+          "plant": "Plant",
+          "water": "Water"
+        },
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Recent",
+        "last30Days": "last 30 days",
+        "needsAttention": "{{count}} analysis needs attention",
+        "needsAttention_plural": "{{count}} analyses need attention",
+        "outOfNorm": "Parameters out of normal range",
+        "latestAnalysis": "Latest Analysis",
+        "parcel": "Parcel",
+        "allInNorm": "All analyses are within normal range",
+        "empty": "No analyses available",
+        "addAnalysis": "Add an analysis",
+        "chlorophyll": "Chlorophyll"
       }
     },
     "title": "Dashboard",
@@ -2207,6 +2228,90 @@
       "deleteError": "Error deleting the analysis."
     }
   },
+  "workers": {
+    "title": "Personnel Management",
+    "subtitle": "Manage your agricultural staff and calculate sharecropping",
+    "loading": "Loading...",
+    "loadingOrganization": "Loading organization...",
+    "accessDenied": {
+      "title": "Access Restricted",
+      "description": "You don't have the necessary permissions to access personnel management.",
+      "requestAccess": "Request Access",
+      "contactAdmin": "Contact your administrator to obtain the necessary permissions. The following roles can access this page: Administrator, Farm Manager."
+    },
+    "banner": {
+      "title": "Personnel vs Platform Users",
+      "description": "This page manages farm staff (workers, sharecroppers). You can give limited platform access to workers to view their tasks. Manage all users via Settings → Users.",
+      "usersButton": "Users"
+    },
+    "tabs": {
+      "list": "Personnel Management",
+      "calculator": "Sharecropping Calculator"
+    },
+    "list": {
+      "title": "Personnel Management",
+      "subtitle": "Manage your employees, workers and sharecroppers",
+      "addWorker": "Add a worker",
+      "restrictedAccess": "Restricted access",
+      "search": "Search...",
+      "noWorkersFound": "No workers found"
+    },
+    "stats": {
+      "total": "Total",
+      "fixedSalary": "Fixed salary",
+      "dailyWorkers": "Daily workers",
+      "sharecropping": "Sharecropping",
+      "platformAccess": "Platform access"
+    },
+    "filters": {
+      "allTypes": "All types",
+      "fixedSalary": "Fixed salary",
+      "dailyWorker": "Daily workers",
+      "metayage": "Sharecropping",
+      "allFarms": "All farms",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "allPlatformAccess": "All (Platform access)",
+      "withAccess": "With access",
+      "withoutAccess": "Without access"
+    },
+    "table": {
+      "worker": "Worker",
+      "type": "Type",
+      "compensation": "Compensation",
+      "farm": "Farm",
+      "cnss": "CNSS",
+      "status": "Status",
+      "platformAccess": "Platform access",
+      "actions": "Actions",
+      "notSpecified": "Not specified",
+      "declared": "Declared",
+      "notDeclared": "Not declared",
+      "active": "Active",
+      "inactive": "Inactive",
+      "enabled": "Enabled",
+      "notEnabled": "Not enabled",
+      "farmWorker": "Farm worker",
+      "activate": "Activate",
+      "viewOnly": "View only"
+    },
+    "actions": {
+      "paySalary": "Pay salary",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "delete": "Delete"
+    },
+    "confirmations": {
+      "deactivate": "Are you sure you want to deactivate this worker?",
+      "delete": "Are you sure you want to permanently delete this worker? This action cannot be undone."
+    },
+    "workerTypes": {
+      "fixed_salary": "Fixed salary",
+      "daily_worker": "Daily worker",
+      "metayage": "Sharecropping"
+    }
+  },
   "tasks": {
     "title": "Task Management",
     "subtitle": "Plan and track agricultural tasks",
@@ -2267,6 +2372,318 @@
         "button": "Month",
         "empty": "No month found",
         "search": "Search for a month..."
+      }
+    }
+  },
+  "tour": {
+    "buttons": {
+      "back": "Previous",
+      "close": "Close",
+      "last": "Finish",
+      "next": "Next",
+      "open": "Open",
+      "skip": "Skip"
+    },
+    "welcome": {
+      "step1": {
+        "title": "Welcome to AgriTech! 🌾",
+        "content": "Discover how to efficiently manage your farm. This guided tour will introduce you to the main features of the platform."
+      },
+      "step2": {
+        "title": "Main Navigation",
+        "content": "Use this menu to access all sections of the application: farms, parcels, tasks, stock, accounting and more."
+      },
+      "step3": {
+        "title": "Organization Switcher",
+        "content": "If you manage multiple farms, you can easily switch between them here."
+      },
+      "step4": {
+        "title": "Your Profile",
+        "content": "Access your settings, preferences and logout options from this menu."
+      }
+    },
+    "fullApp": {
+      "step1": {
+        "title": "Complete App Tour 🌾",
+        "content": "Discover all the features of AgriTech in one complete guided tour. We will go through each module of the platform."
+      },
+      "step2": {
+        "title": "1. Main Navigation",
+        "content": "The sidebar gives you access to all modules. Let's explore each section of your farm together."
+      },
+      "step3": {
+        "title": "2. Multi-Organization",
+        "content": "AgriTech is multi-tenant. Manage multiple farms from a single account and easily switch between them."
+      },
+      "step4": {
+        "title": "3. Dashboard",
+        "content": "Your command center. View key statistics, urgent tasks and crop health status at a glance."
+      },
+      "step5": {
+        "title": "4. Farm Management",
+        "content": "Organize your operations into farms and sub-farms. Each farm can contain multiple parcels with their own crops."
+      },
+      "step6": {
+        "title": "5. Parcels",
+        "content": "Define your parcels with their geographic boundaries, soil types, irrigation systems and crops."
+      },
+      "step7": {
+        "title": "6. Inventory",
+        "content": "Track your input stock: seeds, fertilizers, plant protection products, equipment. Receive low stock alerts."
+      },
+      "step8": {
+        "title": "7. Infrastructure",
+        "content": "Manage your buildings, wells, basins, pumping stations and other equipment."
+      },
+      "step9": {
+        "title": "8. Personnel",
+        "content": "Manage your team: workers, assigned tasks. Track their hours and calculate their salaries."
+      },
+      "step10": {
+        "title": "9. Production",
+        "content": "Track your campaigns, crop cycles, harvests and quality control. Complete production traceability."
+      },
+      "step11": {
+        "title": "10. Sales & Purchases",
+        "content": "Create quotes, purchase orders and manage your commercial transactions."
+      },
+      "step12": {
+        "title": "11. Accounting",
+        "content": "Double-entry accounting adapted to agriculture. Chart of accounts, journals, invoices and financial reports."
+      },
+      "step13": {
+        "title": "12. Reports",
+        "content": "Generate detailed reports: production, profitability, labor. Export to PDF or Excel."
+      },
+      "step14": {
+        "title": "13. Settings",
+        "content": "Manage your customers, suppliers, warehouses and access application settings."
+      },
+      "step15": {
+        "title": "14. Your Profile",
+        "content": "Access your personal settings, preferences and logout options."
+      },
+      "step16": {
+        "title": "Ready to Start! 🚀",
+        "content": "You now have an overview of all features. Click the help button (?) at the bottom right to review this tour or access module guides."
+      }
+    },
+    "dashboard": {
+      "step1": {
+        "title": "Key Statistics",
+        "content": "View important metrics of your farm at a glance: area, harvests, revenue and ongoing tasks."
+      },
+      "step2": {
+        "title": "Recent Tasks",
+        "content": "Track urgent tasks and their progress directly from the dashboard."
+      },
+      "step3": {
+        "title": "Weather",
+        "content": "Check weather forecasts to plan your agricultural activities."
+      },
+      "step4": {
+        "title": "Parcel Overview",
+        "content": "View the health status of your crops using satellite indices."
+      }
+    },
+    "farmManagement": {
+      "step1": {
+        "title": "Your Farms",
+        "content": "Manage all your agricultural operations from this view. Each farm can contain multiple parcels."
+      },
+      "step2": {
+        "title": "Add a Farm",
+        "content": "Click here to create a new farm and define its characteristics: name, location, area, soil type, etc."
+      },
+      "step3": {
+        "title": "Map View",
+        "content": "View your farms and parcels on the map. You can draw parcel boundaries directly on the map."
+      }
+    },
+    "parcels": {
+      "step1": {
+        "title": "Parcel List",
+        "content": "All your parcels are displayed here with their current crops, areas and health status."
+      },
+      "step2": {
+        "title": "Filters",
+        "content": "Filter your parcels by crop, farm or status to quickly find what you're looking for."
+      },
+      "step3": {
+        "title": "Quick Actions",
+        "content": "Quickly access satellite analysis, weather, tasks and profitability for each parcel."
+      }
+    },
+    "tasks": {
+      "step1": {
+        "title": "Task Management",
+        "content": "Plan and track all agricultural tasks: irrigation, fertilization, harvest, treatments, etc."
+      },
+      "step2": {
+        "title": "Calendar View",
+        "content": "View your tasks on a calendar to better plan your activities."
+      },
+      "step3": {
+        "title": "Create a Task",
+        "content": "Create new tasks, assign them to workers and set priorities and deadlines."
+      }
+    },
+    "workers": {
+      "step1": {
+        "title": "Worker Management",
+        "content": "Manage your team: permanent workers, day laborers, and sharecroppers. Track their payments and performance."
+      },
+      "step2": {
+        "title": "Payments",
+        "content": "Automatically calculate salaries based on time worked, tasks completed or piece work."
+      },
+      "step3": {
+        "title": "Add a Worker",
+        "content": "Register new team members with their information and payment terms."
+      }
+    },
+    "inventory": {
+      "step1": {
+        "title": "Stock Overview",
+        "content": "View the status of your inventory: products in stock, low levels, and total value."
+      },
+      "step2": {
+        "title": "Item Catalog",
+        "content": "Manage your product catalog: inputs, fertilizers, seeds, equipment, etc."
+      },
+      "step3": {
+        "title": "Warehouses",
+        "content": "Organize your stock by warehouse and track movements between locations."
+      },
+      "step4": {
+        "title": "Stock Movements",
+        "content": "Record entries, exits and stock transfers with complete traceability."
+      }
+    },
+    "accounting": {
+      "step1": {
+        "title": "Accounting",
+        "content": "Manage all your agricultural accounting: invoices, payments, journals and financial reports."
+      },
+      "step2": {
+        "title": "Invoices",
+        "content": "Create and manage your customer and supplier invoices. Track payments and receivables."
+      },
+      "step3": {
+        "title": "Accounting Journal",
+        "content": "Record your journal entries in double-entry according to the agricultural chart of accounts."
+      },
+      "step4": {
+        "title": "Financial Reports",
+        "content": "Generate reports: balance sheet, income statement, trial balance, and profitability analyses."
+      }
+    },
+    "satellite": {
+      "step1": {
+        "title": "Satellite Analysis",
+        "content": "View the health of your crops using satellite imagery. NDVI, NDWI and other indices help you detect problems."
+      },
+      "step2": {
+        "title": "Vegetation Indices",
+        "content": "Compare different indices to understand the status of your crops: water stress, vegetative vigor, etc."
+      },
+      "step3": {
+        "title": "History",
+        "content": "Navigate through time to see the evolution of your parcels and detect trends."
+      }
+    },
+    "reports": {
+      "step1": {
+        "title": "Reports",
+        "content": "Access all your reports: production, finance, labor, and profitability analyses."
+      },
+      "step2": {
+        "title": "Export",
+        "content": "Export your reports to PDF or Excel to share or archive them."
+      },
+      "step3": {
+        "title": "Filters and Periods",
+        "content": "Customize your reports by filtering by period, farm, parcel or crop type."
+      }
+    },
+    "harvests": {
+      "step1": {
+        "title": "Harvest Statistics",
+        "content": "View the summary of your harvests: total quantities, estimated value, distribution by crop."
+      },
+      "step2": {
+        "title": "Harvest List",
+        "content": "All your harvests are listed here with date, parcel, crop, quantity and quality."
+      },
+      "step3": {
+        "title": "New Harvest",
+        "content": "Record a new harvest by specifying the parcel, quantity harvested and product quality."
+      },
+      "step4": {
+        "title": "Filters",
+        "content": "Filter your harvests by period, farm, crop or status to quickly find information."
+      }
+    },
+    "infrastructure": {
+      "step1": {
+        "title": "Your Infrastructure",
+        "content": "Manage all your buildings and equipment: wells, basins, pumping stations, hangars, offices."
+      },
+      "step2": {
+        "title": "Add Infrastructure",
+        "content": "Create new infrastructure with their type, location, capacity and commissioning date."
+      },
+      "step3": {
+        "title": "Maintenance",
+        "content": "Plan and track maintenance of your equipment to avoid breakdowns and optimize their lifespan."
+      }
+    },
+    "billing": {
+      "step1": {
+        "title": "Billing Overview",
+        "content": "View the summary of your billing: quotes in progress, orders to deliver, invoices to collect."
+      },
+      "step2": {
+        "title": "Quotes",
+        "content": "Create professional quotes for your clients. Track their status: sent, accepted, converted to order."
+      },
+      "step3": {
+        "title": "Purchase Orders",
+        "content": "Manage your customer and supplier orders. Track deliveries and receipts."
+      },
+      "step4": {
+        "title": "Invoices",
+        "content": "Issue invoices and track payments. Manage reminders and customer receivables."
+      },
+      "step5": {
+        "title": "Customers and Suppliers",
+        "content": "Manage your address book: customers, suppliers, transporters with their contact details and history."
+      }
+    },
+    "settings": {
+      "step1": {
+        "title": "Settings",
+        "content": "Access all your organization settings from this menu."
+      },
+      "step2": {
+        "title": "Organization",
+        "content": "Configure your farm information: name, address, logo, currency and fiscal year."
+      },
+      "step3": {
+        "title": "Users",
+        "content": "Manage your team members, their roles and access permissions to the platform."
+      },
+      "step4": {
+        "title": "Subscription",
+        "content": "Check your current plan, included features and upgrade if needed."
+      },
+      "step5": {
+        "title": "Modules",
+        "content": "Enable or disable modules according to your needs: accounting, satellite, sharecropping, etc."
+      },
+      "step6": {
+        "title": "Preferences",
+        "content": "Customize your experience: language, theme, date format, notifications."
       }
     }
   }
