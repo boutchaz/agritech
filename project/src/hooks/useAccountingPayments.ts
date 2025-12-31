@@ -21,8 +21,8 @@ export interface PaymentWithAllocations extends Payment {
 }
 
 export interface CreatePaymentInput {
-  payment_type: 'received' | 'paid';
-  party_type?: 'Customer' | 'Supplier' | null;
+  payment_type: 'receive' | 'pay';
+  party_type?: 'customer' | 'supplier' | null;
   party_id?: string | null;
   party_name: string;
   payment_date: string;
@@ -121,17 +121,13 @@ export function useCreatePayment() {
         throw new Error('No organization selected');
       }
 
-      // Map frontend terminology to API terminology
-      const apiType = input.payment_type === 'received' ? 'receive' : 'pay';
-
-      // Map party_type to match API expectations
-      const partyType = input.party_type?.toLowerCase() as 'customer' | 'supplier' | undefined;
+      const partyType = input.party_type || (input.payment_type === 'receive' ? 'customer' : 'supplier');
 
       const data = await paymentsApi.create({
         payment_date: input.payment_date,
-        payment_type: apiType as 'receive' | 'pay',
-        party_type: partyType || 'customer', // Default to customer if not specified
-        party_id: input.party_id,
+        payment_type: input.payment_type,
+        party_type: partyType,
+        party_id: input.party_id || '',
         party_name: input.party_name,
         amount: input.amount,
         payment_method: input.payment_method,

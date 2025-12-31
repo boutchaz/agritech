@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
-import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride';
+import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
@@ -68,6 +68,128 @@ const tourStyles = {
   buttonSkip: {
     color: '#9ca3af',
   },
+};
+
+// Custom Tooltip component for translated step counter
+interface CustomTooltipProps extends TooltipRenderProps {
+  t: TFunction;
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  continuous,
+  index,
+  step,
+  size,
+  backProps,
+  closeProps,
+  primaryProps,
+  skipProps,
+  tooltipProps,
+  isLastStep,
+  t,
+}) => {
+  return (
+    <div
+      {...tooltipProps}
+      style={{
+        backgroundColor: '#fff',
+        borderRadius: '0.75rem',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        maxWidth: '420px',
+        padding: '1rem',
+      }}
+    >
+      {step.title && (
+        <h4 style={{ 
+          fontSize: '1.125rem', 
+          fontWeight: 600, 
+          color: '#059669', 
+          marginBottom: '0.5rem' 
+        }}>
+          {step.title}
+        </h4>
+      )}
+      <div style={{ color: '#374151', marginBottom: '1rem' }}>
+        {step.content}
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        paddingTop: '0.75rem',
+        borderTop: '1px solid #e5e7eb'
+      }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {index > 0 && (
+            <button
+              {...backProps}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#6b7280',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              {t('tour.buttons.back')}
+            </button>
+          )}
+          <button
+            {...skipProps}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: '#9ca3af',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
+          >
+            {t('tour.buttons.skip')}
+          </button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
+            {t('tour.buttons.stepCounter', { current: index + 1, total: size })}
+          </span>
+          {continuous && (
+            <button
+              {...primaryProps}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#059669',
+                border: 'none',
+                borderRadius: '0.5rem',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              }}
+            >
+              {isLastStep ? t('tour.buttons.last') : t('tour.buttons.next')}
+            </button>
+          )}
+          {!continuous && (
+            <button
+              {...closeProps}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#059669',
+                border: 'none',
+                borderRadius: '0.5rem',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              {t('tour.buttons.close')}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
@@ -661,21 +783,13 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         run={tourState.isRunning}
         stepIndex={tourState.stepIndex}
         continuous
-        showProgress
         showSkipButton
         scrollToFirstStep
         spotlightClicks
         disableOverlayClose
         callback={handleJoyrideCallback}
         styles={tourStyles}
-        locale={{
-          back: t('tour.buttons.back'),
-          close: t('tour.buttons.close'),
-          last: t('tour.buttons.last'),
-          next: t('tour.buttons.next'),
-          open: t('tour.buttons.open'),
-          skip: t('tour.buttons.skip'),
-        }}
+        tooltipComponent={(props) => <CustomTooltip {...props} t={t} />}
         floaterProps={{
           hideArrow: false,
         }}

@@ -49,7 +49,7 @@ const purchaseOrderSchema = z
           item_name: z.string().min(1, 'Item name is required'),
           description: z.string().optional(),
           quantity: z.number().min(0.01, 'Quantity must be positive'),
-          rate: z.number().min(0, 'Rate must be non-negative'),
+          rate: z.number().positive('Rate must be positive'),
           unit_of_measure: z.string().optional(),
           account_id: z.string().min(1, 'Account is required'),
           tax_id: z.string().optional().nullable(),
@@ -239,7 +239,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   React.useEffect(() => {
     const calculateTotals = async () => {
       const validItems = watchItems.filter(
-        (item) => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
+        (item) => item.item_name && item.quantity > 0 && item.rate > 0 && item.account_id
       );
 
       if (validItems.length === 0) {
@@ -292,7 +292,6 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         onOpenChange(false);
         onSuccess?.();
       } else {
-        // Create new purchase order
         const purchaseOrderData = {
           supplier_id: data.supplier_id,
           order_date: data.order_date,
@@ -303,6 +302,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             ...data.items[index],
             amount: item.amount,
             tax_amount: item.tax_amount,
+            tax_rate: item.tax_rate || 0,
           })),
         };
 

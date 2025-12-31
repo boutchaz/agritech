@@ -140,16 +140,19 @@ export function useCreatePurchaseOrder() {
         throw new Error('No organization');
       }
 
-      // Transform InvoiceItemInput to PurchaseOrderItem format
-      const apiItems = poData.items.map((item, index) => ({
-        line_number: index + 1,
-        item_name: item.item_name,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.rate, // InvoiceItemInput uses 'rate', API expects 'unit_price'
-        tax_rate: 0, // Will be calculated from tax_id by backend if needed
-        account_id: item.account_id,
-      }));
+      const apiItems = poData.items.map((item, index) => {
+        const extendedItem = item as InvoiceItemInput & { tax_rate?: number; inventory_item_id?: string };
+        return {
+          line_number: index + 1,
+          item_name: item.item_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.rate,
+          tax_rate: extendedItem.tax_rate || 0,
+          account_id: item.account_id,
+          item_id: extendedItem.inventory_item_id,
+        };
+      });
 
       // Call the API to create purchase order
       const po = await purchaseOrdersApi.createPurchaseOrder({

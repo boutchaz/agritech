@@ -1,0 +1,90 @@
+import { apiClient } from '../api-client';
+
+const BASE_URL = '/api/v1/ai-reports';
+
+export type AIProvider = 'openai' | 'gemini';
+
+export interface AIProviderInfo {
+  provider: AIProvider;
+  available: boolean;
+  name: string;
+}
+
+export interface GenerateAIReportDto {
+  parcel_id: string;
+  provider: AIProvider;
+  model?: string;
+  data_start_date?: string;
+  data_end_date?: string;
+  language?: 'en' | 'fr' | 'ar';
+}
+
+export interface AIHealthAssessment {
+  overallScore: number;
+  soilHealth: string;
+  vegetationHealth: string;
+  waterStatus: string;
+}
+
+export interface AIRecommendation {
+  priority: 'high' | 'medium' | 'low';
+  category: 'fertilization' | 'irrigation' | 'pest-control' | 'soil-amendment' | 'general';
+  title: string;
+  description: string;
+  timing?: string;
+}
+
+export interface AIRiskAlert {
+  severity: 'critical' | 'warning' | 'info';
+  type: string;
+  description: string;
+  mitigationSteps?: string[];
+}
+
+export interface AIActionItem {
+  priority: number;
+  action: string;
+  deadline?: string;
+  estimatedImpact: string;
+}
+
+export interface AIReportSections {
+  executiveSummary: string;
+  healthAssessment: AIHealthAssessment;
+  recommendations: AIRecommendation[];
+  riskAlerts: AIRiskAlert[];
+  actionItems: AIActionItem[];
+}
+
+export interface AIReportResponse {
+  id: string;
+  parcel_id: string;
+  provider: AIProvider;
+  model: string;
+  sections: AIReportSections;
+  generated_at: string;
+  data_range: {
+    start: string;
+    end: string;
+  };
+  metadata: {
+    token_usage?: number;
+    processing_time_ms?: number;
+  };
+}
+
+export const aiReportsApi = {
+  /**
+   * Get available AI providers
+   */
+  async getProviders(organizationId?: string): Promise<AIProviderInfo[]> {
+    return apiClient.get(`${BASE_URL}/providers`, {}, organizationId);
+  },
+
+  /**
+   * Generate an AI-powered report for a parcel
+   */
+  async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportResponse> {
+    return apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
+  },
+};

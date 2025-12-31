@@ -2374,6 +2374,389 @@
         "search": "Rechercher un mois..."
       }
     }
+  },
+  "tour": {
+    "buttons": {
+      "back": "Précédent",
+      "close": "Fermer",
+      "last": "Terminer",
+      "next": "Suivant",
+      "open": "Ouvrir",
+      "skip": "Passer",
+      "stepCounter": "Étape {{current}} sur {{total}}"
+    },
+    "welcome": {
+      "step1": {
+        "title": "Bienvenue sur AgriTech! 🌾",
+        "content": "Découvrez comment gérer efficacement votre exploitation agricole. Cette visite guidée vous présentera les principales fonctionnalités de la plateforme."
+      },
+      "step2": {
+        "title": "Navigation principale",
+        "content": "Utilisez ce menu pour accéder à toutes les sections de l'application : fermes, parcelles, tâches, stock, comptabilité et plus encore."
+      },
+      "step3": {
+        "title": "Changement d'organisation",
+        "content": "Si vous gérez plusieurs exploitations, vous pouvez facilement basculer entre elles ici."
+      },
+      "step4": {
+        "title": "Votre profil",
+        "content": "Accédez à vos paramètres, préférences et options de déconnexion depuis ce menu."
+      }
+    },
+    "fullApp": {
+      "step1": {
+        "title": "Tour complet de l'application 🌾",
+        "content": "Découvrez toutes les fonctionnalités d'AgriTech en une visite guidée complète. Nous allons parcourir chaque module de la plateforme."
+      },
+      "step2": {
+        "title": "1. Navigation principale",
+        "content": "Le menu latéral vous donne accès à tous les modules. Explorons ensemble chaque section de votre exploitation agricole."
+      },
+      "step3": {
+        "title": "2. Multi-organisation",
+        "content": "AgriTech est multi-tenant. Gérez plusieurs exploitations agricoles depuis un seul compte et basculez facilement entre elles."
+      },
+      "step4": {
+        "title": "3. Tableau de bord",
+        "content": "Votre centre de commande. Visualisez les statistiques clés, les tâches urgentes et l'état de santé de vos cultures en un coup d'œil."
+      },
+      "step5": {
+        "title": "4. Gestion des fermes",
+        "content": "Organisez vos exploitations en fermes et sous-fermes. Chaque ferme peut contenir plusieurs parcelles avec leurs propres cultures."
+      },
+      "step6": {
+        "title": "5. Parcelles",
+        "content": "Définissez vos parcelles avec leurs limites géographiques, types de sol, systèmes d'irrigation et cultures."
+      },
+      "step7": {
+        "title": "6. Inventaire",
+        "content": "Suivez votre stock d'intrants : semences, engrais, produits phytosanitaires, équipements. Recevez des alertes de stock bas."
+      },
+      "step8": {
+        "title": "7. Infrastructures",
+        "content": "Gérez vos bâtiments, puits, bassins, stations de pompage et autres équipements."
+      },
+      "step9": {
+        "title": "8. Personnel",
+        "content": "Gérez votre équipe : ouvriers, tâches assignées. Suivez leurs heures et calculez leurs salaires."
+      },
+      "step10": {
+        "title": "9. Production",
+        "content": "Suivez vos campagnes, cycles de culture, récoltes et contrôle qualité. Traçabilité complète de la production."
+      },
+      "step11": {
+        "title": "10. Ventes & Achats",
+        "content": "Créez des devis, bons de commande et gérez vos transactions commerciales."
+      },
+      "step12": {
+        "title": "11. Comptabilité",
+        "content": "Comptabilité en partie double adaptée à l'agriculture. Plan comptable, journaux, factures et rapports financiers."
+      },
+      "step13": {
+        "title": "12. Rapports",
+        "content": "Générez des rapports détaillés : production, rentabilité, main d'œuvre. Exportez en PDF ou Excel."
+      },
+      "step14": {
+        "title": "13. Configuration",
+        "content": "Gérez vos clients, fournisseurs, entrepôts et accédez aux paramètres de l'application."
+      },
+      "step15": {
+        "title": "14. Votre profil",
+        "content": "Accédez à vos paramètres personnels, préférences et options de déconnexion."
+      },
+      "step16": {
+        "title": "Prêt à commencer! 🚀",
+        "content": "Vous avez maintenant une vue d'ensemble de toutes les fonctionnalités. Cliquez sur le bouton d'aide (?) en bas à droite pour revoir cette visite ou accéder aux guides de chaque module."
+      }
+    },
+    "dashboard": {
+      "step1": {
+        "title": "Statistiques clés",
+        "content": "Visualisez en un coup d'œil les métriques importantes de votre exploitation : superficie, récoltes, revenus et tâches en cours."
+      },
+      "step2": {
+        "title": "Tâches récentes",
+        "content": "Suivez les tâches urgentes et leur progression directement depuis le tableau de bord."
+      },
+      "step3": {
+        "title": "Météo",
+        "content": "Consultez les prévisions météo pour planifier vos activités agricoles."
+      },
+      "step4": {
+        "title": "Aperçu des parcelles",
+        "content": "Visualisez l'état de santé de vos cultures grâce aux indices satellite."
+      }
+    },
+    "farmManagement": {
+      "step1": {
+        "title": "Vos fermes",
+        "content": "Gérez toutes vos exploitations agricoles depuis cette vue. Chaque ferme peut contenir plusieurs parcelles."
+      },
+      "step2": {
+        "title": "Ajouter une ferme",
+        "content": "Cliquez ici pour créer une nouvelle ferme et définir ses caractéristiques : nom, localisation, superficie, type de sol, etc."
+      },
+      "step3": {
+        "title": "Vue cartographique",
+        "content": "Visualisez vos fermes et parcelles sur la carte. Vous pouvez dessiner les limites de vos parcelles directement sur la carte."
+      }
+    },
+    "parcels": {
+      "step1": {
+        "title": "Liste des parcelles",
+        "content": "Toutes vos parcelles sont affichées ici avec leurs cultures actuelles, superficies et états de santé."
+      },
+      "step2": {
+        "title": "Filtres",
+        "content": "Filtrez vos parcelles par culture, ferme ou état pour trouver rapidement ce que vous cherchez."
+      },
+      "step3": {
+        "title": "Actions rapides",
+        "content": "Accédez rapidement aux analyses satellite, à la météo, aux tâches et à la rentabilité de chaque parcelle."
+      }
+    },
+    "tasks": {
+      "step1": {
+        "title": "Gestion des tâches",
+        "content": "Planifiez et suivez toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements, etc."
+      },
+      "step2": {
+        "title": "Vue calendrier",
+        "content": "Visualisez vos tâches sur un calendrier pour mieux planifier vos activités."
+      },
+      "step3": {
+        "title": "Créer une tâche",
+        "content": "Créez de nouvelles tâches, assignez-les à des ouvriers et définissez des priorités et des échéances."
+      }
+    },
+    "workers": {
+      "step1": {
+        "title": "Gestion des ouvriers",
+        "content": "Gérez votre équipe : ouvriers permanents, journaliers, et métayers. Suivez leurs paiements et performances."
+      },
+      "step2": {
+        "title": "Paiements",
+        "content": "Calculez automatiquement les salaires basés sur le temps travaillé, les tâches effectuées ou le travail à la pièce."
+      },
+      "step3": {
+        "title": "Ajouter un ouvrier",
+        "content": "Enregistrez de nouveaux membres de votre équipe avec leurs informations et modalités de paiement."
+      }
+    },
+    "inventory": {
+      "step1": {
+        "title": "Aperçu du stock",
+        "content": "Visualisez l'état de votre inventaire : produits en stock, niveaux bas, et valeur totale."
+      },
+      "step2": {
+        "title": "Catalogue d'articles",
+        "content": "Gérez votre catalogue de produits : intrants, engrais, semences, équipements, etc."
+      },
+      "step3": {
+        "title": "Entrepôts",
+        "content": "Organisez votre stock par entrepôt et suivez les mouvements entre sites."
+      },
+      "step4": {
+        "title": "Mouvements de stock",
+        "content": "Enregistrez les entrées, sorties et transferts de stock avec traçabilité complète."
+      }
+    },
+    "accounting": {
+      "step1": {
+        "title": "Comptabilité",
+        "content": "Gérez toute votre comptabilité agricole : factures, paiements, journaux et rapports financiers."
+      },
+      "step2": {
+        "title": "Factures",
+        "content": "Créez et gérez vos factures clients et fournisseurs. Suivez les paiements et les créances."
+      },
+      "step3": {
+        "title": "Journal comptable",
+        "content": "Enregistrez vos écritures comptables en partie double selon le plan comptable agricole."
+      },
+      "step4": {
+        "title": "Rapports financiers",
+        "content": "Générez des rapports : bilan, compte de résultat, balance des comptes, et analyses de rentabilité."
+      }
+    },
+    "satellite": {
+      "step1": {
+        "title": "Analyse satellite",
+        "content": "Visualisez la santé de vos cultures grâce aux images satellite. Les indices NDVI, NDWI et autres vous aident à détecter les problèmes."
+      },
+      "step2": {
+        "title": "Indices de végétation",
+        "content": "Comparez différents indices pour comprendre l'état de vos cultures : stress hydrique, vigueur végétative, etc."
+      },
+      "step3": {
+        "title": "Historique",
+        "content": "Naviguez dans le temps pour voir l'évolution de vos parcelles et détecter les tendances."
+      }
+    },
+    "reports": {
+      "step1": {
+        "title": "Rapports",
+        "content": "Accédez à tous vos rapports : production, finances, main d'œuvre, et analyses de rentabilité."
+      },
+      "step2": {
+        "title": "Export",
+        "content": "Exportez vos rapports en PDF ou Excel pour les partager ou les archiver."
+      },
+      "step3": {
+        "title": "Filtres et périodes",
+        "content": "Personnalisez vos rapports en filtrant par période, ferme, parcelle ou type de culture."
+      }
+    },
+    "harvests": {
+      "step1": {
+        "title": "Statistiques de récolte",
+        "content": "Visualisez le résumé de vos récoltes : quantités totales, valeur estimée, répartition par culture."
+      },
+      "step2": {
+        "title": "Liste des récoltes",
+        "content": "Toutes vos récoltes sont listées ici avec la date, parcelle, culture, quantité et qualité."
+      },
+      "step3": {
+        "title": "Nouvelle récolte",
+        "content": "Enregistrez une nouvelle récolte en spécifiant la parcelle, la quantité récoltée et la qualité du produit."
+      },
+      "step4": {
+        "title": "Filtres",
+        "content": "Filtrez vos récoltes par période, ferme, culture ou statut pour retrouver rapidement les informations."
+      }
+    },
+    "infrastructure": {
+      "step1": {
+        "title": "Vos infrastructures",
+        "content": "Gérez tous vos bâtiments et équipements : puits, bassins, stations de pompage, hangars, bureaux."
+      },
+      "step2": {
+        "title": "Ajouter une infrastructure",
+        "content": "Créez de nouvelles infrastructures avec leur type, localisation, capacité et date de mise en service."
+      },
+      "step3": {
+        "title": "Maintenance",
+        "content": "Planifiez et suivez la maintenance de vos équipements pour éviter les pannes et optimiser leur durée de vie."
+      }
+    },
+    "billing": {
+      "step1": {
+        "title": "Aperçu facturation",
+        "content": "Visualisez le résumé de votre facturation : devis en cours, commandes à livrer, factures à encaisser."
+      },
+      "step2": {
+        "title": "Devis",
+        "content": "Créez des devis professionnels pour vos clients. Suivez leur statut : envoyé, accepté, converti en commande."
+      },
+      "step3": {
+        "title": "Bons de commande",
+        "content": "Gérez vos commandes clients et fournisseurs. Suivez les livraisons et les réceptions."
+      },
+      "step4": {
+        "title": "Factures",
+        "content": "Émettez des factures et suivez les paiements. Gérez les relances et les créances clients."
+      },
+      "step5": {
+        "title": "Clients et fournisseurs",
+        "content": "Gérez votre carnet d'adresses : clients, fournisseurs, transporteurs avec leurs coordonnées et historique."
+      }
+    },
+    "settings": {
+      "step1": {
+        "title": "Paramètres",
+        "content": "Accédez à tous les paramètres de votre organisation depuis ce menu."
+      },
+      "step2": {
+        "title": "Organisation",
+        "content": "Configurez les informations de votre exploitation : nom, adresse, logo, devise et année fiscale."
+      },
+      "step3": {
+        "title": "Utilisateurs",
+        "content": "Gérez les membres de votre équipe, leurs rôles et permissions d'accès à la plateforme."
+      },
+      "step4": {
+        "title": "Abonnement",
+        "content": "Consultez votre formule actuelle, les fonctionnalités incluses et passez à un plan supérieur si besoin."
+      },
+      "step5": {
+        "title": "Modules",
+        "content": "Activez ou désactivez les modules selon vos besoins : comptabilité, satellite, métayage, etc."
+      },
+      "step6": {
+        "title": "Préférences",
+        "content": "Personnalisez votre expérience : langue, thème, format de date, notifications."
+      }
+    }
+  },
+  "helpCenter": {
+    "title": "Centre d'aide",
+    "subtitle": "Choisissez une visite guidée pour découvrir les fonctionnalités",
+    "completed": "Terminé",
+    "restartTour": "Recommencer cette visite",
+    "resetAllTours": "Réinitialiser toutes les visites",
+    "buttonTitle": "Aide et visites guidées",
+    "tours": {
+      "welcome": {
+        "title": "Visite de bienvenue",
+        "description": "Découvrez l'interface et la navigation"
+      },
+      "fullApp": {
+        "title": "🌟 Tour complet",
+        "description": "Découvrez toute l'application en une visite"
+      },
+      "dashboard": {
+        "title": "Tableau de bord",
+        "description": "Statistiques et aperçu général"
+      },
+      "farmManagement": {
+        "title": "Gestion des fermes",
+        "description": "Créez et gérez vos exploitations"
+      },
+      "parcels": {
+        "title": "Gestion des parcelles",
+        "description": "Gérez vos cultures et parcelles"
+      },
+      "tasks": {
+        "title": "Gestion des tâches",
+        "description": "Planifiez et suivez les travaux"
+      },
+      "workers": {
+        "title": "Gestion du personnel",
+        "description": "Gérez votre équipe et les paiements"
+      },
+      "inventory": {
+        "title": "Gestion du stock",
+        "description": "Suivez votre inventaire"
+      },
+      "harvests": {
+        "title": "Récoltes",
+        "description": "Enregistrez et suivez vos récoltes"
+      },
+      "infrastructure": {
+        "title": "Infrastructures",
+        "description": "Gérez bâtiments, puits et bassins"
+      },
+      "billing": {
+        "title": "Facturation",
+        "description": "Devis, commandes et factures"
+      },
+      "accounting": {
+        "title": "Comptabilité",
+        "description": "Journaux et rapports financiers"
+      },
+      "satellite": {
+        "title": "Analyse satellite",
+        "description": "Surveillez la santé des cultures"
+      },
+      "reports": {
+        "title": "Rapports",
+        "description": "Générez et exportez des rapports"
+      },
+      "settings": {
+        "title": "Paramètres",
+        "description": "Configurez votre organisation"
+      }
+    }
   }
 }
 

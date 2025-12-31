@@ -1,0 +1,75 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+import { BaseAIProvider } from './base-ai.provider';
+import {
+  AIGenerationRequest,
+  AIGenerationResponse,
+  AIProvider,
+} from '../interfaces';
+
+@Injectable()
+export class OpenAIProvider extends BaseAIProvider {
+  private readonly apiKey: string;
+  private readonly apiUrl = 'https://api.openai.com/v1/chat/completions';
+  private readonly defaultModel = 'gpt-4-turbo-preview';
+
+  constructor(configService: ConfigService) {
+    super(configService, AIProvider.OPENAI);
+    this.apiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+  }
+
+  validateConfig(): boolean {
+    const isValid = !!this.apiKey && this.apiKey.length > 0;
+    if (!isValid) {
+      this.logger.warn('OpenAI API key not configured');
+    }
+    return isValid;
+  }
+
+  async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
+    const model = request.config.model || this.defaultModel;
+
+    this.logger.log(`Generating with OpenAI model: ${model}`);
+
+    try {
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          model,
+          messages: this.buildMessages(request.systemPrompt, request.userPrompt),
+          temperature: request.config.temperature ?? 0.7,
+          max_tokens: request.config.maxTokens ?? 4096,
+          response_format: { type: 'json_object' },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 120000, // 2 minutes timeout for AI generation
+        },
+      );
+
+      const content = response.data.choices[0]?.message?.content || '';
+      const tokensUsed = response.data.usage?.total_tokens;
+
+      this.logger.log(`OpenAI generation complete. Tokens used: ${tokensUsed}`);
+
+      return {
+        content,
+        provider: AIProvider.OPENAI,
+        model,
+        tokensUsed,
+        generatedAt: new Date(),
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.error?.message || error.message;
+        this.logger.error(`OpenAI API error: ${errorMessage}`);
+        throw new Error(`OpenAI API error: ${errorMessage}`);
+      }
+      return this.handleError(error, 'OpenAI generation');
+    }
+  }
+}

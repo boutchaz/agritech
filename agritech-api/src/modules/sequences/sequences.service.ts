@@ -48,7 +48,7 @@ export class SequencesService {
       prefix: 'JE',
     },
     [SequenceType.PAYMENT]: {
-      table: 'payments',
+      table: 'accounting_payments',
       dateColumn: 'payment_date',
       prefix: 'PAY',
     },

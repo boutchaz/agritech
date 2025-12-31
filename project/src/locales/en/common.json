@@ -2382,7 +2382,8 @@
       "last": "Finish",
       "next": "Next",
       "open": "Open",
-      "skip": "Skip"
+      "skip": "Skip",
+      "stepCounter": "Step {{current}} of {{total}}"
     },
     "welcome": {
       "step1": {
@@ -2684,6 +2685,76 @@
       "step6": {
         "title": "Preferences",
         "content": "Customize your experience: language, theme, date format, notifications."
+      }
+    }
+  },
+  "helpCenter": {
+    "title": "Help Center",
+    "subtitle": "Choose a guided tour to discover the features",
+    "completed": "Completed",
+    "restartTour": "Restart this tour",
+    "resetAllTours": "Reset all tours",
+    "buttonTitle": "Help and guided tours",
+    "tours": {
+      "welcome": {
+        "title": "Welcome Tour",
+        "description": "Discover the interface and navigation"
+      },
+      "fullApp": {
+        "title": "Complete Tour",
+        "description": "Discover the entire app in one tour"
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Statistics and general overview"
+      },
+      "farmManagement": {
+        "title": "Farm Management",
+        "description": "Create and manage your farms"
+      },
+      "parcels": {
+        "title": "Parcel Management",
+        "description": "Manage your crops and parcels"
+      },
+      "tasks": {
+        "title": "Task Management",
+        "description": "Plan and track work"
+      },
+      "workers": {
+        "title": "Personnel Management",
+        "description": "Manage your team and payments"
+      },
+      "inventory": {
+        "title": "Inventory Management",
+        "description": "Track your inventory"
+      },
+      "harvests": {
+        "title": "Harvests",
+        "description": "Record and track your harvests"
+      },
+      "infrastructure": {
+        "title": "Infrastructure",
+        "description": "Manage buildings, wells and basins"
+      },
+      "billing": {
+        "title": "Billing",
+        "description": "Quotes, orders and invoices"
+      },
+      "accounting": {
+        "title": "Accounting",
+        "description": "Journals and financial reports"
+      },
+      "satellite": {
+        "title": "Satellite Analysis",
+        "description": "Monitor crop health"
+      },
+      "reports": {
+        "title": "Reports",
+        "description": "Generate and export reports"
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Configure your organization"
       }
     }
   }
