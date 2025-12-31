@@ -160,6 +160,8 @@ export function CostCenterManagement() {
         name: data.name,
         description: data.description || undefined,
         parent_id: data.parent_id || undefined,
+        farm_id: data.farm_id || undefined,
+        parcel_id: data.parcel_id || undefined,
         is_active: data.is_active,
       };
 
@@ -309,16 +311,16 @@ export function CostCenterManagement() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('costCenters.table.parent', 'Parent')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('costCenters.table.description', 'Description')}</th>
-                    <th className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</th>
-                    <th className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</th>
-                  </tr>
-                </thead>
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</th>
+                      <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</th>
+                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('costCenters.table.parent', 'Parent')}</th>
+                      <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('costCenters.table.location', 'Location')}</th>
+                      <th className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</th>
+                      <th className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {filteredCostCenters.map((costCenter) => (
                     <tr key={costCenter.id} className="border-b hover:bg-muted/50">
@@ -337,10 +339,23 @@ export function CostCenterManagement() {
                         )}
                       </td>
                       <td className="py-3 px-4 hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground line-clamp-1">
-                          {costCenter.description || '-'}
-                        </span>
-                      </td>
+                          {costCenter.farm_id ? (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Building2 className="h-3 w-3" />
+                              <span className="line-clamp-1">
+                                {farms.find((f: { id: string }) => f.id === costCenter.farm_id)?.name || 'Farm'}
+                              </span>
+                              {costCenter.parcel_id && (
+                                <Badge variant="outline" className="ml-1 text-xs">
+                                  <MapPin className="h-2 w-2 mr-1" />
+                                  Parcel
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
                       <td className="py-3 px-4 text-center">
                         <Badge variant={costCenter.is_active ? 'default' : 'secondary'}>
                           {costCenter.is_active
@@ -466,6 +481,65 @@ export function CostCenterManagement() {
                 {t('costCenters.form.parentHelp', 'Organize cost centers hierarchically for roll-up reporting.')}
               </p>
             </div>
+
+            {/* Farm */}
+            <div className="space-y-2">
+              <Label>{t('costCenters.form.farm', 'Farm')}</Label>
+              <Select
+                value={form.watch('farm_id') || 'none'}
+                onValueChange={(value) => {
+                  form.setValue('farm_id', value === 'none' ? '' : value);
+                  form.setValue('parcel_id', '');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('costCenters.form.farmPlaceholder', 'Select farm (optional)')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('costCenters.form.noFarm', 'No farm')}</SelectItem>
+                  {farms.map((farm: { id: string; name: string }) => (
+                    <SelectItem key={farm.id} value={farm.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-3 w-3" />
+                        {farm.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('costCenters.form.farmHelp', 'Link this cost center to a specific farm for tracking.')}
+              </p>
+            </div>
+
+            {/* Parcel */}
+            {form.watch('farm_id') && (
+              <div className="space-y-2">
+                <Label>{t('costCenters.form.parcel', 'Parcel')}</Label>
+                <Select
+                  value={form.watch('parcel_id') || 'none'}
+                  onValueChange={(value) => form.setValue('parcel_id', value === 'none' ? '' : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('costCenters.form.parcelPlaceholder', 'Select parcel (optional)')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('costCenters.form.noParcel', 'No parcel')}</SelectItem>
+                    {parcels.map((parcel: { id: string; name: string }) => (
+                      <SelectItem key={parcel.id} value={parcel.id}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3" />
+                          {parcel.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('costCenters.form.parcelHelp', 'Further narrow down to a specific parcel for granular tracking.')}
+                </p>
+              </div>
+            )}
 
             {/* Active Status */}
             <div className="flex items-center justify-between">

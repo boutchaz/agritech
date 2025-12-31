@@ -206,6 +206,8 @@ export const useAddParcel = () => {
       area_unit?: string;
       soil_type?: string;
       irrigation_type?: string;
+      crop_category?: string;
+      crop_type?: string;
       tree_type?: string;
       tree_count?: number;
       planting_year?: number;
@@ -213,42 +215,39 @@ export const useAddParcel = () => {
       rootstock?: string;
       planting_date?: string;
       planting_type?: string;
+      planting_system?: string;
+      spacing?: string;
+      density_per_hectare?: number;
+      plant_count?: number;
+      calculated_area?: number;
+      perimeter?: number;
     }) => {
-      // Convert undefined to null where needed and ensure required fields
-      const createData: {
-        farm_id: string;
-        name: string;
-        description?: string;
-        area: number;
-        area_unit?: string;
-        soil_type?: string;
-        irrigation_type?: string;
-        variety?: string;
-        planting_date?: string;
-        planting_year?: number;
-        rootstock?: string;
-        [key: string]: unknown;
-      } = {
+      const createData: Record<string, unknown> = {
         farm_id: parcelData.farm_id,
         name: parcelData.name,
-        area: parcelData.area ?? 0, // Required field, default to 0
+        area: parcelData.area ?? 0,
       };
 
-      if (parcelData.description !== undefined) createData.description = parcelData.description || undefined;
+      if (parcelData.description) createData.description = parcelData.description;
       if (parcelData.area_unit) createData.area_unit = parcelData.area_unit;
       if (parcelData.soil_type) createData.soil_type = parcelData.soil_type;
       if (parcelData.irrigation_type) createData.irrigation_type = parcelData.irrigation_type;
+      if (parcelData.crop_category) createData.crop_category = parcelData.crop_category;
+      if (parcelData.crop_type) createData.crop_type = parcelData.crop_type;
       if (parcelData.variety) createData.variety = parcelData.variety;
       if (parcelData.planting_date) createData.planting_date = parcelData.planting_date;
       if (parcelData.planting_year) createData.planting_year = parcelData.planting_year;
       if (parcelData.rootstock) createData.rootstock = parcelData.rootstock;
+      if (parcelData.planting_system) createData.planting_system = parcelData.planting_system;
+      if (parcelData.planting_type) createData.planting_type = parcelData.planting_type;
+      if (parcelData.spacing) createData.spacing = parcelData.spacing;
+      if (parcelData.density_per_hectare) createData.density_per_hectare = parcelData.density_per_hectare;
+      if (parcelData.plant_count) createData.plant_count = parcelData.plant_count;
+      if (parcelData.boundary) createData.boundary = parcelData.boundary;
+      if (parcelData.calculated_area) createData.calculated_area = parcelData.calculated_area;
+      if (parcelData.perimeter) createData.perimeter = parcelData.perimeter;
 
-      // Handle boundary separately if needed (it might need special handling)
-      if (parcelData.boundary) {
-        (createData as any).boundary = parcelData.boundary;
-      }
-
-      return parcelsService.createParcel(createData);
+      return parcelsService.createParcel(createData as Parameters<typeof parcelsService.createParcel>[0]);
     },
     onSuccess: (data) => {
       // Invalidate relevant queries - invalidate ALL parcel queries

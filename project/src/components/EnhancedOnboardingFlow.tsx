@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Building,
@@ -11,64 +11,21 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { useOnboardingPersistence, OnboardingState } from '../hooks/useOnboardingPersistence';
+import { Loader2 } from 'lucide-react';
+
+type ModuleSelection = OnboardingState['moduleSelection'];
 
 interface EnhancedOnboardingFlowProps {
   user: any;
   onComplete: () => void;
-}
-
-interface ProfileData {
-  first_name: string;
-  last_name: string;
-  phone: string;
-  timezone: string;
-  language: string;
-}
-
-interface OrganizationData {
-  name: string;
-  slug: string;
-  phone: string;
-  email: string;
-  account_type: 'individual' | 'business' | 'farm';
-  address?: string;
-  city?: string;
-  country: string;
-}
-
-interface FarmData {
-  name: string;
-  location: string;
-  size: number;
-  size_unit: string;
-  farm_type: 'main' | 'sub';
-  description: string;
-  soil_type?: string;
-  climate_zone?: string;
-}
-
-interface ModuleSelection {
-  farm_management: boolean;
-  inventory: boolean;
-  sales: boolean;
-  procurement: boolean;
-  accounting: boolean;
-  hr: boolean;
-  analytics: boolean;
-  marketplace: boolean;
-}
-
-interface PreferencesData {
-  currency: string;
-  date_format: string;
-  use_demo_data: boolean;
-  enable_notifications: boolean;
 }
 
 const AVAILABLE_MODULES = [
@@ -151,54 +108,39 @@ const CURRENCIES = [
 ];
 
 const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const {
+    state,
+    isRestored,
+    clearState,
+    updateProfileData,
+    updateOrganizationData,
+    updateFarmData,
+    updateModuleSelection,
+    updatePreferences,
+    setCurrentStep,
+    setExistingOrgId
+  } = useOnboardingPersistence(user?.id, user?.email);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [existingOrgId, setExistingOrgId] = useState<string | null>(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
 
-  const [profileData, setProfileData] = useState<ProfileData>({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Casablanca',
-    language: 'fr'
-  });
+  const { 
+    currentStep, 
+    profileData, 
+    organizationData, 
+    farmData, 
+    moduleSelection, 
+    preferences,
+    existingOrgId 
+  } = state;
 
-  const [organizationData, setOrganizationData] = useState<OrganizationData>({
-    name: '',
-    slug: '',
-    phone: '',
-    email: user?.email || '',
-    account_type: 'farm',
-    country: 'MA'
-  });
-
-  const [farmData, setFarmData] = useState<FarmData>({
-    name: '',
-    location: '',
-    size: 0,
-    size_unit: 'hectares',
-    farm_type: 'main',
-    description: ''
-  });
-
-  const [moduleSelection, setModuleSelection] = useState<ModuleSelection>({
-    farm_management: true, // Default essential for AgriTech
-    inventory: false,
-    sales: false,
-    procurement: false,
-    accounting: false,
-    hr: false,
-    analytics: false,
-    marketplace: false
-  });
-
-  const [preferences, setPreferences] = useState<PreferencesData>({
-    currency: 'MAD',
-    date_format: 'DD/MM/YYYY',
-    use_demo_data: false,
-    enable_notifications: true
-  });
+  // Show resume prompt if user has saved progress
+  useEffect(() => {
+    if (isRestored && currentStep > 1) {
+      setShowResumePrompt(true);
+    }
+  }, [isRestored, currentStep]);
 
   // Auto-generate slug from organization name
   useEffect(() => {
@@ -207,35 +149,52 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-      setOrganizationData(prev => ({ ...prev, slug }));
+      if (slug !== organizationData.slug) {
+        updateOrganizationData({ slug });
+      }
     }
-  }, [organizationData.name]);
+  }, [organizationData.name, organizationData.slug, updateOrganizationData]);
 
-  // Check for existing data on mount
+  // Check for existing data on mount (sync with database)
   useEffect(() => {
-    checkExistingData();
-  }, [user.id]);
+    if (isRestored) {
+      checkExistingData();
+    }
+  }, [user.id, isRestored]);
 
-  const checkExistingData = async () => {
+  // Prevent React Query refetch on visibility change during onboarding
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Page became visible - don't trigger any refetch
+        // The persisted state should be sufficient
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const checkExistingData = useCallback(async () => {
     try {
-      // Check profile
-      const { data: profileData } = await supabase
+      const { data: existingProfile } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (profileData && profileData.first_name) {
-        setProfileData({
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
-          phone: profileData.phone || '',
-          timezone: profileData.timezone || 'Africa/Casablanca',
-          language: profileData.language || 'fr'
+      if (existingProfile && existingProfile.first_name && !profileData.first_name) {
+        updateProfileData({
+          first_name: existingProfile.first_name || '',
+          last_name: existingProfile.last_name || '',
+          phone: existingProfile.phone || '',
+          timezone: existingProfile.timezone || 'Africa/Casablanca',
+          language: existingProfile.language || 'fr'
         });
       }
 
-      // Check organization
       const { data: orgUsers } = await supabase
         .from('organization_users')
         .select('organization_id, organizations(*)')
@@ -243,22 +202,35 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         .limit(1);
 
       if (orgUsers && orgUsers.length > 0) {
-        const org = orgUsers[0].organizations;
-        setExistingOrgId(org.id);
-        setOrganizationData({
-          name: org.name || '',
-          slug: org.slug || '',
-          phone: org.phone || '',
-          email: org.email || user?.email || '',
-          account_type: org.account_type || 'farm',
-          address: org.address || '',
-          city: org.city || '',
-          country: org.country || 'MA'
-        });
+        const org = (orgUsers[0] as any).organizations;
+        if (org && !existingOrgId) {
+          setExistingOrgId(org.id);
+          if (!organizationData.name) {
+            updateOrganizationData({
+              name: org.name || '',
+              slug: org.slug || '',
+              phone: org.phone || '',
+              email: org.email || user?.email || '',
+              account_type: org.account_type || 'farm',
+              address: org.address || '',
+              city: org.city || '',
+              country: org.country || 'MA'
+            });
+          }
+        }
       }
     } catch (err) {
       console.error('Error checking existing data:', err);
     }
+  }, [user.id, profileData.first_name, organizationData.name, existingOrgId, updateProfileData, updateOrganizationData, setExistingOrgId]);
+
+  const handleStartOver = () => {
+    clearState();
+    setShowResumePrompt(false);
+  };
+
+  const handleContinue = () => {
+    setShowResumePrompt(false);
   };
 
   const handleNext = async () => {
@@ -434,7 +406,6 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   };
 
   const completeOnboarding = async () => {
-    // Mark onboarding as completed
     const { error } = await supabase
       .from('user_profiles')
       .update({ onboarding_completed: true })
@@ -442,20 +413,17 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
 
     if (error) throw error;
 
-    // If demo data requested, trigger setup (future implementation)
     if (preferences.use_demo_data) {
-      // TODO: Call edge function to create demo data
       console.log('Demo data setup would happen here');
     }
 
+    clearState();
     onComplete();
   };
 
   const toggleModule = (moduleId: string) => {
-    setModuleSelection(prev => ({
-      ...prev,
-      [moduleId]: !prev[moduleId as keyof ModuleSelection]
-    }));
+    const key = moduleId as keyof typeof moduleSelection;
+    updateModuleSelection({ [key]: !moduleSelection[key] });
   };
 
   const renderStepIndicator = () => (
@@ -500,7 +468,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <FormField label="Prénom" required>
           <Input
             value={profileData.first_name}
-            onChange={(e) => setProfileData({ ...profileData, first_name: e.target.value })}
+            onChange={(e) => updateProfileData({ first_name: e.target.value })}
             placeholder="Votre prénom"
           />
         </FormField>
@@ -508,7 +476,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <FormField label="Nom" required>
           <Input
             value={profileData.last_name}
-            onChange={(e) => setProfileData({ ...profileData, last_name: e.target.value })}
+            onChange={(e) => updateProfileData({ last_name: e.target.value })}
             placeholder="Votre nom"
           />
         </FormField>
@@ -518,7 +486,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <Input
           type="tel"
           value={profileData.phone}
-          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+          onChange={(e) => updateProfileData({ phone: e.target.value })}
           placeholder="+212 6XX XXX XXX"
         />
       </FormField>
@@ -526,7 +494,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Langue" required>
         <Select
           value={profileData.language}
-          onChange={(e) => setProfileData({ ...profileData, language: e.target.value })}
+          onChange={(e) => updateProfileData({ language: e.target.value })}
         >
           {LANGUAGES.map(lang => (
             <option key={lang.value} value={lang.value}>{lang.label}</option>
@@ -537,7 +505,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Fuseau horaire" required>
         <Select
           value={profileData.timezone}
-          onChange={(e) => setProfileData({ ...profileData, timezone: e.target.value })}
+          onChange={(e) => updateProfileData({ timezone: e.target.value })}
         >
           {TIMEZONES.map(tz => (
             <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -558,7 +526,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Type de compte" required>
         <Select
           value={organizationData.account_type}
-          onChange={(e) => setOrganizationData({ ...organizationData, account_type: e.target.value as any })}
+          onChange={(e) => updateOrganizationData({ account_type: e.target.value as any })}
         >
           <option value="individual">Particulier</option>
           <option value="farm">Exploitation Agricole</option>
@@ -569,7 +537,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Nom de l'organisation" required>
         <Input
           value={organizationData.name}
-          onChange={(e) => setOrganizationData({ ...organizationData, name: e.target.value })}
+          onChange={(e) => updateOrganizationData({ name: e.target.value })}
           placeholder="Ex: Ferme El Haouzia"
         />
       </FormField>
@@ -577,7 +545,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Identifiant unique (slug)" required>
         <Input
           value={organizationData.slug}
-          onChange={(e) => setOrganizationData({ ...organizationData, slug: e.target.value })}
+          onChange={(e) => updateOrganizationData({ slug: e.target.value })}
           placeholder="ferme-el-haouzia"
         />
         <p className="text-xs text-gray-500 mt-1">URL: agritech.ma/{organizationData.slug}</p>
@@ -588,7 +556,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
           <Input
             type="tel"
             value={organizationData.phone}
-            onChange={(e) => setOrganizationData({ ...organizationData, phone: e.target.value })}
+            onChange={(e) => updateOrganizationData({ phone: e.target.value })}
             placeholder="+212 5XX XXX XXX"
           />
         </FormField>
@@ -597,7 +565,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
           <Input
             type="email"
             value={organizationData.email}
-            onChange={(e) => setOrganizationData({ ...organizationData, email: e.target.value })}
+            onChange={(e) => updateOrganizationData({ email: e.target.value })}
             placeholder="contact@ferme.ma"
           />
         </FormField>
@@ -606,7 +574,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Adresse">
         <Input
           value={organizationData.address || ''}
-          onChange={(e) => setOrganizationData({ ...organizationData, address: e.target.value })}
+          onChange={(e) => updateOrganizationData({ address: e.target.value })}
           placeholder="Adresse complète"
         />
       </FormField>
@@ -615,7 +583,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <FormField label="Ville">
           <Input
             value={organizationData.city || ''}
-            onChange={(e) => setOrganizationData({ ...organizationData, city: e.target.value })}
+            onChange={(e) => updateOrganizationData({ city: e.target.value })}
             placeholder="Ex: Casablanca"
           />
         </FormField>
@@ -623,7 +591,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <FormField label="Pays" required>
           <Select
             value={organizationData.country}
-            onChange={(e) => setOrganizationData({ ...organizationData, country: e.target.value })}
+            onChange={(e) => updateOrganizationData({ country: e.target.value })}
           >
             <option value="MA">Maroc</option>
             <option value="FR">France</option>
@@ -645,7 +613,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Nom de la ferme" required>
         <Input
           value={farmData.name}
-          onChange={(e) => setFarmData({ ...farmData, name: e.target.value })}
+          onChange={(e) => updateFarmData({ name: e.target.value })}
           placeholder="Ex: Ferme Principale"
         />
       </FormField>
@@ -653,7 +621,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Localisation" required>
         <Input
           value={farmData.location}
-          onChange={(e) => setFarmData({ ...farmData, location: e.target.value })}
+          onChange={(e) => updateFarmData({ location: e.target.value })}
           placeholder="Ex: Benslimane, Casablanca-Settat"
         />
       </FormField>
@@ -665,7 +633,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
             step="0.01"
             min="0"
             value={farmData.size || ''}
-            onChange={(e) => setFarmData({ ...farmData, size: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => updateFarmData({ size: parseFloat(e.target.value) || 0 })}
             placeholder="0"
           />
         </FormField>
@@ -673,7 +641,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         <FormField label="Unité" required>
           <Select
             value={farmData.size_unit}
-            onChange={(e) => setFarmData({ ...farmData, size_unit: e.target.value })}
+            onChange={(e) => updateFarmData({ size_unit: e.target.value })}
           >
             <option value="hectares">Hectares</option>
             <option value="acres">Acres</option>
@@ -685,7 +653,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Type de sol">
         <Select
           value={farmData.soil_type || ''}
-          onChange={(e) => setFarmData({ ...farmData, soil_type: e.target.value })}
+          onChange={(e) => updateFarmData({ soil_type: e.target.value })}
         >
           <option value="">Sélectionner...</option>
           <option value="clay">Argileux</option>
@@ -700,7 +668,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Zone climatique">
         <Select
           value={farmData.climate_zone || ''}
-          onChange={(e) => setFarmData({ ...farmData, climate_zone: e.target.value })}
+          onChange={(e) => updateFarmData({ climate_zone: e.target.value })}
         >
           <option value="">Sélectionner...</option>
           <option value="mediterranean">Méditerranéen</option>
@@ -715,7 +683,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Description">
         <Textarea
           value={farmData.description}
-          onChange={(e) => setFarmData({ ...farmData, description: e.target.value })}
+          onChange={(e) => updateFarmData({ description: e.target.value })}
           rows={3}
           placeholder="Description de votre ferme..."
         />
@@ -793,7 +761,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Devise" required>
         <Select
           value={preferences.currency}
-          onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+          onChange={(e) => updatePreferences({ currency: e.target.value })}
         >
           {CURRENCIES.map(curr => (
             <option key={curr.value} value={curr.value}>{curr.label}</option>
@@ -804,7 +772,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <FormField label="Format de date" required>
         <Select
           value={preferences.date_format}
-          onChange={(e) => setPreferences({ ...preferences, date_format: e.target.value })}
+          onChange={(e) => updatePreferences({ date_format: e.target.value })}
         >
           <option value="DD/MM/YYYY">JJ/MM/AAAA</option>
           <option value="MM/DD/YYYY">MM/JJ/AAAA</option>
@@ -821,7 +789,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
           <input
             type="checkbox"
             checked={preferences.use_demo_data}
-            onChange={(e) => setPreferences({ ...preferences, use_demo_data: e.target.checked })}
+            onChange={(e) => updatePreferences({ use_demo_data: e.target.checked })}
             className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
           />
         </div>
@@ -834,7 +802,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
           <input
             type="checkbox"
             checked={preferences.enable_notifications}
-            onChange={(e) => setPreferences({ ...preferences, enable_notifications: e.target.checked })}
+            onChange={(e) => updatePreferences({ enable_notifications: e.target.checked })}
             className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
           />
         </div>
@@ -848,6 +816,17 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
     </div>
   );
 
+  if (!isRestored) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+          <Loader2 className="h-12 w-12 text-emerald-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8">
@@ -856,6 +835,34 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        {showResumePrompt && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-800">Reprendre votre inscription?</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Vous avez une inscription en cours (Étape {currentStep}/5). Voulez-vous continuer?
+                </p>
+                <div className="flex gap-3 mt-3">
+                  <button 
+                    onClick={handleContinue} 
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                  >
+                    Continuer
+                  </button>
+                  <button 
+                    onClick={handleStartOver} 
+                    className="px-4 py-2 bg-white text-blue-700 border border-blue-300 rounded-lg text-sm font-medium hover:bg-blue-50 transition"
+                  >
+                    Recommencer
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

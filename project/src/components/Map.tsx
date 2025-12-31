@@ -142,11 +142,33 @@ const MapComponent: React.FC<MapProps> = ({
   });
 
   // Fetch reference data from Strapi CMS
-  const { data: soilTypes = [] } = useSoilTypes();
-  const { data: irrigationTypes = [] } = useIrrigationTypes();
+  const { data: soilTypesFromApi = [] } = useSoilTypes();
+  const { data: irrigationTypesFromApi = [] } = useIrrigationTypes();
   const { data: cropCategories = [] } = useCropCategories();
   const { data: cropTypesFromStrapi = [] } = useCropTypes(parcelDetails.crop_category);
   const { data: varietiesFromStrapi = [] } = useVarieties(parcelDetails.crop_type);
+
+  // Fallback soil types when API returns empty
+  const defaultSoilTypes = [
+    { id: 'clay', name: 'Argileux', value: 'clay' },
+    { id: 'sandy', name: 'Sableux', value: 'sandy' },
+    { id: 'loam', name: 'Limoneux', value: 'loam' },
+    { id: 'silt', name: 'Limon', value: 'silt' },
+    { id: 'peat', name: 'Tourbeux', value: 'peat' },
+    { id: 'chalk', name: 'Calcaire', value: 'chalk' },
+  ];
+
+  // Fallback irrigation types when API returns empty
+  const defaultIrrigationTypes = [
+    { id: 'drip', name: 'Goutte à goutte', value: 'drip' },
+    { id: 'sprinkler', name: 'Aspersion', value: 'sprinkler' },
+    { id: 'flood', name: 'Submersion', value: 'flood' },
+    { id: 'furrow', name: 'Rigole', value: 'furrow' },
+    { id: 'none', name: 'Aucune (Bour)', value: 'none' },
+  ];
+
+  const soilTypes = soilTypesFromApi.length > 0 ? soilTypesFromApi : defaultSoilTypes;
+  const irrigationTypes = irrigationTypesFromApi.length > 0 ? irrigationTypesFromApi : defaultIrrigationTypes;
 
   // Get available options based on selected crop category
   // Fallback to hardcoded data if Strapi data is not available yet
@@ -1424,7 +1446,7 @@ const MapComponent: React.FC<MapProps> = ({
             </div>
           )}
 
-          <Dialog open={farmId && enableDrawing && showParcelForm} onOpenChange={(open) => {
+          <Dialog open={!!(farmId && enableDrawing && showParcelForm)} onOpenChange={(open) => {
             if (!open) {
               cleanupDrawingState();
             }
@@ -1481,7 +1503,7 @@ const MapComponent: React.FC<MapProps> = ({
                     >
                       <option value="">Sélectionner...</option>
                       {soilTypes.map(type => (
-                        <option key={type.id} value={type.value}>{type.name}</option>
+                        <option key={type.id} value={type.value}>{type.name || type.name_fr || type.value}</option>
                       ))}
                     </select>
                   </div>
@@ -1500,7 +1522,7 @@ const MapComponent: React.FC<MapProps> = ({
                     >
                       <option value="">Sélectionner...</option>
                       {irrigationTypes.map(type => (
-                        <option key={type.id} value={type.value}>{type.name}</option>
+                        <option key={type.id} value={type.value}>{type.name || type.name_fr || type.value}</option>
                       ))}
                     </select>
                   </div>
@@ -1530,7 +1552,7 @@ const MapComponent: React.FC<MapProps> = ({
                     >
                       <option value="">Sélectionner...</option>
                       {cropCategories.map(category => (
-                        <option key={category.id} value={category.value}>{category.name}</option>
+                        <option key={category.id} value={category.value}>{category.name || category.name_fr || category.value}</option>
                       ))}
                     </select>
                   </div>
@@ -1554,7 +1576,7 @@ const MapComponent: React.FC<MapProps> = ({
                           {availableCropTypes.map(crop => {
                             const key = typeof crop === 'string' ? crop : crop.id;
                             const value = typeof crop === 'string' ? crop : crop.value;
-                            const label = typeof crop === 'string' ? crop : crop.name;
+                            const label = typeof crop === 'string' ? crop : (crop.name || (crop as any).name_fr || crop.value);
                             return (
                               <option key={key} value={value}>
                                 {label}
