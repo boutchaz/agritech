@@ -73,55 +73,61 @@ export const purchaseOrdersApi = {
    * Get all purchase orders with optional filters
    */
   async getPurchaseOrders(filters?: PurchaseOrderFilters, organizationId?: string) {
-    const { data } = await apiClient.get(BASE_URL, {}, organizationId);
-    return data;
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.supplier_id) params.append('supplier_id', filters.supplier_id);
+    if (filters?.supplier_name) params.append('supplier_name', filters.supplier_name);
+    if (filters?.order_number) params.append('order_number', filters.order_number);
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.stock_received) params.append('stock_received', filters.stock_received);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.limit) params.append('limit', String(filters.limit));
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    return apiClient.get(url, {}, organizationId);
   },
 
   /**
    * Get a single purchase order by ID
    */
   async getPurchaseOrder(id: string, organizationId?: string) {
-    const { data } = await apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
-    return data;
+    return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
   },
 
   /**
    * Create a new purchase order
    */
   async createPurchaseOrder(input: CreatePurchaseOrderInput, organizationId?: string) {
-    const { data } = await apiClient.post(BASE_URL, input, {}, organizationId);
-    return data;
+    return apiClient.post(BASE_URL, input, {}, organizationId);
   },
 
   /**
    * Update an existing purchase order
    */
   async updatePurchaseOrder(id: string, input: UpdatePurchaseOrderInput, organizationId?: string) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
-    return data;
+    return apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
   },
 
   /**
    * Update purchase order status
    */
   async updatePurchaseOrderStatus(id: string, input: UpdateStatusInput, organizationId?: string) {
-    const { data } = await apiClient.patch(`${BASE_URL}/${id}/status`, input, {}, organizationId);
-    return data;
+    return apiClient.patch(`${BASE_URL}/${id}/status`, input, {}, organizationId);
   },
 
   /**
    * Delete a purchase order (only drafts)
    */
   async deletePurchaseOrder(id: string, organizationId?: string) {
-    const { data } = await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
-    return data;
+    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
   },
 
   /**
    * Convert purchase order to bill (purchase invoice)
    */
   async convertToBill(id: string, params?: { invoice_date?: string; due_date?: string }, organizationId?: string) {
-    const { data } = await apiClient.post(`${BASE_URL}/${id}/convert-to-bill`, params || {}, {}, organizationId);
-    return data;
+    return apiClient.post(`${BASE_URL}/${id}/convert-to-bill`, params || {}, {}, organizationId);
   },
 };

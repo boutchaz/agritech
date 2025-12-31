@@ -1986,6 +1986,289 @@
       "refreshData": "Actualiser les données",
       "showTemperature": "Afficher la température au moment du passage satellite (11h)"
     }
+  },
+  "infrastructure": {
+    "title": "Gestion des Infrastructures",
+    "subtitle": "Gérez vos infrastructures au niveau organisation ou ferme",
+    "addNew": "Nouvelle Infrastructure",
+    "edit": "Modifier la Structure",
+    "delete": "Supprimer",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette structure ?",
+    "tabs": {
+      "organization": "Organisation",
+      "farm": "Par Ferme"
+    },
+    "scope": {
+      "label": "Niveau d'affectation",
+      "organization": "Organisation",
+      "farm": "Ferme spécifique",
+      "organizationHint": "Accessible par toutes les fermes de l'organisation",
+      "farmHint": "Liée à une ferme spécifique et supprimée avec elle"
+    },
+    "types": {
+      "stable": "Écurie",
+      "technical_room": "Local technique",
+      "basin": "Bassin",
+      "well": "Puits"
+    },
+    "shapes": {
+      "trapezoidal": "Trapézoïdal",
+      "rectangular": "Rectangulaire",
+      "cubic": "Cubique",
+      "circular": "Circulaire"
+    },
+    "conditions": {
+      "excellent": "Excellent",
+      "good": "Bon",
+      "fair": "Moyen",
+      "poor": "Mauvais"
+    },
+    "constructionTypes": {
+      "concrete": "Béton",
+      "metal": "Métallique",
+      "wood": "Bois",
+      "mixed": "Mixte"
+    },
+    "pumpTypes": {
+      "submersible": "Pompe immergée",
+      "surface": "Pompe de surface",
+      "manual": "Pompe manuelle"
+    },
+    "units": {
+      "meters": "m",
+      "cubicMeters": "m³",
+      "kilowatts": "kW"
+    },
+    "empty": {
+      "organizationTitle": "Aucune infrastructure organisation",
+      "organizationDescription": "Les infrastructures de l'organisation sont accessibles par toutes les fermes",
+      "farmTitle": "Aucune infrastructure pour cette ferme",
+      "farmDescription": "Ajoutez votre première infrastructure pour la ferme sélectionnée",
+      "noFarmInfrastructure": "Aucune infrastructure de ferme",
+      "selectFarmToAdd": "Sélectionnez une ferme ci-dessus pour ajouter des infrastructures spécifiques"
+    },
+    "info": {
+      "organizationTitle": "Infrastructures de l'organisation",
+      "organizationDescription": "Ces infrastructures sont partagées au niveau de l'organisation et ne sont pas liées à une ferme spécifique.",
+      "farmTitle": "Infrastructures par ferme",
+      "farmDescription": "Ces infrastructures sont spécifiques à une ferme et seront supprimées si la ferme est supprimée."
+    },
+    "modal": {
+      "addTitle": "Nouvelle Infrastructure",
+      "editTitle": "Modifier la Structure"
+    },
+    "select": "Sélectionner...",
+    "more": "autres",
+    "infrastructure": "infrastructure",
+    "infrastructure_plural": "infrastructures",
+    "messages": {
+      "createSuccess": "Structure créée avec succès",
+      "updateSuccess": "Structure mise à jour avec succès",
+      "deleteSuccess": "Structure supprimée avec succès",
+      "createError": "Échec de la création de la structure",
+      "updateError": "Échec de la mise à jour de la structure",
+      "deleteError": "Échec de la suppression de la structure",
+      "nameTypeRequired": "Nom et type sont requis",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette structure ?"
+    },
+    "actions": {
+      "new": "Nouvelle Infrastructure",
+      "add": "Ajouter une infrastructure",
+      "addButton": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "update": "Mettre à jour",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "fields": {
+      "name": "Nom",
+      "type": "Type de structure",
+      "farm": "Ferme",
+      "filterByFarm": "Filtrer par ferme",
+      "allFarms": "Toutes les fermes",
+      "installationDate": "Date d'installation",
+      "condition": "État",
+      "usage": "Utilisation",
+      "usagePlaceholder": "Ex: Stockage matériel, Élevage, etc.",
+      "width": "Largeur",
+      "length": "Longueur",
+      "height": "Hauteur",
+      "depth": "Profondeur",
+      "radius": "Rayon",
+      "topWidth": "Largeur supérieure",
+      "bottomWidth": "Largeur inférieure",
+      "shape": "Forme",
+      "volume": "Volume",
+      "calculatedVolume": "Volume calculé",
+      "dimensions": "Dimensions",
+      "constructionType": "Type de construction",
+      "equipment": "Équipements présents",
+      "equipmentHelper": "Un équipement par ligne",
+      "pumpType": "Type de pompe",
+      "pumpPower": "Puissance pompe",
+      "pump": "Pompe"
+    }
+  },
+  "parcels": {
+    "title": "Gestion des Parcelles",
+    "subtitle": "{{count}} parcelle - {{farmName}}",
+    "subtitle_plural": "{{count}} parcelles - {{farmName}}",
+    "subtitleAllFarms": "{{count}} parcelle - Toutes les fermes",
+    "subtitleAllFarms_plural": "{{count}} parcelles - Toutes les fermes",
+    "loading": "Chargement...",
+    "loadingOrganization": "Chargement de l'organisation...",
+    "farms": "Fermes",
+    "farmsIn": "Fermes dans {{orgName}}",
+    "clickToViewParcels": "Cliquer pour voir les parcelles →",
+    "allFarms": "Toutes les fermes",
+    "noParcels": "Aucune parcelle trouvée",
+    "noParcelsForFarm": "Aucune parcelle trouvée pour {{farmName}}.",
+    "selectFarmToAdd": "Veuillez sélectionner une ferme pour ajouter des parcelles.",
+    "addParcel": "Ajouter une parcelle",
+    "refresh": "Actualiser",
+    "back": "← Retour",
+    "drawOnMap": "Dessinez votre parcelle sur la carte",
+    "boundariesDefined": "✓ Limites définies",
+    "noBoundaries": "⚠ Pas de limites géographiques",
+    "defineBoundaries": "Définir les limites",
+    "viewDetails": "Voir les détails",
+    "trees": "arbres",
+    "plantedIn": "Plantés en",
+    "rootstock": "Porte-greffe",
+    "editParcel": "Modifier la parcelle",
+    "deleteParcel": "Supprimer la parcelle",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer la parcelle \"{{name}}\" ?",
+    "deleteError": "Erreur lors de la suppression de la parcelle",
+    "updateError": "Erreur lors de la mise à jour de la parcelle",
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "area": "Surface",
+      "areaUnit": "Unité",
+      "soilType": "Type de sol",
+      "soilTypePlaceholder": "ex: Argileux, Sableux...",
+      "irrigationType": "Type d'irrigation",
+      "selectIrrigation": "Sélectionner...",
+      "variety": "Variété",
+      "varietyPlaceholder": "ex: Picholine, Lucques, Arbequina...",
+      "plantingDate": "Date de plantation",
+      "plantingType": "Type de plantation",
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    },
+    "areaUnits": {
+      "hectares": "Hectares",
+      "square_meters": "m²",
+      "acres": "Acres"
+    },
+    "irrigationTypes": {
+      "drip": "Goutte-à-goutte",
+      "sprinkler": "Aspersion",
+      "flood": "Inondation",
+      "none": "Aucune"
+    },
+    "plantingTypes": {
+      "traditional": "Traditionnelle",
+      "intensive": "Intensive",
+      "super_intensive": "Super-intensive",
+      "organic": "Biologique"
+    }
+  },
+  "analysis": {
+    "title": "Analyses",
+    "tabs": {
+      "soil": "Sol",
+      "plant": "Plante",
+      "water": "Eau"
+    },
+    "types": {
+      "soil": "Analyse de Sol",
+      "plant": "Analyse de Plante",
+      "water": "Analyse d'Eau"
+    },
+    "parcel": "Parcelle",
+    "loadingParcels": "Chargement des parcelles...",
+    "allParcels": "Toutes les parcelles",
+    "analysesForParcel": "{{count}} analyse pour cette parcelle",
+    "analysesForParcel_plural": "{{count}} analyses pour cette parcelle",
+    "cardView": "Vue carte",
+    "listView": "Vue liste",
+    "selectParcelToAdd": "Sélectionnez une parcelle pour ajouter une analyse",
+    "addNewAnalysis": "Ajouter une nouvelle analyse",
+    "newAnalysis": "Nouvelle Analyse",
+    "noAnalyses": "Aucune analyse enregistrée",
+    "startByAdding": "Commencez par ajouter une nouvelle analyse {{type}}",
+    "displayingResults": "Affichage de {{from}} à {{to}} sur {{total}} analyses",
+    "alerts": {
+      "selectParcel": "Veuillez sélectionner une parcelle avant d'ajouter une analyse.",
+      "saveError": "Erreur lors de l'enregistrement de l'analyse.",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette analyse ?",
+      "deleteError": "Erreur lors de la suppression de l'analyse."
+    }
+  },
+  "tasks": {
+    "title": "Gestion des Tâches",
+    "subtitle": "Planifiez et suivez les tâches agricoles",
+    "loading": "Chargement...",
+    "list": "Liste",
+    "calendar": "Calendrier",
+    "navigation": "Navigation des tâches",
+    "stats": {
+      "pending": "En attente",
+      "inProgress": "En cours",
+      "completed": "Terminées",
+      "overdue": "En retard"
+    },
+    "listPage": {
+      "title": "Gestion des Tâches",
+      "tasksCount": "{{count}} tâche",
+      "tasksCount_plural": "{{count}} tâches",
+      "newTask": "Nouvelle tâche",
+      "searchPlaceholder": "Rechercher une tâche...",
+      "filters": {
+        "all": "Toutes",
+        "pending": "En attente",
+        "assigned": "Assignées",
+        "inProgress": "En cours",
+        "completed": "Terminées",
+        "cancelled": "Annulées",
+        "paused": "En pause",
+        "overdue": "En retard"
+      },
+      "sortBy": "Trier par",
+      "sortOptions": {
+        "scheduledStart": "Début prévu",
+        "dueDate": "Date d'échéance",
+        "priority": "Priorité",
+        "createdAt": "Date de création"
+      },
+      "progress": "Progression",
+      "empty": {
+        "title": "Aucune tâche trouvée",
+        "description": "Créez votre première tâche pour commencer"
+      },
+      "pagination": {
+        "previous": "Précédent",
+        "next": "Suivant",
+        "page": "Page {{current}} sur {{total}}",
+        "displaying": "Affichage {{from}} - {{to}} sur {{total}} tâches"
+      }
+    },
+    "calendarPage": {
+      "newTask": "Nouvelle tâche",
+      "noTasksOnDate": "Aucune tâche prévue pour cette date",
+      "tasksOnDate": "Tâches du {{date}}",
+      "selectDate": "Sélectionnez une date",
+      "clickDateToView": "Cliquez sur une date pour voir les tâches",
+      "loading": "Chargement du calendrier...",
+      "assigned": "Assigné",
+      "monthPicker": {
+        "button": "Mois",
+        "empty": "Aucun mois trouvé",
+        "search": "Rechercher un mois..."
+      }
+    }
   }
 }
 

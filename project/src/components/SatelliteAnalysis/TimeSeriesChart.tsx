@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, BarChart3, Check, Database, Satellite, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw } from 'lucide-react';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -232,12 +232,21 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     const firstValue = values[0];
     const lastValue = values[values.length - 1];
 
-    if (lastValue > firstValue) {
-      return <TrendingUp className="w-3 h-3 text-green-600" />;
-    } else if (lastValue < firstValue) {
-      return <TrendingDown className="w-3 h-3 text-red-600" />;
+    // Calculate percentage change to determine stability
+    const percentChange = firstValue !== 0
+      ? Math.abs((lastValue - firstValue) / firstValue) * 100
+      : Math.abs(lastValue - firstValue) * 100;
+
+    // Consider stable if change is less than 2%
+    const STABILITY_THRESHOLD = 2;
+
+    if (percentChange <= STABILITY_THRESHOLD) {
+      return <Minus className="w-3 h-3 text-yellow-600" title="Stable" />;
+    } else if (lastValue > firstValue) {
+      return <TrendingUp className="w-3 h-3 text-green-600" title="En hausse" />;
+    } else {
+      return <TrendingDown className="w-3 h-3 text-red-600" title="En baisse" />;
     }
-    return null;
   };
 
   const getCacheStats = () => {

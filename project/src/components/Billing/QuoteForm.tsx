@@ -242,12 +242,12 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
       }));
 
       if (isEditMode && quote?.id) {
-        // Update existing quote
+        // Update existing quote - use transformedItems with unit_price
         await updateQuote.mutateAsync({
           quoteId: quote.id,
           quoteData: {
             ...data,
-            items: data.items,
+            items: transformedItems,
           },
         });
         toast.success(t('quotes.form.success.updated', 'Quote updated successfully'));

@@ -9,7 +9,7 @@ import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';
 import ParcelsOverviewWidget from './Dashboard/ParcelsOverviewWidget';
 import StockAlertsWidget from './Dashboard/StockAlertsWidget';
 import WorkersActivityWidget from './Dashboard/WorkersActivityWidget';
-import SoilAnalysisWidget from './Dashboard/SoilAnalysisWidget';
+import AnalysisWidget from './Dashboard/AnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import { useTranslation } from 'react-i18next';
 
@@ -278,7 +278,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       // case 'parcels': handled by hardcoded ParcelsOverviewWidget
       // case 'stock': handled by hardcoded StockAlertsWidget
       // case 'workers': handled by hardcoded WorkersActivityWidget
-      // case 'soil': handled by hardcoded SoilAnalysisWidget (also has duplicate case above)
+      // case 'soil': handled by hardcoded AnalysisWidget (also has duplicate case above)
       // case 'harvests': handled by hardcoded HarvestSummaryWidget
 
       default:
@@ -305,7 +305,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       {/* Tasks and Soil Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {settings.showTaskAlerts && <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>}
-        {settings.showSoilData && <SoilAnalysisWidget />}
+        {settings.showSoilData && <AnalysisWidget />}
       </div>
 
       {/* Additional Widgets from Settings */}

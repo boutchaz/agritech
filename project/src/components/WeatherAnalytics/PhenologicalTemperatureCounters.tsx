@@ -505,6 +505,17 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     return results;
   }, [temperatureData, phenologicalStages, stageDateRanges]);
 
+  // Get the number of days in the filtered data for a stage
+  const getDaysInPeriod = (stageKey: string, stageIndex: number): number => {
+    const filteredData = getFilteredDataForStage(stageKey, stageIndex);
+    return filteredData.length;
+  };
+
+  // Calculate total possible hours for a period (for percentage calculation)
+  const getTotalPossibleHours = (stageKey: string, stageIndex: number): number => {
+    return getDaysInPeriod(stageKey, stageIndex) * 24;
+  };
+
   if (!temperatureData || temperatureData.length === 0) {
     return null;
   }
@@ -622,7 +633,10 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
               {stage.thresholds.map((threshold, thresholdIndex) => {
                 const key = `${stage.nameKey}_${threshold.nameKey}`;
                 const count = stageCounters[key] || 0;
-                const days = Math.round(count / 24);
+                const daysInPeriod = getDaysInPeriod(stageKey, stageIndex);
+                const totalPossibleHours = getTotalPossibleHours(stageKey, stageIndex);
+                const percentage = totalPossibleHours > 0 ? Math.round((count / totalPossibleHours) * 100) : 0;
+                const equivalentDays = Math.round(count / 24 * 10) / 10; // 1 decimal place
 
                 return (
                   <div
@@ -645,8 +659,15 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
                         {t('phenological.hours', 'hrs')}
                       </span>
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      ≈ {days} {t('phenological.days', 'days')}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <span>≈ {equivalentDays} {t('phenological.equivalentDays', 'jours équiv.')}</span>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <span className={`font-medium ${percentage >= 50 ? threshold.color : ''}`}>
+                        {percentage}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {t('phenological.outOf', 'sur')} {daysInPeriod} {t('phenological.daysOfData', 'jours de données')}
                     </p>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">
                       {t(threshold.nameKey, threshold.name)}

@@ -372,7 +372,7 @@ export class ReceptionBatchesService {
       .select(`
         *,
         warehouse:warehouses!warehouse_id(id, name),
-        parcel:parcels!parcel_id(id, name),
+        parcel:parcels!parcel_id(id, name, farm:farms!farm_id(id, name)),
         crop:crops!crop_id(id, name),
         harvest:harvest_records!harvest_id(id, harvest_date, quantity),
         receiver:workers!received_by(id, first_name, last_name),
@@ -437,7 +437,7 @@ export class ReceptionBatchesService {
       .select(`
         *,
         warehouse:warehouses!warehouse_id(id, name),
-        parcel:parcels!parcel_id(id, name),
+        parcel:parcels!parcel_id(id, name, farm:farms!farm_id(id, name)),
         crop:crops!crop_id(id, name),
         harvest:harvest_records!harvest_id(id, harvest_date, quantity, harvest_task_id),
         receiver:workers!received_by(id, first_name, last_name),

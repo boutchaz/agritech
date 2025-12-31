@@ -9,23 +9,16 @@ import { useStructures, useCreateStructure, useUpdateStructure, useDeleteStructu
 import type { Structure as ApiStructure, CreateStructureInput } from '../lib/api/structures';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 // Use the API Structure type
 type Structure = ApiStructure;
 
-const STRUCTURE_TYPES = [
-  { value: 'stable', label: 'Écurie' },
-  { value: 'technical_room', label: 'Local technique' },
-  { value: 'basin', label: 'Bassin' },
-  { value: 'well', label: 'Puits' }
-];
+// Structure type keys for translation lookup
+const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well'] as const;
 
-const BASIN_SHAPES = [
-  { value: 'trapezoidal', label: 'Trapézoïdal' },
-  { value: 'rectangular', label: 'Rectangulaire' },
-  { value: 'cubic', label: 'Cubique' },
-  { value: 'circular', label: 'Circulaire' }
-];
+// Basin shape keys for translation lookup
+const BASIN_SHAPE_KEYS = ['trapezoidal', 'rectangular', 'cubic', 'circular'] as const;
 
 interface Farm {
   id: string;
@@ -33,6 +26,7 @@ interface Farm {
 }
 
 const InfrastructureManagement: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
   // API hooks
@@ -150,7 +144,7 @@ const InfrastructureManagement: React.FC = () => {
         return (
           <>
             <div className="grid grid-cols-3 gap-4">
-              <FormField label="Largeur (m)" htmlFor="stable_width" required>
+              <FormField label={`${t('infrastructure.fields.width')} (${t('infrastructure.units.meters')})`} htmlFor="stable_width" required>
                 <Input
                   id="stable_width"
                   type="number"
@@ -160,7 +154,7 @@ const InfrastructureManagement: React.FC = () => {
                   required
                 />
               </FormField>
-              <FormField label="Longueur (m)" htmlFor="stable_length" required>
+              <FormField label={`${t('infrastructure.fields.length')} (${t('infrastructure.units.meters')})`} htmlFor="stable_length" required>
                 <Input
                   id="stable_length"
                   type="number"
@@ -170,7 +164,7 @@ const InfrastructureManagement: React.FC = () => {
                   required
                 />
               </FormField>
-              <FormField label="Hauteur (m)" htmlFor="stable_height" required>
+              <FormField label={`${t('infrastructure.fields.height')} (${t('infrastructure.units.meters')})`} htmlFor="stable_height" required>
                 <Input
                   id="stable_height"
                   type="number"
@@ -181,17 +175,17 @@ const InfrastructureManagement: React.FC = () => {
                 />
               </FormField>
             </div>
-            <FormField label="Type de construction" htmlFor="construction_type" required>
+            <FormField label={t('infrastructure.fields.constructionType')} htmlFor="construction_type" required>
               <Select
                 id="construction_type"
                 value={details.construction_type || ''}
                 onChange={(e) => handleStructureDetailsChange('construction_type', (e.target as HTMLSelectElement).value)}
               >
-                <option value="">Sélectionner...</option>
-                <option value="concrete">Béton</option>
-                <option value="metal">Métallique</option>
-                <option value="wood">Bois</option>
-                <option value="mixed">Mixte</option>
+                <option value="">{t('infrastructure.select')}</option>
+                <option value="concrete">{t('infrastructure.constructionTypes.concrete')}</option>
+                <option value="metal">{t('infrastructure.constructionTypes.metal')}</option>
+                <option value="wood">{t('infrastructure.constructionTypes.wood')}</option>
+                <option value="mixed">{t('infrastructure.constructionTypes.mixed')}</option>
               </Select>
             </FormField>
           </>
@@ -200,16 +194,16 @@ const InfrastructureManagement: React.FC = () => {
       case 'basin':
         return (
           <>
-            <FormField label="Forme" htmlFor="basin_shape" required>
+            <FormField label={t('infrastructure.fields.shape')} htmlFor="basin_shape" required>
               <Select
                 id="basin_shape"
                 value={details.shape || ''}
                 onChange={(e) => handleStructureDetailsChange('shape', (e.target as HTMLSelectElement).value)}
               >
-                <option value="">Sélectionner...</option>
-                {BASIN_SHAPES.map(shape => (
-                  <option key={shape.value} value={shape.value}>
-                    {shape.label}
+                <option value="">{t('infrastructure.select')}</option>
+                {BASIN_SHAPE_KEYS.map(shape => (
+                  <option key={shape} value={shape}>
+                    {t(`infrastructure.shapes.${shape}`)}
                   </option>
                 ))}
               </Select>
@@ -220,7 +214,7 @@ const InfrastructureManagement: React.FC = () => {
                 {details.shape === 'circular' ? (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Rayon (m)" htmlFor="basin_radius" required>
+                      <FormField label={`${t('infrastructure.fields.radius')} (${t('infrastructure.units.meters')})`} htmlFor="basin_radius" required>
                         <Input
                           id="basin_radius"
                           type="number"
@@ -230,7 +224,7 @@ const InfrastructureManagement: React.FC = () => {
                           required
                         />
                       </FormField>
-                      <FormField label="Hauteur (m)" htmlFor="basin_height" required>
+                      <FormField label={`${t('infrastructure.fields.height')} (${t('infrastructure.units.meters')})`} htmlFor="basin_height" required>
                         <Input
                           id="basin_height"
                           type="number"
@@ -245,7 +239,7 @@ const InfrastructureManagement: React.FC = () => {
                 ) : details.shape === 'trapezoidal' ? (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Largeur supérieure (m)" htmlFor="basin_top_width" required>
+                      <FormField label={`${t('infrastructure.fields.topWidth')} (${t('infrastructure.units.meters')})`} htmlFor="basin_top_width" required>
                         <Input
                           id="basin_top_width"
                           type="number"
@@ -255,7 +249,7 @@ const InfrastructureManagement: React.FC = () => {
                           required
                         />
                       </FormField>
-                      <FormField label="Largeur inférieure (m)" htmlFor="basin_bottom_width" required>
+                      <FormField label={`${t('infrastructure.fields.bottomWidth')} (${t('infrastructure.units.meters')})`} htmlFor="basin_bottom_width" required>
                         <Input
                           id="basin_bottom_width"
                           type="number"
@@ -267,7 +261,7 @@ const InfrastructureManagement: React.FC = () => {
                       </FormField>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Longueur (m)" htmlFor="basin_length" required>
+                      <FormField label={`${t('infrastructure.fields.length')} (${t('infrastructure.units.meters')})`} htmlFor="basin_length" required>
                         <Input
                           id="basin_length"
                           type="number"
@@ -277,7 +271,7 @@ const InfrastructureManagement: React.FC = () => {
                           required
                         />
                       </FormField>
-                      <FormField label="Hauteur (m)" htmlFor="basin_height2" required>
+                      <FormField label={`${t('infrastructure.fields.height')} (${t('infrastructure.units.meters')})`} htmlFor="basin_height2" required>
                         <Input
                           id="basin_height2"
                           type="number"
@@ -292,7 +286,7 @@ const InfrastructureManagement: React.FC = () => {
                 ) : (
                   // Rectangular or Cubic
                   <div className="grid grid-cols-3 gap-4">
-                    <FormField label="Largeur (m)" htmlFor="rect_width" required>
+                    <FormField label={`${t('infrastructure.fields.width')} (${t('infrastructure.units.meters')})`} htmlFor="rect_width" required>
                       <Input
                         id="rect_width"
                         type="number"
@@ -302,7 +296,7 @@ const InfrastructureManagement: React.FC = () => {
                         required
                       />
                     </FormField>
-                    <FormField label="Longueur (m)" htmlFor="rect_length" required>
+                    <FormField label={`${t('infrastructure.fields.length')} (${t('infrastructure.units.meters')})`} htmlFor="rect_length" required>
                       <Input
                         id="rect_length"
                         type="number"
@@ -312,7 +306,7 @@ const InfrastructureManagement: React.FC = () => {
                         required
                       />
                     </FormField>
-                    <FormField label="Hauteur (m)" htmlFor="rect_height" required>
+                    <FormField label={`${t('infrastructure.fields.height')} (${t('infrastructure.units.meters')})`} htmlFor="rect_height" required>
                       <Input
                         id="rect_height"
                         type="number"
@@ -327,10 +321,10 @@ const InfrastructureManagement: React.FC = () => {
 
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Volume calculé
+                    {t('infrastructure.fields.calculatedVolume')}
                   </label>
                   <div className="mt-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-                    {details.volume?.toFixed(2) || 0} m³
+                    {details.volume?.toFixed(2) || 0} {t('infrastructure.units.cubicMeters')}
                   </div>
                 </div>
               </div>
@@ -342,53 +336,44 @@ const InfrastructureManagement: React.FC = () => {
         return (
           <>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Largeur (m)
-                </label>
-                <input
+              <FormField label={`${t('infrastructure.fields.width')} (${t('infrastructure.units.meters')})`} htmlFor="tech_width" required>
+                <Input
+                  id="tech_width"
                   type="number"
                   step="0.1"
                   value={details.width || ''}
                   onChange={(e) => handleStructureDetailsChange('width', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Longueur (m)
-                </label>
-                <input
+              </FormField>
+              <FormField label={`${t('infrastructure.fields.length')} (${t('infrastructure.units.meters')})`} htmlFor="tech_length" required>
+                <Input
+                  id="tech_length"
                   type="number"
                   step="0.1"
                   value={details.length || ''}
                   onChange={(e) => handleStructureDetailsChange('length', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Hauteur (m)
-                </label>
-                <input
+              </FormField>
+              <FormField label={`${t('infrastructure.fields.height')} (${t('infrastructure.units.meters')})`} htmlFor="tech_height" required>
+                <Input
+                  id="tech_height"
                   type="number"
                   step="0.1"
                   value={details.height || ''}
                   onChange={(e) => handleStructureDetailsChange('height', Number(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
                 />
-              </div>
+              </FormField>
             </div>
-            <FormField label="Équipements présents" htmlFor="tech_equipment" helper="Un équipement par ligne">
+            <FormField label={t('infrastructure.fields.equipment')} htmlFor="tech_equipment" helper={t('infrastructure.fields.equipmentHelper')}>
               <Textarea
                 id="tech_equipment"
                 value={details.equipment?.join('\n') || ''}
                 onChange={(e) => handleStructureDetailsChange('equipment', e.target.value.split('\n').filter(Boolean))}
                 rows={4}
-                placeholder="Un équipement par ligne"
+                placeholder={t('infrastructure.fields.equipmentHelper')}
               />
             </FormField>
           </>
@@ -398,7 +383,7 @@ const InfrastructureManagement: React.FC = () => {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="Profondeur (m)" htmlFor="well_depth" required>
+              <FormField label={`${t('infrastructure.fields.depth')} (${t('infrastructure.units.meters')})`} htmlFor="well_depth" required>
                 <Input
                   id="well_depth"
                   type="number"
@@ -408,34 +393,34 @@ const InfrastructureManagement: React.FC = () => {
                   required
                 />
               </FormField>
-              <FormField label="État" htmlFor="well_condition" required>
+              <FormField label={t('infrastructure.fields.condition')} htmlFor="well_condition" required>
                 <Select
                   id="well_condition"
                   value={details.condition || ''}
                   onChange={(e) => handleStructureDetailsChange('condition', (e.target as HTMLSelectElement).value)}
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="excellent">Excellent</option>
-                  <option value="good">Bon</option>
-                  <option value="fair">Moyen</option>
-                  <option value="poor">Mauvais</option>
+                  <option value="">{t('infrastructure.select')}</option>
+                  <option value="excellent">{t('infrastructure.conditions.excellent')}</option>
+                  <option value="good">{t('infrastructure.conditions.good')}</option>
+                  <option value="fair">{t('infrastructure.conditions.fair')}</option>
+                  <option value="poor">{t('infrastructure.conditions.poor')}</option>
                 </Select>
               </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="Type de pompe" htmlFor="well_pump_type" required>
+              <FormField label={t('infrastructure.fields.pumpType')} htmlFor="well_pump_type" required>
                 <Select
                   id="well_pump_type"
                   value={details.pump_type || ''}
                   onChange={(e) => handleStructureDetailsChange('pump_type', (e.target as HTMLSelectElement).value)}
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="submersible">Pompe immergée</option>
-                  <option value="surface">Pompe de surface</option>
-                  <option value="manual">Pompe manuelle</option>
+                  <option value="">{t('infrastructure.select')}</option>
+                  <option value="submersible">{t('infrastructure.pumpTypes.submersible')}</option>
+                  <option value="surface">{t('infrastructure.pumpTypes.surface')}</option>
+                  <option value="manual">{t('infrastructure.pumpTypes.manual')}</option>
                 </Select>
               </FormField>
-              <FormField label="Puissance pompe (kW)" htmlFor="well_pump_power" required>
+              <FormField label={`${t('infrastructure.fields.pumpPower')} (${t('infrastructure.units.kilowatts')})`} htmlFor="well_pump_power" required>
                 <Input
                   id="well_pump_power"
                   type="number"
@@ -453,7 +438,7 @@ const InfrastructureManagement: React.FC = () => {
 
   const handleAddStructure = async () => {
     if (!newStructure.name || !newStructure.type) {
-      toast.error('Nom et type sont requis');
+      toast.error(t('infrastructure.messages.nameTypeRequired'));
       return;
     }
 
@@ -479,10 +464,10 @@ const InfrastructureManagement: React.FC = () => {
         usage: '',
         structure_details: {}
       });
-      toast.success('Structure créée avec succès');
+      toast.success(t('infrastructure.messages.createSuccess'));
     } catch (error) {
       console.error('Error adding structure:', error);
-      toast.error('Échec de la création de la structure');
+      toast.error(t('infrastructure.messages.createError'));
     }
   };
 
@@ -490,29 +475,29 @@ const InfrastructureManagement: React.FC = () => {
     if (!editingStructure) return;
 
     try {
-       
+
       const { id: _id, created_at: _created, updated_at: _updated, organization_id: _orgId, farm: _farm, ...updateData } = editingStructure;
       await updateStructure.mutateAsync({
         id: editingStructure.id,
         data: updateData
       });
       setEditingStructure(null);
-      toast.success('Structure mise à jour avec succès');
+      toast.success(t('infrastructure.messages.updateSuccess'));
     } catch (error) {
       console.error('Error updating structure:', error);
-      toast.error('Échec de la mise à jour de la structure');
+      toast.error(t('infrastructure.messages.updateError'));
     }
   };
 
   const handleDeleteStructure = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette structure ?')) return;
+    if (!confirm(t('infrastructure.messages.deleteConfirm'))) return;
 
     try {
       await deleteStructure.mutateAsync(id);
-      toast.success('Structure supprimée avec succès');
+      toast.success(t('infrastructure.messages.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting structure:', error);
-      toast.error('Échec de la suppression de la structure');
+      toast.error(t('infrastructure.messages.deleteError'));
     }
   };
 
@@ -538,7 +523,7 @@ const InfrastructureManagement: React.FC = () => {
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{structure.name}</h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              {STRUCTURE_TYPES.find(t => t.value === structure.type)?.label}
+              {t(`infrastructure.types.${structure.type}`)}
             </p>
             {structure.farm && (
               <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
@@ -552,14 +537,14 @@ const InfrastructureManagement: React.FC = () => {
           <button
             onClick={() => setEditingStructure(structure)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Modifier"
+            aria-label={t('infrastructure.actions.edit')}
           >
             <Edit2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
           <button
             onClick={() => handleDeleteStructure(structure.id)}
             className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            aria-label="Supprimer"
+            aria-label={t('infrastructure.actions.delete')}
           >
             <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
@@ -568,23 +553,23 @@ const InfrastructureManagement: React.FC = () => {
 
       <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
         <div className="flex justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Installation</span>
+          <span className="text-gray-500 dark:text-gray-400">{t('infrastructure.fields.installationDate')}</span>
           <span>{new Date(structure.installation_date).toLocaleDateString()}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-500 dark:text-gray-400">État</span>
+          <span className="text-gray-500 dark:text-gray-400">{t('infrastructure.fields.condition')}</span>
           <span className={`px-2 py-0.5 rounded-full text-xs ${
             structure.condition === 'excellent' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
             structure.condition === 'good' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
             structure.condition === 'fair' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
             'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}>
-            {structure.condition}
+            {t(`infrastructure.conditions.${structure.condition}`)}
           </span>
         </div>
         {structure.usage && (
           <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400">Utilisation</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('infrastructure.fields.usage')}</span>
             <span className="text-right">{structure.usage}</span>
           </div>
         )}
@@ -593,10 +578,10 @@ const InfrastructureManagement: React.FC = () => {
         {structure.type === 'stable' && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm">
-              <span className="text-gray-500">Dimensions:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
+              <span className="text-gray-500">{t('infrastructure.fields.dimensions')}:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
             </p>
             <p className="text-sm">
-              <span className="text-gray-500">Construction:</span> {structure.structure_details.construction_type}
+              <span className="text-gray-500">{t('infrastructure.fields.constructionType')}:</span> {t(`infrastructure.constructionTypes.${structure.structure_details.construction_type}`)}
             </p>
           </div>
         )}
@@ -604,10 +589,10 @@ const InfrastructureManagement: React.FC = () => {
         {structure.type === 'basin' && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm">
-              <span className="text-gray-500">Forme:</span> {BASIN_SHAPES.find(s => s.value === structure.structure_details.shape)?.label}
+              <span className="text-gray-500">{t('infrastructure.fields.shape')}:</span> {t(`infrastructure.shapes.${structure.structure_details.shape}`)}
             </p>
             <p className="text-sm">
-              <span className="text-gray-500">Volume:</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{structure.structure_details.volume?.toFixed(2)} m³</span>
+              <span className="text-gray-500">{t('infrastructure.fields.volume')}:</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{structure.structure_details.volume?.toFixed(2)} {t('infrastructure.units.cubicMeters')}</span>
             </p>
           </div>
         )}
@@ -615,17 +600,17 @@ const InfrastructureManagement: React.FC = () => {
         {structure.type === 'technical_room' && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm">
-              <span className="text-gray-500">Dimensions:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
+              <span className="text-gray-500">{t('infrastructure.fields.dimensions')}:</span> {structure.structure_details.width}m × {structure.structure_details.length}m × {structure.structure_details.height}m
             </p>
             {structure.structure_details.equipment && structure.structure_details.equipment.length > 0 && (
               <div className="mt-2">
-                <p className="font-medium text-xs text-gray-500 mb-1">Équipements:</p>
+                <p className="font-medium text-xs text-gray-500 mb-1">{t('infrastructure.fields.equipment')}:</p>
                 <ul className="list-disc list-inside text-xs space-y-0.5">
-                  {structure.structure_details.equipment.slice(0, 3).map((item, index) => (
+                  {structure.structure_details.equipment.slice(0, 3).map((item: string, index: number) => (
                     <li key={index}>{item}</li>
                   ))}
                   {structure.structure_details.equipment.length > 3 && (
-                    <li className="text-gray-400">+{structure.structure_details.equipment.length - 3} autres...</li>
+                    <li className="text-gray-400">+{structure.structure_details.equipment.length - 3} {t('infrastructure.more')}...</li>
                   )}
                 </ul>
               </div>
@@ -636,10 +621,10 @@ const InfrastructureManagement: React.FC = () => {
         {structure.type === 'well' && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm">
-              <span className="text-gray-500">Profondeur:</span> {structure.structure_details.depth}m
+              <span className="text-gray-500">{t('infrastructure.fields.depth')}:</span> {structure.structure_details.depth}m
             </p>
             <p className="text-sm">
-              <span className="text-gray-500">Pompe:</span> {structure.structure_details.pump_type} ({structure.structure_details.pump_power} kW)
+              <span className="text-gray-500">{t('infrastructure.fields.pump')}:</span> {t(`infrastructure.pumpTypes.${structure.structure_details.pump_type}`)} ({structure.structure_details.pump_power} kW)
             </p>
           </div>
         )}
@@ -661,10 +646,10 @@ const InfrastructureManagement: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="hidden sm:block">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Gestion des Infrastructures
+            {t('infrastructure.title')}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gérez vos infrastructures au niveau organisation ou ferme
+            {t('infrastructure.subtitle')}
           </p>
         </div>
         <button
@@ -673,7 +658,7 @@ const InfrastructureManagement: React.FC = () => {
           className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
-          <span className="font-medium">Nouvelle Infrastructure</span>
+          <span className="font-medium">{t('infrastructure.actions.new')}</span>
         </button>
       </div>
 
@@ -698,7 +683,7 @@ const InfrastructureManagement: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Building className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span>Organisation</span>
+              <span>{t('infrastructure.tabs.organization')}</span>
               <span className="py-0.5 px-1.5 sm:px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {organizationStructures.length}
               </span>
@@ -716,7 +701,7 @@ const InfrastructureManagement: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span>Par Ferme</span>
+              <span>{t('infrastructure.tabs.byFarm')}</span>
               <span className="py-0.5 px-1.5 sm:px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {allFarmStructures.length}
               </span>
@@ -732,9 +717,9 @@ const InfrastructureManagement: React.FC = () => {
             <div className="flex items-start gap-3">
               <Building className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div>
-                <h3 className="font-medium text-blue-900 dark:text-blue-300">Infrastructures de l'organisation</h3>
+                <h3 className="font-medium text-blue-900 dark:text-blue-300">{t('infrastructure.info.organizationTitle')}</h3>
                 <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                  Ces infrastructures sont partagées au niveau de l'organisation et ne sont pas liées à une ferme spécifique.
+                  {t('infrastructure.info.organizationDescription')}
                 </p>
               </div>
             </div>
@@ -744,10 +729,10 @@ const InfrastructureManagement: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
               <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Aucune infrastructure organisation
+                {t('infrastructure.empty.organizationTitle')}
               </h3>
               <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
-                Les infrastructures de l'organisation sont accessibles par toutes les fermes
+                {t('infrastructure.empty.organizationDescription')}
               </p>
               <button
                 onClick={() => {
@@ -757,7 +742,7 @@ const InfrastructureManagement: React.FC = () => {
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 <Plus className="h-5 w-5" />
-                <span>Ajouter une infrastructure</span>
+                <span>{t('infrastructure.actions.add')}</span>
               </button>
             </div>
           ) : (
@@ -775,9 +760,9 @@ const InfrastructureManagement: React.FC = () => {
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-medium text-green-900 dark:text-green-300">Infrastructures par ferme</h3>
+                <h3 className="font-medium text-green-900 dark:text-green-300">{t('infrastructure.info.farmTitle')}</h3>
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                  Ces infrastructures sont spécifiques à une ferme et seront supprimées si la ferme est supprimée.
+                  {t('infrastructure.info.farmDescription')}
                 </p>
               </div>
             </div>
@@ -787,14 +772,14 @@ const InfrastructureManagement: React.FC = () => {
           {farms.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filtrer par ferme
+                {t('infrastructure.fields.filterByFarm')}
               </label>
               <select
                 value={selectedFarmId || ''}
                 onChange={(e) => setSelectedFarmId(e.target.value || null)}
                 className="w-full md:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                <option value="">Toutes les fermes</option>
+                <option value="">{t('infrastructure.fields.allFarms')}</option>
                 {farms.map(farm => (
                   <option key={farm.id} value={farm.id}>
                     {farm.name}
@@ -811,10 +796,10 @@ const InfrastructureManagement: React.FC = () => {
               <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
                 <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Aucune infrastructure pour cette ferme
+                  {t('infrastructure.empty.farmTitle')}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
-                  Ajoutez votre première infrastructure pour la ferme sélectionnée
+                  {t('infrastructure.empty.farmDescription')}
                 </p>
                 <button
                   onClick={() => {
@@ -824,7 +809,7 @@ const InfrastructureManagement: React.FC = () => {
                   className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >
                   <Plus className="h-5 w-5" />
-                  <span>Ajouter une infrastructure</span>
+                  <span>{t('infrastructure.actions.add')}</span>
                 </button>
               </div>
             ) : (
@@ -838,10 +823,10 @@ const InfrastructureManagement: React.FC = () => {
               <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
                 <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Aucune infrastructure de ferme
+                  {t('infrastructure.empty.noFarmInfrastructure')}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
-                  Sélectionnez une ferme ci-dessus pour ajouter des infrastructures spécifiques
+                  {t('infrastructure.empty.selectFarmToAdd')}
                 </p>
               </div>
             ) : (
@@ -854,7 +839,7 @@ const InfrastructureManagement: React.FC = () => {
                         <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{farm.name}</h3>
                         <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                          {farmStructuresForFarm.length} infrastructure{farmStructuresForFarm.length > 1 ? 's' : ''}
+                          {farmStructuresForFarm.length} {t('infrastructure.infrastructure', { count: farmStructuresForFarm.length })}
                         </span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -875,7 +860,7 @@ const InfrastructureManagement: React.FC = () => {
           <div className="modal-panel p-4 sm:p-6 max-w-full sm:max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700 mb-4">
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
-                {editingStructure ? 'Modifier la Structure' : 'Nouvelle Infrastructure'}
+                {editingStructure ? t('infrastructure.modal.editTitle') : t('infrastructure.modal.addTitle')}
               </h3>
               <button
                 onClick={() => {
@@ -883,14 +868,14 @@ const InfrastructureManagement: React.FC = () => {
                   setEditingStructure(null);
                 }}
                 className="text-gray-400 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label="Fermer"
+                aria-label={t('infrastructure.actions.close')}
               >
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <FormField label="Nom" htmlFor="struct_name" required>
+              <FormField label={t('infrastructure.fields.name')} htmlFor="struct_name" required>
                 <Input
                   id="struct_name"
                   type="text"
@@ -912,7 +897,7 @@ const InfrastructureManagement: React.FC = () => {
                 />
               </FormField>
 
-              <FormField label="Niveau d'affectation" htmlFor="struct_scope" required>
+              <FormField label={t('infrastructure.scope.label')} htmlFor="struct_scope" required>
                 <div className="space-y-2">
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -922,7 +907,7 @@ const InfrastructureManagement: React.FC = () => {
                         onChange={() => setActiveTab('organization')}
                         className="text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Organisation</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('infrastructure.scope.organization')}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -931,26 +916,26 @@ const InfrastructureManagement: React.FC = () => {
                         onChange={() => setActiveTab('farm')}
                         className="text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Ferme spécifique</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('infrastructure.scope.specificFarm')}</span>
                     </label>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {activeTab === 'organization'
-                      ? 'Accessible par toutes les fermes de l\'organisation'
-                      : 'Liée à une ferme spécifique et supprimée avec elle'}
+                      ? t('infrastructure.scope.organizationHint')
+                      : t('infrastructure.scope.farmHint')}
                   </p>
                 </div>
               </FormField>
 
               {(activeTab === 'farm' || editingStructure?.farm_id) && farms.length > 0 && (
-                <FormField label="Ferme" htmlFor="struct_farm" required>
+                <FormField label={t('infrastructure.fields.farm')} htmlFor="struct_farm" required>
                   <Select
                     id="struct_farm"
                     value={selectedFarmId || editingStructure?.farm_id || ''}
                     onChange={(e) => setSelectedFarmId(e.target.value)}
                     required
                   >
-                    <option value="">Sélectionner une ferme</option>
+                    <option value="">{t('infrastructure.select')}</option>
                     {farms.map(farm => (
                       <option key={farm.id} value={farm.id}>
                         {farm.name}
@@ -960,7 +945,7 @@ const InfrastructureManagement: React.FC = () => {
                 </FormField>
               )}
 
-              <FormField label="Type de structure" htmlFor="struct_type" required>
+              <FormField label={t('infrastructure.fields.type')} htmlFor="struct_type" required>
                 <Select
                   id="struct_type"
                   value={editingStructure?.type || newStructure.type}
@@ -982,15 +967,15 @@ const InfrastructureManagement: React.FC = () => {
                   }}
                   required
                 >
-                  {STRUCTURE_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
+                  {STRUCTURE_TYPE_KEYS.map(typeKey => (
+                    <option key={typeKey} value={typeKey}>
+                      {t(`infrastructure.types.${typeKey}`)}
                     </option>
                   ))}
                 </Select>
               </FormField>
 
-              <FormField label="Date d'installation" htmlFor="struct_installation" required>
+              <FormField label={t('infrastructure.fields.installationDate')} htmlFor="struct_installation" required>
                 <Input
                   id="struct_installation"
                   type="date"
@@ -1012,7 +997,7 @@ const InfrastructureManagement: React.FC = () => {
                 />
               </FormField>
 
-              <FormField label="Utilisation" htmlFor="struct_usage">
+              <FormField label={t('infrastructure.fields.usage')} htmlFor="struct_usage">
                 <Input
                   id="struct_usage"
                   type="text"
@@ -1030,7 +1015,7 @@ const InfrastructureManagement: React.FC = () => {
                       });
                     }
                   }}
-                  placeholder="Ex: Stockage matériel, Élevage, etc."
+                  placeholder={t('infrastructure.fields.usagePlaceholder')}
                 />
               </FormField>
 
@@ -1046,13 +1031,13 @@ const InfrastructureManagement: React.FC = () => {
                 }}
                 className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Annuler
+                {t('infrastructure.actions.cancel')}
               </button>
               <button
                 onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
                 className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
               >
-                {editingStructure ? 'Mettre à jour' : 'Ajouter'}
+                {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
               </button>
             </div>
           </div>

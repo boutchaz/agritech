@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { AnalysisType } from '../types/analysis';
 import { Select } from './ui/Select';
@@ -15,16 +16,16 @@ const ITEMS_PER_PAGE = 6;
 // Parcel interface removed - using the type from useParcels hook instead
 
 const AnalysisPage: React.FC = () => {
-  const { currentFarm } = useAuth();
+  const { t } = useTranslation('common');
+  const { currentFarm, currentOrganization } = useAuth();
   const [activeTab, setActiveTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
-  // Use TanStack Query hooks
-  const { data: analyses = [], isLoading: loading, error } = useAnalysesByFarm(currentFarm?.id, activeTab);
-  const { data: parcels = [], isLoading: loadingParcels } = useParcels(currentFarm?.id);
+  const { data: analyses = [], isLoading: loading, error } = useAnalysesByFarm(currentFarm?.id, activeTab, currentOrganization?.id);
+  const { data: parcels = [], isLoading: loadingParcels } = useParcels(currentFarm?.id, currentOrganization?.id);
   const addAnalysisMutation = useAddAnalysis();
   const deleteAnalysisMutation = useDeleteAnalysis();
 
@@ -51,12 +52,11 @@ const AnalysisPage: React.FC = () => {
 
   const handleSaveSoil = async (values: SoilAnalysisFormValues) => {
     if (!selectedParcelId) {
-      alert('Veuillez sélectionner une parcelle avant d\'ajouter une analyse.');
+      alert(t('analysis.alerts.selectParcel'));
       return;
     }
 
     try {
-      // Extract general info from form values
       const { analysisDate, laboratory, notes, ...data } = values;
 
       await addAnalysisMutation.mutateAsync({
@@ -71,12 +71,12 @@ const AnalysisPage: React.FC = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Error saving analysis:', err);
-      alert('Erreur lors de l\'enregistrement de l\'analyse.');
+      alert(t('analysis.alerts.saveError'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette analyse ?')) {
+    if (!confirm(t('analysis.alerts.deleteConfirm'))) {
       return;
     }
 
@@ -84,14 +84,14 @@ const AnalysisPage: React.FC = () => {
       await deleteAnalysisMutation.mutateAsync(id);
     } catch (err) {
       console.error('Error deleting analysis:', err);
-      alert('Erreur lors de la suppression de l\'analyse.');
+      alert(t('analysis.alerts.deleteError'));
     }
   };
 
   const tabs = [
-    { id: 'soil' as AnalysisType, label: 'Sol', icon: Beaker },
-    { id: 'plant' as AnalysisType, label: 'Plante', icon: Leaf },
-    { id: 'water' as AnalysisType, label: 'Eau', icon: Droplet }
+    { id: 'soil' as AnalysisType, labelKey: 'analysis.tabs.soil', icon: Beaker },
+    { id: 'plant' as AnalysisType, labelKey: 'analysis.tabs.plant', icon: Leaf },
+    { id: 'water' as AnalysisType, labelKey: 'analysis.tabs.water', icon: Droplet }
   ];
 
   if (loading) {
@@ -163,7 +163,7 @@ const AnalysisPage: React.FC = () => {
                 }`}
               >
                 <Icon className="h-5 w-5" />
-                <span>Analyse {tab.label}</span>
+                <span>{t(`analysis.types.${tab.id}`)}</span>
               </button>
             );
           })}
@@ -175,13 +175,13 @@ const AnalysisPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="font-medium text-sm sm:text-base">Parcelle :</span>
+            <span className="font-medium text-sm sm:text-base">{t('analysis.parcel')} :</span>
           </div>
           <div className="flex-1 w-full sm:w-auto">
             {loadingParcels ? (
               <div className="flex items-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-gray-500 text-sm">Chargement des parcelles...</span>
+                <span className="text-gray-500 text-sm">{t('analysis.loadingParcels')}</span>
               </div>
             ) : (
               <Select
@@ -189,7 +189,7 @@ const AnalysisPage: React.FC = () => {
                 onChange={(e) => setSelectedParcelId((e.target as HTMLSelectElement).value || null)}
                 className="w-full sm:max-w-md text-sm"
               >
-                <option value="">Toutes les parcelles</option>
+                <option value="">{t('analysis.allParcels')}</option>
                 {parcels.map(parcel => (
                   <option key={parcel.id} value={parcel.id}>
                     {parcel.name} {parcel.area && `(${parcel.area} ${parcel.area_unit})`}
@@ -200,7 +200,7 @@ const AnalysisPage: React.FC = () => {
           </div>
           {selectedParcelId && (
             <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto">
-              {filteredAnalyses.length} analyse(s) pour cette parcelle
+              {t('analysis.analysesForParcel', { count: filteredAnalyses.length })}
             </div>
           )}
         </div>
@@ -208,21 +208,21 @@ const AnalysisPage: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          Analyses {activeTab === 'soil' ? 'de Sol' : activeTab === 'plant' ? 'de Plante' : 'd\'Eau'}
+          {t(`analysis.types.${activeTab}`)}
         </h2>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setViewMode('card')}
               className={`p-2 rounded ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title="Vue carte"
+              title={t('analysis.cardView')}
             >
               <Grid className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </button>
             <button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title="Vue liste"
+              title={t('analysis.listView')}
             >
               <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </button>
@@ -231,10 +231,10 @@ const AnalysisPage: React.FC = () => {
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
             className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            title={!selectedParcelId ? 'Sélectionnez une parcelle pour ajouter une analyse' : 'Ajouter une nouvelle analyse'}
+            title={!selectedParcelId ? t('analysis.selectParcelToAdd') : t('analysis.addNewAnalysis')}
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouvelle Analyse</span>
+            <span>{t('analysis.newAnalysis')}</span>
           </button>
         </div>
       </div>
@@ -243,10 +243,10 @@ const AnalysisPage: React.FC = () => {
         <div className="text-center py-12">
           <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune analyse enregistrée
+            {t('analysis.noAnalyses')}
           </h3>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-            Commencez par ajouter une nouvelle analyse {activeTab === 'soil' ? 'de sol' : activeTab === 'plant' ? 'de plante' : 'd\'eau'}
+            {t('analysis.startByAdding', { type: t(`analysis.tabs.${activeTab}`).toLowerCase() })}
           </p>
         </div>
       ) : (
@@ -266,9 +266,11 @@ const AnalysisPage: React.FC = () => {
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6">
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-                Affichage de {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à{' '}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredAnalyses.length)} sur{' '}
-                {filteredAnalyses.length} analyses
+                {t('analysis.displayingResults', {
+                  from: ((currentPage - 1) * ITEMS_PER_PAGE) + 1,
+                  to: Math.min(currentPage * ITEMS_PER_PAGE, filteredAnalyses.length),
+                  total: filteredAnalyses.length
+                })}
               </p>
               <div className="flex items-center space-x-2">
                 <button

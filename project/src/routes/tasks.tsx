@@ -7,6 +7,7 @@ import ModernPageHeader from '../components/ModernPageHeader';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { cn } from '../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 const mockModules: Module[] = [
   {
@@ -21,6 +22,7 @@ const mockModules: Module[] = [
 ];
 
 function TasksLayout() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const location = useLocation();
   const [activeModule, setActiveModule] = useState('tasks');
@@ -37,15 +39,15 @@ function TasksLayout() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('tasks.loading')}</p>
         </div>
       </div>
     );
   }
 
   const navItems = [
-    { to: '/tasks', label: 'Liste', icon: CheckSquare, tourId: undefined },
-    { to: '/tasks/calendar', label: 'Calendrier', icon: Calendar, tourId: 'task-calendar' },
+    { to: '/tasks', label: t('tasks.list'), icon: CheckSquare, tourId: undefined },
+    { to: '/tasks/calendar', label: t('tasks.calendar'), icon: Calendar, tourId: 'task-calendar' },
   ];
 
   return (
@@ -61,16 +63,16 @@ function TasksLayout() {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: CheckSquare, label: 'Tâches', isActive: true }
+            { icon: CheckSquare, label: t('nav.tasks'), isActive: true }
           ]}
-          title="Gestion des Tâches"
-          subtitle="Planifiez et suivez les tâches agricoles"
+          title={t('tasks.title')}
+          subtitle={t('tasks.subtitle')}
         />
 
         <div className="p-3 sm:p-4 lg:p-6">
           {/* Navigation Tabs */}
           <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-8" aria-label="Tasks navigation">
+            <nav className="flex space-x-8" aria-label={t('tasks.navigation')}>
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;

@@ -45,8 +45,17 @@ const OrganizationSwitcher: React.FC = () => {
       const windowWidth = window.innerWidth;
       const dropdownWidth = 320; // w-80 = 20rem = 320px
 
-      // Check if dropdown would overflow on the right
-      if (buttonRect.left + dropdownWidth > windowWidth - 20) {
+      // Check available space on both sides
+      const spaceOnRight = windowWidth - buttonRect.left;
+      const spaceOnLeft = buttonRect.right;
+
+      // If button is on the right half of the screen, align dropdown to right edge
+      // Otherwise align to left edge, but only if it fits
+      if (buttonRect.left > windowWidth / 2) {
+        // Button is on the right side - align dropdown to right
+        setDropdownPosition('right');
+      } else if (buttonRect.left + dropdownWidth > windowWidth - 20) {
+        // Button is on left but dropdown would overflow - align to right if possible
         setDropdownPosition('right');
       } else {
         setDropdownPosition('left');
@@ -107,6 +116,7 @@ const OrganizationSwitcher: React.FC = () => {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
+        data-tour="user-menu"
         className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -130,7 +140,7 @@ const OrganizationSwitcher: React.FC = () => {
           dropdownPosition === 'right' ? 'right-0' : 'left-0'
         }`}>
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700" data-tour="user-menu">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">

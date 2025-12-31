@@ -105,6 +105,18 @@ export function useOnboardingPersistence(userId: string, email: string) {
   const [state, setState] = useState<OnboardingState>(() => getDefaultState(userId, email));
   const [isRestored, setIsRestored] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStateRef = useRef<OnboardingState | null>(null);
+
+  // Immediate save function (bypasses debounce)
+  const saveImmediately = useCallback(() => {
+    if (pendingStateRef.current) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingStateRef.current));
+      } catch (err) {
+        console.error('Failed to save onboarding state immediately:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -134,19 +146,23 @@ export function useOnboardingPersistence(userId: string, email: string) {
   const saveState = useCallback((newState: Partial<OnboardingState>) => {
     setState(prev => {
       const updated = { ...prev, ...newState, lastSavedAt: Date.now() };
-      
+
+      // Store pending state for immediate save on visibility change
+      pendingStateRef.current = updated;
+
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      
+
       saveTimeoutRef.current = setTimeout(() => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          pendingStateRef.current = null; // Clear pending after successful save
         } catch (err) {
           console.error('Failed to save onboarding state:', err);
         }
       }, 100);
-      
+
       return updated;
     });
   }, []);
@@ -188,13 +204,31 @@ export function useOnboardingPersistence(userId: string, email: string) {
     saveState({ existingOrgId: orgId });
   }, [saveState]);
 
+  // Save immediately when tab becomes hidden or page is about to unload
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveImmediately();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveImmediately();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Flush pending save on unmount
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      saveImmediately();
     };
-  }, []);
+  }, [saveImmediately]);
 
   return {
     state,

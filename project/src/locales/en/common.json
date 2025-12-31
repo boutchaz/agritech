@@ -1986,5 +1986,288 @@
       "refreshData": "Refresh data",
       "showTemperature": "Show temperature at satellite pass time (11h)"
     }
+  },
+  "infrastructure": {
+    "title": "Infrastructure Management",
+    "subtitle": "Manage your infrastructure at organization or farm level",
+    "addNew": "New Infrastructure",
+    "edit": "Edit Structure",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this structure?",
+    "tabs": {
+      "organization": "Organization",
+      "farm": "By Farm"
+    },
+    "scope": {
+      "label": "Assignment Level",
+      "organization": "Organization",
+      "farm": "Specific Farm",
+      "organizationHint": "Accessible by all farms in the organization",
+      "farmHint": "Linked to a specific farm and deleted with it"
+    },
+    "types": {
+      "stable": "Stable",
+      "technical_room": "Technical Room",
+      "basin": "Basin",
+      "well": "Well"
+    },
+    "shapes": {
+      "trapezoidal": "Trapezoidal",
+      "rectangular": "Rectangular",
+      "cubic": "Cubic",
+      "circular": "Circular"
+    },
+    "conditions": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor"
+    },
+    "constructionTypes": {
+      "concrete": "Concrete",
+      "metal": "Metal",
+      "wood": "Wood",
+      "mixed": "Mixed"
+    },
+    "pumpTypes": {
+      "submersible": "Submersible Pump",
+      "surface": "Surface Pump",
+      "manual": "Manual Pump"
+    },
+    "units": {
+      "meters": "m",
+      "cubicMeters": "m³",
+      "kilowatts": "kW"
+    },
+    "empty": {
+      "organizationTitle": "No organization infrastructure",
+      "organizationDescription": "Organization infrastructure is accessible by all farms",
+      "farmTitle": "No infrastructure for this farm",
+      "farmDescription": "Add your first infrastructure for the selected farm",
+      "noFarmInfrastructure": "No farm infrastructure",
+      "selectFarmToAdd": "Select a farm above to add specific infrastructure"
+    },
+    "info": {
+      "organizationTitle": "Organization Infrastructure",
+      "organizationDescription": "These infrastructures are shared at the organization level and are not linked to a specific farm.",
+      "farmTitle": "Farm Infrastructure",
+      "farmDescription": "These infrastructures are specific to a farm and will be deleted if the farm is deleted."
+    },
+    "modal": {
+      "addTitle": "New Infrastructure",
+      "editTitle": "Edit Structure"
+    },
+    "select": "Select...",
+    "more": "more",
+    "infrastructure": "infrastructure",
+    "infrastructure_plural": "infrastructures",
+    "messages": {
+      "createSuccess": "Structure created successfully",
+      "updateSuccess": "Structure updated successfully",
+      "deleteSuccess": "Structure deleted successfully",
+      "createError": "Failed to create structure",
+      "updateError": "Failed to update structure",
+      "deleteError": "Failed to delete structure",
+      "nameTypeRequired": "Name and type are required",
+      "deleteConfirm": "Are you sure you want to delete this structure?"
+    },
+    "actions": {
+      "new": "New Infrastructure",
+      "add": "Add an infrastructure",
+      "addButton": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "update": "Update",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Structure Type",
+      "farm": "Farm",
+      "filterByFarm": "Filter by farm",
+      "allFarms": "All farms",
+      "installationDate": "Installation Date",
+      "condition": "Condition",
+      "usage": "Usage",
+      "usagePlaceholder": "Ex: Equipment storage, Livestock, etc.",
+      "width": "Width",
+      "length": "Length",
+      "height": "Height",
+      "depth": "Depth",
+      "radius": "Radius",
+      "topWidth": "Top Width",
+      "bottomWidth": "Bottom Width",
+      "shape": "Shape",
+      "volume": "Volume",
+      "calculatedVolume": "Calculated Volume",
+      "dimensions": "Dimensions",
+      "constructionType": "Construction Type",
+      "equipment": "Equipment Present",
+      "equipmentHelper": "One equipment per line",
+      "pumpType": "Pump Type",
+      "pumpPower": "Pump Power",
+      "pump": "Pump"
+    }
+  },
+  "parcels": {
+    "title": "Parcel Management",
+    "subtitle": "{{count}} parcel - {{farmName}}",
+    "subtitle_plural": "{{count}} parcels - {{farmName}}",
+    "subtitleAllFarms": "{{count}} parcel - All farms",
+    "subtitleAllFarms_plural": "{{count}} parcels - All farms",
+    "loading": "Loading...",
+    "loadingOrganization": "Loading organization...",
+    "farms": "Farms",
+    "farmsIn": "Farms in {{orgName}}",
+    "clickToViewParcels": "Click to view parcels →",
+    "allFarms": "All farms",
+    "noParcels": "No parcels found",
+    "noParcelsForFarm": "No parcels found for {{farmName}}.",
+    "selectFarmToAdd": "Please select a farm to add parcels.",
+    "addParcel": "Add a parcel",
+    "refresh": "Refresh",
+    "back": "← Back",
+    "drawOnMap": "Draw your parcel on the map",
+    "boundariesDefined": "✓ Boundaries defined",
+    "noBoundaries": "⚠ No geographic boundaries",
+    "defineBoundaries": "Define boundaries",
+    "viewDetails": "View details",
+    "trees": "trees",
+    "plantedIn": "Planted in",
+    "rootstock": "Rootstock",
+    "editParcel": "Edit parcel",
+    "deleteParcel": "Delete parcel",
+    "deleteConfirm": "Are you sure you want to delete the parcel \"{{name}}\"?",
+    "deleteError": "Error deleting parcel",
+    "updateError": "Error updating parcel",
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "area": "Area",
+      "areaUnit": "Unit",
+      "soilType": "Soil type",
+      "soilTypePlaceholder": "e.g., Clay, Sandy...",
+      "irrigationType": "Irrigation type",
+      "selectIrrigation": "Select...",
+      "variety": "Variety",
+      "varietyPlaceholder": "e.g., Picholine, Lucques, Arbequina...",
+      "plantingDate": "Planting date",
+      "plantingType": "Planting type",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "areaUnits": {
+      "hectares": "Hectares",
+      "square_meters": "m²",
+      "acres": "Acres"
+    },
+    "irrigationTypes": {
+      "drip": "Drip irrigation",
+      "sprinkler": "Sprinkler",
+      "flood": "Flood",
+      "none": "None"
+    },
+    "plantingTypes": {
+      "traditional": "Traditional",
+      "intensive": "Intensive",
+      "super_intensive": "Super-intensive",
+      "organic": "Organic"
+    }
+  },
+  "analysis": {
+    "title": "Analyses",
+    "tabs": {
+      "soil": "Soil",
+      "plant": "Plant",
+      "water": "Water"
+    },
+    "types": {
+      "soil": "Soil Analysis",
+      "plant": "Plant Analysis",
+      "water": "Water Analysis"
+    },
+    "parcel": "Parcel",
+    "loadingParcels": "Loading parcels...",
+    "allParcels": "All parcels",
+    "analysesForParcel": "{{count}} analysis for this parcel",
+    "analysesForParcel_plural": "{{count}} analyses for this parcel",
+    "cardView": "Card view",
+    "listView": "List view",
+    "selectParcelToAdd": "Select a parcel to add an analysis",
+    "addNewAnalysis": "Add a new analysis",
+    "newAnalysis": "New Analysis",
+    "noAnalyses": "No analyses recorded",
+    "startByAdding": "Start by adding a new {{type}} analysis",
+    "displayingResults": "Displaying {{from}} to {{to}} of {{total}} analyses",
+    "alerts": {
+      "selectParcel": "Please select a parcel before adding an analysis.",
+      "saveError": "Error saving the analysis.",
+      "deleteConfirm": "Are you sure you want to delete this analysis?",
+      "deleteError": "Error deleting the analysis."
+    }
+  },
+  "tasks": {
+    "title": "Task Management",
+    "subtitle": "Plan and track agricultural tasks",
+    "loading": "Loading...",
+    "list": "List",
+    "calendar": "Calendar",
+    "navigation": "Tasks navigation",
+    "stats": {
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "overdue": "Overdue"
+    },
+    "listPage": {
+      "title": "Task Management",
+      "tasksCount": "{{count}} task",
+      "tasksCount_plural": "{{count}} tasks",
+      "newTask": "New Task",
+      "searchPlaceholder": "Search for a task...",
+      "filters": {
+        "all": "All",
+        "pending": "Pending",
+        "assigned": "Assigned",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "paused": "Paused",
+        "overdue": "Overdue"
+      },
+      "sortBy": "Sort by",
+      "sortOptions": {
+        "scheduledStart": "Scheduled Start",
+        "dueDate": "Due Date",
+        "priority": "Priority",
+        "createdAt": "Created At"
+      },
+      "progress": "Progress",
+      "empty": {
+        "title": "No tasks found",
+        "description": "Create your first task to get started"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "page": "Page {{current}} of {{total}}",
+        "displaying": "Showing {{from}} - {{to}} of {{total}} tasks"
+      }
+    },
+    "calendarPage": {
+      "newTask": "New Task",
+      "noTasksOnDate": "No tasks scheduled for this date",
+      "tasksOnDate": "Tasks on {{date}}",
+      "selectDate": "Select a date",
+      "clickDateToView": "Click on a date to view tasks",
+      "loading": "Loading calendar...",
+      "assigned": "Assigned",
+      "monthPicker": {
+        "button": "Month",
+        "empty": "No month found",
+        "search": "Search for a month..."
+      }
+    }
   }
 }

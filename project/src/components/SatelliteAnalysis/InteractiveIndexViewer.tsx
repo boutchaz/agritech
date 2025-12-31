@@ -30,7 +30,7 @@ interface InteractiveIndexViewerProps {
 type VisualizationType = 'leaflet' | 'scatter';
 
 // Color palette configurations
-export type ColorPalette = 'viridis' | 'red-green' | 'blue-red' | 'rainbow' | 'terrain';
+export type ColorPalette = 'viridis' | 'red-green' | 'blue-red' | 'rainbow' | 'terrain' | 'green-red-inverted' | 'blue-red-inverted';
 
 export const COLOR_PALETTES: Record<ColorPalette, { name: string; colors: string[]; description: string }> = {
   'red-green': {
@@ -57,6 +57,16 @@ export const COLOR_PALETTES: Record<ColorPalette, { name: string; colors: string
     name: 'Terrain',
     colors: ['#333333', '#8b4513', '#daa520', '#f0e68c', '#9acd32', '#228b22', '#006400'],
     description: 'Terrain naturel'
+  },
+  'green-red-inverted': {
+    name: 'Vert-Rouge (Inversé)',
+    colors: ['#228b22', '#32cd32', '#adff2f', '#ffff00', '#ffa500', '#ff6347', '#dc143c'],
+    description: 'Pour indices inversés (MSI, PRI) - bas = bon'
+  },
+  'blue-red-inverted': {
+    name: 'Bleu-Rouge (Inversé)',
+    colors: ['#0000ff', '#4169e1', '#00bfff', '#ffffff', '#ff69b4', '#ff0000', '#8b0000'],
+    description: 'Pour indices inversés (MSI, PRI) - bas = bon'
   }
 };
 

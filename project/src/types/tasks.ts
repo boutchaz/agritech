@@ -292,6 +292,12 @@ export interface TaskFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  // Pagination
+  page?: number;
+  limit?: number;
+  // Sorting
+  sort_by?: 'scheduled_start' | 'created_at' | 'due_date' | 'priority';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface CreateTaskRequest {
