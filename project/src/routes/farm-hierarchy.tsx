@@ -8,6 +8,7 @@ import FarmRoleManager from '../components/FarmRoleManager';
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import type { Module } from '../types';
+import { useAutoStartTour } from '@/contexts/TourContext';
 
 const mockModules: Module[] = [
   {
@@ -32,6 +33,9 @@ function FarmHierarchyPage() {
   const [activeModule, setActiveModule] = useState('farm-hierarchy');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
+
+  // Auto-start farm management tour for first-time visitors
+  useAutoStartTour('farm-management', 1500);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);

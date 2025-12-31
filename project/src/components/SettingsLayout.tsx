@@ -198,7 +198,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        <nav className="p-3 sm:p-4 space-y-2">
+        <nav className="p-3 sm:p-4 space-y-2" data-tour="settings-menu">
           {/* Back to Dashboard button - only on mobile */}
           <button
             onClick={() => {
@@ -228,6 +228,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.path)}
+                data-tour={`settings-${item.id}`}
                 className={`w-full text-left p-3 sm:p-4 rounded-lg transition-colors group ${
                   active
                     ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'

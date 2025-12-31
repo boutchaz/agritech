@@ -688,7 +688,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           )}
         </div>
       ) : (
-        <div data-testid="farms-list" className="space-y-3">
+        <div data-testid="farms-list" data-tour="farm-list" className="space-y-3">
           {viewMode === 'grid' ? renderFarmTree(filteredFarms) : renderFarmList(allFarms.filter(farm =>
             filteredFarms.some(f => f.farm_id === farm.farm_id ||
               (f.children && f.children.some(c => c.farm_id === farm.farm_id)))

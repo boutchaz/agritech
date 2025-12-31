@@ -46,11 +46,12 @@ export class PaymentsService {
                     amount: dto.amount,
                     party_name: dto.party_name,
                     party_id: dto.party_id,
+                    party_type: dto.party_type,
                     bank_account_id: dto.bank_account_id,
                     reference_number: dto.reference_number,
                     currency_code: dto.currency_code || 'MAD',
                     exchange_rate: dto.exchange_rate || 1.0,
-                    remarks: dto.remarks,
+                    remarks: dto.remarks || dto.notes,
                     status: 'draft',
                     created_by: userId,
                 })

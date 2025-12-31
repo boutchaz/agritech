@@ -130,13 +130,13 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="reports-list">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Rapports
         </h2>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg" data-tour="reports-filters">
         <p className="text-blue-800 dark:text-blue-200 text-center">
           Cliquez sur "Télécharger" pour générer un rapport au format CSV (30 derniers jours par défaut).
         </p>
@@ -179,6 +179,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
                     <button
                       onClick={() => handleDownloadReport(reportType.id, reportType.name)}
                       className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      data-tour="reports-export"
                     >
                       <Download className="h-5 w-5" />
                       <span>Télécharger</span>

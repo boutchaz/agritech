@@ -264,13 +264,17 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar */}
-      <div className={cn(
-        "fixed lg:static inset-y-0 z-50",
-        isRTL ? "right-0 border-l" : "left-0 border-r",
-        "h-screen w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
-        "transform transition-transform duration-300 ease-in-out",
-        isMobileMenuOpen ? "translate-x-0" : isRTL ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div 
+        data-tour="sidebar"
+        className={cn(
+          "fixed lg:static inset-y-0 z-50",
+          isRTL ? "right-0 border-l" : "left-0 border-r",
+          "h-screen w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
+          "transform transition-transform duration-300 ease-in-out",
+          isMobileMenuOpen ? "translate-x-0" : isRTL ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )} 
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
 
         {/* Header */}
         <div className={cn("flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800", isRTL && "text-right")}>

@@ -191,6 +191,7 @@ function HarvestsPage() {
                 </button>
 
                 <button
+                  data-tour="harvest-add"
                   onClick={handleAddHarvest}
                   className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
                 >
@@ -215,11 +216,11 @@ function HarvestsPage() {
           </div>
 
           {/* Statistics */}
-          {statistics && <HarvestStatistics statistics={statistics} />}
+          {statistics && <div data-tour="harvest-stats"><HarvestStatistics statistics={statistics} /></div>}
 
           {/* Filters Panel */}
           {showFilters && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 space-y-4" data-tour="harvest-filters">
               <h3 className="font-semibold text-gray-900 dark:text-white">Filtres</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -320,7 +321,7 @@ function HarvestsPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="harvest-list">
               {filteredHarvests.map(harvest => (
                 <HarvestCard
                   key={harvest.id}

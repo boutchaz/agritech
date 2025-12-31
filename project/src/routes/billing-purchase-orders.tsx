@@ -264,7 +264,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -350,7 +350,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Order List */}
-          <Card>
+          <Card data-tour="billing-orders">
             <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
               <CardTitle className="text-lg sm:text-xl">{t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}</CardTitle>
               <CardDescription className="text-sm">

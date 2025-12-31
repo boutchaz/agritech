@@ -6,6 +6,8 @@ import { MultiTenantAuthProvider } from '../components/MultiTenantAuthProvider'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
+import { TourProvider } from '../contexts/TourContext'
+import { TourHelpButton } from '../components/TourHelpButton'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 import { ErrorBoundary } from '../components/ErrorBoundary'
@@ -16,21 +18,24 @@ export const Route = createRootRoute({
       <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
         <MultiTenantAuthProvider>
           <ExperienceLevelProvider>
-            <AbilityProvider>
-              <GlobalCommandPalette>
-                <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                  <Outlet />
-                  <OfflineIndicator />
-                  <Toaster richColors position="top-right" />
-                  {import.meta.env.DEV && (
-                    <>
-                      <TanStackRouterDevtools />
-                      <ReactQueryDevtools initialIsOpen={false} />
-                    </>
-                  )}
-                </div>
-              </GlobalCommandPalette>
-            </AbilityProvider>
+            <TourProvider>
+              <AbilityProvider>
+                <GlobalCommandPalette>
+                  <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                    <Outlet />
+                    <OfflineIndicator />
+                    <TourHelpButton />
+                    <Toaster richColors position="top-right" />
+                    {import.meta.env.DEV && (
+                      <>
+                        <TanStackRouterDevtools />
+                        <ReactQueryDevtools initialIsOpen={false} />
+                      </>
+                    )}
+                  </div>
+                </GlobalCommandPalette>
+              </AbilityProvider>
+            </TourProvider>
           </ExperienceLevelProvider>
         </MultiTenantAuthProvider>
       </NetworkStatusProvider>

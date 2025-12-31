@@ -112,13 +112,19 @@ const AppContent: React.FC = () => {
 
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
             <TabsList className="w-full justify-start overflow-x-auto sm:overflow-visible whitespace-nowrap rounded-lg">
               {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className="flex-shrink-0"
+                  data-tour={
+                    tab.value === 'items' ? 'stock-items' : 
+                    tab.value === 'entries' ? 'stock-movements' : 
+                    tab.value === 'inventory' ? 'stock-warehouses' : 
+                    undefined
+                  }
                 >
                   {tab.label}
                 </TabsTrigger>

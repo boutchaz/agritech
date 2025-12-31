@@ -103,7 +103,7 @@ const OrganizationSwitcher: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+    <div className="relative w-full sm:w-auto" ref={dropdownRef} data-tour="org-switcher">
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
@@ -130,7 +130,7 @@ const OrganizationSwitcher: React.FC = () => {
           dropdownPosition === 'right' ? 'right-0' : 'left-0'
         }`}>
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700" data-tour="user-menu">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">

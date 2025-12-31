@@ -8,6 +8,7 @@ import { useState } from 'react'
 import type { Module } from '../types'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Home } from 'lucide-react'
+import { useAutoStartTour } from '@/contexts/TourContext'
 
 const mockModules: Module[] = [
   {
@@ -32,6 +33,8 @@ const SettingsLayoutComponent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('settings');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+
+  useAutoStartTour('settings', 1500);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
