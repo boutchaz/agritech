@@ -121,33 +121,50 @@ export class StrapiService {
 
   /**
    * Transform Strapi response to simple format
-   * Extracts data.attributes and adds id
+   * Handles both Strapi v4 (data.attributes) and v5 (flat structure) formats
    */
   transformResponse<T = any>(strapiResponse: any): T[] {
     if (!strapiResponse?.data) return [];
 
     if (Array.isArray(strapiResponse.data)) {
-      return strapiResponse.data.map((item: any) => ({
-        id: item.id,
-        ...item.attributes,
-      }));
+      return strapiResponse.data.map((item: any) => {
+        // Strapi v5 uses flat structure, v4 uses attributes
+        if (item.attributes) {
+          return {
+            id: item.id,
+            ...item.attributes,
+          };
+        }
+        // Strapi v5 flat structure - item already has all fields
+        return item;
+      });
     }
 
-    return [{
-      id: strapiResponse.data.id,
-      ...strapiResponse.data.attributes,
-    }];
+    // Single item response
+    if (strapiResponse.data.attributes) {
+      return [{
+        id: strapiResponse.data.id,
+        ...strapiResponse.data.attributes,
+      }];
+    }
+    return [strapiResponse.data];
   }
 
   /**
    * Transform single item response
+   * Handles both Strapi v4 (data.attributes) and v5 (flat structure) formats
    */
   transformSingleResponse<T = any>(strapiResponse: any): T {
     if (!strapiResponse?.data) return null;
 
-    return {
-      id: strapiResponse.data.id,
-      ...strapiResponse.data.attributes,
-    } as T;
+    // Strapi v5 uses flat structure, v4 uses attributes
+    if (strapiResponse.data.attributes) {
+      return {
+        id: strapiResponse.data.id,
+        ...strapiResponse.data.attributes,
+      } as T;
+    }
+    // Strapi v5 flat structure
+    return strapiResponse.data as T;
   }
 }
