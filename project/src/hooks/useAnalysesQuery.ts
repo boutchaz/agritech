@@ -18,6 +18,8 @@ export const analysesKeys = {
     type ? ['analyses', 'parcel', parcelId, type] as const : ['analyses', 'parcel', parcelId] as const,
   byFarm: (farmId: string, type?: AnalysisType) =>
     type ? ['analyses', 'farm', farmId, type] as const : ['analyses', 'farm', farmId] as const,
+  byOrganization: (organizationId: string, type?: AnalysisType) =>
+    type ? ['analyses', 'organization', organizationId, type] as const : ['analyses', 'organization', organizationId] as const,
 };
 
 export const parcelsKeys = {
@@ -25,17 +27,23 @@ export const parcelsKeys = {
   byFarm: (farmId: string) => ['parcels', 'farm', farmId] as const,
 };
 
-// Hook to fetch parcels by farm (needed for farm-level queries)
-export function useParcels(farmId: string | undefined) {
+export function useParcels(farmId: string | undefined, organizationId?: string | undefined) {
   return useQuery({
-    queryKey: parcelsKeys.byFarm(farmId || ''),
+    queryKey: farmId 
+      ? [...parcelsKeys.byFarm(farmId), organizationId] 
+      : ['parcels', 'organization', organizationId || ''],
     queryFn: async () => {
-      if (!farmId) return [];
-
-      const parcels = await parcelsApi.getAll({ farm_id: farmId });
-      return parcels || [];
+      if (farmId && organizationId) {
+        const parcels = await parcelsApi.getAll({ farm_id: farmId }, organizationId);
+        return parcels || [];
+      }
+      if (organizationId) {
+        const parcels = await parcelsApi.getAll({ organization_id: organizationId }, organizationId);
+        return parcels || [];
+      }
+      return [];
     },
-    enabled: !!farmId,
+    enabled: !!organizationId,
   });
 }
 
@@ -56,20 +64,30 @@ export function useAnalysesByParcel(parcelId: string | undefined, analysisType?:
   });
 }
 
-// Hook to fetch analyses by farm ID (all parcels in farm)
-export function useAnalysesByFarm(farmId: string | undefined, analysisType?: AnalysisType) {
+// Hook to fetch analyses by farm ID (all parcels in farm) or by organization if no farm selected
+export function useAnalysesByFarm(farmId: string | undefined, analysisType?: AnalysisType, organizationId?: string | undefined) {
   return useQuery({
-    queryKey: analysesKeys.byFarm(farmId || '', analysisType),
+    queryKey: farmId 
+      ? analysesKeys.byFarm(farmId, analysisType) 
+      : analysesKeys.byOrganization(organizationId || '', analysisType),
     queryFn: async () => {
-      if (!farmId) return [];
-
-      const response = await analysesApi.getAll({
-        farm_id: farmId,
-        analysis_type: analysisType
-      });
-      return response.data || [];
+      if (farmId) {
+        const response = await analysesApi.getAll({
+          farm_id: farmId,
+          analysis_type: analysisType
+        });
+        return response.data || [];
+      }
+      if (organizationId) {
+        // Fetch all analyses for the organization (no farm filter)
+        const response = await analysesApi.getAll({
+          analysis_type: analysisType
+        }, organizationId);
+        return response.data || [];
+      }
+      return [];
     },
-    enabled: !!farmId,
+    enabled: !!farmId || !!organizationId,
   });
 }
 

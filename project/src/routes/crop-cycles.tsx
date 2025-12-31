@@ -13,16 +13,16 @@ function CropCyclesPage() {
       <Sidebar
         modules={[]}
         activeModule="crop-cycles"
-        onModuleSelect={() => {}}
+        onModuleChange={() => {}}
         isDarkMode={false}
-        onToggleTheme={() => {}}
+        onThemeToggle={() => {}}
       />
-      <main className="flex-1 lg:ml-72 transition-all duration-300">
+      <main className="flex-1 w-full lg:w-auto">
         <ModernPageHeader
           title={t('cropCycles.pageTitle', 'Crop Cycles')}
           breadcrumbs={[
-            { label: t('nav.dashboard', 'Dashboard'), href: '/dashboard' },
-            { label: t('cropCycles.pageTitle', 'Crop Cycles') },
+            { label: t('nav.dashboard', 'Dashboard'), path: '/dashboard' },
+            { label: t('cropCycles.pageTitle', 'Crop Cycles'), isActive: true },
           ]}
         />
         <div className="p-6">

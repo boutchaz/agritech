@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { FormField } from '../components/ui/FormField'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
@@ -36,6 +37,7 @@ interface ParcelsListContentProps {
 const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   console.log('🎨 ParcelsListContent rendering', { search });
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
   console.log('Auth state:', {
@@ -136,7 +138,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       await deleteParcelMutation.mutateAsync(parcelId);
     } catch (error) {
       console.error('Error deleting parcel:', error);
-      alert('Erreur lors de la suppression de la parcelle');
+      alert(t('parcels.deleteError'));
     }
   };
 
@@ -147,7 +149,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       setShowEditDialog(false);
     } catch (error) {
       console.error('Error updating parcel:', error);
-      alert('Erreur lors de la mise à jour de la parcelle');
+      alert(t('parcels.updateError'));
     }
   };
 
@@ -172,7 +174,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('parcels.loadingOrganization')}</p>
         </div>
       </div>
     );
@@ -191,17 +193,17 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: TreePine, label: 'Fermes' },
-            { icon: MapPin, label: 'Parcelles', isActive: true }
+            { icon: TreePine, label: t('parcels.farms') },
+            { icon: MapPin, label: t('nav.parcels'), isActive: true }
           ]}
-          title="Gestion des Parcelles"
+          title={t('parcels.title')}
           subtitle={(() => {
             const targetFarmId = selectedFarmId || currentFarm?.id;
             const farm = farms?.find(f => f.id === targetFarmId);
             const farmName = farm?.name || currentFarm?.name;
             return farmName
-              ? `${parcels.length} parcelle${parcels.length !== 1 ? 's' : ''} - ${farmName}`
-              : `${parcels.length} parcelle${parcels.length !== 1 ? 's' : ''} - Toutes les fermes`;
+              ? t('parcels.subtitle', { count: parcels.length, farmName })
+              : t('parcels.subtitleAllFarms', { count: parcels.length });
           })()}
           actions={
             farms && farms.length > 1 ? (
@@ -211,7 +213,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 onChange={(e) => setSelectedFarmId(e.target.value || null)}
                 className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
               >
-                <option value="">Toutes les fermes</option>
+                <option value="">{t('parcels.allFarms')}</option>
                 {farms.map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.name}
@@ -225,38 +227,30 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6 hidden">
             <div className="w-full sm:w-auto">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                Gestion des Parcelles
+                {t('parcels.title')}
               </h2>
               {/* Show current context */}
               <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 {selectedFarmId || currentFarm ? (
-                  <>
-                    <span className="hidden sm:inline">Parcelles de la ferme: </span>
-                    <span className="sm:hidden">Ferme: </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {(() => {
-                        const targetFarmId = selectedFarmId || currentFarm?.id;
-                        const farm = farms?.find(f => f.id === targetFarmId);
-                        return farm?.name || currentFarm?.name || 'Chargement...';
-                      })()}
-                    </span>
-                  </>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {(() => {
+                      const targetFarmId = selectedFarmId || currentFarm?.id;
+                      const farm = farms?.find(f => f.id === targetFarmId);
+                      return farm?.name || currentFarm?.name || t('parcels.loading');
+                    })()}
+                  </span>
                 ) : (
-                  <>
-                    <span className="hidden sm:inline">Parcelles de toutes les fermes dans </span>
-                    <span className="sm:hidden">Toutes - </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {currentOrganization?.name || 'votre organisation'}
-                    </span>
-                  </>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {currentOrganization?.name}
+                  </span>
                 )}
               </div>
             </div>
             <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto text-left sm:text-right">
               {loading ? (
-                <span>Chargement...</span>
+                <span>{t('parcels.loading')}</span>
               ) : (
-                <span>{parcels.length} parcelle{parcels.length !== 1 ? 's' : ''} trouvée{parcels.length !== 1 ? 's' : ''}</span>
+                <span>{t('parcels.subtitle', { count: parcels.length, farmName: '' })}</span>
               )}
             </div>
           </div>
@@ -271,7 +265,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               {!selectedFarmId && !currentFarm && farms.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Fermes dans {currentOrganization?.name || 'votre organisation'}
+                    {t('parcels.farmsIn', { orgName: currentOrganization?.name })}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {farms.map((farm) => (
@@ -291,7 +285,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         )}
                         {farm.size && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                            📏 {farm.size} hectares
+                            📏 {farm.size} {t('units.hectares').toLowerCase()}
                           </p>
                         )}
                         {farm.manager_name && (
@@ -300,7 +294,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                           </p>
                         )}
                         <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                          Cliquer pour voir les parcelles →
+                          {t('parcels.clickToViewParcels')}
                         </p>
                       </div>
                     ))}
@@ -312,12 +306,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {currentFarm || selectedFarmId
-                    ? `Aucune parcelle trouvée pour ${(() => {
+                    ? t('parcels.noParcelsForFarm', { farmName: (() => {
                       const targetFarmId = selectedFarmId || currentFarm?.id;
                       const farm = farms?.find(f => f.id === targetFarmId);
-                      return farm?.name || 'cette ferme';
-                    })()}.`
-                    : 'Veuillez sélectionner une ferme pour ajouter des parcelles.'}
+                      return farm?.name || '';
+                    })() })
+                    : t('parcels.selectFarmToAdd')}
                 </p>
                   {(currentFarm || selectedFarmId) && (
                     <div className="space-x-3" data-tour="parcel-actions">
@@ -329,7 +323,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         }}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                       >
-                        Ajouter une parcelle
+                        {t('parcels.addParcel')}
                       </button>
                     <button
                       onClick={() => {
@@ -338,7 +332,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                       }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
-                      Actualiser
+                      {t('parcels.refresh')}
                     </button>
                   </div>
                 )}
@@ -352,10 +346,10 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                     onClick={() => setShowAddParcelMap(false)}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
-                    ← Retour
+                    {t('parcels.back')}
                   </button>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Dessinez votre parcelle sur la carte
+                    {t('parcels.drawOnMap')}
                   </p>
                 </div>
               )}
@@ -411,19 +405,19 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                                 setShowEditDialog(true);
                               }}
                               className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                              title="Modifier"
+                              title={t('app.edit')}
                             >
                               <Edit2 className="h-4 w-4" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Êtes-vous sûr de vouloir supprimer la parcelle "${parcel.name}" ?`)) {
+                                if (confirm(t('parcels.deleteConfirm', { name: parcel.name }))) {
                                   handleDeleteParcel(parcel.id);
                                 }
                               }}
                               className="p-1 text-red-600 hover:bg-red-50 rounded"
-                              title="Supprimer"
+                              title={t('app.delete')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -467,17 +461,17 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                           )}
                           {parcel.tree_count && (
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                              <span className="font-medium">{parcel.tree_count}</span> arbres
+                              <span className="font-medium">{parcel.tree_count}</span> {t('parcels.trees')}
                               {parcel.planting_year && (
                                 <span className="text-xs text-gray-400 ml-1">
-                                  • Plantés en {parcel.planting_year}
+                                  • {t('parcels.plantedIn')} {parcel.planting_year}
                                 </span>
                               )}
                             </div>
                           )}
                           {parcel.rootstock && (
                             <div className="text-xs text-gray-400">
-                              Porte-greffe: {parcel.rootstock}
+                              {t('parcels.rootstock')}: {parcel.rootstock}
                             </div>
                           )}
                         </div>
@@ -485,12 +479,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
                           {parcel.boundary && parcel.boundary.length > 0 ? (
                             <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                              ✓ Limites définies
+                              {t('parcels.boundariesDefined')}
                             </p>
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                ⚠ Pas de limites géographiques
+                                {t('parcels.noBoundaries')}
                               </p>
                               <button
                                 onClick={(e) => {
@@ -500,7 +494,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                                 }}
                                 className="text-xs text-blue-600 hover:text-blue-700 underline"
                               >
-                                Définir les limites
+                                {t('parcels.defineBoundaries')}
                               </button>
                             </div>
                           )}
@@ -512,7 +506,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                             }}
                             className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
                           >
-                            <span>Voir les détails</span>
+                            <span>{t('parcels.viewDetails')}</span>
                             <span>→</span>
                           </button>
                         </div>
@@ -532,11 +526,11 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
         <div className="modal-overlay">
           <div className="modal-panel p-6 max-w-md">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Modifier la parcelle
+              {t('parcels.editParcel')}
             </h3>
 
             <div className="space-y-4">
-              <FormField label="Nom" htmlFor="parcel_name">
+              <FormField label={t('parcels.form.name')} htmlFor="parcel_name">
                 <Input
                   id="parcel_name"
                   type="text"
@@ -545,7 +539,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 />
               </FormField>
 
-              <FormField label="Description" htmlFor="parcel_description">
+              <FormField label={t('parcels.form.description')} htmlFor="parcel_description">
                 <Textarea
                   id="parcel_description"
                   value={editingParcel.description || ''}
@@ -555,7 +549,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               </FormField>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Surface" htmlFor="parcel_area">
+                <FormField label={t('parcels.form.area')} htmlFor="parcel_area">
                   <Input
                     id="parcel_area"
                     type="number"
@@ -565,57 +559,57 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                   />
                 </FormField>
 
-                <FormField label="Unité" htmlFor="parcel_area_unit">
+                <FormField label={t('parcels.form.areaUnit')} htmlFor="parcel_area_unit">
                   <Select
                     id="parcel_area_unit"
                     value={editingParcel.area_unit || 'hectares'}
                     onChange={(e) => setEditingParcel({ ...editingParcel, area_unit: e.target.value })}
                   >
-                    <option value="hectares">Hectares</option>
-                    <option value="square_meters">m²</option>
-                    <option value="acres">Acres</option>
+                    <option value="hectares">{t('parcels.areaUnits.hectares')}</option>
+                    <option value="square_meters">{t('parcels.areaUnits.square_meters')}</option>
+                    <option value="acres">{t('parcels.areaUnits.acres')}</option>
                   </Select>
                 </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Type de sol" htmlFor="parcel_soil_type">
+                <FormField label={t('parcels.form.soilType')} htmlFor="parcel_soil_type">
                   <Input
                     id="parcel_soil_type"
                     type="text"
                     value={editingParcel.soil_type || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, soil_type: e.target.value })}
-                    placeholder="ex: Argileux, Sableux..."
+                    placeholder={t('parcels.form.soilTypePlaceholder')}
                   />
                 </FormField>
 
-                <FormField label="Type d'irrigation" htmlFor="parcel_irrigation_type">
+                <FormField label={t('parcels.form.irrigationType')} htmlFor="parcel_irrigation_type">
                   <Select
                     id="parcel_irrigation_type"
                     value={editingParcel.irrigation_type || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, irrigation_type: e.target.value })}
                   >
-                    <option value="">Sélectionner...</option>
-                    <option value="drip">Goutte-à-goutte</option>
-                    <option value="sprinkler">Aspersion</option>
-                    <option value="flood">Inondation</option>
-                    <option value="none">Aucune</option>
+                    <option value="">{t('parcels.form.selectIrrigation')}</option>
+                    <option value="drip">{t('parcels.irrigationTypes.drip')}</option>
+                    <option value="sprinkler">{t('parcels.irrigationTypes.sprinkler')}</option>
+                    <option value="flood">{t('parcels.irrigationTypes.flood')}</option>
+                    <option value="none">{t('parcels.irrigationTypes.none')}</option>
                   </Select>
                 </FormField>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Variété" htmlFor="parcel_variety">
+                <FormField label={t('parcels.form.variety')} htmlFor="parcel_variety">
                   <Input
                     id="parcel_variety"
                     type="text"
                     value={editingParcel.variety || ''}
                     onChange={(e) => setEditingParcel({ ...editingParcel, variety: e.target.value })}
-                    placeholder="ex: Picholine, Lucques, Arbequina..."
+                    placeholder={t('parcels.form.varietyPlaceholder')}
                   />
                 </FormField>
 
-                <FormField label="Date de plantation" htmlFor="parcel_planting_date">
+                <FormField label={t('parcels.form.plantingDate')} htmlFor="parcel_planting_date">
                   <Input
                     id="parcel_planting_date"
                     type="date"
@@ -625,17 +619,17 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 </FormField>
               </div>
 
-              <FormField label="Type de plantation" htmlFor="parcel_planting_type">
+              <FormField label={t('parcels.form.plantingType')} htmlFor="parcel_planting_type">
                 <Select
                   id="parcel_planting_type"
                   value={editingParcel.planting_type || ''}
                   onChange={(e) => setEditingParcel({ ...editingParcel, planting_type: e.target.value })}
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="traditional">Traditionnelle</option>
-                  <option value="intensive">Intensive</option>
-                  <option value="super_intensive">Super-intensive</option>
-                  <option value="organic">Biologique</option>
+                  <option value="">{t('parcels.form.selectIrrigation')}</option>
+                  <option value="traditional">{t('parcels.plantingTypes.traditional')}</option>
+                  <option value="intensive">{t('parcels.plantingTypes.intensive')}</option>
+                  <option value="super_intensive">{t('parcels.plantingTypes.super_intensive')}</option>
+                  <option value="organic">{t('parcels.plantingTypes.organic')}</option>
                 </Select>
               </FormField>
             </div>
@@ -648,7 +642,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 }}
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
-                Annuler
+                {t('parcels.form.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -658,7 +652,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
-                Enregistrer
+                {t('parcels.form.save')}
               </button>
             </div>
           </div>

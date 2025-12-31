@@ -13,16 +13,16 @@ function CampaignsPage() {
       <Sidebar
         modules={[]}
         activeModule="campaigns"
-        onModuleSelect={() => {}}
+        onModuleChange={() => {}}
         isDarkMode={false}
-        onToggleTheme={() => {}}
+        onThemeToggle={() => {}}
       />
-      <main className="flex-1 lg:ml-72 transition-all duration-300">
+      <main className="flex-1 w-full lg:w-auto">
         <ModernPageHeader
           title={t('campaigns.pageTitle', 'Agricultural Campaigns')}
           breadcrumbs={[
-            { label: t('nav.dashboard', 'Dashboard'), href: '/dashboard' },
-            { label: t('campaigns.pageTitle', 'Campaigns') },
+            { label: t('nav.dashboard', 'Dashboard'), path: '/dashboard' },
+            { label: t('campaigns.pageTitle', 'Campaigns'), isActive: true },
           ]}
         />
         <div className="p-6">

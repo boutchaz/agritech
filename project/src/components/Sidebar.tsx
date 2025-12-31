@@ -325,6 +325,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Dashboard">
                 <Button
                   variant="ghost"
+                  data-tour="nav-dashboard"
                   className={getButtonClassName(currentPath === '/dashboard')}
                   onClick={(e) => handleNavigation('/dashboard', e)}
                 >
@@ -337,6 +338,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="FarmHierarchy">
                 <Button
                   variant="ghost"
+                  data-tour="nav-farms"
                   className={getButtonClassName(currentPath === '/farm-hierarchy')}
                   onClick={(e) => handleNavigation('/farm-hierarchy', e)}
                 >
@@ -349,6 +351,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Parcel">
                 <Button
                   variant="ghost"
+                  data-tour="nav-parcels"
                   className={getButtonClassName(currentPath === '/parcels')}
                   onClick={(e) => handleNavigation('/parcels', e)}
                 >
@@ -361,6 +364,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Stock">
                 <Button
                   variant="ghost"
+                  data-tour="nav-stock"
                   className={getButtonClassName(currentPath === '/stock' || currentPath.startsWith('/stock/'))}
                   onClick={(e) => handleNavigation('/stock', e)}
                 >
@@ -373,6 +377,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Infrastructure">
                 <Button
                   variant="ghost"
+                  data-tour="nav-infrastructure"
                   className={getButtonClassName(currentPath === '/infrastructure')}
                   onClick={(e) => handleNavigation('/infrastructure', e)}
                 >
@@ -384,7 +389,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== PERSONNEL SECTION ========== */}
             <Separator className="my-3" />
-            <div className="space-y-1">
+            <div className="space-y-1" data-tour="nav-personnel">
               <Button
                 variant="ghost"
                 className={getSectionHeaderClassName()}
@@ -422,7 +427,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== PRODUCTION SECTION ========== */}
             <Separator className="my-3" />
-            <div className="space-y-1">
+            <div className="space-y-1" data-tour="nav-production">
               <Button
                 variant="ghost"
                 className={getSectionHeaderClassName()}
@@ -487,7 +492,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== SALES & PURCHASING SECTION ========== */}
             <Separator className="my-3" />
-            <div className="space-y-1">
+            <div className="space-y-1" data-tour="nav-billing">
               <Button
                 variant="ghost"
                 className={getSectionHeaderClassName()}
@@ -535,7 +540,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== ACCOUNTING SECTION ========== */}
             <Separator className="my-3" />
             <ProtectedNavItem action="read" subject="Invoice">
-              <div className="space-y-1">
+              <div className="space-y-1" data-tour="nav-accounting">
                 <Button
                   variant="ghost"
                   className={getSectionHeaderClassName()}
@@ -600,7 +605,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== CONFIGURATION SECTION ========== */}
             <Separator className="my-3" />
-            <div className="space-y-1">
+            <div className="space-y-1" data-tour="nav-settings">
               <Button
                 variant="ghost"
                 className={getSectionHeaderClassName()}
@@ -784,6 +789,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <ProtectedNavItem action="read" subject="Report">
             <Button
               variant="ghost"
+              data-tour="nav-reports"
               className={getButtonClassName(currentPath === '/reports' || currentPath === '/accounting-reports')}
               onClick={(e) => handleNavigation('/accounting-reports', e)}
             >

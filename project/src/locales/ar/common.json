@@ -1986,5 +1986,289 @@
       "refreshData": "تحديث البيانات",
       "showTemperature": "عرض درجة الحرارة وقت مرور القمر الصناعي (11 صباحاً)"
     }
+  },
+  "infrastructure": {
+    "title": "إدارة البنية التحتية",
+    "subtitle": "إدارة البنية التحتية على مستوى المنظمة أو المزرعة",
+    "addNew": "بنية تحتية جديدة",
+    "edit": "تعديل المنشأة",
+    "delete": "حذف",
+    "deleteConfirm": "هل أنت متأكد من حذف هذه المنشأة؟",
+    "tabs": {
+      "organization": "المنظمة",
+      "farm": "حسب المزرعة"
+    },
+    "scope": {
+      "label": "مستوى التخصيص",
+      "organization": "المنظمة",
+      "farm": "مزرعة محددة",
+      "organizationHint": "متاحة لجميع مزارع المنظمة",
+      "farmHint": "مرتبطة بمزرعة محددة وتُحذف معها"
+    },
+    "types": {
+      "stable": "إسطبل",
+      "technical_room": "غرفة تقنية",
+      "basin": "حوض",
+      "well": "بئر"
+    },
+    "shapes": {
+      "trapezoidal": "شبه منحرف",
+      "rectangular": "مستطيل",
+      "cubic": "مكعب",
+      "circular": "دائري"
+    },
+    "conditions": {
+      "excellent": "ممتاز",
+      "good": "جيد",
+      "fair": "متوسط",
+      "poor": "سيء"
+    },
+    "constructionTypes": {
+      "concrete": "خرسانة",
+      "metal": "معدني",
+      "wood": "خشب",
+      "mixed": "مختلط"
+    },
+    "pumpTypes": {
+      "submersible": "مضخة غاطسة",
+      "surface": "مضخة سطحية",
+      "manual": "مضخة يدوية"
+    },
+    "fields": {
+      "name": "الاسم",
+      "type": "نوع المنشأة",
+      "farm": "المزرعة",
+      "installationDate": "تاريخ التركيب",
+      "condition": "الحالة",
+      "usage": "الاستخدام",
+      "usagePlaceholder": "مثال: تخزين المعدات، تربية الماشية، إلخ.",
+      "width": "العرض",
+      "length": "الطول",
+      "height": "الارتفاع",
+      "depth": "العمق",
+      "radius": "نصف القطر",
+      "topWidth": "العرض العلوي",
+      "bottomWidth": "العرض السفلي",
+      "shape": "الشكل",
+      "volume": "الحجم المحسوب",
+      "constructionType": "نوع البناء",
+      "equipment": "المعدات الموجودة",
+      "equipmentHelper": "معدة واحدة في كل سطر",
+      "pumpType": "نوع المضخة",
+      "pumpPower": "قوة المضخة"
+    },
+    "units": {
+      "meters": "م",
+      "cubicMeters": "م³",
+      "kilowatts": "كيلوواط"
+    },
+    "empty": {
+      "organization": {
+        "title": "لا توجد بنية تحتية للمنظمة",
+        "description": "البنية التحتية للمنظمة متاحة لجميع المزارع"
+      },
+      "farm": {
+        "title": "لا توجد بنية تحتية لهذه المزرعة",
+        "description": "أضف أول بنية تحتية للمزرعة المحددة"
+      },
+      "allFarms": {
+        "title": "لا توجد بنية تحتية للمزارع",
+        "description": "اختر مزرعة أعلاه لإضافة بنية تحتية محددة"
+      }
+    },
+    "info": {
+      "organization": {
+        "title": "البنية التحتية للمنظمة",
+        "description": "هذه البنى التحتية مشتركة على مستوى المنظمة وغير مرتبطة بمزرعة محددة."
+      },
+      "farm": {
+        "title": "البنية التحتية حسب المزرعة",
+        "description": "هذه البنى التحتية خاصة بمزرعة معينة وستُحذف إذا حُذفت المزرعة."
+      }
+    },
+    "filterByFarm": "تصفية حسب المزرعة",
+    "allFarms": "جميع المزارع",
+    "selectFarm": "اختر مزرعة",
+    "select": "اختر...",
+    "installation": "التركيب",
+    "dimensions": "الأبعاد",
+    "construction": "البناء",
+    "pump": "المضخة",
+    "infrastructureCount": "بنية تحتية | بنى تحتية",
+    "messages": {
+      "created": "تم إنشاء المنشأة بنجاح",
+      "updated": "تم تحديث المنشأة بنجاح",
+      "deleted": "تم حذف المنشأة بنجاح",
+      "createError": "فشل في إنشاء المنشأة",
+      "updateError": "فشل في تحديث المنشأة",
+      "deleteError": "فشل في حذف المنشأة",
+      "nameTypeRequired": "الاسم والنوع مطلوبان"
+    },
+    "actions": {
+      "add": "إضافة",
+      "update": "تحديث",
+      "cancel": "إلغاء",
+      "addInfrastructure": "إضافة بنية تحتية"
+    }
+  },
+  "parcels": {
+    "title": "إدارة القطع",
+    "subtitle": "{{count}} قطعة - {{farmName}}",
+    "subtitle_plural": "{{count}} قطع - {{farmName}}",
+    "subtitleAllFarms": "{{count}} قطعة - جميع المزارع",
+    "subtitleAllFarms_plural": "{{count}} قطع - جميع المزارع",
+    "loading": "جاري التحميل...",
+    "loadingOrganization": "جاري تحميل المنظمة...",
+    "farms": "المزارع",
+    "farmsIn": "المزارع في {{orgName}}",
+    "clickToViewParcels": "انقر لعرض القطع ←",
+    "allFarms": "جميع المزارع",
+    "noParcels": "لم يتم العثور على قطع",
+    "noParcelsForFarm": "لم يتم العثور على قطع لـ {{farmName}}.",
+    "selectFarmToAdd": "يرجى اختيار مزرعة لإضافة قطع.",
+    "addParcel": "إضافة قطعة",
+    "refresh": "تحديث",
+    "back": "→ رجوع",
+    "drawOnMap": "ارسم قطعتك على الخريطة",
+    "boundariesDefined": "✓ الحدود محددة",
+    "noBoundaries": "⚠ لا توجد حدود جغرافية",
+    "defineBoundaries": "تحديد الحدود",
+    "viewDetails": "عرض التفاصيل",
+    "trees": "أشجار",
+    "plantedIn": "زُرعت في",
+    "rootstock": "الأصل الجذري",
+    "editParcel": "تعديل القطعة",
+    "deleteParcel": "حذف القطعة",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف القطعة \"{{name}}\"؟",
+    "deleteError": "خطأ في حذف القطعة",
+    "updateError": "خطأ في تحديث القطعة",
+    "form": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "area": "المساحة",
+      "areaUnit": "الوحدة",
+      "soilType": "نوع التربة",
+      "soilTypePlaceholder": "مثال: طينية، رملية...",
+      "irrigationType": "نوع الري",
+      "selectIrrigation": "اختر...",
+      "variety": "الصنف",
+      "varietyPlaceholder": "مثال: بيشولين، لوك، أربكينا...",
+      "plantingDate": "تاريخ الزراعة",
+      "plantingType": "نوع الزراعة",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "areaUnits": {
+      "hectares": "هكتار",
+      "square_meters": "م²",
+      "acres": "فدان"
+    },
+    "irrigationTypes": {
+      "drip": "ري بالتنقيط",
+      "sprinkler": "رش",
+      "flood": "غمر",
+      "none": "بدون"
+    },
+    "plantingTypes": {
+      "traditional": "تقليدية",
+      "intensive": "مكثفة",
+      "super_intensive": "مكثفة جداً",
+      "organic": "عضوية"
+    }
+  },
+  "analysis": {
+    "title": "التحليلات",
+    "tabs": {
+      "soil": "التربة",
+      "plant": "النبات",
+      "water": "الماء"
+    },
+    "types": {
+      "soil": "تحليل التربة",
+      "plant": "تحليل النبات",
+      "water": "تحليل الماء"
+    },
+    "parcel": "القطعة",
+    "loadingParcels": "جاري تحميل القطع...",
+    "allParcels": "جميع القطع",
+    "analysesForParcel": "{{count}} تحليل لهذه القطعة",
+    "analysesForParcel_plural": "{{count}} تحليلات لهذه القطعة",
+    "cardView": "عرض البطاقات",
+    "listView": "عرض القائمة",
+    "selectParcelToAdd": "اختر قطعة لإضافة تحليل",
+    "addNewAnalysis": "إضافة تحليل جديد",
+    "newAnalysis": "تحليل جديد",
+    "noAnalyses": "لا توجد تحليلات مسجلة",
+    "startByAdding": "ابدأ بإضافة تحليل {{type}} جديد",
+    "displayingResults": "عرض {{from}} إلى {{to}} من أصل {{total}} تحليل",
+    "alerts": {
+      "selectParcel": "يرجى اختيار قطعة قبل إضافة تحليل.",
+      "saveError": "خطأ في حفظ التحليل.",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا التحليل؟",
+      "deleteError": "خطأ في حذف التحليل."
+    }
+  },
+  "tasks": {
+    "title": "إدارة المهام",
+    "subtitle": "خطط وتتبع المهام الزراعية",
+    "loading": "جاري التحميل...",
+    "list": "قائمة",
+    "calendar": "التقويم",
+    "navigation": "تنقل المهام",
+    "stats": {
+      "pending": "قيد الانتظار",
+      "inProgress": "قيد التنفيذ",
+      "completed": "مكتملة",
+      "overdue": "متأخرة"
+    },
+    "listPage": {
+      "title": "إدارة المهام",
+      "tasksCount": "{{count}} مهمة",
+      "tasksCount_plural": "{{count}} مهام",
+      "newTask": "مهمة جديدة",
+      "searchPlaceholder": "البحث عن مهمة...",
+      "filters": {
+        "all": "الكل",
+        "pending": "قيد الانتظار",
+        "assigned": "معينة",
+        "inProgress": "قيد التنفيذ",
+        "completed": "مكتملة",
+        "cancelled": "ملغاة",
+        "paused": "متوقفة",
+        "overdue": "متأخرة"
+      },
+      "sortBy": "ترتيب حسب",
+      "sortOptions": {
+        "scheduledStart": "بدء مجدول",
+        "dueDate": "تاريخ الاستحقاق",
+        "priority": "الأولوية",
+        "createdAt": "تاريخ الإنشاء"
+      },
+      "progress": "التقدم",
+      "empty": {
+        "title": "لم يتم العثور على مهام",
+        "description": "قم بإنشاء مهمتك الأولى للبدء"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "page": "الصفحة {{current}} من {{total}}",
+        "displaying": "عرض {{from}} - {{to}} من {{total}} مهام"
+      }
+    },
+    "calendarPage": {
+      "newTask": "مهمة جديدة",
+      "noTasksOnDate": "لا توجد مهام مجدولة لهذا التاريخ",
+      "tasksOnDate": "المهام في {{date}}",
+      "selectDate": "اختر تاريخاً",
+      "clickDateToView": "انقر على تاريخ لعرض المهام",
+      "loading": "جاري تحميل التقويم...",
+      "assigned": "معين",
+      "monthPicker": {
+        "button": "الشهر",
+        "empty": "لم يتم العثور على شهر",
+        "search": "البحث عن شهر..."
+      }
+    }
   }
 }

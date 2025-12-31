@@ -72,7 +72,7 @@ export class InvoicesController {
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   async create(@Req() req, @Body() dto: CreateInvoiceDto) {
     const organizationId = req.headers['x-organization-id'];
-    const userId = req.user.sub;
+    const userId = req.user.id || req.user.sub;
     return this.invoicesService.create(dto, organizationId, userId);
   }
 
@@ -93,7 +93,7 @@ export class InvoicesController {
     @Body() dto: { posting_date: string },
   ) {
     const organizationId = req.headers['x-organization-id'];
-    const userId = req.user.sub;
+    const userId = req.user.id || req.user.sub;
     return this.invoicesService.postInvoice(id, organizationId, userId, dto.posting_date);
   }
 
@@ -129,7 +129,7 @@ export class InvoicesController {
     @Body() dto: UpdateInvoiceStatusDto,
   ) {
     const organizationId = req.headers['x-organization-id'];
-    const userId = req.user.sub;
+    const userId = req.user.id || req.user.sub;
     return this.invoicesService.updateStatus(id, organizationId, userId, dto);
   }
 

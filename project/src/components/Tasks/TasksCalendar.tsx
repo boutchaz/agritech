@@ -20,7 +20,8 @@ import { useTasks } from '../../hooks/useTasks';
 import TaskForm from './TaskForm';
 import type { Task } from '../../types/tasks';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS, ar } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 
 interface TasksCalendarProps {
   organizationId: string;
@@ -66,9 +67,22 @@ const CalendarContent: React.FC<{
   currentMonth: number;
   currentYear: number;
 }> = ({ tasks, onTaskSelect, onCreateTask, _currentMonth, _currentYear }) => {
+  const { t, i18n } = useTranslation();
   const [_month] = useCalendarMonth();
   const [_year] = useCalendarYear();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Get locale for date formatting
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return fr;
+      case 'ar':
+        return ar;
+      default:
+        return enUS;
+    }
+  };
 
   // Convert tasks to Kibo UI Feature format
   const features: Feature[] = useMemo(() => {
@@ -133,7 +147,7 @@ const CalendarContent: React.FC<{
             <CalendarDate>
               {(date) => (
                 <CardTitle className="text-2xl font-bold">
-                  {format(date, 'MMMM yyyy', { locale: fr })}
+                  {format(date, 'MMMM yyyy', { locale: getDateLocale() })}
                 </CardTitle>
               )}
             </CalendarDate>
@@ -141,7 +155,7 @@ const CalendarContent: React.FC<{
               <CalendarDatePagination />
               <Button onClick={onCreateTask} size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Nouvelle tâche
+                {t('tasks.calendarPage.newTask')}
               </Button>
             </div>
           </div>
@@ -153,9 +167,9 @@ const CalendarContent: React.FC<{
             <div className="flex items-center gap-2">
               <CalendarMonthPicker
                 labels={{
-                  button: "Mois",
-                  empty: "Aucun mois trouvé",
-                  search: "Rechercher un mois...",
+                  button: t('tasks.calendarPage.monthPicker.button'),
+                  empty: t('tasks.calendarPage.monthPicker.empty'),
+                  search: t('tasks.calendarPage.monthPicker.search'),
                 }}
               />
               <CalendarYearPicker
@@ -197,20 +211,20 @@ const CalendarContent: React.FC<{
         <CardHeader>
           <CardTitle className="text-lg">
             {selectedDate
-              ? `Tâches du ${format(selectedDate, 'dd MMMM yyyy', { locale: fr })}`
-              : 'Sélectionnez une date'}
+              ? t('tasks.calendarPage.tasksOnDate', { date: format(selectedDate, 'dd MMMM yyyy', { locale: getDateLocale() }) })
+              : t('tasks.calendarPage.selectDate')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!selectedDate ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Cliquez sur une date pour voir les tâches</p>
+              <p className="text-sm">{t('tasks.calendarPage.clickDateToView')}</p>
             </div>
           ) : selectedDateTasks.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Aucune tâche prévue</p>
+              <p className="text-sm">{t('tasks.calendarPage.noTasksOnDate')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -243,7 +257,7 @@ const CalendarContent: React.FC<{
                       {task.assigned_to && (
                         <div className="flex items-center gap-1">
                           <User className="w-3 h-3" />
-                          <span>Assigné</span>
+                          <span>{t('tasks.calendarPage.assigned')}</span>
                         </div>
                       )}
 
@@ -297,11 +311,13 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
     setShowTaskForm(true);
   };
 
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement du calendrier...</span>
+        <span className="ml-3 text-gray-600 dark:text-gray-400">{t('tasks.calendarPage.loading')}</span>
       </div>
     );
   }
@@ -338,8 +354,22 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
 
 // Main component wraps with CalendarProvider
 const TasksCalendar: React.FC<TasksCalendarProps> = (props) => {
+  const { i18n } = useTranslation();
+  
+  // Map i18n language to calendar locale
+  const getCalendarLocale = () => {
+    switch (i18n.language) {
+      case 'fr':
+        return 'fr-FR';
+      case 'ar':
+        return 'ar-SA';
+      default:
+        return 'en-US';
+    }
+  };
+
   return (
-    <CalendarProvider locale="fr-FR" startDay={1}>
+    <CalendarProvider locale={getCalendarLocale()} startDay={1}>
       <TasksCalendarInner {...props} />
     </CalendarProvider>
   );

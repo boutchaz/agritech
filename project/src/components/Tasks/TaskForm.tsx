@@ -387,6 +387,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Input
                 id="scheduled_start"
                 type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={formData.scheduled_start}
                 onChange={(e) => setFormData({ ...formData, scheduled_start: e.target.value })}
               />
@@ -397,6 +398,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Input
                 id="due_date"
                 type="date"
+                min={formData.scheduled_start || new Date().toISOString().split('T')[0]}
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               />

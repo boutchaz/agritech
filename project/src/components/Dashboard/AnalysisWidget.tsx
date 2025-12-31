@@ -9,7 +9,7 @@ import { fr } from 'date-fns/locale';
 import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 
-const SoilAnalysisWidget: React.FC = () => {
+const AnalysisWidget: React.FC = () => {
   const navigate = useNavigate();
   const { currentFarm } = useAuth();
   const { t, i18n } = useTranslation();
@@ -64,7 +64,7 @@ const SoilAnalysisWidget: React.FC = () => {
   }, [analyses]);
 
   const handleViewAnalyses = () => {
-    navigate({ to: '/soil-analysis' });
+    navigate({ to: '/analyses' });
   };
 
   if (loading) {
@@ -225,4 +225,4 @@ const SoilAnalysisWidget: React.FC = () => {
   );
 };
 
-export default SoilAnalysisWidget;
+export default AnalysisWidget;
