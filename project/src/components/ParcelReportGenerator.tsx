@@ -12,6 +12,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { generateParcelReport } from '../lib/edge-functions-api';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
+import { AIReportGenerator } from './AIReportSection';
 
 interface ParcelReportGeneratorProps {
   parcelId: string;
@@ -186,6 +187,21 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* AI Report Section */}
+      <AIReportGenerator parcelId={parcelId} parcelName={parcelData?.name || 'Parcelle'} />
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="px-4 bg-gray-50 dark:bg-gray-900 text-sm text-gray-500 dark:text-gray-400">
+            Rapports Traditionnels
+          </span>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

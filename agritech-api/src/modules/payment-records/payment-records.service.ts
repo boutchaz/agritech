@@ -408,14 +408,28 @@ export class PaymentRecordsService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
+    // Extract bonuses and deductions arrays (they go to separate tables)
+    const bonusesArray = paymentData.bonuses || [];
+    const deductionsArray = paymentData.deductions || [];
+
+    // Calculate total amounts for NUMERIC fields
+    const bonusesTotal = bonusesArray.reduce((sum: number, bonus: any) => sum + (Number(bonus.amount) || 0), 0);
+    const deductionsTotal = deductionsArray.reduce((sum: number, deduction: any) => sum + (Number(deduction.amount) || 0), 0);
+
+    // Prepare insert data, excluding arrays and setting calculated totals
+    const { bonuses: _, deductions: __, ...restData } = paymentData;
+    const insertData = {
+      ...restData,
+      bonuses: bonusesTotal, // NUMERIC field - total amount
+      deductions: deductionsTotal, // NUMERIC field - total amount
+      organization_id: organizationId,
+      calculated_by: userId,
+    };
+
     // Create payment record
     const { data: payment, error: paymentError } = await client
       .from('payment_records')
-      .insert({
-        ...paymentData,
-        organization_id: organizationId,
-        calculated_by: userId,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -424,10 +438,12 @@ export class PaymentRecordsService {
     }
 
     // Insert bonuses if provided
-    if (paymentData.bonuses && paymentData.bonuses.length > 0) {
-      const bonusInserts = paymentData.bonuses.map((bonus: any) => ({
+    if (bonusesArray.length > 0) {
+      const bonusInserts = bonusesArray.map((bonus: any) => ({
         payment_record_id: payment.id,
-        ...bonus,
+        bonus_type: bonus.bonus_type,
+        amount: Number(bonus.amount) || 0,
+        description: bonus.description || null,
       }));
 
       const { error: bonusError } = await client
@@ -440,10 +456,13 @@ export class PaymentRecordsService {
     }
 
     // Insert deductions if provided
-    if (paymentData.deductions && paymentData.deductions.length > 0) {
-      const deductionInserts = paymentData.deductions.map((deduction: any) => ({
+    if (deductionsArray.length > 0) {
+      const deductionInserts = deductionsArray.map((deduction: any) => ({
         payment_record_id: payment.id,
-        ...deduction,
+        deduction_type: deduction.deduction_type,
+        amount: Number(deduction.amount) || 0,
+        description: deduction.description || null,
+        reference: deduction.reference || null,
       }));
 
       const { error: deductionError } = await client

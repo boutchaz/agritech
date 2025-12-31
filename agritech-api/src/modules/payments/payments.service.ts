@@ -26,7 +26,7 @@ export class PaymentsService {
         organizationId: string,
         userId: string,
     ) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             // Generate payment number
@@ -81,7 +81,7 @@ export class PaymentsService {
         organizationId: string,
         userId: string,
     ) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             // Fetch payment
@@ -359,7 +359,7 @@ export class PaymentsService {
      * Get all payments with optional filters
      */
     async findAll(organizationId: string, filters?: any) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             let query = supabaseClient
@@ -409,7 +409,7 @@ export class PaymentsService {
      * Get a single payment by ID
      */
     async findOne(id: string, organizationId: string) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             const { data, error } = await supabaseClient
@@ -452,7 +452,7 @@ export class PaymentsService {
         dto: UpdatePaymentStatusDto,
         organizationId: string,
     ) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             // Check if payment exists
@@ -494,7 +494,7 @@ export class PaymentsService {
      * Delete a payment (only drafts without allocations)
      */
     async delete(id: string, organizationId: string) {
-        const supabaseClient = this.databaseService.getClient();
+        const supabaseClient = this.databaseService.getAdminClient();
 
         try {
             const payment = await this.findOne(id, organizationId);

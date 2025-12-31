@@ -73,7 +73,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     item_name: z.string().min(1, t('quotes.form.validation.itemNameRequired')),
     description: z.string().optional(),
     quantity: z.coerce.number().min(0.01, t('quotes.form.validation.quantityPositive')),
-    rate: z.coerce.number().min(0, t('quotes.form.validation.ratePositive')),
+    rate: z.coerce.number().positive(t('quotes.form.validation.ratePositive')),
     account_id: z.string().min(1, t('quotes.form.validation.accountRequired')),
     tax_id: z.string().optional(),
   });
@@ -199,7 +199,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   useEffect(() => {
     const calculateTotals = async () => {
       const validItems = watchItems.filter(
-        (item) => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
+        (item) => item.item_name && item.quantity > 0 && item.rate > 0 && item.account_id
       );
 
       if (validItems.length > 0) {

@@ -65,6 +65,7 @@ import { FilesModule } from './modules/files/files.module';
 import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
 import { LabServicesModule } from './modules/lab-services/lab-services.module';
 import { TreeManagementModule } from './modules/tree-management/tree-management.module';
+import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
 
 @Module({
   imports: [
@@ -147,6 +148,7 @@ import { TreeManagementModule } from './modules/tree-management/tree-management.
     StrapiModule,
     DemoDataModule,
     FilesModule,
+    AIReportsModule,
   ],
   controllers: [AppController],
   providers: [

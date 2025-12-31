@@ -1,110 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
 
 interface TourInfo {
   id: TourId;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   icon: React.ReactNode;
 }
 
-const AVAILABLE_TOURS: TourInfo[] = [
+const TOUR_CONFIGS: TourInfo[] = [
   {
     id: 'welcome',
-    title: 'Visite de bienvenue',
-    description: 'Découvrez l\'interface et la navigation',
+    titleKey: 'helpCenter.tours.welcome.title',
+    descriptionKey: 'helpCenter.tours.welcome.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'full-app',
-    title: '🌟 Tour complet',
-    description: 'Découvrez toute l\'application en une visite',
+    titleKey: 'helpCenter.tours.fullApp.title',
+    descriptionKey: 'helpCenter.tours.fullApp.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'dashboard',
-    title: 'Tableau de bord',
-    description: 'Statistiques et aperçu général',
+    titleKey: 'helpCenter.tours.dashboard.title',
+    descriptionKey: 'helpCenter.tours.dashboard.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'farm-management',
-    title: 'Gestion des fermes',
-    description: 'Créez et gérez vos exploitations',
+    titleKey: 'helpCenter.tours.farmManagement.title',
+    descriptionKey: 'helpCenter.tours.farmManagement.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'parcels',
-    title: 'Gestion des parcelles',
-    description: 'Gérez vos cultures et parcelles',
+    titleKey: 'helpCenter.tours.parcels.title',
+    descriptionKey: 'helpCenter.tours.parcels.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'tasks',
-    title: 'Gestion des tâches',
-    description: 'Planifiez et suivez les travaux',
+    titleKey: 'helpCenter.tours.tasks.title',
+    descriptionKey: 'helpCenter.tours.tasks.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'workers',
-    title: 'Gestion du personnel',
-    description: 'Gérez votre équipe et les paiements',
+    titleKey: 'helpCenter.tours.workers.title',
+    descriptionKey: 'helpCenter.tours.workers.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'inventory',
-    title: 'Gestion du stock',
-    description: 'Suivez votre inventaire',
+    titleKey: 'helpCenter.tours.inventory.title',
+    descriptionKey: 'helpCenter.tours.inventory.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'harvests',
-    title: 'Récoltes',
-    description: 'Enregistrez et suivez vos récoltes',
+    titleKey: 'helpCenter.tours.harvests.title',
+    descriptionKey: 'helpCenter.tours.harvests.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'infrastructure',
-    title: 'Infrastructures',
-    description: 'Gérez bâtiments, puits et bassins',
+    titleKey: 'helpCenter.tours.infrastructure.title',
+    descriptionKey: 'helpCenter.tours.infrastructure.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'billing',
-    title: 'Facturation',
-    description: 'Devis, commandes et factures',
+    titleKey: 'helpCenter.tours.billing.title',
+    descriptionKey: 'helpCenter.tours.billing.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'accounting',
-    title: 'Comptabilité',
-    description: 'Journaux et rapports financiers',
+    titleKey: 'helpCenter.tours.accounting.title',
+    descriptionKey: 'helpCenter.tours.accounting.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'satellite',
-    title: 'Analyse satellite',
-    description: 'Surveillez la santé des cultures',
+    titleKey: 'helpCenter.tours.satellite.title',
+    descriptionKey: 'helpCenter.tours.satellite.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'reports',
-    title: 'Rapports',
-    description: 'Générez et exportez des rapports',
+    titleKey: 'helpCenter.tours.reports.title',
+    descriptionKey: 'helpCenter.tours.reports.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     id: 'settings',
-    title: 'Paramètres',
-    description: 'Configurez votre organisation',
+    titleKey: 'helpCenter.tours.settings.title',
+    descriptionKey: 'helpCenter.tours.settings.description',
     icon: <BookOpen className="h-4 w-4" />,
   },
 ];
 
 export const TourHelpButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
   const { startTour, isTourCompleted, resetTour, resetAllTours, isRunning } = useTour();
+
+  const tours = useMemo(() => 
+    TOUR_CONFIGS.map(tour => ({
+      ...tour,
+      title: t(tour.titleKey),
+      description: t(tour.descriptionKey),
+    })),
+    [t]
+  );
 
   const handleStartTour = (tourId: TourId) => {
     setIsOpen(false);
@@ -129,14 +140,14 @@ export const TourHelpButton: React.FC = () => {
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
           <div className="p-4 bg-emerald-50 border-b border-emerald-100">
-            <h3 className="font-semibold text-emerald-800">Centre d'aide</h3>
+            <h3 className="font-semibold text-emerald-800">{t('helpCenter.title')}</h3>
             <p className="text-sm text-emerald-600 mt-1">
-              Choisissez une visite guidée pour découvrir les fonctionnalités
+              {t('helpCenter.subtitle')}
             </p>
           </div>
           
           <div className="max-h-96 overflow-y-auto">
-            {AVAILABLE_TOURS.map((tour) => {
+            {tours.map((tour) => {
               const completed = isTourCompleted(tour.id);
               
               return (
@@ -155,7 +166,7 @@ export const TourHelpButton: React.FC = () => {
                       </span>
                       {completed && (
                         <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                          Terminé
+                          {t('helpCenter.completed')}
                         </span>
                       )}
                     </div>
@@ -166,7 +177,7 @@ export const TourHelpButton: React.FC = () => {
                       <button
                         onClick={(e) => handleResetTour(e, tour.id)}
                         className="p-1 hover:bg-gray-200 rounded transition-colors"
-                        title="Recommencer cette visite"
+                        title={t('helpCenter.restartTour')}
                       >
                         <RotateCcw className="h-3.5 w-3.5 text-gray-400" />
                       </button>
@@ -184,7 +195,7 @@ export const TourHelpButton: React.FC = () => {
               className="w-full text-sm text-gray-600 hover:text-gray-800 flex items-center justify-center gap-2 py-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <RotateCcw className="h-4 w-4" />
-              Réinitialiser toutes les visites
+              {t('helpCenter.resetAllTours')}
             </button>
           </div>
         </div>
@@ -199,7 +210,7 @@ export const TourHelpButton: React.FC = () => {
             : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-110'
           }
         `}
-        title="Aide et visites guidées"
+        title={t('helpCenter.buttonTitle')}
       >
         <HelpCircle className="h-6 w-6" />
       </button>
