@@ -12256,7 +12256,7 @@ CREATE POLICY "org_ai_settings_select" ON organization_ai_settings
     FOR SELECT
     USING (
         organization_id IN (
-            SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+            SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
         )
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -12266,10 +12266,13 @@ DO $$ BEGIN
 CREATE POLICY "org_ai_settings_insert" ON organization_ai_settings
     FOR INSERT
     WITH CHECK (
-        organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND role IN ('owner', 'admin')
+        EXISTS (
+            SELECT 1 FROM organization_users ou
+            JOIN roles r ON r.id = ou.role_id
+            WHERE ou.user_id = auth.uid()
+                AND ou.organization_id = organization_ai_settings.organization_id
+                AND r.name IN ('organization_admin', 'system_admin')
+                AND ou.is_active = true
         )
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -12279,10 +12282,13 @@ DO $$ BEGIN
 CREATE POLICY "org_ai_settings_update" ON organization_ai_settings
     FOR UPDATE
     USING (
-        organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND role IN ('owner', 'admin')
+        EXISTS (
+            SELECT 1 FROM organization_users ou
+            JOIN roles r ON r.id = ou.role_id
+            WHERE ou.user_id = auth.uid()
+                AND ou.organization_id = organization_ai_settings.organization_id
+                AND r.name IN ('organization_admin', 'system_admin')
+                AND ou.is_active = true
         )
     );
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -12292,10 +12298,13 @@ DO $$ BEGIN
 CREATE POLICY "org_ai_settings_delete" ON organization_ai_settings
     FOR DELETE
     USING (
-        organization_id IN (
-            SELECT organization_id FROM organization_users
-            WHERE user_id = auth.uid()
-            AND role IN ('owner', 'admin')
+        EXISTS (
+            SELECT 1 FROM organization_users ou
+            JOIN roles r ON r.id = ou.role_id
+            WHERE ou.user_id = auth.uid()
+                AND ou.organization_id = organization_ai_settings.organization_id
+                AND r.name IN ('organization_admin', 'system_admin')
+                AND ou.is_active = true
         )
     );
 EXCEPTION WHEN duplicate_object THEN NULL;

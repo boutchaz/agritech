@@ -14,6 +14,7 @@ import { Link } from '@tanstack/react-router';
 import { AIProviderSelector } from './AIProviderSelector';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
+import { DataAvailabilityPreview } from './DataAvailabilityPreview';
 import { useAIProviders, useGenerateAIReport } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 
@@ -201,6 +202,13 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Data Availability Preview */}
+          <DataAvailabilityPreview
+            parcelId={parcelId}
+            startDate={dateRange.start}
+            endDate={dateRange.end}
+          />
 
           {/* Error Display */}
           {generateMutation.isError && (

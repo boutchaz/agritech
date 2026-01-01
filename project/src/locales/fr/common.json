@@ -2898,7 +2898,21 @@
       }
     },
     "configureProviders": "Configurer les fournisseurs IA",
-    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée."
+    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée.",
+    "dataAvailability": {
+      "title": "Données disponibles",
+      "loading": "Vérification des données...",
+      "statusExcellent": "Excellente couverture",
+      "statusPartial": "Couverture partielle",
+      "statusLimited": "Couverture limitée",
+      "satellite": "Données satellites",
+      "satelliteDetail": "{{count}} points",
+      "soil": "Analyse de sol",
+      "water": "Analyse d'eau",
+      "plant": "Analyse végétale",
+      "weather": "Données météo",
+      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats."
+    }
   },
   "aiSettings": {
     "title": "Fournisseurs IA",

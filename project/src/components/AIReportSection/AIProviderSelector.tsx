@@ -9,12 +9,13 @@ interface AIProviderSelectorProps {
   disabled?: boolean;
 }
 
-const providerIcons: Record<AIProvider, React.ReactNode> = {
+const providerIcons: Record<string, React.ReactNode> = {
   openai: <Bot className="w-6 h-6" />,
   gemini: <Sparkles className="w-6 h-6" />,
+  groq: <Bot className="w-6 h-6" />,
 };
 
-const providerLabels: Record<AIProvider, { name: string; description: string }> = {
+const providerLabels: Record<string, { name: string; description: string }> = {
   openai: {
     name: 'OpenAI GPT-4',
     description: 'Modèle avancé pour des analyses détaillées',
@@ -23,6 +24,15 @@ const providerLabels: Record<AIProvider, { name: string; description: string }> 
     name: 'Google Gemini',
     description: 'IA multimodale de Google',
   },
+  groq: {
+    name: 'Groq',
+    description: 'IA ultra-rapide avec Llama',
+  },
+};
+
+const defaultProviderInfo = {
+  name: 'Unknown Provider',
+  description: 'Provider not configured',
 };
 
 export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
@@ -40,7 +50,8 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
         {providers.map((provider) => {
           const isSelected = selectedProvider === provider.provider;
           const isAvailable = provider.available;
-          const info = providerLabels[provider.provider];
+          const info = providerLabels[provider.provider] || defaultProviderInfo;
+          const icon = providerIcons[provider.provider] || <Bot className="w-6 h-6" />;
 
           return (
             <button
@@ -63,7 +74,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                     : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
                 }`}
               >
-                {providerIcons[provider.provider]}
+                {icon}
               </div>
               <div className="ml-3 flex-1 text-left">
                 <div className="flex items-center justify-between">

@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Body,
+  Param,
+  Query,
   UseGuards,
   Headers,
   Req,
@@ -36,6 +38,30 @@ export class AIReportsController {
     @Headers('x-organization-id') organizationId: string,
   ) {
     return this.aiReportsService.getAvailableProviders(organizationId);
+  }
+
+  @Get('data-availability/:parcelId')
+  @ApiOperation({ summary: 'Get data availability for AI report generation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Data availability summary for the parcel',
+  })
+  async getDataAvailability(
+    @Req() req,
+    @Headers('x-organization-id') organizationId: string,
+    @Param('parcelId') parcelId: string,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.aiReportsService.getDataAvailability(
+      organizationId,
+      parcelId,
+      startDate,
+      endDate,
+    );
   }
 
   @Post('generate')
