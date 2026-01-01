@@ -2802,7 +2802,25 @@
         "name": "Google Gemini",
         "description": "IA multimodale de Google"
       }
-    }
+    },
+    "configureProviders": "Configurer les fournisseurs IA",
+    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée."
+  },
+  "aiSettings": {
+    "title": "Fournisseurs IA",
+    "description": "Configurez vos clés API pour activer les rapports IA sur vos parcelles.",
+    "loading": "Chargement des paramètres IA...",
+    "securityTitle": "Stockage sécurisé",
+    "securityDescription": "Vos clés API sont chiffrées avec AES-256-GCM avant d'être stockées. Elles ne sont jamais exposées en clair.",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "apiKey": "Clé API",
+    "enterApiKey": "Entrez votre clé API",
+    "update": "Modifier",
+    "getApiKey": "Obtenir une clé API",
+    "lastUpdated": "Dernière mise à jour",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette clé API ?",
+    "saveError": "Erreur lors de l'enregistrement"
   }
 }
 

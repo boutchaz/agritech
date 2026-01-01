@@ -2757,5 +2757,69 @@
         "description": "هيئ منظمتك"
       }
     }
+  },
+  "aiReport": {
+    "title": "تقرير الذكاء الاصطناعي",
+    "subtitle": "تحليل معمق لقطعة الأرض باستخدام الذكاء الاصطناعي",
+    "loadingProviders": "جاري تحميل مزودي الذكاء الاصطناعي...",
+    "noProvidersTitle": "لم يتم تكوين مزودي الذكاء الاصطناعي",
+    "noProvidersDescription": "لإنشاء تقارير الذكاء الاصطناعي، يرجى تكوين مزود واحد على الأقل (OpenAI أو Google Gemini) في إعدادات منظمتك.",
+    "dateRange": "فترة التحليل",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "errorTitle": "خطأ في الإنشاء",
+    "errorGeneric": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    "generating": "جاري التحليل...",
+    "generateButton": "إنشاء تقرير الذكاء الاصطناعي",
+    "generatingHint": "يقوم الذكاء الاصطناعي بتحليل بيانات الأقمار الصناعية وتحليلات التربة والمعلومات الأخرى...",
+    "generatedWith": "تم الإنشاء بواسطة",
+    "regenerate": "إعادة الإنشاء",
+    "exportPdf": "تصدير PDF",
+    "sections": {
+      "executiveSummary": "الملخص التنفيذي",
+      "healthAssessment": "تقييم الصحة",
+      "riskAlerts": "التنبيهات",
+      "recommendations": "التوصيات",
+      "actionItems": "الإجراءات المطلوبة"
+    },
+    "health": {
+      "soil": "التربة",
+      "vegetation": "الغطاء النباتي",
+      "water": "المياه",
+      "notEvaluated": "غير مقيم"
+    },
+    "priority": {
+      "high": "أولوية عالية",
+      "medium": "أولوية متوسطة",
+      "low": "أولوية منخفضة"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "نموذج متقدم للتحليلات المفصلة"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "الذكاء الاصطناعي متعدد الوسائط من Google"
+      }
+    },
+    "configureProviders": "تكوين مزودي الذكاء الاصطناعي",
+    "securityNote": "مفاتيح API الخاصة بك مشفرة ومخزنة بشكل آمن."
+  },
+  "aiSettings": {
+    "title": "مزودو الذكاء الاصطناعي",
+    "description": "قم بتكوين مفاتيح API الخاصة بك لتمكين تقارير الذكاء الاصطناعي على قطعك.",
+    "loading": "جاري تحميل إعدادات الذكاء الاصطناعي...",
+    "securityTitle": "تخزين آمن",
+    "securityDescription": "يتم تشفير مفاتيح API الخاصة بك باستخدام AES-256-GCM قبل تخزينها. لا يتم كشفها أبداً بشكل نص عادي.",
+    "enabled": "مفعّل",
+    "disabled": "معطّل",
+    "apiKey": "مفتاح API",
+    "enterApiKey": "أدخل مفتاح API الخاص بك",
+    "update": "تحديث",
+    "getApiKey": "الحصول على مفتاح API",
+    "lastUpdated": "آخر تحديث",
+    "confirmDelete": "هل أنت متأكد من حذف مفتاح API هذا؟",
+    "saveError": "خطأ في الحفظ"
   }
 }

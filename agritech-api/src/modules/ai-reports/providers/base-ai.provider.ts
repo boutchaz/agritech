@@ -11,6 +11,7 @@ export abstract class BaseAIProvider implements IAIProvider {
   protected readonly logger: Logger;
   protected readonly configService: ConfigService;
   protected readonly providerName: AIProvider;
+  protected dynamicApiKey: string | null = null;
 
   constructor(configService: ConfigService, providerName: AIProvider) {
     this.configService = configService;
@@ -23,6 +24,20 @@ export abstract class BaseAIProvider implements IAIProvider {
 
   getProviderName(): AIProvider {
     return this.providerName;
+  }
+
+  /**
+   * Set a dynamic API key for this request (from organization settings)
+   */
+  setApiKey(apiKey: string): void {
+    this.dynamicApiKey = apiKey;
+  }
+
+  /**
+   * Clear the dynamic API key after use
+   */
+  protected clearDynamicApiKey(): void {
+    this.dynamicApiKey = null;
   }
 
   protected buildMessages(systemPrompt: string, userPrompt: string) {

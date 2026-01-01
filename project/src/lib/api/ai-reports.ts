@@ -73,6 +73,37 @@ export interface AIReportResponse {
   };
 }
 
+// Backend response structure
+interface BackendAIReportResponse {
+  success: boolean;
+  report: {
+    id: string;
+    parcel_id: string;
+    title: string;
+    status: string;
+    generated_at: string;
+    metadata: {
+      type: string;
+      provider: AIProvider;
+      sections: AIReportSections;
+      health_score: number;
+      recommendations_count: number;
+      risk_alerts_count: number;
+    };
+  };
+  sections: AIReportSections;
+  metadata: {
+    provider: AIProvider;
+    model: string;
+    tokensUsed?: number;
+    generatedAt: string;
+    dataRange: {
+      start: string;
+      end: string;
+    };
+  };
+}
+
 export const aiReportsApi = {
   /**
    * Get available AI providers
@@ -85,6 +116,20 @@ export const aiReportsApi = {
    * Generate an AI-powered report for a parcel
    */
   async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportResponse> {
-    return apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
+    const response: BackendAIReportResponse = await apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
+
+    // Map backend response to frontend expected format
+    return {
+      id: response.report.id,
+      parcel_id: response.report.parcel_id,
+      provider: response.metadata.provider,
+      model: response.metadata.model,
+      sections: response.sections,
+      generated_at: response.metadata.generatedAt,
+      data_range: response.metadata.dataRange,
+      metadata: {
+        token_usage: response.metadata.tokensUsed,
+      },
+    };
   },
 };

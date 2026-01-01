@@ -28,4 +28,5 @@ export interface IAIProvider {
   generate(request: AIGenerationRequest): Promise<AIGenerationResponse>;
   validateConfig(): boolean;
   getProviderName(): AIProvider;
+  setApiKey(apiKey: string): void;
 }
