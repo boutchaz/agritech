@@ -63,6 +63,7 @@ import { Route as StockIndexRouteImport } from './routes/stock/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as WorkersPieceWorkRouteImport } from './routes/workers.piece-work'
+import { Route as WorkersWorkerIdRouteImport } from './routes/workers.$workerId'
 import { Route as TasksCalendarRouteImport } from './routes/tasks.calendar'
 import { Route as StockWarehousesRouteImport } from './routes/stock/warehouses'
 import { Route as StockSuppliersRouteImport } from './routes/stock/suppliers'
@@ -371,6 +372,11 @@ const WorkersPieceWorkRoute = WorkersPieceWorkRouteImport.update({
   path: '/piece-work',
   getParentRoute: () => WorkersRoute,
 } as any)
+const WorkersWorkerIdRoute = WorkersWorkerIdRouteImport.update({
+  id: '/$workerId',
+  path: '/$workerId',
+  getParentRoute: () => WorkersRoute,
+} as any)
 const TasksCalendarRoute = TasksCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -644,6 +650,7 @@ export interface FileRoutesByFullPath {
   '/stock/suppliers': typeof StockSuppliersRoute
   '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/$workerId': typeof WorkersWorkerIdRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -731,6 +738,7 @@ export interface FileRoutesByTo {
   '/stock/suppliers': typeof StockSuppliersRoute
   '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/$workerId': typeof WorkersWorkerIdRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -826,6 +834,7 @@ export interface FileRoutesById {
   '/stock/suppliers': typeof StockSuppliersRoute
   '/stock/warehouses': typeof StockWarehousesRoute
   '/tasks/calendar': typeof TasksCalendarRoute
+  '/workers/$workerId': typeof WorkersWorkerIdRoute
   '/workers/piece-work': typeof WorkersPieceWorkRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -921,6 +930,7 @@ export interface FileRouteTypes {
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/tasks/calendar'
+    | '/workers/$workerId'
     | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
@@ -1008,6 +1018,7 @@ export interface FileRouteTypes {
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/tasks/calendar'
+    | '/workers/$workerId'
     | '/workers/piece-work'
     | '/onboarding'
     | '/settings'
@@ -1102,6 +1113,7 @@ export interface FileRouteTypes {
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/tasks/calendar'
+    | '/workers/$workerId'
     | '/workers/piece-work'
     | '/onboarding/'
     | '/settings/'
@@ -1553,6 +1565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkersPieceWorkRouteImport
       parentRoute: typeof WorkersRoute
     }
+    '/workers/$workerId': {
+      id: '/workers/$workerId'
+      path: '/$workerId'
+      fullPath: '/workers/$workerId'
+      preLoaderRoute: typeof WorkersWorkerIdRouteImport
+      parentRoute: typeof WorkersRoute
+    }
     '/tasks/calendar': {
       id: '/tasks/calendar'
       path: '/calendar'
@@ -1988,10 +2007,12 @@ const TasksRouteChildren: TasksRouteChildren = {
 const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 
 interface WorkersRouteChildren {
+  WorkersWorkerIdRoute: typeof WorkersWorkerIdRoute
   WorkersPieceWorkRoute: typeof WorkersPieceWorkRoute
 }
 
 const WorkersRouteChildren: WorkersRouteChildren = {
+  WorkersWorkerIdRoute: WorkersWorkerIdRoute,
   WorkersPieceWorkRoute: WorkersPieceWorkRoute,
 }
 

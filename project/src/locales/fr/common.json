@@ -2261,7 +2261,11 @@
       "fixedSalary": "Salariés fixes",
       "dailyWorkers": "Ouvriers journaliers",
       "sharecropping": "Métayage",
-      "platformAccess": "Accès plateforme"
+      "platformAccess": "Accès plateforme",
+      "daysWorked": "Jours travaillés",
+      "tasksCompleted": "Tâches terminées",
+      "totalPaid": "Total payé",
+      "pendingPayments": "Paiements en attente"
     },
     "filters": {
       "allTypes": "Tous les types",
@@ -2310,7 +2314,97 @@
       "fixed_salary": "Salarié fixe",
       "daily_worker": "Ouvrier journalier",
       "metayage": "Métayage"
-    }
+    },
+    "detail": {
+      "notFound": "Travailleur introuvable",
+      "backToList": "Retour aux travailleurs",
+      "noPosition": "Aucun poste assigné",
+      "tabs": {
+        "info": "Informations",
+        "payments": "Paiements",
+        "workRecords": "Registre de travail",
+        "settlements": "Règlements"
+      },
+      "personalInfo": "Informations personnelles",
+      "compensation": "Rémunération",
+      "paymentHistory": "Historique des paiements",
+      "noPayments": "Aucun paiement enregistré",
+      "workRecords": "Registre de travail",
+      "noWorkRecords": "Aucun enregistrement de travail",
+      "metayageSettlements": "Règlements de métayage",
+      "noSettlements": "Aucun règlement enregistré"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "fields": {
+      "cin": "Numéro CIN",
+      "phone": "Téléphone",
+      "email": "Email",
+      "address": "Adresse",
+      "hireDate": "Date d'embauche",
+      "monthlySalary": "Salaire mensuel",
+      "dailyRate": "Taux journalier",
+      "metayageType": "Type de métayage",
+      "calculationBasis": "Base de calcul",
+      "paymentMethod": "Mode de paiement",
+      "bankAccount": "Compte bancaire"
+    },
+    "payments": {
+      "date": "Date",
+      "type": "Type",
+      "amount": "Montant",
+      "status": "Statut",
+      "method": "Méthode",
+      "markAsPaid": "Marquer comme payé",
+      "processSuccess": "Paiement marqué comme payé",
+      "processError": "Échec du traitement du paiement"
+    },
+    "paymentTypes": {
+      "salary": "Salaire",
+      "daily_wage": "Salaire journalier",
+      "piece_work": "Travail à la pièce",
+      "bonus": "Prime",
+      "advance": "Avance",
+      "settlement": "Règlement"
+    },
+    "paymentStatuses": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "cancelled": "Annulé"
+    },
+    "paymentMethods": {
+      "cash": "Espèces",
+      "bank_transfer": "Virement bancaire",
+      "check": "Chèque",
+      "mobile_payment": "Paiement mobile"
+    },
+    "workRecords": {
+      "date": "Date",
+      "hours": "Heures",
+      "description": "Description",
+      "status": "Statut"
+    },
+    "settlements": {
+      "period": "Période",
+      "grossRevenue": "Revenu brut",
+      "charges": "Charges",
+      "share": "Part du travailleur",
+      "status": "Statut"
+    },
+    "metayageTypes": {
+      "khemmas": "Khemmas (1/5)",
+      "robaa": "Robaa (1/4)",
+      "nouss": "Nouss (1/2)",
+      "custom": "Personnalisé"
+    },
+    "calculationBasis": {
+      "gross": "Revenu brut",
+      "net": "Revenu net (après charges)"
+    },
+    "perDay": "par jour"
   },
   "tasks": {
     "title": "Gestion des Tâches",

@@ -4,6 +4,7 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-valid
 export enum AIProviderType {
   OPENAI = 'openai',
   GEMINI = 'gemini',
+  GROQ = 'groq',
 }
 
 export class UpsertAIProviderDto {

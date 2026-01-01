@@ -346,7 +346,7 @@ export class WorkersService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    // Get worker
+    
     const { data: worker } = await client
       .from('workers')
       .select('*')
@@ -358,21 +358,32 @@ export class WorkersService {
       throw new NotFoundException('Worker not found');
     }
 
-    // Get work records count and total paid
     const { data: workRecords } = await client
       .from('work_records')
       .select('amount_paid, payment_status')
       .eq('worker_id', workerId);
 
-    const totalPaid = (workRecords || [])
+    const workRecordsPaid = (workRecords || [])
       .filter(r => r.payment_status === 'paid')
       .reduce((sum, r) => sum + (r.amount_paid || 0), 0);
 
-    const pendingPayments = (workRecords || [])
+    const workRecordsPending = (workRecords || [])
       .filter(r => r.payment_status === 'pending')
       .reduce((sum, r) => sum + (r.amount_paid || 0), 0);
 
-    // Get métayage settlements if applicable
+    const { data: paymentRecords } = await client
+      .from('payment_records')
+      .select('net_amount, base_amount, status')
+      .eq('worker_id', workerId);
+
+    const paymentsPaid = (paymentRecords || [])
+      .filter(r => r.status === 'paid')
+      .reduce((sum, r) => sum + (r.net_amount || r.base_amount || 0), 0);
+
+    const paymentsPending = (paymentRecords || [])
+      .filter(r => r.status === 'pending')
+      .reduce((sum, r) => sum + (r.net_amount || r.base_amount || 0), 0);
+
     let metayageTotal = 0;
     if (worker.worker_type === 'metayage') {
       const { data: settlements } = await client
@@ -390,8 +401,8 @@ export class WorkersService {
     return {
       worker,
       totalWorkRecords: workRecords?.length || 0,
-      totalPaid: totalPaid + metayageTotal,
-      pendingPayments,
+      totalPaid: workRecordsPaid + paymentsPaid + metayageTotal,
+      pendingPayments: workRecordsPending + paymentsPending,
       totalDaysWorked: worker.total_days_worked || 0,
       totalTasksCompleted: worker.total_tasks_completed || 0,
     };

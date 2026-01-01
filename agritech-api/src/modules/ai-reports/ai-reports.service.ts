@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { OpenAIProvider } from './providers/openai.provider';
 import { GeminiProvider } from './providers/gemini.provider';
+import { GroqProvider } from './providers/groq.provider';
 import {
   AIProvider,
   AggregatedParcelData,
@@ -35,12 +36,14 @@ export class AIReportsService {
     private readonly configService: ConfigService,
     private readonly openaiProvider: OpenAIProvider,
     private readonly geminiProvider: GeminiProvider,
+    private readonly groqProvider: GroqProvider,
     @Inject(forwardRef(() => OrganizationAISettingsService))
     private readonly aiSettingsService: OrganizationAISettingsService,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
     this.providers.set(AIProvider.GEMINI, geminiProvider);
+    this.providers.set(AIProvider.GROQ, groqProvider);
   }
 
   async generateReport(organizationId: string, userId: string, dto: GenerateAIReportDto) {
@@ -56,9 +59,18 @@ export class AIReportsService {
     );
 
     // Fallback to environment variable if not configured in DB
-    const envApiKey = dto.provider === AIProvider.OPENAI
-      ? this.configService.get<string>('OPENAI_API_KEY')
-      : this.configService.get<string>('GOOGLE_AI_API_KEY');
+    let envApiKey: string | undefined;
+    switch (dto.provider) {
+      case AIProvider.OPENAI:
+        envApiKey = this.configService.get<string>('OPENAI_API_KEY');
+        break;
+      case AIProvider.GEMINI:
+        envApiKey = this.configService.get<string>('GOOGLE_AI_API_KEY');
+        break;
+      case AIProvider.GROQ:
+        envApiKey = this.configService.get<string>('GROQ_API_KEY');
+        break;
+    }
 
     const effectiveApiKey = apiKey || envApiKey;
 
@@ -166,6 +178,11 @@ export class AIReportsService {
       this.providers.get(AIProvider.GEMINI)?.validateConfig() ||
       false;
 
+    const groqAvailable =
+      orgSettings.get(AIProviderType.GROQ) ||
+      this.providers.get(AIProvider.GROQ)?.validateConfig() ||
+      false;
+
     return [
       {
         provider: AIProvider.OPENAI,
@@ -176,6 +193,11 @@ export class AIReportsService {
         provider: AIProvider.GEMINI,
         available: geminiAvailable,
         name: 'Gemini (Google)',
+      },
+      {
+        provider: AIProvider.GROQ,
+        available: groqAvailable,
+        name: 'Groq (LLaMA)',
       },
     ];
   }

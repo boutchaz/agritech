@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { supabase } from '@/lib/supabase';
 
@@ -43,6 +44,24 @@ interface TourContextValue {
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
 const TOUR_STORAGE_KEY = 'agritech_completed_tours';
+
+const TOUR_ROUTES: Record<TourId, string> = {
+  'welcome': '/dashboard',
+  'full-app': '/dashboard',
+  'dashboard': '/dashboard',
+  'farm-management': '/farm-hierarchy',
+  'parcels': '/parcels',
+  'tasks': '/tasks',
+  'workers': '/workers',
+  'inventory': '/stock',
+  'harvests': '/harvests',
+  'infrastructure': '/infrastructure',
+  'billing': '/billing',
+  'accounting': '/accounting',
+  'satellite': '/satellite-analysis',
+  'reports': '/reports',
+  'settings': '/settings',
+};
 
 const tourStyles = {
   options: {
@@ -653,6 +672,7 @@ interface TourProviderProps {
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     currentTour: null,
@@ -710,13 +730,27 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   };
 
   const startTour = useCallback((tourId: TourId) => {
-    setTourState(prev => ({
-      ...prev,
-      currentTour: tourId,
-      isRunning: true,
-      stepIndex: 0,
-    }));
-  }, []);
+    const targetRoute = TOUR_ROUTES[tourId];
+    
+    if (targetRoute) {
+      navigate({ to: targetRoute });
+      setTimeout(() => {
+        setTourState(prev => ({
+          ...prev,
+          currentTour: tourId,
+          isRunning: true,
+          stepIndex: 0,
+        }));
+      }, 500);
+    } else {
+      setTourState(prev => ({
+        ...prev,
+        currentTour: tourId,
+        isRunning: true,
+        stepIndex: 0,
+      }));
+    }
+  }, [navigate]);
 
   const endTour = useCallback(() => {
     setTourState(prev => ({

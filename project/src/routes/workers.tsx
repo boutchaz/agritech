@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings } from 'lucide-react';
@@ -32,11 +32,15 @@ function WorkersPage() {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const { can } = useCan();
+  const location = useLocation();
   const [activeModule, setActiveModule] = useState('workers');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
+  
+  // Check if we're on a child route (like /workers/:workerId)
+  const isChildRoute = location.pathname !== '/workers' && location.pathname !== '/workers/';
 
   // Check if user has access to workers page
   const canReadWorkers = can('read', 'Worker');
@@ -150,7 +154,9 @@ function WorkersPage() {
           subtitle={t('workers.subtitle')}
         />
         <div className="p-3 sm:p-4 lg:p-6">
-          {farmsLoading ? (
+          {isChildRoute ? (
+            <Outlet />
+          ) : farmsLoading ? (
             <div className="flex items-center justify-center p-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
