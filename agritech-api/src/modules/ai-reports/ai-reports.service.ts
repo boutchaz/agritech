@@ -178,8 +178,8 @@ export class AIReportsService {
       throw new BadRequestException('Parcel not found');
     }
 
-    const parcelFarms = parcel.farms as unknown as { organization_id: string }[];
-    if (!parcelFarms?.[0] || parcelFarms[0].organization_id !== organizationId) {
+    const parcelWithFarm = parcel as unknown as { farms: { organization_id: string } };
+    if (parcelWithFarm.farms?.organization_id !== organizationId) {
       throw new BadRequestException('Access denied to this parcel');
     }
 
