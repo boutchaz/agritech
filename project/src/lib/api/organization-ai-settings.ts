@@ -2,7 +2,7 @@ import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/organization-ai-settings';
 
-export type AIProviderType = 'openai' | 'gemini';
+export type AIProviderType = 'openai' | 'gemini' | 'groq';
 
 export interface AIProviderSettings {
   provider: AIProviderType;

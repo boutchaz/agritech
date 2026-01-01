@@ -1,6 +1,7 @@
 export enum AIProvider {
   OPENAI = 'openai',
   GEMINI = 'gemini',
+  GROQ = 'groq',
 }
 
 export interface AIProviderConfig {

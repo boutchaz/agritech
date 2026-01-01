@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Users,
@@ -30,6 +31,7 @@ interface WorkersListProps {
 
 const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<WorkerType | 'all'>('all');
   const [filterActive, setFilterActive] = useState<boolean | 'all'>('all');
@@ -271,7 +273,11 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           {/* Mobile Cards View */}
           <div className="lg:hidden space-y-3" data-tour="worker-list">
             {filteredWorkers.map((worker) => (
-              <div key={worker.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+              <div
+                key={worker.id}
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
@@ -362,7 +368,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
                   <Can I="create" a="Payment">
                     <button
                       onClick={() => handlePayWorker(worker)}
@@ -446,7 +452,11 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredWorkers.map((worker) => (
-                    <tr key={worker.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr
+                      key={worker.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
+                    >
                       <td className="px-4 xl:px-6 py-4">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">
@@ -528,7 +538,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 xl:px-6 py-4 text-right">
+                      <td className="px-4 xl:px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <Can I="create" a="Payment">
                             <button

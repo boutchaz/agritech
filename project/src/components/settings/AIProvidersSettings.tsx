@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Bot,
   Sparkles,
+  Zap,
   Eye,
   EyeOff,
   Trash2,
@@ -47,6 +48,14 @@ const providers: ProviderConfig[] = [
     placeholder: 'AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     docsUrl: 'https://aistudio.google.com/app/apikey',
   },
+  {
+    id: 'groq',
+    name: 'Groq',
+    description: 'LLaMA 3.3 70B ultra-rapide pour des réponses instantanées',
+    icon: <Zap className="w-6 h-6" />,
+    placeholder: 'gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    docsUrl: 'https://console.groq.com/keys',
+  },
 ];
 
 export const AIProvidersSettings: React.FC = () => {
@@ -59,10 +68,12 @@ export const AIProvidersSettings: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<Record<AIProviderType, string>>({
     openai: '',
     gemini: '',
+    groq: '',
   });
   const [showKeys, setShowKeys] = useState<Record<AIProviderType, boolean>>({
     openai: false,
     gemini: false,
+    groq: false,
   });
   const [editingProvider, setEditingProvider] = useState<AIProviderType | null>(null);
 

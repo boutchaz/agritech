@@ -2261,7 +2261,11 @@
       "fixedSalary": "Fixed salary",
       "dailyWorkers": "Daily workers",
       "sharecropping": "Sharecropping",
-      "platformAccess": "Platform access"
+      "platformAccess": "Platform access",
+      "daysWorked": "Days Worked",
+      "tasksCompleted": "Tasks Completed",
+      "totalPaid": "Total Paid",
+      "pendingPayments": "Pending Payments"
     },
     "filters": {
       "allTypes": "All types",
@@ -2310,7 +2314,97 @@
       "fixed_salary": "Fixed salary",
       "daily_worker": "Daily worker",
       "metayage": "Sharecropping"
-    }
+    },
+    "detail": {
+      "notFound": "Worker not found",
+      "backToList": "Back to Workers",
+      "noPosition": "No position assigned",
+      "tabs": {
+        "info": "Information",
+        "payments": "Payments",
+        "workRecords": "Work Records",
+        "settlements": "Settlements"
+      },
+      "personalInfo": "Personal Information",
+      "compensation": "Compensation",
+      "paymentHistory": "Payment History",
+      "noPayments": "No payments recorded",
+      "workRecords": "Work Records",
+      "noWorkRecords": "No work records found",
+      "metayageSettlements": "Sharecropping Settlements",
+      "noSettlements": "No settlements recorded"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "fields": {
+      "cin": "ID Number (CIN)",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "hireDate": "Hire Date",
+      "monthlySalary": "Monthly Salary",
+      "dailyRate": "Daily Rate",
+      "metayageType": "Sharecropping Type",
+      "calculationBasis": "Calculation Basis",
+      "paymentMethod": "Payment Method",
+      "bankAccount": "Bank Account"
+    },
+    "payments": {
+      "date": "Date",
+      "type": "Type",
+      "amount": "Amount",
+      "status": "Status",
+      "method": "Method",
+      "markAsPaid": "Mark as Paid",
+      "processSuccess": "Payment marked as paid",
+      "processError": "Failed to process payment"
+    },
+    "paymentTypes": {
+      "salary": "Salary",
+      "daily_wage": "Daily Wage",
+      "piece_work": "Piece Work",
+      "bonus": "Bonus",
+      "advance": "Advance",
+      "settlement": "Settlement"
+    },
+    "paymentStatuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "paymentMethods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank Transfer",
+      "check": "Check",
+      "mobile_payment": "Mobile Payment"
+    },
+    "workRecords": {
+      "date": "Date",
+      "hours": "Hours",
+      "description": "Description",
+      "status": "Status"
+    },
+    "settlements": {
+      "period": "Period",
+      "grossRevenue": "Gross Revenue",
+      "charges": "Charges",
+      "share": "Worker Share",
+      "status": "Status"
+    },
+    "metayageTypes": {
+      "khemmas": "Khemmas (1/5)",
+      "robaa": "Robaa (1/4)",
+      "nouss": "Nouss (1/2)",
+      "custom": "Custom"
+    },
+    "calculationBasis": {
+      "gross": "Gross Revenue",
+      "net": "Net Revenue (after charges)"
+    },
+    "perDay": "per day"
   },
   "tasks": {
     "title": "Task Management",

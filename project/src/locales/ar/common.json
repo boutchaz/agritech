@@ -2261,7 +2261,11 @@
       "fixedSalary": "راتب ثابت",
       "dailyWorkers": "عمال يوميون",
       "sharecropping": "مزارعة",
-      "platformAccess": "وصول المنصة"
+      "platformAccess": "وصول المنصة",
+      "daysWorked": "أيام العمل",
+      "tasksCompleted": "المهام المكتملة",
+      "totalPaid": "إجمالي المدفوع",
+      "pendingPayments": "المدفوعات المعلقة"
     },
     "filters": {
       "allTypes": "جميع الأنواع",
@@ -2310,7 +2314,97 @@
       "fixed_salary": "راتب ثابت",
       "daily_worker": "عامل يومي",
       "metayage": "مزارعة"
-    }
+    },
+    "detail": {
+      "notFound": "لم يتم العثور على العامل",
+      "backToList": "العودة للعمال",
+      "noPosition": "لا يوجد منصب معين",
+      "tabs": {
+        "info": "المعلومات",
+        "payments": "المدفوعات",
+        "workRecords": "سجل العمل",
+        "settlements": "التسويات"
+      },
+      "personalInfo": "المعلومات الشخصية",
+      "compensation": "التعويض",
+      "paymentHistory": "سجل المدفوعات",
+      "noPayments": "لا توجد مدفوعات مسجلة",
+      "workRecords": "سجل العمل",
+      "noWorkRecords": "لا توجد سجلات عمل",
+      "metayageSettlements": "تسويات المزارعة",
+      "noSettlements": "لا توجد تسويات مسجلة"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "fields": {
+      "cin": "رقم البطاقة الوطنية",
+      "phone": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "address": "العنوان",
+      "hireDate": "تاريخ التوظيف",
+      "monthlySalary": "الراتب الشهري",
+      "dailyRate": "الأجر اليومي",
+      "metayageType": "نوع المزارعة",
+      "calculationBasis": "أساس الحساب",
+      "paymentMethod": "طريقة الدفع",
+      "bankAccount": "الحساب البنكي"
+    },
+    "payments": {
+      "date": "التاريخ",
+      "type": "النوع",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "method": "الطريقة",
+      "markAsPaid": "تحديد كمدفوع",
+      "processSuccess": "تم تحديد الدفع كمدفوع",
+      "processError": "فشل في معالجة الدفع"
+    },
+    "paymentTypes": {
+      "salary": "راتب",
+      "daily_wage": "أجر يومي",
+      "piece_work": "عمل بالقطعة",
+      "bonus": "مكافأة",
+      "advance": "سلفة",
+      "settlement": "تسوية"
+    },
+    "paymentStatuses": {
+      "pending": "قيد الانتظار",
+      "approved": "موافق عليه",
+      "paid": "مدفوع",
+      "cancelled": "ملغى"
+    },
+    "paymentMethods": {
+      "cash": "نقداً",
+      "bank_transfer": "تحويل بنكي",
+      "check": "شيك",
+      "mobile_payment": "دفع عبر الهاتف"
+    },
+    "workRecords": {
+      "date": "التاريخ",
+      "hours": "الساعات",
+      "description": "الوصف",
+      "status": "الحالة"
+    },
+    "settlements": {
+      "period": "الفترة",
+      "grossRevenue": "الإيراد الإجمالي",
+      "charges": "المصاريف",
+      "share": "حصة العامل",
+      "status": "الحالة"
+    },
+    "metayageTypes": {
+      "khemmas": "خماس (1/5)",
+      "robaa": "رباع (1/4)",
+      "nouss": "نص (1/2)",
+      "custom": "مخصص"
+    },
+    "calculationBasis": {
+      "gross": "الإيراد الإجمالي",
+      "net": "الإيراد الصافي (بعد المصاريف)"
+    },
+    "perDay": "في اليوم"
   },
   "tasks": {
     "title": "إدارة المهام",
