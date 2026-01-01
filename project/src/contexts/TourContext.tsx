@@ -95,8 +95,10 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
         backgroundColor: '#fff',
         borderRadius: '0.75rem',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        maxWidth: '420px',
-        padding: '1rem',
+        maxWidth: 'min(420px, calc(100vw - 2rem))',
+        width: '100%',
+        padding: '0.875rem',
+        margin: '0 auto',
       }}
     >
       {step.title && (
@@ -114,78 +116,86 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
       </div>
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
+        flexDirection: 'column',
+        gap: '0.75rem',
         paddingTop: '0.75rem',
         borderTop: '1px solid #e5e7eb'
       }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {index > 0 && (
-            <button
-              {...backProps}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: '#6b7280',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              {t('tour.buttons.back')}
-            </button>
-          )}
-          <button
-            {...skipProps}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: '#9ca3af',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
-            {t('tour.buttons.skip')}
-          </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.5rem'
+        }}>
           <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
             {t('tour.buttons.stepCounter', { current: index + 1, total: size })}
           </span>
-          {continuous && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {index > 0 && (
+              <button
+                {...backProps}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.375rem',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {t('tour.buttons.back')}
+              </button>
+            )}
             <button
-              {...primaryProps}
+              {...skipProps}
               style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#059669',
-                border: 'none',
-                borderRadius: '0.5rem',
-                color: 'white',
+                padding: '0.5rem 0.75rem',
+                backgroundColor: 'transparent',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.375rem',
+                color: '#9ca3af',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
-                fontWeight: 500,
               }}
             >
-              {isLastStep ? t('tour.buttons.last') : t('tour.buttons.next')}
+              {t('tour.buttons.skip')}
             </button>
-          )}
-          {!continuous && (
-            <button
-              {...closeProps}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#059669',
-                border: 'none',
-                borderRadius: '0.5rem',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              {t('tour.buttons.close')}
-            </button>
-          )}
+            {continuous && (
+              <button
+                {...primaryProps}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#059669',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                }}
+              >
+                {isLastStep ? t('tour.buttons.last') : t('tour.buttons.next')}
+              </button>
+            )}
+            {!continuous && (
+              <button
+                {...closeProps}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#059669',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {t('tour.buttons.close')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

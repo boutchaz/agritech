@@ -42,16 +42,16 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
   }, [open]);
 
   const eligibleInvoices = React.useMemo(() => {
-    const paymentAmount = Number(payment.amount);
     return invoices
       .filter((invoice) => invoice.invoice_type === invoiceType)
       .filter((invoice) => {
         const outstanding = Number(invoice.outstanding_amount ?? 0);
         if (outstanding <= 0) return false;
         if (!['submitted', 'partially_paid', 'overdue'].includes(invoice.status)) return false;
-        return Math.abs(outstanding - paymentAmount) <= 0.01;
-      });
-  }, [invoices, invoiceType, payment.amount]);
+        return true;
+      })
+      .sort((a, b) => Number(b.outstanding_amount ?? 0) - Number(a.outstanding_amount ?? 0));
+  }, [invoices, invoiceType]);
 
   const selectedInvoice = eligibleInvoices.find((invoice) => invoice.id === selectedInvoiceId);
 
@@ -117,10 +117,10 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-muted-foreground dark:border-gray-700">
               <AlertCircle className="h-6 w-6 text-emerald-500" />
               <div>
-              Aucune facture dont le solde correspond exactement au montant du paiement n’a été trouvée.
-              {invoiceType === 'sales'
-                ? ' Assurez-vous qu’une facture de vente en attente possède le même solde restant.'
-                : ' Assurez-vous qu’une facture d’achat en attente possède le même solde restant.'}
+                Aucune facture en attente de paiement n'a été trouvée.
+                {invoiceType === 'sales'
+                  ? " Assurez-vous qu'une facture de vente est soumise et a un solde restant."
+                  : " Assurez-vous qu'une facture d'achat est soumise et a un solde restant."}
               </div>
             </div>
         ) : (
@@ -178,13 +178,22 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
             )}
 
             {selectedInvoice && (
-              <FormField label="Montant à comptabiliser" required>
-                <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  {allocationAmount.toLocaleString('fr-FR', {
+              <FormField label="Montant à allouer" required>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={maxAllocatable}
+                  value={allocationAmount}
+                  onChange={(e) => setAllocationAmount(Number(e.target.value))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Maximum allouable: {maxAllocatable.toLocaleString('fr-FR', {
                     style: 'currency',
                     currency: selectedInvoice.currency_code || 'MAD',
                   })}
-                </div>
+                </p>
               </FormField>
             )}
 

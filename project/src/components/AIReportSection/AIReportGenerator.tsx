@@ -6,8 +6,11 @@ import {
   RefreshCw,
   Calendar,
   Sparkles,
+  Settings,
+  ArrowRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from '@tanstack/react-router';
 import { AIProviderSelector } from './AIProviderSelector';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
@@ -85,19 +88,38 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   if (availableProviders.length === 0) {
     return (
-      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
+      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
-            <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-800/30 rounded-full">
+              <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
           </div>
-          <div>
-            <h4 className="text-lg font-medium text-yellow-800 dark:text-yellow-300">
+          <div className="flex-1">
+            <h4 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300">
               {t('aiReport.noProvidersTitle', 'Aucun fournisseur IA configuré')}
             </h4>
             <p className="mt-2 text-yellow-700 dark:text-yellow-400">
               {t(
                 'aiReport.noProvidersDescription',
                 'Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.'
+              )}
+            </p>
+            <div className="mt-4">
+              <Link
+                to="/settings/organization"
+                search={{ tab: 'ai-providers' }}
+                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow-md"
+              >
+                <Settings className="w-4 h-4" />
+                <span>{t('aiReport.configureProviders', 'Configurer les fournisseurs IA')}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <p className="mt-3 text-xs text-yellow-600 dark:text-yellow-500">
+              {t(
+                'aiReport.securityNote',
+                'Vos clés API sont chiffrées et stockées de manière sécurisée.'
               )}
             </p>
           </div>

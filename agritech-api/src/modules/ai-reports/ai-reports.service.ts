@@ -3,6 +3,8 @@ import {
   Logger,
   BadRequestException,
   InternalServerErrorException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
@@ -20,6 +22,8 @@ import {
   AGRICULTURAL_EXPERT_SYSTEM_PROMPT,
   buildUserPrompt,
 } from './prompts/agricultural-expert.prompt';
+import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
+import { AIProviderType } from '../organization-ai-settings/dto';
 
 @Injectable()
 export class AIReportsService {
@@ -31,6 +35,8 @@ export class AIReportsService {
     private readonly configService: ConfigService,
     private readonly openaiProvider: OpenAIProvider,
     private readonly geminiProvider: GeminiProvider,
+    @Inject(forwardRef(() => OrganizationAISettingsService))
+    private readonly aiSettingsService: OrganizationAISettingsService,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
@@ -42,13 +48,34 @@ export class AIReportsService {
       `Generating AI report for parcel ${dto.parcel_id} using ${dto.provider}`,
     );
 
-    // 1. Validate provider configuration
-    const provider = this.providers.get(dto.provider);
-    if (!provider || !provider.validateConfig()) {
+    // 1. Get API key from organization settings
+    const providerType = dto.provider as unknown as AIProviderType;
+    const apiKey = await this.aiSettingsService.getDecryptedApiKey(
+      organizationId,
+      providerType,
+    );
+
+    // Fallback to environment variable if not configured in DB
+    const envApiKey = dto.provider === AIProvider.OPENAI
+      ? this.configService.get<string>('OPENAI_API_KEY')
+      : this.configService.get<string>('GOOGLE_AI_API_KEY');
+
+    const effectiveApiKey = apiKey || envApiKey;
+
+    if (!effectiveApiKey) {
       throw new BadRequestException(
-        `AI provider ${dto.provider} is not configured. Please contact your administrator.`,
+        `AI provider ${dto.provider} is not configured. Please configure it in your organization settings.`,
       );
     }
+
+    // 2. Get the provider and set the API key dynamically
+    const provider = this.providers.get(dto.provider);
+    if (!provider) {
+      throw new BadRequestException(`Unknown AI provider: ${dto.provider}`);
+    }
+
+    // Set the API key on the provider for this request
+    provider.setApiKey(effectiveApiKey);
 
     // 2. Aggregate all data sources
     const aggregatedData = await this.aggregateParcelData(
@@ -113,16 +140,41 @@ export class AIReportsService {
     }
   }
 
-  async getAvailableProviders(): Promise<AIProviderInfoDto[]> {
+  async getAvailableProviders(organizationId?: string): Promise<AIProviderInfoDto[]> {
+    // Check organization-specific settings if organizationId is provided
+    let orgSettings: Map<string, boolean> = new Map();
+
+    if (organizationId) {
+      try {
+        const settings = await this.aiSettingsService.getProviderSettings(organizationId);
+        settings.forEach((s) => {
+          orgSettings.set(s.provider, s.configured && s.enabled);
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to fetch org AI settings: ${error.message}`);
+      }
+    }
+
+    // Check if provider is available either from org settings or env vars
+    const openaiAvailable =
+      orgSettings.get(AIProviderType.OPENAI) ||
+      this.providers.get(AIProvider.OPENAI)?.validateConfig() ||
+      false;
+
+    const geminiAvailable =
+      orgSettings.get(AIProviderType.GEMINI) ||
+      this.providers.get(AIProvider.GEMINI)?.validateConfig() ||
+      false;
+
     return [
       {
         provider: AIProvider.OPENAI,
-        available: this.providers.get(AIProvider.OPENAI)?.validateConfig() || false,
+        available: openaiAvailable,
         name: 'ChatGPT (OpenAI)',
       },
       {
         provider: AIProvider.GEMINI,
-        available: this.providers.get(AIProvider.GEMINI)?.validateConfig() || false,
+        available: geminiAvailable,
         name: 'Gemini (Google)',
       },
     ];

@@ -136,17 +136,17 @@ export const TourHelpButton: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-          <div className="p-4 bg-emerald-50 border-b border-emerald-100">
+        <div className="fixed inset-x-4 bottom-20 sm:absolute sm:inset-auto sm:bottom-16 sm:right-0 sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
+          <div className="p-4 bg-emerald-50 border-b border-emerald-100 shrink-0">
             <h3 className="font-semibold text-emerald-800">{t('helpCenter.title')}</h3>
             <p className="text-sm text-emerald-600 mt-1">
               {t('helpCenter.subtitle')}
             </p>
           </div>
           
-          <div className="max-h-96 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto">
             {tours.map((tour) => {
               const completed = isTourCompleted(tour.id);
               

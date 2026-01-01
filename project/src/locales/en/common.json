@@ -2757,5 +2757,69 @@
         "description": "Configure your organization"
       }
     }
+  },
+  "aiReport": {
+    "title": "AI-Powered Report",
+    "subtitle": "In-depth analysis of your parcel using artificial intelligence",
+    "loadingProviders": "Loading AI providers...",
+    "noProvidersTitle": "No AI providers configured",
+    "noProvidersDescription": "To generate AI reports, please configure at least one provider (OpenAI or Google Gemini) in your organization settings.",
+    "dateRange": "Analysis period",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "errorTitle": "Generation error",
+    "errorGeneric": "An error occurred. Please try again.",
+    "generating": "Analyzing...",
+    "generateButton": "Generate AI report",
+    "generatingHint": "AI is analyzing your satellite data, soil analyses, and other information...",
+    "generatedWith": "Generated with",
+    "regenerate": "Regenerate",
+    "exportPdf": "Export PDF",
+    "sections": {
+      "executiveSummary": "Executive Summary",
+      "healthAssessment": "Health Assessment",
+      "riskAlerts": "Alerts",
+      "recommendations": "Recommendations",
+      "actionItems": "Action Items"
+    },
+    "health": {
+      "soil": "Soil",
+      "vegetation": "Vegetation",
+      "water": "Water",
+      "notEvaluated": "Not evaluated"
+    },
+    "priority": {
+      "high": "High priority",
+      "medium": "Medium priority",
+      "low": "Low priority"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "Advanced model for detailed analyses"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "Google's multimodal AI"
+      }
+    },
+    "configureProviders": "Configure AI providers",
+    "securityNote": "Your API keys are encrypted and stored securely."
+  },
+  "aiSettings": {
+    "title": "AI Providers",
+    "description": "Configure your API keys to enable AI reports on your parcels.",
+    "loading": "Loading AI settings...",
+    "securityTitle": "Secure Storage",
+    "securityDescription": "Your API keys are encrypted with AES-256-GCM before being stored. They are never exposed in plain text.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "apiKey": "API Key",
+    "enterApiKey": "Enter your API key",
+    "update": "Update",
+    "getApiKey": "Get an API key",
+    "lastUpdated": "Last updated",
+    "confirmDelete": "Are you sure you want to delete this API key?",
+    "saveError": "Error saving"
   }
 }

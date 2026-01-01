@@ -32,8 +32,10 @@ export class AIReportsController {
     status: 200,
     description: 'List of AI providers and their availability status',
   })
-  async getProviders() {
-    return this.aiReportsService.getAvailableProviders();
+  async getProviders(
+    @Headers('x-organization-id') organizationId: string,
+  ) {
+    return this.aiReportsService.getAvailableProviders(organizationId);
   }
 
   @Post('generate')

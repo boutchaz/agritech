@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
+import AIProvidersSettings from './Settings/AIProvidersSettings';
 
 interface OrganizationData {
   id: string;
@@ -29,10 +30,24 @@ interface OrganizationData {
   is_active?: boolean;
 }
 
+type SettingsTab = 'general' | 'ai-providers';
+
 const OrganizationSettings: React.FC = () => {
   const { currentOrganization, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  // Get tab from URL search params or default to 'general'
+  const getInitialTab = (): SettingsTab => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      return tab === 'ai-providers' ? 'ai-providers' : 'general';
+    }
+    return 'general';
+  };
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>(getInitialTab);
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -166,6 +181,11 @@ const OrganizationSettings: React.FC = () => {
     );
   }
 
+  const tabs = [
+    { id: 'general' as const, label: t('organization.tabs.general', 'Général'), icon: Building },
+    { id: 'ai-providers' as const, label: t('organization.tabs.aiProviders', 'Fournisseurs IA'), icon: Bot },
+  ];
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -185,19 +205,44 @@ const OrganizationSettings: React.FC = () => {
             <ExternalLink className="h-4 w-4" />
             <span>Preview on Marketplace</span>
           </a>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            <span>{saving ? t('organization.saving') : t('organization.save')}</span>
-          </button>
+          {activeTab === 'general' && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span>{saving ? t('organization.saving') : t('organization.save')}</span>
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex space-x-4">
+          {tabs.map((tab) => {
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-green-500 text-green-600 dark:text-green-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                <TabIcon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       {error && (
@@ -209,7 +254,7 @@ const OrganizationSettings: React.FC = () => {
         </div>
       )}
 
-      {success && (
+      {activeTab === 'general' && success && (
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
           <p className="text-green-600 dark:text-green-400">
             {t('organization.success')}
@@ -217,6 +262,15 @@ const OrganizationSettings: React.FC = () => {
         </div>
       )}
 
+      {/* AI Providers Tab */}
+      {activeTab === 'ai-providers' && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <AIProvidersSettings />
+        </div>
+      )}
+
+      {/* General Settings Tab */}
+      {activeTab === 'general' && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Basic Information */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
@@ -445,6 +499,7 @@ const OrganizationSettings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -10,17 +10,22 @@ import {
 
 @Injectable()
 export class OpenAIProvider extends BaseAIProvider {
-  private readonly apiKey: string;
+  private readonly envApiKey: string;
   private readonly apiUrl = 'https://api.openai.com/v1/chat/completions';
   private readonly defaultModel = 'gpt-4-turbo-preview';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.OPENAI);
-    this.apiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+    this.envApiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+  }
+
+  private getEffectiveApiKey(): string {
+    return this.dynamicApiKey || this.envApiKey;
   }
 
   validateConfig(): boolean {
-    const isValid = !!this.apiKey && this.apiKey.length > 0;
+    const apiKey = this.getEffectiveApiKey();
+    const isValid = !!apiKey && apiKey.length > 0;
     if (!isValid) {
       this.logger.warn('OpenAI API key not configured');
     }
@@ -29,6 +34,7 @@ export class OpenAIProvider extends BaseAIProvider {
 
   async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
     const model = request.config.model || this.defaultModel;
+    const apiKey = this.getEffectiveApiKey();
 
     this.logger.log(`Generating with OpenAI model: ${model}`);
 
@@ -44,7 +50,7 @@ export class OpenAIProvider extends BaseAIProvider {
         },
         {
           headers: {
-            Authorization: `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           timeout: 120000, // 2 minutes timeout for AI generation

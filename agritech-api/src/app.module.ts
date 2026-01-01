@@ -66,6 +66,7 @@ import { DocumentTemplatesModule } from './modules/document-templates/document-t
 import { LabServicesModule } from './modules/lab-services/lab-services.module';
 import { TreeManagementModule } from './modules/tree-management/tree-management.module';
 import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
+import { OrganizationAISettingsModule } from './modules/organization-ai-settings/organization-ai-settings.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
     DemoDataModule,
     FilesModule,
     AIReportsModule,
+    OrganizationAISettingsModule,
   ],
   controllers: [AppController],
   providers: [

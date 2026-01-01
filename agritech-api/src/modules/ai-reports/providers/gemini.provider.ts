@@ -10,16 +10,21 @@ import {
 
 @Injectable()
 export class GeminiProvider extends BaseAIProvider {
-  private readonly apiKey: string;
+  private readonly envApiKey: string;
   private readonly defaultModel = 'gemini-1.5-pro';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.GEMINI);
-    this.apiKey = this.configService.get<string>('GOOGLE_AI_API_KEY', '');
+    this.envApiKey = this.configService.get<string>('GOOGLE_AI_API_KEY', '');
+  }
+
+  private getEffectiveApiKey(): string {
+    return this.dynamicApiKey || this.envApiKey;
   }
 
   validateConfig(): boolean {
-    const isValid = !!this.apiKey && this.apiKey.length > 0;
+    const apiKey = this.getEffectiveApiKey();
+    const isValid = !!apiKey && apiKey.length > 0;
     if (!isValid) {
       this.logger.warn('Google AI API key not configured');
     }
@@ -28,7 +33,8 @@ export class GeminiProvider extends BaseAIProvider {
 
   async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
     const model = request.config.model || this.defaultModel;
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+    const apiKey = this.getEffectiveApiKey();
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     this.logger.log(`Generating with Gemini model: ${model}`);
 
