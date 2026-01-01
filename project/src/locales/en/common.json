@@ -2898,7 +2898,21 @@
       }
     },
     "configureProviders": "Configure AI providers",
-    "securityNote": "Your API keys are encrypted and stored securely."
+    "securityNote": "Your API keys are encrypted and stored securely.",
+    "dataAvailability": {
+      "title": "Available data",
+      "loading": "Checking data availability...",
+      "statusExcellent": "Excellent coverage",
+      "statusPartial": "Partial coverage",
+      "statusLimited": "Limited coverage",
+      "satellite": "Satellite data",
+      "satelliteDetail": "{{count}} points",
+      "soil": "Soil analysis",
+      "water": "Water analysis",
+      "plant": "Plant analysis",
+      "weather": "Weather data",
+      "lowCoverageWarning": "The AI report will be less accurate with limited data. Add analyses for better results."
+    }
   },
   "aiSettings": {
     "title": "AI Providers",

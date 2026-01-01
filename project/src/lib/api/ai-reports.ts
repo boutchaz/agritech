@@ -2,7 +2,40 @@ import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/ai-reports';
 
-export type AIProvider = 'openai' | 'gemini';
+export type AIProvider = 'openai' | 'gemini' | 'groq';
+
+export interface DataAvailabilityResponse {
+  parcel: {
+    id: string;
+    name: string;
+    hasBoundary: boolean;
+  };
+  satellite: {
+    available: boolean;
+    dataPoints: number;
+    indices: string[];
+    dateRange: { earliest: string; latest: string } | null;
+  };
+  soil: {
+    available: boolean;
+    lastAnalysisDate: string | null;
+  };
+  water: {
+    available: boolean;
+    lastAnalysisDate: string | null;
+  };
+  plant: {
+    available: boolean;
+    lastAnalysisDate: string | null;
+  };
+  weather: {
+    available: boolean;
+  };
+  period: {
+    start: string;
+    end: string;
+  };
+}
 
 export interface AIProviderInfo {
   provider: AIProvider;
@@ -105,16 +138,23 @@ interface BackendAIReportResponse {
 }
 
 export const aiReportsApi = {
-  /**
-   * Get available AI providers
-   */
   async getProviders(organizationId?: string): Promise<AIProviderInfo[]> {
     return apiClient.get(`${BASE_URL}/providers`, {}, organizationId);
   },
 
-  /**
-   * Generate an AI-powered report for a parcel
-   */
+  async getDataAvailability(
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+    organizationId?: string,
+  ): Promise<DataAvailabilityResponse> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const query = params.toString() ? `?${params}` : '';
+    return apiClient.get(`${BASE_URL}/data-availability/${parcelId}${query}`, {}, organizationId);
+  },
+
   async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportResponse> {
     const response: BackendAIReportResponse = await apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
 

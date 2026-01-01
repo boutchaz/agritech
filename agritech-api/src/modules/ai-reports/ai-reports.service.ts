@@ -152,6 +152,113 @@ export class AIReportsService {
     }
   }
 
+  async getDataAvailability(
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const supabase = this.databaseService.getAdminClient();
+    const now = new Date();
+    const defaultEndDate = endDate || now.toISOString().split('T')[0];
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const defaultStartDate = startDate || sixMonthsAgo.toISOString().split('T')[0];
+
+    const { data: parcel, error: parcelError } = await supabase
+      .from('parcels')
+      .select(`
+        id, name, boundary,
+        farms!inner(id, organization_id)
+      `)
+      .eq('id', parcelId)
+      .single();
+
+    if (parcelError || !parcel) {
+      throw new BadRequestException('Parcel not found');
+    }
+
+    const parcelFarms = parcel.farms as unknown as { organization_id: string }[];
+    if (!parcelFarms?.[0] || parcelFarms[0].organization_id !== organizationId) {
+      throw new BadRequestException('Access denied to this parcel');
+    }
+
+    const { data: satelliteData, count: satelliteCount } = await supabase
+      .from('satellite_indices_data')
+      .select('date, index_name', { count: 'exact' })
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .order('date', { ascending: true });
+
+    const satelliteDates = satelliteData?.map((d) => d.date) || [];
+    const uniqueIndices = [...new Set(satelliteData?.map((d) => d.index_name) || [])];
+
+    const { data: soilAnalysis } = await supabase
+      .from('analyses')
+      .select('id, analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'soil')
+      .order('analysis_date', { ascending: false })
+      .limit(1);
+
+    const { data: waterAnalysis } = await supabase
+      .from('analyses')
+      .select('id, analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'water')
+      .order('analysis_date', { ascending: false })
+      .limit(1);
+
+    const { data: plantAnalysis } = await supabase
+      .from('analyses')
+      .select('id, analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'plant')
+      .order('analysis_date', { ascending: false })
+      .limit(1);
+
+    const hasBoundary = !!(parcel.boundary && Array.isArray(parcel.boundary) && parcel.boundary.length > 0);
+
+    return {
+      parcel: {
+        id: parcel.id,
+        name: parcel.name,
+        hasBoundary,
+      },
+      satellite: {
+        available: (satelliteCount || 0) > 0,
+        dataPoints: satelliteCount || 0,
+        indices: uniqueIndices,
+        dateRange: satelliteDates.length > 0
+          ? {
+              earliest: satelliteDates[0],
+              latest: satelliteDates[satelliteDates.length - 1],
+            }
+          : null,
+      },
+      soil: {
+        available: !!(soilAnalysis && soilAnalysis.length > 0),
+        lastAnalysisDate: soilAnalysis?.[0]?.analysis_date || null,
+      },
+      water: {
+        available: !!(waterAnalysis && waterAnalysis.length > 0),
+        lastAnalysisDate: waterAnalysis?.[0]?.analysis_date || null,
+      },
+      plant: {
+        available: !!(plantAnalysis && plantAnalysis.length > 0),
+        lastAnalysisDate: plantAnalysis?.[0]?.analysis_date || null,
+      },
+      weather: {
+        available: hasBoundary,
+      },
+      period: {
+        start: defaultStartDate,
+        end: defaultEndDate,
+      },
+    };
+  }
+
   async getAvailableProviders(organizationId?: string): Promise<AIProviderInfoDto[]> {
     // Check organization-specific settings if organizationId is provided
     let orgSettings: Map<string, boolean> = new Map();
@@ -287,7 +394,7 @@ export class AIReportsService {
     );
   }
 
-  private buildAggregatedData(
+  private async buildAggregatedData(
     parcel: any,
     soilAnalysis: any,
     waterAnalysis: any,
@@ -295,7 +402,7 @@ export class AIReportsService {
     satelliteData: any[],
     startDate: string,
     endDate: string,
-  ): AggregatedParcelData {
+  ): Promise<AggregatedParcelData> {
     // Process satellite data trends
     const ndviSeries = satelliteData.filter((d) => d.index_name === 'NDVI');
     const ndmiSeries = satelliteData.filter((d) => d.index_name === 'NDMI');
@@ -423,19 +530,134 @@ export class AIReportsService {
             [] as Array<{ date: string; ndvi?: number; ndmi?: number }>,
           ),
       },
-      weather: {
-        // Weather data would come from weatherClimateService
-        // For now, using placeholder values that will be enhanced later
+      weather: await this.fetchWeatherData(parcel.boundary, startDate, endDate),
+    };
+  }
+
+  private async fetchWeatherData(
+    boundary: any,
+    startDate: string,
+    endDate: string,
+  ): Promise<{
+    period: { start: string; end: string };
+    temperatureSummary: { avgMin: number; avgMax: number; avgMean: number };
+    precipitationTotal: number;
+    drySpellsCount: number;
+    frostDays: number;
+  }> {
+    try {
+      if (!boundary || !Array.isArray(boundary) || boundary.length === 0) {
+        this.logger.warn('No parcel boundary available for weather data');
+        return this.getDefaultWeatherData(startDate, endDate);
+      }
+
+      // Calculate centroid from boundary
+      let sumLat = 0;
+      let sumLon = 0;
+      const coords = boundary as number[][];
+
+      // Check if coordinates are in Web Mercator and convert to WGS84
+      const firstCoord = coords[0];
+      const isWebMercator = Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90;
+
+      coords.forEach(([x, y]) => {
+        if (isWebMercator) {
+          const lon = (x / 20037508.34) * 180;
+          const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+          sumLon += lon;
+          sumLat += lat;
+        } else {
+          sumLon += x;
+          sumLat += y;
+        }
+      });
+
+      const latitude = sumLat / coords.length;
+      const longitude = sumLon / coords.length;
+
+      // Fetch weather data from Open-Meteo Archive API
+      const params = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+        start_date: startDate,
+        end_date: endDate,
+        daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum',
+        timezone: 'auto',
+      });
+
+      const response = await fetch(
+        `https://archive-api.open-meteo.com/v1/archive?${params}`,
+      );
+
+      if (!response.ok) {
+        this.logger.warn(`Open-Meteo API error: ${response.statusText}`);
+        return this.getDefaultWeatherData(startDate, endDate);
+      }
+
+      const data = await response.json();
+
+      if (!data.daily || !data.daily.time) {
+        return this.getDefaultWeatherData(startDate, endDate);
+      }
+
+      // Calculate summary statistics
+      const temps_min = data.daily.temperature_2m_min.filter((t: number) => t !== null);
+      const temps_max = data.daily.temperature_2m_max.filter((t: number) => t !== null);
+      const temps_mean = data.daily.temperature_2m_mean.filter((t: number) => t !== null);
+      const precips = data.daily.precipitation_sum.filter((p: number) => p !== null);
+
+      const avgMin = temps_min.length > 0 
+        ? temps_min.reduce((a: number, b: number) => a + b, 0) / temps_min.length 
+        : 0;
+      const avgMax = temps_max.length > 0 
+        ? temps_max.reduce((a: number, b: number) => a + b, 0) / temps_max.length 
+        : 0;
+      const avgMean = temps_mean.length > 0 
+        ? temps_mean.reduce((a: number, b: number) => a + b, 0) / temps_mean.length 
+        : 0;
+      const precipitationTotal = precips.reduce((a: number, b: number) => a + b, 0);
+
+      // Count dry spells (5+ consecutive days with < 1mm)
+      let drySpellsCount = 0;
+      let consecutiveDryDays = 0;
+      for (const precip of data.daily.precipitation_sum) {
+        if (precip !== null && precip < 1) {
+          consecutiveDryDays++;
+          if (consecutiveDryDays === 5) {
+            drySpellsCount++;
+          }
+        } else {
+          consecutiveDryDays = 0;
+        }
+      }
+
+      // Count frost days (min temp < 0)
+      const frostDays = temps_min.filter((t: number) => t < 0).length;
+
+      return {
         period: { start: startDate, end: endDate },
         temperatureSummary: {
-          avgMin: 10,
-          avgMax: 25,
-          avgMean: 17.5,
+          avgMin: Math.round(avgMin * 10) / 10,
+          avgMax: Math.round(avgMax * 10) / 10,
+          avgMean: Math.round(avgMean * 10) / 10,
         },
-        precipitationTotal: 150,
-        drySpellsCount: 2,
-        frostDays: 0,
-      },
+        precipitationTotal: Math.round(precipitationTotal),
+        drySpellsCount,
+        frostDays,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to fetch weather data: ${error.message}`);
+      return this.getDefaultWeatherData(startDate, endDate);
+    }
+  }
+
+  private getDefaultWeatherData(startDate: string, endDate: string) {
+    return {
+      period: { start: startDate, end: endDate },
+      temperatureSummary: { avgMin: 0, avgMax: 0, avgMean: 0 },
+      precipitationTotal: 0,
+      drySpellsCount: 0,
+      frostDays: 0,
     };
   }
 

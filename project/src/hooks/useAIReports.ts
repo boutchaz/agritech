@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo } from '../lib/api/ai-reports';
+import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo, type DataAvailabilityResponse } from '../lib/api/ai-reports';
 
 /**
  * Hook to fetch available AI providers
@@ -44,4 +44,15 @@ export function useGenerateAIReport() {
   });
 }
 
-export type { AIReportResponse, AIProviderInfo, GenerateAIReportDto };
+export function useDataAvailability(parcelId: string, startDate?: string, endDate?: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['ai-report-data-availability', parcelId, startDate, endDate],
+    queryFn: () => aiReportsApi.getDataAvailability(parcelId, startDate, endDate, currentOrganization?.id),
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export type { AIReportResponse, AIProviderInfo, GenerateAIReportDto, DataAvailabilityResponse };
