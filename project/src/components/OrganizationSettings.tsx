@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
-import AIProvidersSettings from './Settings/AIProvidersSettings';
+import AIProvidersSettings from './settings/AIProvidersSettings';
 
 interface OrganizationData {
   id: string;
