@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStockEntry } from '@/hooks/useStockEntries';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
@@ -29,6 +30,7 @@ interface StockEntryDetailProps {
 }
 
 export default function StockEntryDetail({ entryId, open, onOpenChange }: StockEntryDetailProps) {
+  const { t } = useTranslation();
   const { data: entry, isLoading } = useStockEntry(entryId);
   const { format: formatCurrency } = useCurrency();
 
@@ -40,7 +42,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-3">Loading entry details...</span>
+            <span className="ml-3">{t('stockEntries.detail.loading')}</span>
           </div>
         </DialogContent>
       </Dialog>
@@ -52,7 +54,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-4xl">
           <div className="text-center py-12">
-            <p className="text-gray-500">Entry not found</p>
+            <p className="text-gray-500">{t('stockEntries.detail.notFound')}</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -68,7 +70,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Stock Entry Details
+            {t('stockEntries.detail.title')}
           </DialogTitle>
           <DialogDescription>
             {entry.entry_number} - {entry.entry_type}
@@ -80,7 +82,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Entry Number</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stockEntries.detail.entryNumber')}</p>
                 <p className="font-semibold text-lg">{entry.entry_number}</p>
               </div>
               <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>
@@ -92,7 +94,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Entry Date
+                  {t('stockEntries.detail.entryDate')}
                 </p>
                 <p className="font-medium">{new Date(entry.entry_date).toLocaleDateString()}</p>
               </div>
@@ -100,7 +102,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                   <FileText className="w-4 h-4" />
-                  Entry Type
+                  {t('stockEntries.detail.entryType')}
                 </p>
                 <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
                   {entry.entry_type}
@@ -115,7 +117,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <Warehouse className="w-4 h-4" />
-                      From Warehouse
+                      {t('stockEntries.detail.fromWarehouse')}
                     </p>
                     <p className="font-medium">{entry.from_warehouse.name}</p>
                   </div>
@@ -125,7 +127,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <Warehouse className="w-4 h-4" />
-                      To Warehouse
+                      {t('stockEntries.detail.toWarehouse')}
                     </p>
                     <p className="font-medium">{entry.to_warehouse.name}</p>
                   </div>
@@ -136,7 +138,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
             {/* Reference */}
             {entry.reference_number && (
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Reference</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stockEntries.detail.reference')}</p>
                 <p className="font-medium">
                   {entry.reference_type && `${entry.reference_type}: `}
                   {entry.reference_number}
@@ -147,7 +149,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
             {/* Purpose */}
             {entry.purpose && (
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Purpose</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stockEntries.detail.purpose')}</p>
                 <p className="font-medium">{entry.purpose}</p>
               </div>
             )}
@@ -155,7 +157,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
             {/* Notes */}
             {entry.notes && (
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Notes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('stockEntries.detail.notes')}</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300">{entry.notes}</p>
               </div>
             )}
@@ -163,16 +165,16 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
 
           {/* Items Table */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Items</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('stockEntries.detail.items')}</h3>
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>#</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>{t('stockEntries.detail.itemColumn')}</TableHead>
+                    <TableHead className="text-right">{t('stockEntries.detail.quantityColumn')}</TableHead>
+                    <TableHead className="text-right">{t('stockEntries.detail.rateColumn')}</TableHead>
+                    <TableHead className="text-right">{t('stockEntries.detail.amountColumn')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -185,17 +187,17 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                             <p className="font-medium">{item.item_name}</p>
                             {item.item?.item_code && (
                               <p className="text-xs text-gray-500">
-                                Code: {item.item.item_code}
+                                {t('stockEntries.detail.code')}: {item.item.item_code}
                               </p>
                             )}
                             {item.batch_number && (
                               <p className="text-xs text-gray-500">
-                                Batch: {item.batch_number}
+                                {t('stockEntries.detail.batch')}: {item.batch_number}
                               </p>
                             )}
                             {item.serial_number && (
                               <p className="text-xs text-gray-500">
-                                Serial: {item.serial_number}
+                                {t('stockEntries.detail.serial')}: {item.serial_number}
                               </p>
                             )}
                           </div>
@@ -216,7 +218,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                        No items in this entry
+                        {t('stockEntries.detail.noItems')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -229,7 +231,7 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
               <div className="mt-4 flex justify-end">
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 min-w-[200px]">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total Cost:</span>
+                    <span className="font-semibold">{t('stockEntries.detail.totalCost')}:</span>
                     <span className="text-lg font-bold">{formatCurrency(totalCost)}</span>
                   </div>
                 </div>
@@ -240,18 +242,18 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
           {/* Metadata */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Created</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('stockEntries.detail.created')}</span>
               <span>{new Date(entry.created_at).toLocaleString()}</span>
             </div>
             {entry.updated_at && entry.updated_at !== entry.created_at && (
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Updated</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('stockEntries.detail.updated')}</span>
                 <span>{new Date(entry.updated_at).toLocaleString()}</span>
               </div>
             )}
             {entry.posted_at && (
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Posted</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('stockEntries.detail.posted')}</span>
                 <span>{new Date(entry.posted_at).toLocaleString()}</span>
               </div>
             )}

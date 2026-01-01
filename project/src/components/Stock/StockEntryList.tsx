@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useStockEntries,
   usePostStockEntry,
@@ -49,10 +50,8 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Search,
-  Filter,
-  Download,
-  Loader2,
+  Search, Download,
+  Loader2
 } from 'lucide-react';
 import type {
   StockEntry,
@@ -65,7 +64,6 @@ import {
   STOCK_ENTRY_STATUS_COLORS,
 } from '@/types/stock-entries';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/taxCalculations';
 
 interface StockEntryListProps {
   onCreateClick: () => void;
@@ -73,6 +71,7 @@ interface StockEntryListProps {
 }
 
 export default function StockEntryList({ onCreateClick, onViewClick }: StockEntryListProps) {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<StockEntryFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
@@ -94,30 +93,33 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
   const handlePost = async (entryId: string) => {
     try {
       await postEntry.mutateAsync(entryId);
-      toast.success('Stock entry posted successfully');
+      toast.success(t('stockEntries.toast.postSuccess'));
       setConfirmAction(null);
-    } catch (error: any) {
-      toast.error(`Failed to post entry: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.postError')}: ${message}`);
     }
   };
 
   const handleCancel = async (entryId: string) => {
     try {
       await cancelEntry.mutateAsync(entryId);
-      toast.success('Stock entry cancelled');
+      toast.success(t('stockEntries.toast.cancelSuccess'));
       setConfirmAction(null);
-    } catch (error: any) {
-      toast.error(`Failed to cancel entry: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.cancelError')}: ${message}`);
     }
   };
 
   const handleDelete = async (entryId: string) => {
     try {
       await deleteEntry.mutateAsync(entryId);
-      toast.success('Stock entry deleted');
+      toast.success(t('stockEntries.toast.deleteSuccess'));
       setConfirmAction(null);
-    } catch (error: any) {
-      toast.error(`Failed to delete entry: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.deleteError')}: ${message}`);
     }
   };
 
@@ -125,22 +127,21 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     switch (action) {
       case 'post':
         return {
-          title: 'Post Stock Entry',
-          description:
-            'This will update inventory quantities and create stock movements. This action cannot be undone.',
-          confirmLabel: 'Post Entry',
+          title: t('stockEntries.confirm.postTitle'),
+          description: t('stockEntries.confirm.postDescription'),
+          confirmLabel: t('stockEntries.confirm.postConfirm'),
         };
       case 'cancel':
         return {
-          title: 'Cancel Stock Entry',
-          description: 'This will mark the entry as cancelled. Stock quantities will not be affected.',
-          confirmLabel: 'Cancel Entry',
+          title: t('stockEntries.confirm.cancelTitle'),
+          description: t('stockEntries.confirm.cancelDescription'),
+          confirmLabel: t('stockEntries.confirm.cancelConfirm'),
         };
       case 'delete':
         return {
-          title: 'Delete Stock Entry',
-          description: 'This will permanently delete the entry. Only draft entries can be deleted.',
-          confirmLabel: 'Delete Entry',
+          title: t('stockEntries.confirm.deleteTitle'),
+          description: t('stockEntries.confirm.deleteDescription'),
+          confirmLabel: t('stockEntries.confirm.deleteConfirm'),
         };
     }
   };
@@ -149,7 +150,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">Loading stock entries...</span>
+        <span className="ml-3 text-gray-600">{t('stockEntries.loading')}</span>
       </div>
     );
   }
@@ -159,24 +160,24 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Stock Entries</h2>
-          <p className="text-gray-600">Manage stock transactions and movements</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
+          <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
         </div>
         <Button onClick={onCreateClick}>
           <Plus className="w-4 h-4 mr-2" />
-          New Stock Entry
+          {t('stockEntries.newEntry')}
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by entry number or notes..."
+                placeholder={t('stockEntries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -196,10 +197,10 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t('stockEntries.allTypes')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="all">{t('stockEntries.allTypes')}</SelectItem>
                 {Object.values(STOCK_ENTRY_TYPES).map((type) => (
                   <SelectItem key={type.type} value={type.type}>
                     {type.label}
@@ -221,14 +222,14 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t('stockEntries.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Draft">Draft</SelectItem>
-                <SelectItem value="Submitted">Submitted</SelectItem>
-                <SelectItem value="Posted">Posted</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
+                <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
+                <SelectItem value="Submitted">{t('stockEntries.status.submitted')}</SelectItem>
+                <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
+                <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -256,26 +257,26 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Entry Number</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Warehouse</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
+              <TableHead>{t('stockEntries.table.date')}</TableHead>
+              <TableHead>{t('stockEntries.table.type')}</TableHead>
+              <TableHead>{t('stockEntries.table.warehouse')}</TableHead>
+              <TableHead>{t('stockEntries.table.reference')}</TableHead>
+              <TableHead>{t('stockEntries.table.status')}</TableHead>
+              <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredEntries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>No stock entries found</p>
-                  <p className="text-sm mt-1">Create your first stock entry to get started</p>
+                  <p>{t('stockEntries.noEntries')}</p>
+                  <p className="text-sm mt-1">{t('stockEntries.noEntriesHint')}</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -290,24 +291,24 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                         {entry.entry_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell className="text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
-                        const fromWarehouse = (entry as any).from_warehouse;
-                        const toWarehouse = (entry as any).to_warehouse;
+                        const fromWarehouse = (entry as unknown as { from_warehouse?: { name: string } }).from_warehouse;
+                        const toWarehouse = (entry as unknown as { to_warehouse?: { name: string } }).to_warehouse;
                         
                         if (fromWarehouse && toWarehouse) {
                           return (
                             <div className="flex flex-col">
-                              <span className="text-xs text-gray-500">From: {fromWarehouse.name}</span>
-                              <span className="text-xs text-gray-500">To: {toWarehouse.name}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.from')}: {fromWarehouse.name}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.to')}: {toWarehouse.name}</span>
                             </div>
                           );
                         }
                         if (fromWarehouse) {
-                          return <span>From: {fromWarehouse.name}</span>;
+                          return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
                         }
                         if (toWarehouse) {
-                          return <span>To: {toWarehouse.name}</span>;
+                          return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
                         }
                         return '-';
                       })()}
@@ -330,28 +331,28 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onViewClick(entry)}>
                             <Eye className="w-4 h-4 mr-2" />
-                            View Details
+                            {t('stockEntries.actions.viewDetails')}
                           </DropdownMenuItem>
 
                           {entry.status === 'Draft' && (
                             <>
                               <DropdownMenuItem>
                                 <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                                {t('stockEntries.actions.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => setConfirmAction({ entry, action: 'post' })}
                               >
                                 <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                Post Entry
+                                {t('stockEntries.actions.postEntry')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setConfirmAction({ entry, action: 'delete' })}
                                 className="text-red-600"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                                {t('stockEntries.actions.delete')}
                               </DropdownMenuItem>
                             </>
                           )}
@@ -361,14 +362,14 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                               onClick={() => setConfirmAction({ entry, action: 'cancel' })}
                             >
                               <XCircle className="w-4 h-4 mr-2 text-orange-600" />
-                              Cancel Entry
+                              {t('stockEntries.actions.cancelEntry')}
                             </DropdownMenuItem>
                           )}
 
                           <DropdownMenuSeparator />
                           <DropdownMenuItem>
                             <Download className="w-4 h-4 mr-2" />
-                            Export PDF
+                            {t('stockEntries.actions.exportPdf')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -392,7 +393,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('stockEntries.confirm.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   const { entry, action } = confirmAction;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,6 +83,7 @@ export default function StockEntryForm({
   referenceId,
   referenceNumber,
 }: StockEntryFormProps) {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
@@ -122,7 +124,7 @@ export default function StockEntryForm({
 
   const onSubmit = async (data: StockEntryFormData) => {
     if (!currentOrganization?.id) {
-      toast.error('No organization selected');
+      toast.error(t('stockEntries.toast.noOrganization'));
       return;
     }
 
@@ -133,7 +135,7 @@ export default function StockEntryForm({
         entry_date: data.entry_date,
         from_warehouse_id: data.from_warehouse_id,
         to_warehouse_id: data.to_warehouse_id,
-        reference_type: referenceType as any,
+        reference_type: referenceType as CreateStockEntryInput['reference_type'],
         reference_id: referenceId,
         reference_number: referenceNumber,
         purpose: data.purpose,
@@ -142,11 +144,12 @@ export default function StockEntryForm({
       };
 
       await createEntry.mutateAsync(input);
-      toast.success(`${selectedType} created successfully`);
+      toast.success(`${selectedType} ${t('stockEntries.toast.createSuccess')}`);
       onOpenChange(false);
       form.reset();
-    } catch (error: any) {
-      toast.error(`Failed to create entry: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.createError')}: ${message}`);
     }
   };
 
@@ -159,7 +162,7 @@ export default function StockEntryForm({
             {config.icon === 'PackageMinus' && <PackageMinus className="w-5 h-5" />}
             {config.icon === 'ArrowRightLeft' && <ArrowRightLeft className="w-5 h-5" />}
             {config.icon === 'ClipboardCheck' && <ClipboardCheck className="w-5 h-5" />}
-            Create Stock Entry
+            {t('stockEntries.form.createTitle')}
           </DialogTitle>
           <DialogDescription>{config.description}</DialogDescription>
         </DialogHeader>
@@ -199,7 +202,7 @@ export default function StockEntryForm({
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="entry_date">Entry Date *</Label>
+              <Label htmlFor="entry_date">{t('stockEntries.form.entryDate')} {t('stockEntries.form.required')}</Label>
               <Input
                 id="entry_date"
                 type="date"
@@ -216,18 +219,18 @@ export default function StockEntryForm({
             {/* From Warehouse (for Issue and Transfer) */}
             {config.requiresFromWarehouse && (
               <div>
-                <Label htmlFor="from_warehouse_id">From Warehouse *</Label>
+                <Label htmlFor="from_warehouse_id">{t('stockEntries.form.fromWarehouse')} {t('stockEntries.form.required')}</Label>
                 <Select
                   value={form.watch('from_warehouse_id') || ''}
                   onValueChange={(value) => form.setValue('from_warehouse_id', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select warehouse" />
+                    <SelectValue placeholder={t('stockEntries.form.selectWarehouse')} />
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        No warehouses available
+                        {t('stockEntries.form.noWarehouses')}
                       </SelectItem>
                     ) : (
                       warehouses.map((warehouse) => (
@@ -250,18 +253,18 @@ export default function StockEntryForm({
             {/* To Warehouse (for Receipt, Transfer, Reconciliation) */}
             {config.requiresToWarehouse && (
               <div>
-                <Label htmlFor="to_warehouse_id">To Warehouse *</Label>
+                <Label htmlFor="to_warehouse_id">{t('stockEntries.form.toWarehouse')} {t('stockEntries.form.required')}</Label>
                 <Select
                   value={form.watch('to_warehouse_id') || ''}
                   onValueChange={(value) => form.setValue('to_warehouse_id', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select warehouse" />
+                    <SelectValue placeholder={t('stockEntries.form.selectWarehouse')} />
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        No warehouses available
+                        {t('stockEntries.form.noWarehouses')}
                       </SelectItem>
                     ) : (
                       warehouses.map((warehouse) => (
@@ -285,20 +288,20 @@ export default function StockEntryForm({
           {/* Purpose and Notes */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="purpose">Purpose</Label>
+              <Label htmlFor="purpose">{t('stockEntries.form.purpose')}</Label>
               <Input
                 id="purpose"
-                placeholder={`Purpose of this ${selectedType.toLowerCase()}`}
+                placeholder={t('stockEntries.form.purposePlaceholder')}
                 {...form.register('purpose')}
                 className="mt-1"
               />
             </div>
 
             <div>
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('stockEntries.form.notes')}</Label>
               <Textarea
                 id="notes"
-                placeholder="Additional notes"
+                placeholder={t('stockEntries.form.notesPlaceholder')}
                 {...form.register('notes')}
                 className="mt-1"
                 rows={2}
@@ -309,7 +312,7 @@ export default function StockEntryForm({
           {/* Items */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Items</h3>
+              <h3 className="text-lg font-semibold">{t('stockEntries.form.items')}</h3>
               <Button
                 type="button"
                 onClick={() =>
@@ -324,7 +327,7 @@ export default function StockEntryForm({
                 size="sm"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Item
+                {t('stockEntries.form.addItem')}
               </Button>
             </div>
 
@@ -332,7 +335,7 @@ export default function StockEntryForm({
               {fields.map((field, index) => (
                 <div key={field.id} className="p-4 border rounded-lg">
                   <div className="flex items-start justify-between mb-4">
-                    <h4 className="font-medium">Item #{index + 1}</h4>
+                    <h4 className="font-medium">{t('stockEntries.form.itemNumber', { number: index + 1 })}</h4>
                     {fields.length > 1 && (
                       <Button
                         type="button"
@@ -347,7 +350,7 @@ export default function StockEntryForm({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label>Item *</Label>
+                      <Label>{t('stockEntries.form.item')} {t('stockEntries.form.required')}</Label>
                       <Select
                         value={form.watch(`items.${index}.item_id`) || ''}
                         onValueChange={(itemId) => {
@@ -360,16 +363,16 @@ export default function StockEntryForm({
                         }}
                       >
                         <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select item" />
+                          <SelectValue placeholder={t('stockEntries.form.selectItem')} />
                         </SelectTrigger>
                         <SelectContent>
                           {itemsLoading ? (
                             <SelectItem value="_loading" disabled>
-                              Loading items...
+                              {t('stockEntries.form.loadingItems')}
                             </SelectItem>
                           ) : items.length === 0 ? (
                             <SelectItem value="_none" disabled>
-                              No items available. Create items first.
+                              {t('stockEntries.form.noItems')}
                             </SelectItem>
                           ) : (
                             items.map((item) => (
@@ -385,7 +388,6 @@ export default function StockEntryForm({
                           {form.formState.errors.items[index]?.item_id?.message}
                         </p>
                       )}
-                      {/* Hidden field for item_name (still required for backward compatibility) */}
                       <input
                         type="hidden"
                         {...form.register(`items.${index}.item_name`)}
@@ -393,7 +395,7 @@ export default function StockEntryForm({
                     </div>
 
                     <div>
-                      <Label>Quantity *</Label>
+                      <Label>{t('stockEntries.form.quantity')} {t('stockEntries.form.required')}</Label>
                       <Input
                         type="number"
                         step="0.001"
@@ -405,7 +407,7 @@ export default function StockEntryForm({
                     </div>
 
                     <div>
-                      <Label>Unit *</Label>
+                      <Label>{t('stockEntries.form.unit')} {t('stockEntries.form.required')}</Label>
                       <Input
                         placeholder="kg, L, units"
                         {...form.register(`items.${index}.unit`)}
@@ -419,7 +421,7 @@ export default function StockEntryForm({
                     {config.showReconciliationFields && (
                       <>
                         <div>
-                          <Label>System Quantity</Label>
+                          <Label>{t('stockEntries.form.systemQuantity')}</Label>
                           <Input
                             type="number"
                             step="0.001"
@@ -431,7 +433,7 @@ export default function StockEntryForm({
                         </div>
 
                         <div>
-                          <Label>Physical Quantity *</Label>
+                          <Label>{t('stockEntries.form.physicalQuantity')} {t('stockEntries.form.required')}</Label>
                           <Input
                             type="number"
                             step="0.001"
@@ -446,7 +448,7 @@ export default function StockEntryForm({
 
                     {/* Batch/Serial/Cost */}
                     <div>
-                      <Label>Batch Number</Label>
+                      <Label>{t('stockEntries.form.batchNumber')}</Label>
                       <Input
                         placeholder="BATCH-001"
                         {...form.register(`items.${index}.batch_number`)}
@@ -457,7 +459,7 @@ export default function StockEntryForm({
                     {selectedType === 'Material Receipt' && (
                       <>
                         <div>
-                          <Label>Cost per Unit</Label>
+                          <Label>{t('stockEntries.form.costPerUnit')}</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -470,7 +472,7 @@ export default function StockEntryForm({
                         </div>
 
                         <div>
-                          <Label>Expiry Date</Label>
+                          <Label>{t('stockEntries.form.expiryDate')}</Label>
                           <Input
                             type="date"
                             {...form.register(`items.${index}.expiry_date`)}
@@ -482,9 +484,9 @@ export default function StockEntryForm({
                   </div>
 
                   <div className="mt-4">
-                    <Label>Item Notes</Label>
+                    <Label>{t('stockEntries.form.itemNotes')}</Label>
                     <Textarea
-                      placeholder="Notes for this item"
+                      placeholder={t('stockEntries.form.itemNotesPlaceholder')}
                       {...form.register(`items.${index}.notes`)}
                       className="mt-1"
                       rows={2}
@@ -510,16 +512,16 @@ export default function StockEntryForm({
               onClick={() => onOpenChange(false)}
               disabled={createEntry.isPending}
             >
-              Cancel
+              {t('stockEntries.form.cancel')}
             </Button>
             <Button type="submit" disabled={createEntry.isPending}>
               {createEntry.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
+                  {t('stockEntries.form.creating')}
                 </>
               ) : (
-                `Create ${selectedType}`
+                `${t('stockEntries.form.create')} ${selectedType}`
               )}
             </Button>
           </div>
