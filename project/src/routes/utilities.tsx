@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../components/MultiTenantAuthProvider'
 import Sidebar from '../components/Sidebar'
 
@@ -29,6 +30,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm: _currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('utilities');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -44,7 +46,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('utilities.loading')}</p>
         </div>
       </div>
     );
@@ -61,17 +63,17 @@ const AppContent: React.FC = () => {
       />
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
-        <MobileNavBar title="Gestion des Utilités" />
+        <MobileNavBar title={t('utilities.title')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Zap, label: 'Gestion des Utilités', isActive: true }
+              { icon: Zap, label: t('utilities.title'), isActive: true }
             ]}
-            title="Gestion des Utilités"
-            subtitle="Suivez et gérez la consommation d'eau et d'électricité de vos fermes"
+            title={t('utilities.title')}
+            subtitle={t('utilities.subtitle')}
           />
         </div>
 
@@ -79,7 +81,7 @@ const AppContent: React.FC = () => {
           <Suspense fallback={
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement du tableau de bord...</span>
+              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('utilities.loadingDashboard')}</span>
             </div>
           }>
             <UtilitiesManagement />

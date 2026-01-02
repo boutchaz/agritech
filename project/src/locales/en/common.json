@@ -685,12 +685,45 @@
           "soil": "Soil Analysis",
           "satellite": "Satellite Imagery",
           "weather": "Weather & Climate",
+          "production": "Production Intelligence",
           "profitability": "Profitability",
           "reports": "Reports"
         },
         "breadcrumbs": {
           "farm": "Farm",
           "parcels": "Parcels"
+        },
+        "overview": {
+          "noSatelliteData": "Satellite data not available",
+          "noSatelliteDataDesc": "No satellite data found for this parcel. Go to the Satellite tab to fetch the data.",
+          "goToSatellite": "Go to satellite analysis",
+          "refreshData": "Refresh data",
+          "irrigationIndex": "Irrigation Index",
+          "basedOnNdmi": "Based on NDMI",
+          "expectedYield": "Expected Yield",
+          "ndvi": "NDVI",
+          "updatedOn": "Updated on",
+          "vegetationHealth": "Vegetation Health",
+          "summary": "Summary",
+          "area": "Area",
+          "notDefined": "Not defined",
+          "soilType": "Soil type",
+          "irrigation": "Irrigation",
+          "treeType": "Tree type",
+          "variety": "Variety",
+          "plantingYear": "Planting year",
+          "lastUpdate": "Last update",
+          "description": "Description",
+          "healthStatus": {
+            "excellent": "Excellent",
+            "good": "Good",
+            "average": "Average",
+            "low": "Low",
+            "critical": "Critical"
+          }
+        },
+        "reports": {
+          "loading": "Loading report generator..."
         }
       },
       "soil": {
@@ -2903,15 +2936,24 @@
       "title": "Available data",
       "loading": "Checking data availability...",
       "statusExcellent": "Excellent coverage",
+      "statusGood": "Good coverage",
+      "statusBasic": "Basic coverage",
+      "statusInsufficient": "Insufficient data",
       "statusPartial": "Partial coverage",
       "statusLimited": "Limited coverage",
+      "requiredSection": "Required",
+      "optionalSection": "Optional (improves accuracy)",
+      "optional": "optional",
       "satellite": "Satellite data",
       "satelliteDetail": "{{count}} points",
       "soil": "Soil analysis",
       "water": "Water analysis",
       "plant": "Plant analysis",
       "weather": "Weather data",
-      "lowCoverageWarning": "The AI report will be less accurate with limited data. Add analyses for better results."
+      "canGenerateBasic": "You can generate a basic report. Add analyses for more accuracy.",
+      "cannotGenerate": "Satellite and weather data are required to generate a report.",
+      "lowCoverageWarning": "The AI report will be less accurate with limited data. Add analyses for better results.",
+      "addAnalysis": "Add"
     }
   },
   "aiSettings": {
@@ -3058,5 +3100,116 @@
       "stockTransfer": "Transfer between warehouses",
       "stockReconciliation": "Adjust stock quantities"
     }
+  },
+  "weather": {
+    "loading": "Loading weather analyses...",
+    "loadingFallback": "Loading weather data...",
+    "errorTitle": "Loading Error",
+    "noBoundary": {
+      "title": "Parcel location data is required for weather analysis.",
+      "description": "Please define the parcel boundaries to access weather & climate analyses."
+    },
+    "title": "Weather & Climate Analysis",
+    "comparisonWithNormals": "Comparison with climate normals",
+    "analysisPeriod": "Analysis period:",
+    "timeRanges": {
+      "last3Months": "Last 3 months",
+      "last6Months": "Last 6 months",
+      "last12Months": "Last 12 months",
+      "yearToDate": "Year to date",
+      "custom": "Custom"
+    },
+    "customDates": {
+      "startDate": "Start date",
+      "endDate": "End date"
+    },
+    "dataRange": "Data from {{startDate}} to {{endDate}}",
+    "location": "Location",
+    "forecast": {
+      "title": "15-Day Weather Forecast"
+    },
+    "summary": {
+      "avgTemperature": "Average Temperature",
+      "totalPrecipitation": "Total Precipitation",
+      "rainyDays": "Rainy Days",
+      "analyzedPeriod": "Analyzed period",
+      "daysAbove1mm": "Days with > 1mm"
+    },
+    "sections": {
+      "temperatureAnalysis": "Temperature Analysis",
+      "precipitationAnalysis": "Precipitation Analysis",
+      "dryWetConditions": "Dry & Wet Conditions",
+      "insightsRecommendations": "Insights and Recommendations"
+    },
+    "insights": {
+      "comparison": "Data is compared to long-term climate normals (LTN) to identify significant deviations from usual conditions.",
+      "wetDay": "A wet day is defined as a day with more than 1mm of precipitation. Dry periods are analyzed to optimize irrigation management.",
+      "drought": "Drought conditions (5 consecutive days with less than 5mm) require special attention for crop water management."
+    },
+    "noData": "Select a period to display weather analyses"
+  },
+  "satellite": {
+    "loading": "Loading satellite analysis...",
+    "noBoundary": {
+      "title": "Parcel boundary data is required for satellite analysis.",
+      "description": "Please define the parcel boundaries to access satellite imagery features.",
+      "defineButton": "Define parcel boundaries"
+    }
+  },
+  "harvests": {
+    "title": "Harvest Management",
+    "subtitle": "Track and manage your harvests",
+    "loading": "Loading organization...",
+    "searchPlaceholder": "Search by crop, parcel, farm...",
+    "deleteError": "Error deleting harvest",
+    "deleteConfirm": "Are you sure you want to delete this harvest?",
+    "noResults": "No results found",
+    "noHarvests": "No harvests recorded",
+    "harvestsCount": "{{count}} harvest recorded",
+    "harvestsCount_plural": "{{count}} harvests recorded",
+    "filters": "Filters",
+    "export": "Export",
+    "newHarvest": "New Harvest",
+    "filterLabels": {
+      "farm": "Farm",
+      "status": "Status",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "allFarms": "All farms",
+      "allStatuses": "All statuses",
+      "reset": "Reset"
+    },
+    "statuses": {
+      "stored": "Stored",
+      "in_delivery": "In delivery",
+      "delivered": "Delivered",
+      "sold": "Sold",
+      "spoiled": "Spoiled"
+    },
+    "emptyState": {
+      "modifySearch": "Try modifying your search",
+      "startFirst": "Start by recording your first harvest"
+    }
+  },
+  "utilities": {
+    "title": "Utilities Management",
+    "subtitle": "Track and manage water and electricity consumption for your farms",
+    "loading": "Loading organization...",
+    "loadingDashboard": "Loading dashboard..."
+  },
+  "receptionBatches": {
+    "title": "Reception Batch Management",
+    "subtitle": "Traceability of reception and quality control of harvests",
+    "loading": "Loading organization..."
+  },
+  "analyses": {
+    "title": "Soil, Plant and Water Analyses",
+    "subtitle": "Manage and track your agricultural analyses",
+    "loading": "Loading organization..."
+  },
+  "labServices": {
+    "title": "Laboratory Services",
+    "subtitle": "Schedule soil and foliar analyses, track samples and integrate results into your recommendations",
+    "loading": "Loading organization..."
   }
 }

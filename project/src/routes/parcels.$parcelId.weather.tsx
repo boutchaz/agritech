@@ -1,11 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense, lazy } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParcelById } from '../hooks/useParcelsQuery'
 import { Cloud, Loader2 } from 'lucide-react'
 
 const WeatherAnalyticsView = lazy(() => import('../components/WeatherAnalytics/WeatherAnalyticsView'));
 
 const ParcelWeatherPage = () => {
+  const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
 
@@ -26,7 +28,7 @@ const ParcelWeatherPage = () => {
           fallback={
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des analyses météo...</span>
+              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('weather.loadingFallback')}</span>
             </div>
           }
         >
@@ -42,10 +44,10 @@ const ParcelWeatherPage = () => {
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
           <Cloud className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Les données de localisation de la parcelle sont requises pour l'analyse météorologique.
+            {t('weather.noBoundary.title')}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques.
+            {t('weather.noBoundary.description')}
           </p>
         </div>
       )}

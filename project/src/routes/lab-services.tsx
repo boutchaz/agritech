@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { FlaskConical, Calendar, Package, TrendingUp, Building2, Home } from 'lucide-react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import Sidebar from '@/components/Sidebar';
@@ -36,6 +37,7 @@ export const Route = createFileRoute('/lab-services')({
 });
 
 function LabServicesPage() {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('lab-services');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -71,7 +73,7 @@ function LabServicesPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('labServices.loading')}</p>
         </div>
       </div>
     );
@@ -92,10 +94,10 @@ function LabServicesPage() {
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
             ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
-            { icon: FlaskConical, label: 'Services de Laboratoire', isActive: true }
+            { icon: FlaskConical, label: t('labServices.title'), isActive: true }
           ]}
-          title="Services de Laboratoire"
-          subtitle="Programmez des analyses de sol et foliaires, suivez les échantillons et intégrez les résultats dans vos recommandations"
+          title={t('labServices.title')}
+          subtitle={t('labServices.subtitle')}
         />
         <div className="p-6 space-y-6">
           {/* Statistics Cards */}
