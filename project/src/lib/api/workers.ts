@@ -131,7 +131,7 @@ export const workersApi = {
    * Get all workers for an organization
    */
   async getAll(filters?: WorkerFilters, organizationId?: string): Promise<Worker[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'workersApi.getAll');
     // Only include farmId param if it's a non-empty string
     const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
     return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`);
@@ -148,7 +148,7 @@ export const workersApi = {
    * Get a single worker by ID
    */
   async getOne(id: string, organizationId?: string): Promise<Worker> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'workersApi.getOne');
     return apiClient.get<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`);
   },
 
@@ -168,7 +168,7 @@ export const workersApi = {
    * Create a new worker
    */
   async create(data: CreateWorkerInput, organizationId?: string): Promise<Worker> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'workersApi.create');
     return apiClient.post<Worker>(`/api/v1/organizations/${organizationId}/workers`, data);
   },
 
@@ -176,7 +176,7 @@ export const workersApi = {
    * Update a worker
    */
   async update(id: string, data: UpdateWorkerInput, organizationId?: string): Promise<Worker> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'workersApi.update');
     return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`, data);
   },
 
@@ -192,7 +192,7 @@ export const workersApi = {
    * Delete a worker (hard delete)
    */
   async delete(id: string, organizationId?: string): Promise<{ message: string }> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'workersApi.delete');
     return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${id}`);
   },
 

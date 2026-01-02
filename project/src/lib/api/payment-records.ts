@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
 import type {
   PaymentRecord,
   PaymentSummary,
@@ -19,7 +20,7 @@ export const paymentRecordsApi = {
    * Get all payment records for an organization
    */
   async getAll(filters?: PaymentFilters, organizationId?: string): Promise<PaymentSummary[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'paymentRecordsApi.getAll');
     const params = new URLSearchParams();
 
     if (filters?.status) {
@@ -47,7 +48,7 @@ export const paymentRecordsApi = {
    * Get a single payment record by ID with deductions and bonuses
    */
   async getOne(id: string, organizationId?: string): Promise<PaymentSummary> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'paymentRecordsApi.getOne');
     return apiClient.get<PaymentSummary>(
       `/api/v1/organizations/${organizationId}/payment-records/${id}`
     );

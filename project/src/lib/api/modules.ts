@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { requireOrganizationId } from './createCrudApi';
 
 export interface ModuleMetric {
   name: string;
@@ -31,7 +32,7 @@ export const modulesApi = {
    * Get all modules for an organization
    */
   async getAll(filters?: undefined, organizationId?: string): Promise<OrganizationModule[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'modulesApi.getAll');
     return apiClient.get<OrganizationModule[]>(getBaseUrl(organizationId));
   },
 

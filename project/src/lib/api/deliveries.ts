@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
 import type {
   Delivery,
   DeliverySummary,
@@ -26,7 +27,7 @@ export const deliveriesApi = {
    * Get all deliveries for an organization
    */
   async getAll(filters?: DeliveryFilters, organizationId?: string): Promise<DeliverySummary[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'deliveriesApi.getAll');
     const params = new URLSearchParams();
 
     if (filters?.status) {
@@ -75,7 +76,7 @@ export const deliveriesApi = {
    * Get delivery items for a specific delivery
    */
   async getItems(deliveryId: string, organizationId?: string): Promise<DeliveryItem[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'deliveriesApi.getItems');
     return apiClient.get<DeliveryItem[]>(
       `/api/v1/organizations/${organizationId}/deliveries/${deliveryId}/items`
     );
@@ -85,7 +86,7 @@ export const deliveriesApi = {
    * Get delivery tracking records for a specific delivery
    */
   async getTracking(deliveryId: string, organizationId?: string): Promise<DeliveryTracking[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'deliveriesApi.getTracking');
     return apiClient.get<DeliveryTracking[]>(
       `/api/v1/organizations/${organizationId}/deliveries/${deliveryId}/tracking`
     );
