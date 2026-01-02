@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { requireOrganizationId } from './createCrudApi';
 
 export type WorkerType = 'fixed_salary' | 'daily_worker' | 'metayage';
 export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'harvest_share';
@@ -134,14 +135,14 @@ export const workersApi = {
     requireOrganizationId(organizationId, 'workersApi.getAll');
     // Only include farmId param if it's a non-empty string
     const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
-    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`);
+    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`, {}, organizationId);
   },
 
   /**
    * Get all active workers for an organization
    */
   async getActive(organizationId: string): Promise<Worker[]> {
-    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers/active`);
+    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers/active`, {}, organizationId);
   },
 
   /**
@@ -149,7 +150,7 @@ export const workersApi = {
    */
   async getOne(id: string, organizationId?: string): Promise<Worker> {
     requireOrganizationId(organizationId, 'workersApi.getOne');
-    return apiClient.get<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`);
+    return apiClient.get<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`, {}, organizationId);
   },
 
   // Alias for backwards compatibility
@@ -161,7 +162,7 @@ export const workersApi = {
    * Get worker statistics
    */
   async getStats(organizationId: string, workerId: string): Promise<WorkerStats> {
-    return apiClient.get<WorkerStats>(`/api/v1/organizations/${organizationId}/workers/${workerId}/stats`);
+    return apiClient.get<WorkerStats>(`/api/v1/organizations/${organizationId}/workers/${workerId}/stats`, {}, organizationId);
   },
 
   /**
@@ -169,7 +170,7 @@ export const workersApi = {
    */
   async create(data: CreateWorkerInput, organizationId?: string): Promise<Worker> {
     requireOrganizationId(organizationId, 'workersApi.create');
-    return apiClient.post<Worker>(`/api/v1/organizations/${organizationId}/workers`, data);
+    return apiClient.post<Worker>(`/api/v1/organizations/${organizationId}/workers`, data, {}, organizationId);
   },
 
   /**
@@ -177,7 +178,7 @@ export const workersApi = {
    */
   async update(id: string, data: UpdateWorkerInput, organizationId?: string): Promise<Worker> {
     requireOrganizationId(organizationId, 'workersApi.update');
-    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`, data);
+    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`, data, {}, organizationId);
   },
 
   /**
@@ -185,7 +186,7 @@ export const workersApi = {
    */
   async deactivate(organizationId: string, workerId: string, endDate?: string): Promise<Worker> {
     const params = endDate ? `?endDate=${endDate}` : '';
-    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${workerId}/deactivate${params}`, {});
+    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${workerId}/deactivate${params}`, {}, {}, organizationId);
   },
 
   /**
@@ -193,7 +194,7 @@ export const workersApi = {
    */
   async delete(id: string, organizationId?: string): Promise<{ message: string }> {
     requireOrganizationId(organizationId, 'workersApi.delete');
-    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${id}`);
+    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${id}`, {}, organizationId);
   },
 
   /**
