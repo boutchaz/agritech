@@ -7,8 +7,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -22,40 +23,6 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   invoiceId,
 }) => {
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-      case 'overdue':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      case 'draft':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-      case 'partially_paid':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle2 className="h-4 w-4" />;
-      case 'submitted':
-      case 'partially_paid':
-        return <Clock className="h-4 w-4" />;
-      case 'overdue':
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
 
   if (!invoiceId) return null;
 
@@ -168,8 +135,8 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                     <CheckCircle2 className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                        {getStatusIcon(invoice.status)}
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${invoiceStatus.getColor(invoice.status)}`}>
+                        {renderStatusIcon(invoice.status)}
                         {invoice.status}
                       </span>
                     </div>

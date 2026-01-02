@@ -55,28 +55,37 @@ export const utilitiesApi = {
   /**
    * Get all utilities for a farm
    */
-  async getAll(organizationId: string, farmId: string): Promise<Utility[]> {
+  async getAll(farmId: string, organizationId?: string): Promise<Utility[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<Utility[]>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`);
   },
 
   /**
    * Get a single utility by ID
    */
-  async getById(organizationId: string, farmId: string, utilityId: string): Promise<Utility> {
+  async getOne(utilityId: string, farmId: string, organizationId?: string): Promise<Utility> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`);
+  },
+
+  // Alias for backwards compatibility
+  async getById(organizationId: string, farmId: string, utilityId: string): Promise<Utility> {
+    return this.getOne(utilityId, farmId, organizationId);
   },
 
   /**
    * Create a new utility
    */
-  async create(organizationId: string, data: CreateUtilityInput): Promise<Utility> {
+  async create(data: CreateUtilityInput, organizationId?: string): Promise<Utility> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<Utility>(`/api/v1/organizations/${organizationId}/farms/${data.farm_id}/utilities`, data);
   },
 
   /**
    * Update a utility
    */
-  async update(organizationId: string, farmId: string, utilityId: string, data: UpdateUtilityInput): Promise<Utility> {
+  async update(utilityId: string, data: UpdateUtilityInput, farmId: string, organizationId?: string): Promise<Utility> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.patch<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, data);
   },
 

@@ -63,21 +63,24 @@ export const structuresApi = {
   /**
    * Get all structures for an organization
    */
-  async getAll(organizationId: string): Promise<Structure[]> {
+  async getAll(filters?: undefined, organizationId?: string): Promise<Structure[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<Structure[]>(getBaseUrl(organizationId));
   },
 
   /**
    * Get a single structure by ID
    */
-  async getOne(organizationId: string, id: string): Promise<Structure> {
+  async getOne(id: string, organizationId?: string): Promise<Structure> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<Structure>(`${getBaseUrl(organizationId)}/${id}`);
   },
 
   /**
    * Create a new structure
    */
-  async create(organizationId: string, data: CreateStructureInput): Promise<Structure> {
+  async create(data: CreateStructureInput, organizationId?: string): Promise<Structure> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<Structure>(getBaseUrl(organizationId), data);
   },
 

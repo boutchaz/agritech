@@ -67,8 +67,14 @@ export const tasksApi = {
   /**
    * Get a single task by ID
    */
+  async getOne(id: string, organizationId?: string): Promise<TaskSummary> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.get<TaskSummary>(`/api/v1/organizations/${organizationId}/tasks/${id}`);
+  },
+
+  // Alias for backwards compatibility
   async getById(organizationId: string, taskId: string): Promise<TaskSummary> {
-    return apiClient.get<TaskSummary>(`/api/v1/organizations/${organizationId}/tasks/${taskId}`);
+    return this.getOne(taskId, organizationId);
   },
 
   /**
@@ -76,7 +82,9 @@ export const tasksApi = {
    * Note: Payment fields (payment_type, work_unit_id, units_required, rate_per_unit)
    * require backend deployment. If the backend doesn't support them yet, we retry without them.
    */
-  async create(organizationId: string, data: CreateTaskRequest): Promise<Task> {
+  async create(data: CreateTaskRequest, organizationId?: string): Promise<Task> {
+    if (!organizationId) throw new Error('organizationId is required');
+    
     try {
       return await apiClient.post<Task>(`/api/v1/organizations/${organizationId}/tasks`, data);
     } catch (error: any) {
@@ -98,15 +106,17 @@ export const tasksApi = {
   /**
    * Update a task
    */
-  async update(organizationId: string, taskId: string, data: UpdateTaskRequest): Promise<Task> {
-    return apiClient.patch<Task>(`/api/v1/organizations/${organizationId}/tasks/${taskId}`, data);
+  async update(id: string, data: UpdateTaskRequest, organizationId?: string): Promise<Task> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.patch<Task>(`/api/v1/organizations/${organizationId}/tasks/${id}`, data);
   },
 
   /**
    * Delete a task
    */
-  async delete(organizationId: string, taskId: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/tasks/${taskId}`);
+  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/tasks/${id}`);
   },
 
   /**

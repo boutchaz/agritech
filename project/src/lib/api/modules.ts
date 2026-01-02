@@ -30,7 +30,8 @@ export const modulesApi = {
   /**
    * Get all modules for an organization
    */
-  async getAll(organizationId: string): Promise<OrganizationModule[]> {
+  async getAll(filters?: undefined, organizationId?: string): Promise<OrganizationModule[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<OrganizationModule[]>(getBaseUrl(organizationId));
   },
 
@@ -38,10 +39,11 @@ export const modulesApi = {
    * Update module activation status or settings
    */
   async update(
-    organizationId: string,
     moduleId: string,
     data: UpdateModuleInput,
+    organizationId?: string,
   ): Promise<OrganizationModule> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.patch<OrganizationModule>(
       `${getBaseUrl(organizationId)}/${moduleId}`,
       data,

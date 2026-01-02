@@ -1,8 +1,8 @@
-import { apiClient } from '../api-client';
+import { createCrudApi } from './createCrudApi';
 import type { Database } from '@/types/database.types';
 
 type Tables = Database['public']['Tables'];
-type Tax = Tables['taxes']['Row'];
+export type Tax = Tables['taxes']['Row'];
 
 export interface TaxFilters {
   tax_type?: 'sales' | 'purchase' | 'both';
@@ -10,29 +10,24 @@ export interface TaxFilters {
   search?: string;
 }
 
+export interface CreateTaxInput {
+  name: string;
+  code?: string;
+  rate: number;
+  tax_type: 'sales' | 'purchase' | 'both';
+  is_compound?: boolean;
+  is_active?: boolean;
+  description?: string;
+}
+
+export type UpdateTaxInput = Partial<CreateTaxInput>;
+
+// Base CRUD operations
+const baseCrud = createCrudApi<Tax, CreateTaxInput, TaxFilters>('/api/v1/taxes');
+
+// Alias for backward compatibility
 export const taxesApi = {
-  async getAll(organizationId: string, filters?: TaxFilters): Promise<Tax[]> {
-    const params = new URLSearchParams();
-      if (filters?.tax_type) params.append('tax_type', filters.tax_type);
-      if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
-      if (filters?.search) params.append('search', filters.search);
-    const queryString = params.toString();
-    return apiClient.get<Tax[]>(`/api/v1/taxes${queryString ? `?${queryString}` : ''}`);
-  },
-
-  async getById(taxId: string): Promise<Tax> {
-    return apiClient.get<Tax>(`/api/v1/taxes/${taxId}`);
-  },
-
-  async create(tax: any): Promise<Tax> {
-    return apiClient.post<Tax>(`/api/v1/taxes`, tax);
-  },
-
-  async update(taxId: string, updates: Partial<Tax>): Promise<Tax> {
-    return apiClient.patch<Tax>(`/api/v1/taxes/${taxId}`, updates);
-  },
-
-  async delete(taxId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/taxes/${taxId}`);
-  },
+  ...baseCrud,
+  // Alias getOne as getById for backward compatibility
+  getById: baseCrud.getOne,
 };

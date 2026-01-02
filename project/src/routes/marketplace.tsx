@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
+import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import { MobileNavBar } from '../components/MobileNavBar';
+import ModernPageHeader from '../components/ModernPageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import {
   Tag,
   DollarSign,
   Box,
+  Building2,
 } from 'lucide-react';
 import {
   Table,
@@ -30,7 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Module } from '../types';
 import { itemsApi } from '../lib/api/items';
 import type { Item } from '../types/items';
 
@@ -38,26 +39,15 @@ export const Route = createFileRoute('/marketplace')({
   component: MarketplacePage,
 });
 
-const mockModules: Module[] = [
-  {
-    id: 'marketplace',
-    name: 'Marketplace',
-    icon: 'ShoppingBag',
-    active: true,
-    category: 'sales',
-    description: 'Sell your products',
-    metrics: [],
-  },
-];
-
 function MarketplacePage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('marketplace');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules] = useState(mockModules);
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Check if we're on a child route
+  const isChildRoute = location.pathname !== '/marketplace' && location.pathname !== '/marketplace/';
 
   // Fetch items marked as sales items
   const { data: salesItems = [], isLoading } = useQuery({
@@ -100,299 +90,342 @@ function MarketplacePage() {
     }).format(amount);
   };
 
+  if (!currentOrganization) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('marketplace.loading', 'Loading...')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we're on a child route, render the Outlet
+  if (isChildRoute) {
+    return (
+      <PageLayout
+        activeModule="marketplace"
+        header={
+          <>
+            <MobileNavBar title={t('marketplace.title', 'Marketplace')} />
+            <div className="hidden md:block">
+              <ModernPageHeader
+                breadcrumbs={[
+                  { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                  { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), path: '/marketplace' },
+                  { label: t('marketplace.quoteRequests', 'Quote Requests'), isActive: true }
+                ]}
+                title={t('marketplace.quoteRequests', 'Quote Requests')}
+                subtitle={t('marketplace.quoteRequestsSubtitle', 'Manage your quote requests')}
+              />
+            </div>
+          </>
+        }
+      >
+        <div className="p-4 md:p-8">
+          <Outlet />
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-      <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-        <Sidebar
-          modules={modules}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={() => setIsDarkMode(!isDarkMode)}
-        />
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <main className="flex-1 overflow-auto">
-            <div className="p-4 md:p-8 space-y-6">
-              {/* Header */}
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                    {t('marketplace.title', 'Marketplace')}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {t(
-                      'marketplace.subtitle',
-                      'Manage your products available for sale'
-                    )}
-                  </p>
+    <PageLayout
+      activeModule="marketplace"
+      header={
+        <>
+          <MobileNavBar title={t('marketplace.title', 'Marketplace')} />
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), isActive: true }
+              ]}
+              title={t('marketplace.title', 'Marketplace')}
+              subtitle={t('marketplace.subtitle', 'Manage your products available for sale')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className="p-4 md:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+              {t('marketplace.title', 'Marketplace')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t(
+                'marketplace.subtitle',
+                'Manage your products available for sale'
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <a href="/stock/items">
+                <Package className="mr-2 h-4 w-4" />
+                {t('marketplace.manageItems', 'Manage Items')}
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t('marketplace.stats.totalProducts', 'Total Products')}
+              </CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalItems}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.activeItems} {t('marketplace.stats.active', 'active')}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t('marketplace.stats.catalogValue', 'Catalog Value')}
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(stats.totalValue)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('marketplace.stats.standardRates', 'Based on standard rates')}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t('marketplace.stats.withImages', 'With Images')}
+              </CardTitle>
+              <Box className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.withImages}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.totalItems > 0
+                  ? `${Math.round((stats.withImages / stats.totalItems) * 100)}%`
+                  : '0%'}{' '}
+                {t('marketplace.stats.coverage', 'coverage')}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t('marketplace.stats.readyToSell', 'Ready to Sell')}
+              </CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeItems}</div>
+              <p className="text-xs text-muted-foreground">
+                {t('marketplace.stats.itemsAvailable', 'Items available for sale')}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Products Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <CardTitle>
+                  {t('marketplace.products.title', 'Sales Products')}
+                </CardTitle>
+                <CardDescription>
+                  {t(
+                    'marketplace.products.description',
+                    'Items marked as sales items from your inventory'
+                  )}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('marketplace.search', 'Search products...')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" asChild>
-                    <a href="/stock/items">
-                      <Package className="mr-2 h-4 w-4" />
-                      {t('marketplace.manageItems', 'Manage Items')}
-                    </a>
+                <div className="flex border rounded-md">
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-
-              {/* Stats Cards */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {t('marketplace.stats.totalProducts', 'Total Products')}
-                    </CardTitle>
-                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalItems}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.activeItems} {t('marketplace.stats.active', 'active')}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {t('marketplace.stats.catalogValue', 'Catalog Value')}
-                    </CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {formatCurrency(stats.totalValue)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('marketplace.stats.standardRates', 'Based on standard rates')}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {t('marketplace.stats.withImages', 'With Images')}
-                    </CardTitle>
-                    <Box className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.withImages}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.totalItems > 0
-                        ? `${Math.round((stats.withImages / stats.totalItems) * 100)}%`
-                        : '0%'}{' '}
-                      {t('marketplace.stats.coverage', 'coverage')}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {t('marketplace.stats.readyToSell', 'Ready to Sell')}
-                    </CardTitle>
-                    <Tag className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.activeItems}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('marketplace.stats.itemsAvailable', 'Items available for sale')}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Products Section */}
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <CardTitle>
-                        {t('marketplace.products.title', 'Sales Products')}
-                      </CardTitle>
-                      <CardDescription>
-                        {t(
-                          'marketplace.products.description',
-                          'Items marked as sales items from your inventory'
-                        )}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                      <div className="relative flex-1 md:w-64">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder={t('marketplace.search', 'Search products...')}
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-8"
-                        />
-                      </div>
-                      <div className="flex border rounded-md">
-                        <Button
-                          variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                          size="icon"
-                          onClick={() => setViewMode('grid')}
-                        >
-                          <Grid className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                          size="icon"
-                          onClick={() => setViewMode('list')}
-                        >
-                          <List className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-10">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
-                    </div>
-                  ) : filteredItems.length === 0 ? (
-                    <div className="text-center py-10">
-                      <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                      <h3 className="mt-4 text-lg font-medium">
-                        {searchQuery
-                          ? t('marketplace.noResults', 'No products found')
-                          : t('marketplace.empty', 'No sales items yet')}
-                      </h3>
-                      <p className="mt-2 text-muted-foreground">
-                        {searchQuery
-                          ? t(
-                              'marketplace.tryDifferentSearch',
-                              'Try a different search term'
-                            )
-                          : t(
-                              'marketplace.emptyHint',
-                              'Mark items as "Sales Item" in Stock > Items to display them here'
-                            )}
-                      </p>
-                      {!searchQuery && (
-                        <Button className="mt-4" variant="outline" asChild>
-                          <a href="/stock/items">
-                            <Plus className="mr-2 h-4 w-4" />
-                            {t('marketplace.goToItems', 'Go to Items')}
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  ) : viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {filteredItems.map((item) => (
-                        <ProductCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t('marketplace.table.code', 'Code')}</TableHead>
-                            <TableHead>{t('marketplace.table.name', 'Name')}</TableHead>
-                            <TableHead>{t('marketplace.table.unit', 'Unit')}</TableHead>
-                            <TableHead className="text-right">
-                              {t('marketplace.table.rate', 'Rate')}
-                            </TableHead>
-                            <TableHead>{t('marketplace.table.status', 'Status')}</TableHead>
-                            <TableHead className="text-right">
-                              {t('marketplace.table.actions', 'Actions')}
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-mono text-sm">
-                                {item.item_code}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {item.image_url ? (
-                                    <img
-                                      src={item.image_url}
-                                      alt={item.item_name}
-                                      className="h-8 w-8 rounded object-cover"
-                                    />
-                                  ) : (
-                                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                                      <Package className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  <div>
-                                    <div className="font-medium">{item.item_name}</div>
-                                    {item.description && (
-                                      <div className="text-xs text-muted-foreground line-clamp-1">
-                                        {item.description}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>{item.default_unit}</TableCell>
-                              <TableCell className="text-right">
-                                {item.standard_rate
-                                  ? formatCurrency(item.standard_rate)
-                                  : '-'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={item.is_active ? 'default' : 'secondary'}
-                                >
-                                  {item.is_active
-                                    ? t('marketplace.active', 'Active')
-                                    : t('marketplace.inactive', 'Inactive')}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" asChild>
-                                  <a href={`/stock/items?edit=${item.id}`}>
-                                    <Edit className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Help Section */}
-              <Card className="bg-muted/50">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row items-start gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <ShoppingBag className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">
-                        {t('marketplace.help.title', 'How to add products to marketplace')}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t(
-                          'marketplace.help.description',
-                          'Go to Stock > Items and create or edit an item. Check the "Sales Item" checkbox to make it appear here. Set a standard rate to display the price.'
-                        )}
-                      </p>
-                    </div>
-                    <Button variant="outline" asChild>
-                      <a href="/stock/items">
-                        {t('marketplace.help.goToItems', 'Manage Items')}
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
-          </main>
-          <MobileNavBar />
-        </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-10">
+                <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+                <h3 className="mt-4 text-lg font-medium">
+                  {searchQuery
+                    ? t('marketplace.noResults', 'No products found')
+                    : t('marketplace.empty', 'No sales items yet')}
+                </h3>
+                <p className="mt-2 text-muted-foreground">
+                  {searchQuery
+                    ? t(
+                        'marketplace.tryDifferentSearch',
+                        'Try a different search term'
+                      )
+                    : t(
+                        'marketplace.emptyHint',
+                        'Mark items as "Sales Item" in Stock > Items to display them here'
+                      )}
+                </p>
+                {!searchQuery && (
+                  <Button className="mt-4" variant="outline" asChild>
+                    <a href="/stock/items">
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t('marketplace.goToItems', 'Go to Items')}
+                    </a>
+                  </Button>
+                )}
+              </div>
+            ) : viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredItems.map((item) => (
+                  <ProductCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('marketplace.table.code', 'Code')}</TableHead>
+                      <TableHead>{t('marketplace.table.name', 'Name')}</TableHead>
+                      <TableHead>{t('marketplace.table.unit', 'Unit')}</TableHead>
+                      <TableHead className="text-right">
+                        {t('marketplace.table.rate', 'Rate')}
+                      </TableHead>
+                      <TableHead>{t('marketplace.table.status', 'Status')}</TableHead>
+                      <TableHead className="text-right">
+                        {t('marketplace.table.actions', 'Actions')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-sm">
+                          {item.item_code}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.item_name}
+                                className="h-8 w-8 rounded object-cover"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium">{item.item_name}</div>
+                              {item.description && (
+                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                  {item.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.default_unit}</TableCell>
+                        <TableCell className="text-right">
+                          {item.standard_rate
+                            ? formatCurrency(item.standard_rate)
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={item.is_active ? 'default' : 'secondary'}
+                          >
+                            {item.is_active
+                              ? t('marketplace.active', 'Active')
+                              : t('marketplace.inactive', 'Inactive')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" asChild>
+                            <a href={`/stock/items?edit=${item.id}`}>
+                              <Edit className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Help Section */}
+        <Card className="bg-muted/50">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row items-start gap-4">
+              <div className="rounded-full bg-primary/10 p-3">
+                <ShoppingBag className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">
+                  {t('marketplace.help.title', 'How to add products to marketplace')}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t(
+                    'marketplace.help.description',
+                    'Go to Stock > Items and create or edit an item. Check the "Sales Item" checkbox to make it appear here. Set a standard rate to display the price.'
+                  )}
+                </p>
+              </div>
+              <Button variant="outline" asChild>
+                <a href="/stock/items">
+                  {t('marketplace.help.goToItems', 'Manage Items')}
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 

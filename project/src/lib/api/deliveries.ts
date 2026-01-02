@@ -25,7 +25,8 @@ export const deliveriesApi = {
   /**
    * Get all deliveries for an organization
    */
-  async getAll(organizationId: string, filters?: DeliveryFilters): Promise<DeliverySummary[]> {
+  async getAll(filters?: DeliveryFilters, organizationId?: string): Promise<DeliverySummary[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     const params = new URLSearchParams();
 
     if (filters?.status) {
@@ -58,16 +59,23 @@ export const deliveriesApi = {
   /**
    * Get a single delivery by ID with items and tracking
    */
-  async getById(organizationId: string, deliveryId: string): Promise<DeliverySummary & { tracking: DeliveryTracking[] }> {
+  async getOne(id: string, organizationId?: string): Promise<DeliverySummary & { tracking: DeliveryTracking[] }> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<DeliverySummary & { tracking: DeliveryTracking[] }>(
-      `/api/v1/organizations/${organizationId}/deliveries/${deliveryId}`
+      `/api/v1/organizations/${organizationId}/deliveries/${id}`
     );
+  },
+
+  // Alias for backwards compatibility
+  async getById(organizationId: string, deliveryId: string): Promise<DeliverySummary & { tracking: DeliveryTracking[] }> {
+    return this.getOne(deliveryId, organizationId);
   },
 
   /**
    * Get delivery items for a specific delivery
    */
-  async getItems(organizationId: string, deliveryId: string): Promise<DeliveryItem[]> {
+  async getItems(deliveryId: string, organizationId?: string): Promise<DeliveryItem[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<DeliveryItem[]>(
       `/api/v1/organizations/${organizationId}/deliveries/${deliveryId}/items`
     );
@@ -76,7 +84,8 @@ export const deliveriesApi = {
   /**
    * Get delivery tracking records for a specific delivery
    */
-  async getTracking(organizationId: string, deliveryId: string): Promise<DeliveryTracking[]> {
+  async getTracking(deliveryId: string, organizationId?: string): Promise<DeliveryTracking[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<DeliveryTracking[]>(
       `/api/v1/organizations/${organizationId}/deliveries/${deliveryId}/tracking`
     );
@@ -85,7 +94,8 @@ export const deliveriesApi = {
   /**
    * Create a new delivery
    */
-  async create(organizationId: string, data: CreateDeliveryRequest): Promise<Delivery> {
+  async create(data: CreateDeliveryRequest, organizationId?: string): Promise<Delivery> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<Delivery>(
       `/api/v1/organizations/${organizationId}/deliveries`,
       data
