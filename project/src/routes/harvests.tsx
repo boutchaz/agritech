@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
 import { Package, Plus, Filter, Download, Building2 } from 'lucide-react';
@@ -12,29 +12,12 @@ import HarvestForm from '../components/Harvests/HarvestForm';
 import HarvestCard from '../components/Harvests/HarvestCard';
 import HarvestDetailsModal from '../components/Harvests/HarvestDetailsModal';
 import HarvestStatistics from '../components/Harvests/HarvestStatistics';
-import type { Module } from '../types';
 import type { HarvestSummary, HarvestFilters } from '../types/harvests';
 import { format } from 'date-fns';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'harvests',
-    name: 'Récoltes',
-    icon: 'Package',
-    active: true,
-    category: 'agriculture',
-    description: 'Gestion des récoltes',
-    metrics: []
-  }
-];
 
 function HarvestsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('harvests');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules] = useState(mockModules);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingHarvest, setEditingHarvest] = useState<HarvestSummary | null>(null);
   const [selectedHarvest, setSelectedHarvest] = useState<string | null>(null);
@@ -43,7 +26,6 @@ function HarvestsPage() {
   // Filters state
   const [filters, setFilters] = useState<HarvestFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const { style: sidebarStyle } = useSidebarMargin();
   const navigate = useNavigate();
 
   // Data fetching
@@ -62,11 +44,6 @@ function HarvestsPage() {
       harvest.farm_name?.toLowerCase().includes(query)
     );
   }, [harvests, searchQuery]);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleAddHarvest = () => {
     setEditingHarvest(null);
@@ -148,63 +125,59 @@ function HarvestsPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Sidebar with mobile menu support */}
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
+    <PageLayout
+      activeModule="harvests"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('harvests.title')} />
 
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('harvests.title')} />
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Package, label: t('harvests.title'), isActive: true }
+              ]}
+              title={t('harvests.title')}
+              subtitle={t('harvests.harvestsCount', { count: filteredHarvests.length })}
+              showSearch={true}
+              searchPlaceholder={t('harvests.searchPlaceholder')}
+              onSearch={setSearchQuery}
+              actions={
+                <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
+                  >
+                    <Filter className="h-4 w-4" />
+                    {t('harvests.filters')}
+                  </button>
 
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Package, label: t('harvests.title'), isActive: true }
-            ]}
-            title={t('harvests.title')}
-            subtitle={t('harvests.harvestsCount', { count: filteredHarvests.length })}
-            showSearch={true}
-            searchPlaceholder={t('harvests.searchPlaceholder')}
-            onSearch={setSearchQuery}
-            actions={
-              <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
-                >
-                  <Filter className="h-4 w-4" />
-                  {t('harvests.filters')}
-                </button>
+                  <button
+                    onClick={exportToCSV}
+                    disabled={harvests.length === 0}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                  >
+                    <Download className="h-4 w-4" />
+                    {t('harvests.export')}
+                  </button>
 
-                <button
-                  onClick={exportToCSV}
-                  disabled={harvests.length === 0}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                >
-                  <Download className="h-4 w-4" />
-                  {t('harvests.export')}
-                </button>
-
-                <button
-                  data-tour="harvest-add"
-                  onClick={handleAddHarvest}
-                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('harvests.newHarvest')}
-                </button>
-              </div>
-            }
-          />
-        </div>
+                  <button
+                    data-tour="harvest-add"
+                    onClick={handleAddHarvest}
+                    className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('harvests.newHarvest')}
+                  </button>
+                </div>
+              }
+            />
+          </div>
+        </>
+      }
+    >
 
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
           {/* Mobile Add Button - Only visible on mobile */}
@@ -338,7 +311,6 @@ function HarvestsPage() {
             </div>
           )}
         </div>
-      </main>
 
       {/* Add/Edit Form Modal */}
       {showAddForm && (
@@ -359,7 +331,7 @@ function HarvestsPage() {
           }}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }
 

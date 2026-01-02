@@ -2,36 +2,18 @@ import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
 import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
 import { Building2, ClipboardCheck } from 'lucide-react';
-import type { Module } from '../types';
 import type { ReceptionBatch } from '@/types/reception';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'reception-batches',
-    name: 'Lots de Réception',
-    icon: 'ClipboardCheck',
-    active: true,
-    category: 'agriculture',
-    description: 'Gestion des lots de réception',
-    metrics: []
-  }
-];
 
 function ReceptionBatchesPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('reception-batches');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules] = useState(mockModules);
   const [showForm, setShowForm] = useState(false);
-  const { style: sidebarStyle } = useSidebarMargin();
   const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
   const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
@@ -42,11 +24,6 @@ function ReceptionBatchesPage() {
       setShowForm(true);
     }
   }, [defaultHarvestId]);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);
@@ -81,48 +58,42 @@ function ReceptionBatchesPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Sidebar with mobile menu support */}
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
+    <PageLayout
+      activeModule="reception-batches"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('receptionBatches.title')} />
 
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('receptionBatches.title')} />
-
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
-            ]}
-            title={t('receptionBatches.title')}
-            subtitle={t('receptionBatches.subtitle')}
-          />
-        </div>
-
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-          <ReceptionBatchList
-            onCreateClick={handleCreateClick}
-            onViewClick={handleViewBatch}
-            onEditClick={handleEditBatch}
-          />
-        </div>
-
-        <ReceptionBatchForm
-          open={showForm}
-          onOpenChange={handleFormClose}
-          defaultHarvestId={defaultHarvestId}
-          batchToEdit={batchToEdit}
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
+              ]}
+              title={t('receptionBatches.title')}
+              subtitle={t('receptionBatches.subtitle')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ReceptionBatchList
+          onCreateClick={handleCreateClick}
+          onViewClick={handleViewBatch}
+          onEditClick={handleEditBatch}
         />
-      </main>
-    </div>
+      </div>
+
+      <ReceptionBatchForm
+        open={showForm}
+        onOpenChange={handleFormClose}
+        defaultHarvestId={defaultHarvestId}
+        batchToEdit={batchToEdit}
+      />
+    </PageLayout>
   );
 }
 

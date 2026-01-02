@@ -5,9 +5,8 @@ import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings } fr
 import WorkersList from '../components/Workers/WorkersList';
 import MetayageCalculator from '../components/Workers/MetayageCalculator';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
-import type { Module } from '../types';
 import { useCan } from '../lib/casl/AbilityContext';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -15,42 +14,20 @@ import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { farmsApi } from '../lib/api/farms';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: []
-  },
-];
 
 function WorkersPage() {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const { can } = useCan();
   const location = useLocation();
-  const [activeModule, setActiveModule] = useState('workers');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules] = useState(mockModules);
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
-  const { style: sidebarStyle } = useSidebarMargin();
-  
+
   // Check if we're on a child route (like /workers/:workerId)
   const isChildRoute = location.pathname !== '/workers' && location.pathname !== '/workers/';
 
   // Check if user has access to workers page
   const canReadWorkers = can('read', 'Worker');
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const fetchFarms = async () => {
     if (!currentOrganization?.id) {
@@ -91,62 +68,51 @@ function WorkersPage() {
   // Access denied - user doesn't have permission to view workers
   if (!canReadWorkers) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+      <PageLayout
+        activeModule="workers"
+        header={
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
               { icon: UserCog, label: t('nav.personnel'), isActive: true }
             ]}
           />
-          <div className="p-4 sm:p-6">
-            <div className="max-w-2xl mx-auto mt-8 sm:mt-12">
-              <Card>
-                <CardContent className="p-6 sm:p-8 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full">
-                      <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-red-600 dark:text-red-400" />
-                    </div>
+        }
+      >
+        <div className="p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto mt-8 sm:mt-12">
+            <Card>
+              <CardContent className="p-6 sm:p-8 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full">
+                    <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-red-600 dark:text-red-400" />
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    {t('workers.accessDenied.title')}
-                  </h2>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
-                    {t('workers.accessDenied.description')}
-                  </p>
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{t('workers.accessDenied.requestAccess')}</AlertTitle>
-                    <AlertDescription className="text-sm">
-                      {t('workers.accessDenied.contactAdmin')}
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  {t('workers.accessDenied.title')}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
+                  {t('workers.accessDenied.description')}
+                </p>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>{t('workers.accessDenied.requestAccess')}</AlertTitle>
+                  <AlertDescription className="text-sm">
+                    {t('workers.accessDenied.contactAdmin')}
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="workers"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -155,7 +121,9 @@ function WorkersPage() {
           title={t('workers.title')}
           subtitle={t('workers.subtitle')}
         />
-        <div className="p-3 sm:p-4 lg:p-6">
+      }
+    >
+      <div className="p-3 sm:p-4 lg:p-6">
           {isChildRoute ? (
             <Outlet />
           ) : farmsLoading ? (
@@ -221,8 +189,7 @@ function WorkersPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }
 

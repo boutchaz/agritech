@@ -1,40 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { ProductionDashboard } from '@/components/ProductionIntelligence/ProductionDashboard';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Building2, BarChart3, Home } from 'lucide-react';
-import type { Module } from '../types';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 const AppContent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
-  const [activeModule, setActiveModule] = useState('production-intelligence');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   if (!currentOrganization) {
     return (
@@ -48,15 +22,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="production-intelligence"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -66,11 +34,12 @@ const AppContent: React.FC = () => {
           title="Production Intelligence"
           subtitle="Yield tracking, forecasts, and performance benchmarks"
         />
-        <div className="p-6">
-          <ProductionDashboard />
-        </div>
-      </main>
-    </div>
+      }
+    >
+      <div className="p-6">
+        <ProductionDashboard />
+      </div>
+    </PageLayout>
   );
 };
 

@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, Receipt, Plus, Filter, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
@@ -20,7 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useInvoices, useInvoiceStats, useDeleteInvoice } from '../hooks/useInvoices';
 import { InvoiceForm } from '../components/Accounting/InvoiceForm';
@@ -29,36 +28,16 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const { style: sidebarStyle } = useSidebarMargin();
   const [filterType, setFilterType] = useState<'all' | 'sales' | 'purchase'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
@@ -92,11 +71,6 @@ const AppContent: React.FC = () => {
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [invoices, searchTerm, filterType, filterStatus]);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string, status: string) => {
     if (status !== 'draft') {
@@ -171,31 +145,28 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={cn(`min-h-screen ${isDarkMode ? 'dark' : ''}`)} dir={isRTL ? 'rtl' : 'ltr'}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('invoices.pageTitle', 'Invoices')} />
+    <PageLayout
+      activeModule="accounting"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('invoices.pageTitle', 'Invoices')} />
 
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
-            ]}
-            title={t('invoices.title', 'Invoices')}
-            subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
-          />
-        </div>
-
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
+              ]}
+              title={t('invoices.title', 'Invoices')}
+              subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6", isRTL && "text-right")}>
           {/* Header with Search and Filters */}
           <div className="flex flex-col gap-4">
             <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
@@ -573,7 +544,6 @@ const AppContent: React.FC = () => {
               ))
             )}
           </div>
-        </div>
 
         {/* Invoice Creation/Edit Dialog */}
         <InvoiceForm
@@ -596,8 +566,8 @@ const AppContent: React.FC = () => {
           onClose={() => setViewInvoiceId(null)}
           invoiceId={viewInvoiceId}
         />
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };
 

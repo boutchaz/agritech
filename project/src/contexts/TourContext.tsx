@@ -363,12 +363,6 @@ const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       placement: 'left',
     },
     {
-      target: '[data-tour="dashboard-weather"]',
-      title: t('tour.dashboard.step3.title'),
-      content: t('tour.dashboard.step3.content'),
-      placement: 'left',
-    },
-    {
       target: '[data-tour="dashboard-parcels"]',
       title: t('tour.dashboard.step4.title'),
       content: t('tour.dashboard.step4.content'),
@@ -731,7 +725,18 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
 
   const startTour = useCallback((tourId: TourId) => {
     const targetRoute = TOUR_ROUTES[tourId];
-    
+
+    // Tours that target sidebar nav items - expand sidebar if collapsed
+    const sidebarTours: TourId[] = ['welcome', 'full-app'];
+    if (sidebarTours.includes(tourId)) {
+      // Expand sidebar by setting localStorage and dispatching event
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (isCollapsed) {
+        localStorage.setItem('sidebarCollapsed', 'false');
+        window.dispatchEvent(new CustomEvent('sidebarCollapse', { detail: { collapsed: false } }));
+      }
+    }
+
     if (targetRoute) {
       navigate({ to: targetRoute });
       setTimeout(() => {

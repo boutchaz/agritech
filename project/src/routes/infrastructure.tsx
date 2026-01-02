@@ -1,34 +1,16 @@
 import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '../components/MultiTenantAuthProvider'
-import Sidebar from '../components/Sidebar'
+import { PageLayout } from '../components/PageLayout'
 import InfrastructureManagement from '../components/InfrastructureManagement'
-
 import { MobileNavBar } from '../components/MobileNavBar'
 import ModernPageHeader from '../components/ModernPageHeader'
-import { useState } from 'react'
 import { Building2, Building } from 'lucide-react'
-import type { Module } from '../types'
 import { useTranslation } from 'react-i18next'
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-// Note: These mock modules are not displayed in the infrastructure page
-// They are left for reference but not actively used
-const mockModules: Module[] = [];
 
 const AppContent: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const { currentOrganization, currentFarm: _currentFarm } = useAuth();
-  const [activeModule, setActiveModule] = useState('infrastructure');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
-  const isRTL = i18n.language === 'ar';
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  const { t } = useTranslation();
+  const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {
     return (
@@ -42,36 +24,31 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Sidebar with mobile menu support */}
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('nav.infrastructure')} />
+    <PageLayout
+      activeModule="infrastructure"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('nav.infrastructure')} />
 
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Building2, label: t('nav.infrastructure'), isActive: true }
-            ]}
-            title={t('nav.infrastructure')}
-            subtitle={t('infrastructure.subtitle')}
-          />
-        </div>
-
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-          <InfrastructureManagement />
-        </div>
-      </main>
-    </div>
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Building2, label: t('nav.infrastructure'), isActive: true }
+              ]}
+              title={t('nav.infrastructure')}
+              subtitle={t('infrastructure.subtitle')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <InfrastructureManagement />
+      </div>
+    </PageLayout>
   );
 };
 

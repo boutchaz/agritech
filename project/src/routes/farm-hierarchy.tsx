@@ -1,48 +1,22 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import ModernFarmHierarchy from '../components/FarmHierarchy/ModernFarmHierarchy';
 import FarmRoleManager from '../components/FarmRoleManager';
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
-import type { Module } from '../types';
 import { useAutoStartTour } from '@/contexts/TourContext';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  }
-];
 
 function FarmHierarchyPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const [selectedFarm, setSelectedFarm] = useState<{ id: string; name: string } | null>(null);
-  const [activeModule, setActiveModule] = useState('farm-hierarchy');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
 
   // Auto-start farm management tour for first-time visitors
   useAutoStartTour('farm-management', 1500);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   if (!currentOrganization) {
     return (
@@ -67,15 +41,9 @@ function FarmHierarchyPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="farm-hierarchy"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -84,50 +52,50 @@ function FarmHierarchyPage() {
           title={t('farmHierarchy.title')}
           subtitle={t('farmHierarchy.subtitle')}
         />
+      }
+    >
+      <div className="p-3 sm:p-4 lg:p-6">
+        {selectedFarm ? (
+          <div>
+            {/* Back Button */}
+            <button
+              onClick={() => setSelectedFarm(null)}
+              className="mb-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              ← {t('farmHierarchy.backToHierarchy')}
+            </button>
 
-        <div className="p-3 sm:p-4 lg:p-6">
-          {selectedFarm ? (
-            <div>
-              {/* Back Button */}
-              <button
-                onClick={() => setSelectedFarm(null)}
-                className="mb-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                ← {t('farmHierarchy.backToHierarchy')}
-              </button>
-
-              {/* Role Manager */}
-              <FarmRoleManager
-                farmId={selectedFarm.id}
-                farmName={selectedFarm.name}
-                onClose={() => setSelectedFarm(null)}
-              />
-            </div>
-          ) : (
-            <ModernFarmHierarchy
-              organizationId={currentOrganization.id}
-              onFarmSelect={(farmId) => {
-                // Navigate to parcels page filtered by the selected farm
-                navigate({
-                  to: '/parcels',
-                  search: { farmId }
-                });
-              }}
-              onManageFarm={(farmId) => {
-                setSelectedFarm({ id: farmId, name: `Farm ${farmId}` });
-              }}
-              onAddParcel={(farmId) => {
-                // Navigate to parcels route with farmId pre-selected to enable map-based parcel creation
-                navigate({
-                  to: '/parcels',
-                  search: { farmId }
-                });
-              }}
+            {/* Role Manager */}
+            <FarmRoleManager
+              farmId={selectedFarm.id}
+              farmName={selectedFarm.name}
+              onClose={() => setSelectedFarm(null)}
             />
-          )}
-        </div>
-      </main>
-    </div>
+          </div>
+        ) : (
+          <ModernFarmHierarchy
+            organizationId={currentOrganization.id}
+            onFarmSelect={(farmId) => {
+              // Navigate to parcels page filtered by the selected farm
+              navigate({
+                to: '/parcels',
+                search: { farmId }
+              });
+            }}
+            onManageFarm={(farmId) => {
+              setSelectedFarm({ id: farmId, name: `Farm ${farmId}` });
+            }}
+            onAddParcel={(farmId) => {
+              // Navigate to parcels route with farmId pre-selected to enable map-based parcel creation
+              navigate({
+                to: '/parcels',
+                search: { farmId }
+              });
+            }}
+          />
+        )}
+      </div>
+    </PageLayout>
   );
 }
 
