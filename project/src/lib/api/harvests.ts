@@ -7,7 +7,9 @@ import type {
 } from '../../types/harvests';
 
 export const harvestsApi = {
-  async getAll(organizationId: string, filters?: HarvestFilters): Promise<HarvestSummary[]> {
+  async getAll(filters?: HarvestFilters, organizationId?: string): Promise<HarvestSummary[]> {
+    if (!organizationId) throw new Error('organizationId is required');
+    
     const params = new URLSearchParams();
 
     if (filters?.status) {
@@ -50,13 +52,20 @@ export const harvestsApi = {
     );
   },
 
-  async getById(organizationId: string, harvestId: string): Promise<HarvestRecord> {
+  async getOne(id: string, organizationId?: string): Promise<HarvestRecord> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<HarvestRecord>(
-      `/api/v1/organizations/${organizationId}/harvests/${harvestId}`
+      `/api/v1/organizations/${organizationId}/harvests/${id}`
     );
   },
 
-  async create(organizationId: string, data: CreateHarvestRequest): Promise<HarvestRecord> {
+  // Alias for backwards compatibility
+  async getById(organizationId: string, harvestId: string): Promise<HarvestRecord> {
+    return this.getOne(harvestId, organizationId);
+  },
+
+  async create(data: CreateHarvestRequest, organizationId?: string): Promise<HarvestRecord> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<HarvestRecord>(
       `/api/v1/organizations/${organizationId}/harvests`,
       data
@@ -64,17 +73,19 @@ export const harvestsApi = {
   },
 
   async update(
-    organizationId: string,
-    harvestId: string,
-    data: Partial<HarvestRecord>
+    id: string,
+    data: Partial<HarvestRecord>,
+    organizationId?: string
   ): Promise<HarvestRecord> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.patch<HarvestRecord>(
-      `/api/v1/organizations/${organizationId}/harvests/${harvestId}`,
+      `/api/v1/organizations/${organizationId}/harvests/${id}`,
       data
     );
   },
 
-  async delete(organizationId: string, harvestId: string): Promise<void> {
-    return apiClient.delete(`/api/v1/organizations/${organizationId}/harvests/${harvestId}`);
+  async delete(id: string, organizationId?: string): Promise<void> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.delete(`/api/v1/organizations/${organizationId}/harvests/${id}`);
   },
 };

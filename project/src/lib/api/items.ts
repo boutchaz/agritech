@@ -1,3 +1,4 @@
+import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
 import type {
   Item,
@@ -14,7 +15,21 @@ import type {
 
 const BASE_URL = '/api/v1/items';
 
+const baseCrud = createCrudApi<Item, CreateItemInput, ItemFilters, UpdateItemInput>(BASE_URL);
+
 export const itemsApi = {
+  // =====================================================
+  // ITEMS - Using createCrudApi
+  // =====================================================
+  ...baseCrud,
+
+  /**
+   * Get a single item with details (overrides baseCrud.getOne)
+   */
+  async getOne(id: string, organizationId?: string): Promise<ItemWithDetails> {
+    return apiClient.get<ItemWithDetails>(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
   // =====================================================
   // ITEM GROUPS
   // =====================================================
@@ -66,7 +81,7 @@ export const itemsApi = {
   },
 
   // =====================================================
-  // ITEMS
+  // CUSTOM ITEM METHODS
   // =====================================================
 
   /**
@@ -93,61 +108,6 @@ export const itemsApi = {
 
     const url = `${BASE_URL}/selection${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get<ItemSelectionOption[]>(url, {}, organizationId);
-  },
-
-  /**
-   * Get all items with optional filters
-   */
-  async getAll(filters?: ItemFilters, organizationId?: string): Promise<Item[]> {
-    const params = new URLSearchParams();
-
-    if (filters?.item_group_id) params.append('item_group_id', filters.item_group_id);
-    if (filters?.is_active !== undefined) {
-      params.append('is_active', filters.is_active.toString());
-    }
-    if (filters?.is_sales_item !== undefined) {
-      params.append('is_sales_item', filters.is_sales_item.toString());
-    }
-    if (filters?.is_purchase_item !== undefined) {
-      params.append('is_purchase_item', filters.is_purchase_item.toString());
-    }
-    if (filters?.is_stock_item !== undefined) {
-      params.append('is_stock_item', filters.is_stock_item.toString());
-    }
-    if (filters?.crop_type) params.append('crop_type', filters.crop_type);
-    if (filters?.variety) params.append('variety', filters.variety);
-    if (filters?.search) params.append('search', filters.search);
-
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<Item[]>(url, {}, organizationId);
-  },
-
-  /**
-   * Get a single item with details
-   */
-  async getOne(id: string, organizationId?: string): Promise<ItemWithDetails> {
-    return apiClient.get<ItemWithDetails>(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-
-  /**
-   * Create a new item
-   */
-  async create(data: CreateItemInput, organizationId?: string): Promise<Item> {
-    return apiClient.post<Item>(BASE_URL, data, {}, organizationId);
-  },
-
-  /**
-   * Update an item
-   */
-  async update(id: string, data: UpdateItemInput, organizationId?: string): Promise<Item> {
-    return apiClient.patch<Item>(`${BASE_URL}/${id}`, data, {}, organizationId);
-  },
-
-  /**
-   * Delete an item
-   */
-  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/${id}`, {}, organizationId);
   },
 
   // =====================================================

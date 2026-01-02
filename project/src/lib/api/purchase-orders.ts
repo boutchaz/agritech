@@ -72,7 +72,7 @@ export const purchaseOrdersApi = {
   /**
    * Get all purchase orders with optional filters
    */
-  async getPurchaseOrders(filters?: PurchaseOrderFilters, organizationId?: string) {
+  async getAll(filters?: PurchaseOrderFilters, organizationId?: string) {
     const params = new URLSearchParams();
     if (filters?.status) params.append('status', filters.status);
     if (filters?.supplier_id) params.append('supplier_id', filters.supplier_id);
@@ -89,25 +89,45 @@ export const purchaseOrdersApi = {
     return apiClient.get(url, {}, organizationId);
   },
 
+  // Alias for backwards compatibility
+  async getPurchaseOrders(filters?: PurchaseOrderFilters, organizationId?: string) {
+    return this.getAll(filters, organizationId);
+  },
+
   /**
    * Get a single purchase order by ID
    */
-  async getPurchaseOrder(id: string, organizationId?: string) {
+  async getOne(id: string, organizationId?: string) {
     return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  // Alias for backwards compatibility
+  async getPurchaseOrder(id: string, organizationId?: string) {
+    return this.getOne(id, organizationId);
   },
 
   /**
    * Create a new purchase order
    */
+  async create(data: CreatePurchaseOrderInput, organizationId?: string) {
+    return apiClient.post(BASE_URL, data, {}, organizationId);
+  },
+
+  // Alias for backwards compatibility
   async createPurchaseOrder(input: CreatePurchaseOrderInput, organizationId?: string) {
-    return apiClient.post(BASE_URL, input, {}, organizationId);
+    return this.create(input, organizationId);
   },
 
   /**
    * Update an existing purchase order
    */
+  async update(id: string, data: UpdatePurchaseOrderInput, organizationId?: string) {
+    return apiClient.patch(`${BASE_URL}/${id}`, data, {}, organizationId);
+  },
+
+  // Alias for backwards compatibility
   async updatePurchaseOrder(id: string, input: UpdatePurchaseOrderInput, organizationId?: string) {
-    return apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
+    return this.update(id, input, organizationId);
   },
 
   /**
@@ -120,8 +140,13 @@ export const purchaseOrdersApi = {
   /**
    * Delete a purchase order (only drafts)
    */
-  async deletePurchaseOrder(id: string, organizationId?: string) {
+  async delete(id: string, organizationId?: string) {
     return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  // Alias for backwards compatibility
+  async deletePurchaseOrder(id: string, organizationId?: string) {
+    return this.delete(id, organizationId);
   },
 
   /**

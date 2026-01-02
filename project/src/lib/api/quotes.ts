@@ -1,6 +1,28 @@
+import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/quotes';
+
+export interface Quote {
+  id: string;
+  organization_id: string;
+  customer_id: string;
+  quote_number: string;
+  quote_date: string;
+  valid_until: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
+  subtotal: number;
+  tax_total: number;
+  grand_total: number;
+  payment_terms?: string;
+  delivery_terms?: string;
+  terms_and_conditions?: string;
+  notes?: string;
+  reference_number?: string;
+  created_at: string;
+  updated_at: string;
+  items?: QuoteItemInput[];
+}
 
 export interface QuoteFilters {
   status?: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
@@ -41,17 +63,7 @@ export interface CreateQuoteInput {
   reference_number?: string;
 }
 
-export interface UpdateQuoteInput {
-  customer_id?: string;
-  quote_date?: string;
-  valid_until?: string;
-  items?: QuoteItemInput[];
-  payment_terms?: string;
-  delivery_terms?: string;
-  terms_and_conditions?: string;
-  notes?: string;
-  reference_number?: string;
-}
+export type UpdateQuoteInput = Partial<CreateQuoteInput>;
 
 // Transform frontend input to API format
 function transformQuoteForApi(data: CreateQuoteInput) {
@@ -70,23 +82,18 @@ function transformQuoteForApi(data: CreateQuoteInput) {
   };
 }
 
+// Base CRUD operations
+const baseCrud = createCrudApi<Quote, CreateQuoteInput, QuoteFilters>(BASE_URL);
+
+// Extended API with additional methods and transformations
 export const quotesApi = {
-  /**
-   * Get all quotes with optional filters
-   */
-  async getAll(filters?: QuoteFilters, organizationId?: string) {
-    return apiClient.get(BASE_URL, {}, organizationId);
-  },
+  // Use base getAll and getOne
+  getAll: baseCrud.getAll,
+  getOne: baseCrud.getOne,
+  delete: baseCrud.delete,
 
   /**
-   * Get a single quote by ID with items
-   */
-  async getOne(id: string, organizationId?: string) {
-    return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-
-  /**
-   * Create a new quote
+   * Create a new quote (with transformation)
    */
   async create(data: CreateQuoteInput, organizationId?: string) {
     const transformedData = transformQuoteForApi(data);
@@ -94,7 +101,7 @@ export const quotesApi = {
   },
 
   /**
-   * Update a quote (only drafts)
+   * Update a quote (with transformation, only drafts)
    */
   async update(id: string, data: UpdateQuoteInput, organizationId?: string) {
     const transformedData = data.items
@@ -115,12 +122,5 @@ export const quotesApi = {
    */
   async convertToOrder(id: string, organizationId?: string) {
     return apiClient.post(`${BASE_URL}/${id}/convert-to-order`, {}, {}, organizationId);
-  },
-
-  /**
-   * Delete a quote (only drafts)
-   */
-  async delete(id: string, organizationId?: string) {
-    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
   },
 };

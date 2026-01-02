@@ -1,3 +1,4 @@
+import { createCrudApi, buildQueryUrl } from './createCrudApi';
 import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/warehouses';
@@ -45,6 +46,11 @@ export interface CreateWarehouseInput {
 
 export type UpdateWarehouseInput = Partial<CreateWarehouseInput>;
 
+export interface WarehouseFilters {
+  is_active?: boolean;
+  farm_id?: string;
+}
+
 export interface InventoryItem {
   id: string;
   organization_id: string;
@@ -63,41 +69,12 @@ export interface InventoryItem {
   };
 }
 
+// Base CRUD operations using factory
+const baseCrud = createCrudApi<Warehouse, CreateWarehouseInput, WarehouseFilters, UpdateWarehouseInput>(BASE_URL);
+
+// Extended API with additional methods
 export const warehousesApi = {
-  /**
-   * Get all active warehouses
-   */
-  async getAll(organizationId?: string): Promise<Warehouse[]> {
-    return apiClient.get<Warehouse[]>(BASE_URL, {}, organizationId);
-  },
-
-  /**
-   * Get a single warehouse by ID
-   */
-  async getOne(id: string, organizationId?: string): Promise<Warehouse> {
-    return apiClient.get<Warehouse>(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-
-  /**
-   * Create a new warehouse
-   */
-  async create(data: CreateWarehouseInput, organizationId?: string): Promise<Warehouse> {
-    return apiClient.post<Warehouse>(BASE_URL, data, {}, organizationId);
-  },
-
-  /**
-   * Update a warehouse
-   */
-  async update(id: string, data: UpdateWarehouseInput, organizationId?: string): Promise<Warehouse> {
-    return apiClient.patch<Warehouse>(`${BASE_URL}/${id}`, data, {}, organizationId);
-  },
-
-  /**
-   * Delete a warehouse (soft delete)
-   */
-  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/${id}`, {}, organizationId);
-  },
+  ...baseCrud,
 
   /**
    * Get inventory with optional filters
@@ -106,12 +83,7 @@ export const warehousesApi = {
     warehouse_id?: string;
     item_id?: string;
   }, organizationId?: string): Promise<InventoryItem[]> {
-    const params = new URLSearchParams();
-
-    if (filters?.warehouse_id) params.append('warehouse_id', filters.warehouse_id);
-    if (filters?.item_id) params.append('item_id', filters.item_id);
-
-    const url = `${BASE_URL}/inventory${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = buildQueryUrl(`${BASE_URL}/inventory`, filters);
     return apiClient.get<InventoryItem[]>(url, {}, organizationId);
   },
 };

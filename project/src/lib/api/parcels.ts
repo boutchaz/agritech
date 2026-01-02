@@ -1,3 +1,4 @@
+import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/parcels';
@@ -88,62 +89,13 @@ export interface PerformanceSummaryFilters {
   toDate?: Date;
 }
 
+const baseCrud = createCrudApi<Parcel, CreateParcelDto, ParcelFilters, UpdateParcelDto>(BASE_URL);
+
 export const parcelsApi = {
-  /**
-   * Get all parcels for an organization, optionally filtered by farm
-   */
-  async getAll(filters: ParcelFilters, organizationId?: string): Promise<Parcel[]> {
-    const params = new URLSearchParams();
-    // Use organizationId param first, then fall back to filters.organization_id
-    const orgId = organizationId || filters.organization_id;
-    if (orgId) {
-      params.append('organization_id', orgId);
-    }
-    if (filters.farm_id) {
-      params.append('farm_id', filters.farm_id);
-    }
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-
-    try {
-      // Backend returns { success: boolean, parcels: Parcel[] }
-      const response = await apiClient.get<{ success: boolean; parcels: Parcel[] } | Parcel[]>(url, {}, organizationId);
-
-      // Check if response is wrapped in success object
-      if (response && typeof response === 'object' && 'success' in response) {
-        const wrappedResponse = response as { success: boolean; parcels: Parcel[] };
-        if (wrappedResponse.success && Array.isArray(wrappedResponse.parcels)) {
-          return wrappedResponse.parcels;
-        }
-      }
-
-      // Fallback: if response is already an array (backward compatibility)
-      if (Array.isArray(response)) {
-        return response;
-      }
-
-      return [];
-    } catch (error) {
-      console.error('Error fetching parcels:', error);
-      return [];
-    }
-  },
+  ...baseCrud,
 
   /**
-   * Create a new parcel
-   */
-  async create(data: CreateParcelDto, organizationId?: string): Promise<Parcel> {
-    return apiClient.post(BASE_URL, data, {}, organizationId);
-  },
-
-  /**
-   * Update an existing parcel
-   */
-  async update(id: string, data: UpdateParcelDto, organizationId?: string): Promise<Parcel> {
-    return apiClient.put(`${BASE_URL}/${id}`, data, {}, organizationId);
-  },
-
-  /**
-   * Delete a parcel
+   * Delete a parcel (custom implementation needed due to special body format)
    */
   async delete(parcelId: string, farmId: string, organizationId?: string): Promise<{ success: boolean; message?: string }> {
     // Backend expects DELETE with body containing parcel_id and farm_id

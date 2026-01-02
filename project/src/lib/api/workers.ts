@@ -121,13 +121,19 @@ export interface WorkerStats {
   totalTasksCompleted: number;
 }
 
+export interface WorkerFilters {
+  farmId?: string;
+  is_active?: boolean;
+}
+
 export const workersApi = {
   /**
    * Get all workers for an organization
    */
-  async getAll(organizationId: string, farmId?: string): Promise<Worker[]> {
+  async getAll(filters?: WorkerFilters, organizationId?: string): Promise<Worker[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     // Only include farmId param if it's a non-empty string
-    const params = farmId && farmId.trim() ? `?farmId=${farmId}` : '';
+    const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
     return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`);
   },
 
@@ -141,8 +147,14 @@ export const workersApi = {
   /**
    * Get a single worker by ID
    */
+  async getOne(id: string, organizationId?: string): Promise<Worker> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.get<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`);
+  },
+
+  // Alias for backwards compatibility
   async getById(organizationId: string, workerId: string): Promise<Worker> {
-    return apiClient.get<Worker>(`/api/v1/organizations/${organizationId}/workers/${workerId}`);
+    return this.getOne(workerId, organizationId);
   },
 
   /**
@@ -155,15 +167,17 @@ export const workersApi = {
   /**
    * Create a new worker
    */
-  async create(organizationId: string, data: CreateWorkerInput): Promise<Worker> {
+  async create(data: CreateWorkerInput, organizationId?: string): Promise<Worker> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<Worker>(`/api/v1/organizations/${organizationId}/workers`, data);
   },
 
   /**
    * Update a worker
    */
-  async update(organizationId: string, workerId: string, data: UpdateWorkerInput): Promise<Worker> {
-    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${workerId}`, data);
+  async update(id: string, data: UpdateWorkerInput, organizationId?: string): Promise<Worker> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.patch<Worker>(`/api/v1/organizations/${organizationId}/workers/${id}`, data);
   },
 
   /**
@@ -177,8 +191,9 @@ export const workersApi = {
   /**
    * Delete a worker (hard delete)
    */
-  async delete(organizationId: string, workerId: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${workerId}`);
+  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
+    if (!organizationId) throw new Error('organizationId is required');
+    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/workers/${id}`);
   },
 
   /**

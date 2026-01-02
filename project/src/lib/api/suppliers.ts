@@ -1,6 +1,24 @@
-import { apiClient } from '../api-client';
+import { createCrudApi } from './createCrudApi';
 
-const BASE_URL = '/api/v1/suppliers';
+export interface Supplier {
+  id: string;
+  organization_id: string;
+  name: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  website: string | null;
+  tax_id: string | null;
+  payment_terms: string | null;
+  notes: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export interface SupplierFilters {
   name?: string;
@@ -34,47 +52,7 @@ export interface CreateSupplierInput {
 
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
 
-export const suppliersApi = {
-  /**
-   * Get all suppliers with optional filters
-   */
-  async getAll(filters?: SupplierFilters, organizationId?: string) {
-    const params = new URLSearchParams();
-    if (filters?.name) params.append('name', filters.name);
-    if (filters?.supplier_code) params.append('supplier_code', filters.supplier_code);
-    if (filters?.supplier_type) params.append('supplier_type', filters.supplier_type);
-    if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
-    if (filters?.assigned_to) params.append('assigned_to', filters.assigned_to);
-
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
-  },
-
-  /**
-   * Get a single supplier by ID
-   */
-  async getOne(id: string, organizationId?: string) {
-    return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-
-  /**
-   * Create a new supplier
-   */
-  async create(data: CreateSupplierInput, organizationId?: string) {
-    return apiClient.post(BASE_URL, data, {}, organizationId);
-  },
-
-  /**
-   * Update a supplier
-   */
-  async update(id: string, data: UpdateSupplierInput, organizationId?: string) {
-    return apiClient.patch(`${BASE_URL}/${id}`, data, {}, organizationId);
-  },
-
-  /**
-   * Delete a supplier (soft delete)
-   */
-  async delete(id: string, organizationId?: string) {
-    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-};
+// Use the generic CRUD factory
+export const suppliersApi = createCrudApi<Supplier, CreateSupplierInput, SupplierFilters, UpdateSupplierInput>(
+  '/api/v1/suppliers'
+);

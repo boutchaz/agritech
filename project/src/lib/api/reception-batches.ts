@@ -13,7 +13,8 @@ export const receptionBatchesApi = {
   /**
    * Get all reception batches with optional filters
    */
-  async getAll(organizationId: string, filters?: ReceptionBatchFilters): Promise<ReceptionBatch[]> {
+  async getAll(filters?: ReceptionBatchFilters, organizationId?: string): Promise<ReceptionBatch[]> {
+    if (!organizationId) throw new Error('organizationId is required');
     const params = new URLSearchParams();
 
     if (filters?.warehouse_id) {
@@ -61,16 +62,23 @@ export const receptionBatchesApi = {
   /**
    * Get a single reception batch by ID
    */
-  async getById(organizationId: string, batchId: string): Promise<ReceptionBatch> {
+  async getOne(id: string, organizationId?: string): Promise<ReceptionBatch> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.get<ReceptionBatch>(
-      `/api/v1/organizations/${organizationId}/reception-batches/${batchId}`
+      `/api/v1/organizations/${organizationId}/reception-batches/${id}`
     );
+  },
+
+  // Alias for backwards compatibility
+  async getById(organizationId: string, batchId: string): Promise<ReceptionBatch> {
+    return this.getOne(batchId, organizationId);
   },
 
   /**
    * Step 1: Create initial reception batch
    */
-  async create(organizationId: string, data: CreateReceptionBatchDto): Promise<ReceptionBatch> {
+  async create(data: CreateReceptionBatchDto, organizationId?: string): Promise<ReceptionBatch> {
+    if (!organizationId) throw new Error('organizationId is required');
     return apiClient.post<ReceptionBatch>(
       `/api/v1/organizations/${organizationId}/reception-batches`,
       data

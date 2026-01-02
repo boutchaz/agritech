@@ -1,6 +1,33 @@
-import { apiClient } from '../api-client';
+import { createCrudApi } from './createCrudApi';
 
-const BASE_URL = '/api/v1/customers';
+export interface Customer {
+  id: string;
+  organization_id: string;
+  name: string;
+  customer_code: string | null;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  address: string | null;
+  city: string | null;
+  state_province: string | null;
+  postal_code: string | null;
+  country: string | null;
+  website: string | null;
+  tax_id: string | null;
+  payment_terms: string | null;
+  credit_limit: number | null;
+  currency_code: string | null;
+  customer_type: string | null;
+  price_list: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  created_by: string | null;
+}
 
 export interface CustomerFilters {
   name?: string;
@@ -36,47 +63,7 @@ export interface CreateCustomerInput {
 
 export type UpdateCustomerInput = Partial<CreateCustomerInput>;
 
-export const customersApi = {
-  /**
-   * Get all customers with optional filters
-   */
-  async getAll(filters?: CustomerFilters, organizationId?: string) {
-    const params = new URLSearchParams();
-    if (filters?.name) params.append('name', filters.name);
-    if (filters?.customer_code) params.append('customer_code', filters.customer_code);
-    if (filters?.customer_type) params.append('customer_type', filters.customer_type);
-    if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
-    if (filters?.assigned_to) params.append('assigned_to', filters.assigned_to);
-
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
-  },
-
-  /**
-   * Get a single customer by ID
-   */
-  async getOne(id: string, organizationId?: string) {
-    return apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-
-  /**
-   * Create a new customer
-   */
-  async create(data: CreateCustomerInput, organizationId?: string) {
-    return apiClient.post(BASE_URL, data, {}, organizationId);
-  },
-
-  /**
-   * Update a customer
-   */
-  async update(id: string, data: UpdateCustomerInput, organizationId?: string) {
-    return apiClient.patch(`${BASE_URL}/${id}`, data, {}, organizationId);
-  },
-
-  /**
-   * Delete a customer (soft delete)
-   */
-  async delete(id: string, organizationId?: string) {
-    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
-  },
-};
+// Use the generic CRUD factory
+export const customersApi = createCrudApi<Customer, CreateCustomerInput, CustomerFilters, UpdateCustomerInput>(
+  '/api/v1/customers'
+);

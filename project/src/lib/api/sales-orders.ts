@@ -78,7 +78,7 @@ export const salesOrdersApi = {
   /**
    * Get all sales orders with optional filters
    */
-  async getSalesOrders(filters?: SalesOrderFilters, organizationId?: string) {
+  async getAll(filters?: SalesOrderFilters, organizationId?: string) {
     // Build query string from filters
     const queryParams = new URLSearchParams();
     if (filters) {
@@ -98,31 +98,51 @@ export const salesOrdersApi = {
     return response;
   },
 
+  // Alias for backwards compatibility
+  async getSalesOrders(filters?: SalesOrderFilters, organizationId?: string) {
+    return this.getAll(filters, organizationId);
+  },
+
   /**
    * Get a single sales order by ID
    */
-  async getSalesOrder(id: string, organizationId?: string) {
+  async getOne(id: string, organizationId?: string) {
     // The API returns the sales order directly, not wrapped in { data }
     const response = await apiClient.get(`${BASE_URL}/${id}`, {}, organizationId);
     return response;
   },
 
+  // Alias for backwards compatibility
+  async getSalesOrder(id: string, organizationId?: string) {
+    return this.getOne(id, organizationId);
+  },
+
   /**
    * Create a new sales order
    */
-  async createSalesOrder(input: CreateSalesOrderInput, organizationId?: string) {
+  async create(data: CreateSalesOrderInput, organizationId?: string) {
     // The API returns the sales order directly, not wrapped in { data }
-    const response = await apiClient.post(BASE_URL, input, {}, organizationId);
+    const response = await apiClient.post(BASE_URL, data, {}, organizationId);
     return response;
+  },
+
+  // Alias for backwards compatibility
+  async createSalesOrder(input: CreateSalesOrderInput, organizationId?: string) {
+    return this.create(input, organizationId);
   },
 
   /**
    * Update an existing sales order
    */
-  async updateSalesOrder(id: string, input: UpdateSalesOrderInput, organizationId?: string) {
+  async update(id: string, data: UpdateSalesOrderInput, organizationId?: string) {
     // The API returns the sales order directly, not wrapped in { data }
-    const response = await apiClient.patch(`${BASE_URL}/${id}`, input, {}, organizationId);
+    const response = await apiClient.patch(`${BASE_URL}/${id}`, data, {}, organizationId);
     return response;
+  },
+
+  // Alias for backwards compatibility
+  async updateSalesOrder(id: string, input: UpdateSalesOrderInput, organizationId?: string) {
+    return this.update(id, data, organizationId);
   },
 
   /**
@@ -137,10 +157,15 @@ export const salesOrdersApi = {
   /**
    * Delete a sales order (only drafts)
    */
-  async deleteSalesOrder(id: string, organizationId?: string) {
+  async delete(id: string, organizationId?: string) {
     // The API returns success message directly
     const response = await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
     return response;
+  },
+
+  // Alias for backwards compatibility
+  async deleteSalesOrder(id: string, organizationId?: string) {
+    return this.delete(id, organizationId);
   },
 
   /**

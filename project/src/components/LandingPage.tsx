@@ -22,6 +22,9 @@ import {
   Clock,
   BookOpen,
   Calendar,
+  ShieldCheck,
+  Store,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { blogsApi } from '../lib/api/blogs';
 import { SUBSCRIPTION_PLANS } from '../lib/polar';
@@ -74,19 +77,21 @@ const LandingPage: React.FC = () => {
         t('landing.features.parcelManagement', { defaultValue: 'Gestion des parcelles agricoles' }),
         t('landing.features.teamManagement', { defaultValue: 'Gestion des équipes et tâches' }),
         t('landing.features.satelliteAnalysis', { defaultValue: 'Analyses satellite NDVI/NDWI' }),
-        t('landing.features.profitability', { defaultValue: 'Comptabilité intégrée' }),
-        t('landing.features.stockManagement', { defaultValue: 'Gestion des stocks' }),
+        t('landing.features.profitability', { defaultValue: 'Comptabilité analytique et générale' }),
+        t('landing.features.stockManagement', { defaultValue: 'Gestion des stocks et inventaires' }),
+        t('landing.features.qualityControl', { defaultValue: 'Contrôle qualité et traçabilité' }),
+        t('landing.features.marketplace', { defaultValue: 'Marketplace B2B intégrée' }),
       ],
     };
   }, [siteOrigin, t]);
 
   useEffect(() => {
     const pageTitle = t('landing.seo.title', {
-      defaultValue: 'AgriTech - Plateforme de Gestion Agricole Intelligente | Maroc',
+      defaultValue: 'AgriTech - La Suite de Gestion Agricole Tout-en-Un | Maroc',
     });
     const description = t('landing.seo.description', {
       defaultValue:
-        'AgriTech: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité. Optimisez votre exploitation avec l\'agriculture de précision.',
+        'AgriTech révolutionne l\'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d\'exploitation simplifiée.',
     });
 
     document.title = pageTitle;
@@ -104,7 +109,7 @@ const LandingPage: React.FC = () => {
 
     // Primary meta tags
     ensureMeta('description', description);
-    ensureMeta('keywords', 'gestion agricole, agriculture maroc, logiciel agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, exploitation agricole, agritech');
+    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agritech');
 
     // Open Graph meta tags
     ensureMeta('og:type', 'website', true);
@@ -223,6 +228,27 @@ const LandingPage: React.FC = () => {
       color: 'text-teal-600',
       bgColor: 'bg-teal-100',
     },
+    {
+      icon: ShieldCheck,
+      title: t('landing.features.quality'),
+      description: t('landing.features.qualityDesc', { defaultValue: 'Contrôle qualité rigoureux et suivi de la conformité aux standards.' }),
+      color: 'text-rose-600',
+      bgColor: 'bg-rose-100',
+    },
+    {
+      icon: Store,
+      title: t('landing.features.marketplace'),
+      description: t('landing.features.marketplaceDesc', { defaultValue: 'Accédez aux meilleurs fournisseurs et vendez votre production.' }),
+      color: 'text-fuchsia-600',
+      bgColor: 'bg-fuchsia-100',
+    },
+    {
+      icon: FileSpreadsheet,
+      title: t('landing.features.advancedAccounting'),
+      description: t('landing.features.advancedAccountingDesc', { defaultValue: 'Bilan, compte de résultat et suivi de trésorerie en temps réel.' }),
+      color: 'text-sky-600',
+      bgColor: 'bg-sky-100',
+    },
   ];
 
   const benefits = [
@@ -335,76 +361,98 @@ const LandingPage: React.FC = () => {
           className="relative min-h-[500px] sm:min-h-[600px] lg:min-h-[700px] flex items-center justify-center overflow-hidden"
           aria-labelledby="landing-hero-title"
         >
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url(${heroBg})`,
-              filter: 'brightness(0.4)',
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-gray-900/80" />
-        </div>
+          {/* Background Image with Overlay */}
+          <div className="absolute inset-0 z-0">
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url(${heroBg})`,
+                filter: 'brightness(0.4)',
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-gray-900/80" />
+          </div>
 
-        {/* Content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 text-center">
-          <div className="max-w-3xl mx-auto">
+          {/* Content */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 text-center">
+            <div className="max-w-3xl mx-auto">
               <h1
                 id="landing-hero-title"
                 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 animate-fade-in-up leading-tight"
               >
-              {t('landing.hero.title')}{' '}
-              <span className="text-green-400 animate-pulse-slow">{t('landing.hero.titleHighlight')}</span>
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 px-4 sm:px-0 animate-fade-in-up animation-delay-200">
-              {t('landing.hero.subtitle')}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0 animate-fade-in-up animation-delay-400">
-              <Button
-                asChild
-                size="lg"
-                className="bg-green-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:bg-green-700 hover:shadow-xl text-lg font-semibold"
-              >
-                <Link to="/register">
-                  {t('landing.hero.ctaPrimary')}
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-green-600 transition-colors duration-300 text-lg font-semibold"
-              >
-                <a href="#features">
-                  {t('landing.hero.ctaSecondary')}
-                </a>
-              </Button>
-            </div>
-            <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-200 animate-fade-in-up animation-delay-600 px-4">
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="whitespace-nowrap">{t('landing.hero.freeTrial')}</span>
+                {t('landing.hero.title')}{' '}
+                <span className="text-green-400 animate-pulse-slow">{t('landing.hero.titleHighlight')}</span>
+              </h1>
+              <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 px-4 sm:px-0 animate-fade-in-up animation-delay-200">
+                {t('landing.hero.subtitle')}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0 animate-fade-in-up animation-delay-400">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-green-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:bg-green-700 hover:shadow-xl text-lg font-semibold"
+                >
+                  <Link to="/register">
+                    {t('landing.hero.ctaPrimary')}
+                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-green-600 transition-colors duration-300 text-lg font-semibold"
+                >
+                  <a href="#features">
+                    {t('landing.hero.ctaSecondary')}
+                  </a>
+                </Button>
               </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="whitespace-nowrap">{t('landing.hero.noCommitment')}</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="whitespace-nowrap">{t('landing.hero.supportIncluded')}</span>
+              <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-200 animate-fade-in-up animation-delay-600 px-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{t('landing.hero.freeTrial')}</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{t('landing.hero.noCommitment')}</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{t('landing.hero.supportIncluded')}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-5 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-green-500/10 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-5 sm:right-10 w-64 h-64 sm:w-96 sm:h-96 bg-blue-500/10 rounded-full blur-3xl animate-float-delayed" />
-        </div>
-      </section>
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-20 left-5 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-green-500/10 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-20 right-5 sm:right-10 w-64 h-64 sm:w-96 sm:h-96 bg-blue-500/10 rounded-full blur-3xl animate-float-delayed" />
+          </div>
+        </section>
+
+        {/* Visual Showcase Section */}
+        <section className="relative z-20 -mt-20 sm:-mt-32 px-4 sm:px-6 lg:px-8 mb-12 sm:mb-16">
+          <div className="max-w-6xl mx-auto">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 dark:border-gray-800/50 bg-gray-900/5 aspect-[16/10] sm:aspect-[16/9] group">
+              {/* 
+              TODO: Replace this placeholder with:
+              <img src="/assets/dashboard-preview.png" alt="Agritech Dashboard" className="w-full h-full object-cover" />
+            */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                <div className="text-center p-6">
+                  <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 font-medium">Dashboard Preview</p>
+                  <p className="text-sm text-gray-400 mt-2">Place your specific app screenshot here</p>
+                </div>
+              </div>
+
+              {/* Overlay Gradient for depth */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+            </div>
+          </div>
+        </section>
 
         {/* Trusted By */}
         <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-900">
@@ -568,196 +616,196 @@ const LandingPage: React.FC = () => {
 
         {/* Pricing */}
         <section id="pricing" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-        <div className="text-center mb-10 sm:mb-12 lg:mb-16">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-4">
-            {t('landing.pricing.title')}
-          </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400 px-4">
-            {t('landing.pricing.subtitle')}
-          </p>
-        </div>
+          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-4">
+              {t('landing.pricing.title')}
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400 px-4">
+              {t('landing.pricing.subtitle')}
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-          {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
-            const isPopular = plan.highlighted;
-            return (
-              <Card
-                key={plan.id}
-                className={cn(
-                  'flex h-full flex-col overflow-hidden border',
-                  isPopular ? 'border-green-600 ring-2 ring-green-600 sm:scale-[1.02]' : ''
-                )}
-              >
-                {isPopular && (
-                  <div className="bg-green-600 text-white text-center py-2 text-xs sm:text-sm font-semibold">
-                    {t('landing.pricing.mostPopular')}
-                  </div>
-                )}
-                <CardHeader className="space-y-3 pb-4">
-                  <CardTitle className="text-xl sm:text-2xl font-bold">{plan.name}</CardTitle>
-                  <CardDescription className="min-h-[3rem] text-sm sm:text-base">
-                    {plan.description}
-                  </CardDescription>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
-                    {plan.priceAmount > 0 && (
-                      <span className="text-sm sm:text-base text-muted-foreground">
-                        {t('landing.pricing.perMonth')}
-                      </span>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Button
-                    asChild
-                    className={cn(
-                      'w-full',
-                      isPopular
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-muted text-foreground hover:bg-muted/80'
-                    )}
-                  >
-                    <Link to="/register">
-                      {plan.id === 'enterprise'
-                        ? t('landing.pricing.contactUs')
-                        : t('landing.pricing.getStarted')}
-                    </Link>
-                  </Button>
-                  <ul className="mt-6 sm:mt-8 space-y-2 sm:space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start text-sm text-muted-foreground">
-                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Blog Section */}
-      {latestPosts?.data && latestPosts.data.length > 0 && (
-        <section
-          className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-800"
-          aria-labelledby="landing-blog-title"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10 sm:mb-12">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                    {t('landing.blog.label', { defaultValue: 'Blog' })}
-                  </span>
-                </div>
-                <h2
-                  id="landing-blog-title"
-                  className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+            {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
+              const isPopular = plan.highlighted;
+              return (
+                <Card
+                  key={plan.id}
+                  className={cn(
+                    'flex h-full flex-col overflow-hidden border',
+                    isPopular ? 'border-green-600 ring-2 ring-green-600 sm:scale-[1.02]' : ''
+                  )}
                 >
-                  {t('landing.blog.title', { defaultValue: 'Latest Insights' })}
-                </h2>
-                <p className="mt-2 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
-                  {t('landing.blog.subtitle', {
-                    defaultValue: 'Stay updated with the latest trends and best practices in agricultural technology.',
-                  })}
-                </p>
+                  {isPopular && (
+                    <div className="bg-green-600 text-white text-center py-2 text-xs sm:text-sm font-semibold">
+                      {t('landing.pricing.mostPopular')}
+                    </div>
+                  )}
+                  <CardHeader className="space-y-3 pb-4">
+                    <CardTitle className="text-xl sm:text-2xl font-bold">{plan.name}</CardTitle>
+                    <CardDescription className="min-h-[3rem] text-sm sm:text-base">
+                      {plan.description}
+                    </CardDescription>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
+                      {plan.priceAmount > 0 && (
+                        <span className="text-sm sm:text-base text-muted-foreground">
+                          {t('landing.pricing.perMonth')}
+                        </span>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <Button
+                      asChild
+                      className={cn(
+                        'w-full',
+                        isPopular
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-muted text-foreground hover:bg-muted/80'
+                      )}
+                    >
+                      <Link to="/register">
+                        {plan.id === 'enterprise'
+                          ? t('landing.pricing.contactUs')
+                          : t('landing.pricing.getStarted')}
+                      </Link>
+                    </Button>
+                    <ul className="mt-6 sm:mt-8 space-y-2 sm:space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className="flex items-start text-sm text-muted-foreground">
+                          <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Blog Section */}
+        {latestPosts?.data && latestPosts.data.length > 0 && (
+          <section
+            className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-800"
+            aria-labelledby="landing-blog-title"
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10 sm:mb-12">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      {t('landing.blog.label', { defaultValue: 'Blog' })}
+                    </span>
+                  </div>
+                  <h2
+                    id="landing-blog-title"
+                    className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+                  >
+                    {t('landing.blog.title', { defaultValue: 'Latest Insights' })}
+                  </h2>
+                  <p className="mt-2 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
+                    {t('landing.blog.subtitle', {
+                      defaultValue: 'Stay updated with the latest trends and best practices in agricultural technology.',
+                    })}
+                  </p>
+                </div>
+                <Button asChild variant="outline" className="self-start sm:self-center">
+                  <Link to="/blog">
+                    {t('landing.blog.viewAll', { defaultValue: 'View all articles' })}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-              <Button asChild variant="outline" className="self-start sm:self-center">
-                <Link to="/blog">
-                  {t('landing.blog.viewAll', { defaultValue: 'View all articles' })}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {latestPosts.data.map((post) => {
-                // Image URL should already be a full URL from the NestJS API
-                const imageUrl = post.featured_image?.url || null;
-                const formattedDate = post.publishedAt
-                  ? new Date(post.publishedAt).toLocaleDateString('en-US', {
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {latestPosts.data.map((post) => {
+                  // Image URL should already be a full URL from the NestJS API
+                  const imageUrl = post.featured_image?.url || null;
+                  const formattedDate = post.publishedAt
+                    ? new Date(post.publishedAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
                     })
-                  : null;
+                    : null;
 
-                return (
-                  <Card
-                    key={post.id}
-                    className="group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lg"
-                  >
-                    <Link to="/blog/$slug" params={{ slug: post.slug }} className="flex flex-col h-full">
-                      {imageUrl && (
-                        <div className="relative h-48 overflow-hidden">
-                          <img
-                            src={imageUrl}
-                            alt={post.featured_image?.alternativeText || post.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          {post.blog_category && (
-                            <Badge className="absolute top-3 left-3 bg-green-600 text-white">
-                              {post.blog_category.name}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                          {post.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-1 pt-0">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {post.excerpt}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="pt-0 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                          {formattedDate && (
+                  return (
+                    <Card
+                      key={post.id}
+                      className="group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lg"
+                    >
+                      <Link to="/blog/$slug" params={{ slug: post.slug }} className="flex flex-col h-full">
+                        {imageUrl && (
+                          <div className="relative h-48 overflow-hidden">
+                            <img
+                              src={imageUrl}
+                              alt={post.featured_image?.alternativeText || post.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            {post.blog_category && (
+                              <Badge className="absolute top-3 left-3 bg-green-600 text-white">
+                                {post.blog_category.name}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                            {post.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 pt-0">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {post.excerpt}
+                          </p>
+                        </CardContent>
+                        <CardFooter className="pt-0 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-3">
+                            {formattedDate && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formattedDate}
+                              </span>
+                            )}
                             <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {formattedDate}
+                              <Clock className="h-3.5 w-3.5" />
+                              {post.reading_time} min
                             </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {post.reading_time} min
-                          </span>
-                        </div>
-                      </CardFooter>
-                    </Link>
-                  </Card>
-                );
-              })}
+                          </div>
+                        </CardFooter>
+                      </Link>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
+          </section>
+        )}
+
+        {/* CTA Section */}
+        <section className="bg-green-600 py-12 sm:py-16 lg:py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6 px-4">
+              {t('landing.cta.title')}
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-green-100 mb-6 sm:mb-8 px-4">
+              {t('landing.cta.subtitle')}
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-green-600 hover:bg-gray-100 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl"
+            >
+              <Link to="/register">
+                {t('landing.cta.button')}
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+              </Link>
+            </Button>
           </div>
         </section>
-      )}
-
-      {/* CTA Section */}
-      <section className="bg-green-600 py-12 sm:py-16 lg:py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6 px-4">
-            {t('landing.cta.title')}
-          </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-green-100 mb-6 sm:mb-8 px-4">
-            {t('landing.cta.subtitle')}
-          </p>
-          <Button
-            asChild
-            size="lg"
-            className="bg-white text-green-600 hover:bg-gray-100 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl"
-          >
-            <Link to="/register">
-              {t('landing.cta.button')}
-              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-            </Link>
-          </Button>
-        </div>
-      </section>
 
       </main>
 
