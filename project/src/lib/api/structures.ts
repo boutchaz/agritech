@@ -66,7 +66,7 @@ export const structuresApi = {
    */
   async getAll(filters?: undefined, organizationId?: string): Promise<Structure[]> {
     if (!organizationId) throw new Error('organizationId is required');
-    return apiClient.get<Structure[]>(getBaseUrl(organizationId));
+    return apiClient.get<Structure[]>(getBaseUrl(organizationId), {}, organizationId);
   },
 
   /**
@@ -74,7 +74,7 @@ export const structuresApi = {
    */
   async getOne(id: string, organizationId?: string): Promise<Structure> {
     if (!organizationId) throw new Error('organizationId is required');
-    return apiClient.get<Structure>(`${getBaseUrl(organizationId)}/${id}`);
+    return apiClient.get<Structure>(`${getBaseUrl(organizationId)}/${id}`, {}, organizationId);
   },
 
   /**
@@ -82,7 +82,7 @@ export const structuresApi = {
    */
   async create(data: CreateStructureInput, organizationId?: string): Promise<Structure> {
     requireOrganizationId(organizationId, 'structuresApi.create');
-    return apiClient.post<Structure>(getBaseUrl(organizationId), data);
+    return apiClient.post<Structure>(getBaseUrl(organizationId!), data, {}, organizationId);
   },
 
   /**
@@ -94,7 +94,7 @@ export const structuresApi = {
     organizationId?: string,
   ): Promise<Structure> {
     requireOrganizationId(organizationId, 'structuresApi.update');
-    return apiClient.patch<Structure>(`${getBaseUrl(organizationId!)}/${id}`, data);
+    return apiClient.patch<Structure>(`${getBaseUrl(organizationId!)}/${id}`, data, {}, organizationId);
   },
 
   /**
@@ -102,6 +102,6 @@ export const structuresApi = {
    */
   async delete(id: string, organizationId?: string): Promise<{ message: string }> {
     requireOrganizationId(organizationId, 'structuresApi.delete');
-    return apiClient.delete<{ message: string }>(`${getBaseUrl(organizationId!)}/${id}`);
+    return apiClient.delete<{ message: string }>(`${getBaseUrl(organizationId!)}/${id}`, {}, organizationId);
   },
 };
