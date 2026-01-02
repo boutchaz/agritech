@@ -2,32 +2,15 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { Building2, BookOpen, Loader2, AlertCircle, Download, Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useTrialBalance } from '../hooks/useFinancialReports';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -53,18 +36,9 @@ const getAccountTypeColor = (accountType: string): string => {
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
 
   const { data: report, isLoading, error } = useTrialBalance(asOfDate);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 
@@ -80,15 +54,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="accounting"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -97,8 +65,9 @@ const AppContent: React.FC = () => {
           title={t('reportsModule.trialBalance.title', 'Trial Balance')}
           subtitle={t('reportsModule.trialBalance.subtitle', 'List of all accounts with their debit and credit balances')}
         />
-
-        <div className="p-6 space-y-6">
+      }
+    >
+      <div className="p-6 space-y-6">
           {/* Date Filter */}
           <Card>
             <CardContent className="pt-6">
@@ -285,8 +254,7 @@ const AppContent: React.FC = () => {
             </>
           )}
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 };
 

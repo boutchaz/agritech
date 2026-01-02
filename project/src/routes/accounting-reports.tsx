@@ -1,42 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { Building2, FileSpreadsheet, TrendingUp, Scale, BookOpen, Calendar, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const reports = [
     {
@@ -111,15 +85,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="accounting"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -128,186 +96,186 @@ const AppContent: React.FC = () => {
           title="Financial Reports"
           subtitle="Access comprehensive financial reports and analytics"
         />
-
-        <div className="p-6 space-y-6" data-tour="accounting-reports">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Available Reports
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reports.filter(r => r.available).length} / {reports.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Report Types
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-medium">Balance Sheet, P&L, Trial Balance</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Report Period
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-lg font-medium">Customizable</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Reports Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reports.map((report) => {
-              const Icon = report.icon;
-              return (
-                <Card
-                  key={report.id}
-                  className={`transition-all hover:shadow-lg ${report.available ? 'cursor-pointer' : ''}`}
-                  onClick={() => report.available && handleViewReport(report.path)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className={`p-3 rounded-lg ${report.iconBg}`}>
-                        <Icon className="h-6 w-6 text-white" />
-                      </div>
-                      {report.available ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full">
-                          Available
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-                          Coming Soon
-                        </span>
-                      )}
-                    </div>
-                    <CardTitle className="mt-4">
-                      {report.title}
-                    </CardTitle>
-                    <CardDescription>
-                      {report.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      variant={report.available ? "default" : "outline"}
-                      className="w-full"
-                      disabled={!report.available}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (report.available) handleViewReport(report.path);
-                      }}
-                    >
-                      {report.available ? 'View Report' : 'Coming Soon'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Info Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Report Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileSpreadsheet className="h-5 w-5" />
-                  Report Features
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5">•</span>
-                    <span><strong>Customizable date ranges</strong> - View reports for any period</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5">•</span>
-                    <span><strong>Real-time data</strong> - Reports update automatically with posted entries</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5">•</span>
-                    <span><strong>Balance verification</strong> - Ensures debits equal credits</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5">•</span>
-                    <span><strong>Account details</strong> - View breakdown by account type</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Implementation Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Implementation Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Core financial reports are now available. More reports coming soon!
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Database Functions</span>
-                    <span className="font-medium text-green-600">✓ Complete</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">API Endpoints</span>
-                    <span className="font-medium text-green-600">✓ Complete</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">React Hooks</span>
-                    <span className="font-medium text-green-600">✓ Complete</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">UI Components</span>
-                    <span className="font-medium text-green-600">✓ Complete</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Help Section */}
+      }
+    >
+      <div className="p-6 space-y-6" data-tour="accounting-reports">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Need Help Understanding Reports?</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Available Reports
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Balance Sheet</h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Shows what you own (assets), what you owe (liabilities), and your net worth (equity) at a specific point in time.
-                  </p>
+              <div className="text-2xl font-bold">{reports.filter(r => r.available).length} / {reports.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Report Types
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-medium">Balance Sheet, P&L, Trial Balance</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Report Period
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-medium">Customizable</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Reports Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reports.map((report) => {
+            const Icon = report.icon;
+            return (
+              <Card
+                key={report.id}
+                className={`transition-all hover:shadow-lg ${report.available ? 'cursor-pointer' : ''}`}
+                onClick={() => report.available && handleViewReport(report.path)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className={`p-3 rounded-lg ${report.iconBg}`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                    {report.available ? (
+                      <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full">
+                        Available
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
+                  <CardTitle className="mt-4">
+                    {report.title}
+                  </CardTitle>
+                  <CardDescription>
+                    {report.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant={report.available ? "default" : "outline"}
+                    className="w-full"
+                    disabled={!report.available}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (report.available) handleViewReport(report.path);
+                    }}
+                  >
+                    {report.available ? 'View Report' : 'Coming Soon'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Info Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Report Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Report Features
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span><strong>Customizable date ranges</strong> - View reports for any period</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span><strong>Real-time data</strong> - Reports update automatically with posted entries</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span><strong>Balance verification</strong> - Ensures debits equal credits</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span><strong>Account details</strong> - View breakdown by account type</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Implementation Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Implementation Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Core financial reports are now available. More reports coming soon!
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Database Functions</span>
+                  <span className="font-medium text-green-600">✓ Complete</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">P&L Statement</h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Displays your income and expenses over a period, showing whether you made a profit or loss.
-                  </p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">API Endpoints</span>
+                  <span className="font-medium text-green-600">✓ Complete</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Trial Balance</h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Lists all accounts with their debit and credit balances, ensuring your books are mathematically correct.
-                  </p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">React Hooks</span>
+                  <span className="font-medium text-green-600">✓ Complete</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">UI Components</span>
+                  <span className="font-medium text-green-600">✓ Complete</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+
+        {/* Help Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Need Help Understanding Reports?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Balance Sheet</h4>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Shows what you own (assets), what you owe (liabilities), and your net worth (equity) at a specific point in time.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">P&L Statement</h4>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Displays your income and expenses over a period, showing whether you made a profit or loss.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Trial Balance</h4>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Lists all accounts with their debit and credit balances, ensuring your books are mathematically correct.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PageLayout>
   );
 };
 

@@ -2,47 +2,24 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { Building2, ShoppingCart, Filter, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useSalesOrders, type SalesOrder } from '../hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '../components/Billing/SalesOrderDetailDialog';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'accounting',
-    name: 'Accounting',
-    icon: 'DollarSign',
-    active: true,
-    category: 'business',
-    description: 'Financial management',
-    metrics: []
-  },
-];
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const { style: sidebarStyle } = useSidebarMargin();
   const [statusFilter, _setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = useSalesOrders(statusFilter);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const getStatusColor = (status: SalesOrder['status']) => {
     switch (status) {
@@ -109,15 +86,9 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+      <PageLayout
+        activeModule="accounting"
+        header={
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -126,36 +97,33 @@ const AppContent: React.FC = () => {
             title={t('billingModule.salesOrders.title', 'Sales Orders')}
             subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
           />
-          <div className="p-6 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-          </div>
-        </main>
-      </div>
+        }
+      >
+        <div className="p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">{t('billingModule.salesOrders.error.loading', 'Error loading sales orders')}</p>
-          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.salesOrders.error.unknown', 'Unknown error')}</p>
+      <PageLayout activeModule="accounting">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 dark:text-red-400">{t('billingModule.salesOrders.error.loading', 'Error loading sales orders')}</p>
+            <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.salesOrders.error.unknown', 'Unknown error')}</p>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="accounting"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -164,8 +132,9 @@ const AppContent: React.FC = () => {
           title={t('billingModule.salesOrders.title', 'Sales Orders')}
           subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
         />
-
-        <div className="p-6 space-y-6">
+      }
+    >
+      <div className="p-6 space-y-6">
           {/* Header Actions */}
           <div className="flex items-center justify-between">
             <div>
@@ -371,8 +340,7 @@ const AppContent: React.FC = () => {
             }
           }}
         />
-      </main>
-    </div>
+    </PageLayout>
   );
 };
 

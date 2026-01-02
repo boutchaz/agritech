@@ -2,46 +2,17 @@ import React, { lazy, Suspense } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../components/MultiTenantAuthProvider'
-import Sidebar from '../components/Sidebar'
-
+import { PageLayout } from '../components/PageLayout'
 import { MobileNavBar } from '../components/MobileNavBar'
 import ModernPageHeader from '../components/ModernPageHeader'
-import { useState } from 'react'
-import type { Module } from '../types'
 import { Loader2, Building2, Zap } from 'lucide-react'
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 // Lazy load utilities component (includes Recharts ~600KB)
 const UtilitiesManagement = lazy(() => import('../components/UtilitiesManagement'))
 
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-  // ... other modules would be here
-];
-
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
-  const { currentOrganization, currentFarm: _currentFarm } = useAuth();
-  const [activeModule, setActiveModule] = useState('utilities');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {
     return (
@@ -55,42 +26,38 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('utilities.title')} />
+    <PageLayout
+      activeModule="utilities"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('utilities.title')} />
 
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Zap, label: t('utilities.title'), isActive: true }
-            ]}
-            title={t('utilities.title')}
-            subtitle={t('utilities.subtitle')}
-          />
-        </div>
-
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-          <Suspense fallback={
-            <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('utilities.loadingDashboard')}</span>
-            </div>
-          }>
-            <UtilitiesManagement />
-          </Suspense>
-        </div>
-      </main>
-    </div>
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Zap, label: t('utilities.title'), isActive: true }
+              ]}
+              title={t('utilities.title')}
+              subtitle={t('utilities.subtitle')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <Suspense fallback={
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('utilities.loadingDashboard')}</span>
+          </div>
+        }>
+          <UtilitiesManagement />
+        </Suspense>
+      </div>
+    </PageLayout>
   );
 };
 

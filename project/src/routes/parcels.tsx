@@ -14,7 +14,6 @@ import type { Module, SensorData } from '../types'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
 
-
 const mockModules: Module[] = [
   {
     id: 'fruit-trees',
@@ -38,8 +37,9 @@ interface ParcelsListContentProps {
 const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   console.log('🎨 ParcelsListContent rendering', { search });
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
+  const isRTL = i18n.language === 'ar';
 
   console.log('Auth state:', {
     hasOrg: !!currentOrganization,
@@ -50,7 +50,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const [activeModule, setActiveModule] = useState('parcels');
   const [isDarkMode] = useState(false);
   const [modules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
+  const { style: sidebarStyle } = useSidebarMargin(isRTL);
   const [_sensorData, _setSensorData] = useState<SensorData[]>([]);
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -183,7 +183,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}

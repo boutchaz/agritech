@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, XCircle, Loader2, Trash2, Send, MoreHorizontal, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import {
   useJournalEntries,
@@ -28,22 +28,6 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 interface JournalLineInput {
   account_id: string;
@@ -61,9 +45,6 @@ const emptyLine: JournalLineInput = {
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
 
   // Filters state
   const [showFilters, setShowFilters] = useState(false);
@@ -85,7 +66,6 @@ const AppContent: React.FC = () => {
 
   // Create entry modal
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const { style: sidebarStyle } = useSidebarMargin();
   const [newEntry, setNewEntry] = useState({
     entry_date: new Date().toISOString().split('T')[0],
     remarks: '',
@@ -100,11 +80,6 @@ const AppContent: React.FC = () => {
   const postMutation = usePostJournalEntry();
   const cancelMutation = useCancelJournalEntry();
   const deleteMutation = useDeleteJournalEntry();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const formatAmount = (value: number) => {
     return `MAD ${Number(value || 0).toLocaleString('fr-FR', {
@@ -290,31 +265,28 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title="Journal Comptable" />
+      <PageLayout
+        activeModule="accounting"
+        header={
+          <>
+            {/* Mobile Navigation Bar */}
+            <MobileNavBar title="Journal Comptable" />
 
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-                { icon: BookOpen, label: 'Journal Comptable', isActive: true }
-              ]}
-              title="Journal Comptable"
-              subtitle="Gérer les écritures du grand livre"
-            />
-          </div>
-
-          <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
+            {/* Desktop Header */}
+            <div className="hidden md:block">
+              <ModernPageHeader
+                breadcrumbs={[
+                  { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                  { icon: BookOpen, label: 'Journal Comptable', isActive: true }
+                ]}
+                title="Journal Comptable"
+                subtitle="Gérer les écritures du grand livre"
+              />
+            </div>
+          </>
+        }
+      >
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
             {/* Header Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="hidden sm:block">
@@ -616,9 +588,8 @@ const AppContent: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-          </div>
-        </main>
-      </div>
+        </div>
+      </PageLayout>
 
       {/* View Entry Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={(open) => {

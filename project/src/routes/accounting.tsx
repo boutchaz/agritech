@@ -1,41 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { Building2, BookOpen, TrendingUp, DollarSign, Receipt, CreditCard, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useInvoices, useInvoiceStats } from '../hooks/useInvoices';
 import { useAccountingPayments, usePaymentStats } from '../hooks/useAccountingPayments';
 import { useJournalStats } from '../hooks/useJournalEntries';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
-  const { style: sidebarStyle } = useSidebarMargin();
   const navigate = useNavigate();
 
   // Real data from hooks
@@ -44,11 +23,6 @@ const AppContent: React.FC = () => {
   const invoiceStats = useInvoiceStats();
   const paymentStats = usePaymentStats();
   const journalStats = useJournalStats();
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleNavigation = (path: string) => {
     navigate({ to: path });
@@ -134,15 +108,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="accounting"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -151,8 +119,9 @@ const AppContent: React.FC = () => {
           title={t('accountingModule.dashboard.title', 'Accounting Dashboard')}
           subtitle={t('accountingModule.dashboard.subtitle', 'Overview of your financial performance')}
         />
-
-        <div className="p-6 space-y-6" data-tour="accounting-overview">
+      }
+    >
+      <div className="p-6 space-y-6" data-tour="accounting-overview">
           {/* Alert Banner */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -292,8 +261,7 @@ const AppContent: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 };
 

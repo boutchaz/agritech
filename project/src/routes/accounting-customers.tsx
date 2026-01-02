@@ -28,26 +28,9 @@ import {
   type Customer,
 } from '@/hooks/useCustomers';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import Sidebar from '@/components/Sidebar';
+import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import type { Module } from '@/types';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'fruit-trees',
-    name: 'Arbres Fruitiers',
-    icon: 'Tree',
-    active: true,
-    category: 'agriculture',
-    description: 'Gérez vos vergers',
-    metrics: [
-      { name: 'Rendement', value: 12.5, unit: 't/ha', trend: 'up' },
-      { name: 'Irrigation', value: 850, unit: 'm³/ha', trend: 'stable' }
-    ]
-  },
-];
 
 // Zod schema for customer form validation
 const customerSchema = z.object({
@@ -80,13 +63,9 @@ function CustomersPage() {
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
 
-  const [activeModule, setActiveModule] = useState('customers');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { style: sidebarStyle } = useSidebarMargin();
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -110,11 +89,6 @@ function CustomersPage() {
       notes: '',
     },
   });
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   const handleOpenDialog = (customer?: Customer) => {
     if (customer) {
@@ -249,15 +223,9 @@ function CustomersPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+    <PageLayout
+      activeModule="accounting"
+      header={
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -266,8 +234,9 @@ function CustomersPage() {
           title={t('accountingModule.customers.title', 'Customers')}
           subtitle={t('accountingModule.customers.subtitle', 'Manage your customers for sales invoices')}
         />
-
-        <div className="p-6 space-y-6">
+      }
+    >
+      <div className="p-6 space-y-6">
           {/* Header Actions */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
@@ -595,8 +564,7 @@ function CustomersPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }
 

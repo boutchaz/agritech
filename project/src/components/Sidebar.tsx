@@ -77,6 +77,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     return saved === 'true';
   });
 
+  // Listen for external collapse events (e.g., from tour system)
+  useEffect(() => {
+    const handleExternalCollapse = (e: CustomEvent<{ collapsed: boolean }>) => {
+      setIsCollapsed(e.detail.collapsed);
+    };
+    window.addEventListener('sidebarCollapse', handleExternalCollapse as EventListener);
+    return () => window.removeEventListener('sidebarCollapse', handleExternalCollapse as EventListener);
+  }, []);
+
   const toggleCollapse = () => {
     const newValue = !isCollapsed;
     setIsCollapsed(newValue);

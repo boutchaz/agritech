@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import Sidebar from '../components/Sidebar';
+import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
@@ -18,7 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useQuotes, type Quote } from '../hooks/useQuotes';
 import { QuoteForm } from '../components/Billing/QuoteForm';
@@ -26,31 +25,14 @@ import { QuoteDetailDialog } from '../components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useSidebarMargin } from '../hooks/useSidebarLayout';
-
-const mockModules: Module[] = [
-  {
-    id: 'accounting',
-    name: 'Accounting',
-    icon: 'DollarSign',
-    active: true,
-    category: 'business',
-    description: 'Financial management',
-    metrics: []
-  },
-];
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const [activeModule, setActiveModule] = useState('accounting');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modules, _setModules] = useState(mockModules);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const { style: sidebarStyle } = useSidebarMargin();
   const [statusFilter, _setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
@@ -131,11 +113,6 @@ const AppContent: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
-
   const getStatusColor = (status: Quote['status']) => {
     switch (status) {
       case 'sent':
@@ -197,15 +174,9 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={cn("min-h-screen")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <Sidebar
-          modules={modules.filter(m => m.active)}
-          activeModule={activeModule}
-          onModuleChange={setActiveModule}
-          isDarkMode={isDarkMode}
-          onThemeToggle={toggleTheme}
-        />
-        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
+      <PageLayout
+        activeModule="accounting"
+        header={
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
@@ -216,53 +187,52 @@ const AppContent: React.FC = () => {
               subtitle={t('quotes.pageSubtitle')}
             />
           </div>
-          <div className="p-6 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-          </div>
-        </main>
-      </div>
+        }
+      >
+        <div className="p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="text-center">
-          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">{t('quotes.error.loading')}</p>
-          <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('quotes.error.unknown')}</p>
+      <PageLayout activeModule="accounting">
+        <div className={cn("min-h-screen flex items-center justify-center", isRTL && "flex-row-reverse")}>
+          <div className="text-center">
+            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 dark:text-red-400">{t('quotes.error.loading')}</p>
+            <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('quotes.error.unknown')}</p>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className={cn(`min-h-screen ${isDarkMode ? 'dark' : ''}`)} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Sidebar with mobile menu support */}
-      <Sidebar
-        modules={modules.filter(m => m.active)}
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        isDarkMode={isDarkMode}
-        onThemeToggle={toggleTheme}
-      />
-      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
-        {/* Mobile Navigation Bar */}
-        <MobileNavBar title={t('quotes.pageTitle')} />
+    <PageLayout
+      activeModule="accounting"
+      header={
+        <>
+          {/* Mobile Navigation Bar */}
+          <MobileNavBar title={t('quotes.pageTitle')} />
 
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-            ]}
-            title={t('quotes.title')}
-            subtitle={t('quotes.subtitle')}
-          />
-        </div>
-
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <ModernPageHeader
+              breadcrumbs={[
+                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
+              ]}
+              title={t('quotes.title')}
+              subtitle={t('quotes.subtitle')}
+            />
+          </div>
+        </>
+      }
+    >
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
           {/* Header Actions */}
           <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
             <div className="min-w-0">
@@ -676,7 +646,6 @@ const AppContent: React.FC = () => {
               ))
             )}
           </div>
-        </div>
 
         {/* Create Quote Dialog */}
         <QuoteForm
@@ -721,8 +690,8 @@ const AppContent: React.FC = () => {
             handleDownloadPDF(quote);
           }}
         />
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };
 
