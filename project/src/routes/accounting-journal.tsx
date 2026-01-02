@@ -28,6 +28,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -84,6 +85,7 @@ const AppContent: React.FC = () => {
 
   // Create entry modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
   const [newEntry, setNewEntry] = useState({
     entry_date: new Date().toISOString().split('T')[0],
     remarks: '',
@@ -288,7 +290,7 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+      <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -296,7 +298,7 @@ const AppContent: React.FC = () => {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
           {/* Mobile Navigation Bar */}
           <MobileNavBar title="Journal Comptable" />
 

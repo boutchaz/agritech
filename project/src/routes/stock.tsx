@@ -9,6 +9,7 @@ import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('stock');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
   const isRTL = i18n.language === 'ar';
 
   const toggleTheme = () => {
@@ -85,7 +87,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Sidebar - now visible on mobile with mobile menu */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -94,7 +96,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('stock.title')} />
 

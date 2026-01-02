@@ -7,10 +7,12 @@ import { MobileNavBar } from '../components/MobileNavBar';
 import { Building2, BookOpen } from 'lucide-react';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { ChartOfAccounts } from '../components/Accounting/ChartOfAccounts';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const AccountsContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const { style: sidebarStyle } = useSidebarMargin();
 
   if (!currentOrganization) {
     return (
@@ -21,7 +23,7 @@ const AccountsContent = () => {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen">
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={[]}
@@ -30,7 +32,7 @@ const AccountsContent = () => {
         isDarkMode={false}
         onThemeToggle={() => {}}
       />
-      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('accountingModule.accounts.title', 'Chart of Accounts')} />
 

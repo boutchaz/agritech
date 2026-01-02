@@ -9,6 +9,7 @@ import type { Module } from '../types'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Home } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -33,6 +34,7 @@ const SettingsLayoutComponent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('settings');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   useAutoStartTour('settings', 1500);
 
@@ -57,7 +59,7 @@ const SettingsLayoutComponent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -65,7 +67,7 @@ const SettingsLayoutComponent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-900" style={sidebarStyle}>
         {/* Mobile-optimized header */}
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">

@@ -4,12 +4,14 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { CropCyclesList } from '@/components/CropCycles/CropCyclesList';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useTranslation } from 'react-i18next';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 function CropCyclesPage() {
   const { t } = useTranslation();
+  const { style: sidebarStyle } = useSidebarMargin();
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar
         modules={[]}
         activeModule="crop-cycles"
@@ -17,7 +19,7 @@ function CropCyclesPage() {
         isDarkMode={false}
         onThemeToggle={() => {}}
       />
-      <main className="flex-1 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           title={t('cropCycles.pageTitle', 'Crop Cycles')}
           breadcrumbs={[

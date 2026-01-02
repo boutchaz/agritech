@@ -26,6 +26,7 @@ import { QuoteDetailDialog } from '../components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -49,6 +50,7 @@ const AppContent: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
   const [statusFilter, _setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
@@ -195,7 +197,7 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={cn("flex min-h-screen", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={cn("min-h-screen")} dir={isRTL ? 'rtl' : 'ltr'}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -203,7 +205,7 @@ const AppContent: React.FC = () => {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
@@ -235,7 +237,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={cn(`flex min-h-screen ${isDarkMode ? 'dark' : ''}`, isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={cn(`min-h-screen ${isDarkMode ? 'dark' : ''}`)} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -244,7 +246,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('quotes.pageTitle')} />
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -116,6 +117,7 @@ const MapComponent: React.FC<MapProps> = ({
   editingParcelId,
   onBoundaryUpdated
 }) => {
+  const { t } = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
@@ -1360,7 +1362,7 @@ const MapComponent: React.FC<MapProps> = ({
               <button
                 onClick={() => setIsFullScreen(false)}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title="Quitter le plein écran (Échap)"
+                title={t('map.exitFullscreen')}
               >
                 <X className="h-5 w-5 text-gray-600" />
               </button>
@@ -1418,12 +1420,12 @@ const MapComponent: React.FC<MapProps> = ({
           {farmId && enableDrawing && showNameDialog && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
-                <h3 className="text-lg font-semibold mb-4">Nommer la parcelle</h3>
+                <h3 className="text-lg font-semibold mb-4">{t('map.nameParcel')}</h3>
                 <input
                   type="text"
                   value={parcelName}
                   onChange={(e) => setParcelName(e.target.value)}
-                  placeholder="Nom de la parcelle"
+                  placeholder={t('map.parcelNamePlaceholder')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md mb-4"
                   autoFocus
                 />
@@ -1432,14 +1434,14 @@ const MapComponent: React.FC<MapProps> = ({
                     onClick={cleanupDrawingState}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    Annuler
+                    {t('map.cancel')}
                   </button>
                   <button
                     onClick={handleNameSubmit}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                     disabled={!parcelName}
                   >
-                    Suivant
+                    {t('map.next')}
                   </button>
                 </div>
               </div>

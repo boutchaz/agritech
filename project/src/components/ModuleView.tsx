@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Settings, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Module, SensorData } from '../types';
 import { parcelsApi } from '../lib/api/parcels';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -20,6 +21,7 @@ interface Parcel {
 }
 
 const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
   const [assignedParcels, setAssignedParcels] = useState<Parcel[]>([]);
@@ -63,12 +65,12 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
 
   const loadParcels = async () => {
     if (!currentFarm) {
-      setParcelError('Aucune ferme sélectionnée');
+      setParcelError(t('moduleView.errors.noFarmSelected'));
       return;
     }
 
     if (!currentOrganization?.id) {
-      setParcelError('Aucune organisation sélectionnée');
+      setParcelError(t('moduleView.errors.noOrgSelected'));
       return;
     }
 
@@ -111,7 +113,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
       }
     } catch (error) {
       console.error('Error loading parcels:', error);
-      setParcelError(error instanceof Error ? error.message : 'Erreur lors du chargement des parcelles');
+      setParcelError(error instanceof Error ? error.message : t('moduleView.errors.loadingParcels'));
     } finally {
       setLoadingParcels(false);
     }
@@ -167,7 +169,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
   if (!module) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-600 dark:text-gray-400">Module non trouvé</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('moduleView.moduleNotFound')}</p>
       </div>
     );
   }
@@ -190,17 +192,17 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
           <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune parcelle trouvée
+            {t('moduleView.noParcelsFound')}
           </h4>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
-            Aucune parcelle n'a été trouvée pour cette ferme. Créez d'abord des parcelles dans la section Parcelles.
+            {t('moduleView.noParcelsDescription')}
           </p>
           <button
             onClick={() => navigate({ to: '/parcels' })}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             <MapPin className="h-4 w-4 mr-2" />
-            Aller aux Parcelles
+            {t('moduleView.goToParcels')}
           </button>
         </div>
       );
@@ -215,21 +217,21 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Arbres Fruitiers
+                {t('moduleView.fruitTrees')}
                 {parcelsToDisplay.length > 0 && (
                   <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">
-                    - {parcelsToDisplay[currentParcelIndex]?.name || 'Parcelle'}
+                    - {parcelsToDisplay[currentParcelIndex]?.name || t('farmHierarchy.parcel.new')}
                   </span>
                 )}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {parcelsToDisplay.length > 1 ? (
-                  <>Utilisez les flèches ou balayez pour naviguer entre les parcelles</>
+                  <>{t('moduleView.navigationHint')}</>
                 ) : (
-                  <>1 parcelle disponible</>
+                  <>{t('moduleView.singleParcelAvailable')}</>
                 )}
                 {assignedParcels.length > 0 && (
-                  <span className="ml-2 text-green-600">• {assignedParcels.length} assignée{assignedParcels.length !== 1 ? 's' : ''}</span>
+                  <span className="ml-2 text-green-600">• {t('moduleView.assignedCount', { count: assignedParcels.length })}</span>
                 )}
               </p>
             </div>
@@ -240,14 +242,14 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                 className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingParcels ? 'animate-spin' : ''}`} />
-                <span>Actualiser</span>
+                <span>{t('moduleView.refresh')}</span>
               </button>
               <button
                 onClick={() => setShowParcelManager(!showParcelManager)}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 <Settings className="h-4 w-4" />
-                <span>Gérer</span>
+                <span>{t('moduleView.manage')}</span>
               </button>
             </div>
           </div>
@@ -256,7 +258,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {showParcelManager && (
             <div className="border-t pt-4 mt-4 space-y-4">
               <h4 className="font-medium text-gray-900 dark:text-white">
-                Assigner des parcelles
+                {t('moduleView.assignParcels')}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {allParcels.map(parcel => {
@@ -277,7 +279,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                             {parcel.name}
                           </h5>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {parcel.area ? `${parcel.area} ha` : 'Superficie non définie'}
+                            {parcel.area ? `${parcel.area} ha` : t('moduleView.areaNotDefined')}
                             {parcel.soil_type && ` • ${parcel.soil_type}`}
                           </p>
                         </div>
@@ -337,7 +339,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
               <button
                 onClick={() => setCurrentParcelIndex(Math.max(0, currentParcelIndex - 1))}
                 disabled={currentParcelIndex === 0}
-                aria-label="Parcelle précédente"
+                aria-label={t('moduleView.previousParcel')}
                 className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-full p-2.5 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 z-10"
               >
                 <svg className="h-5 w-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,7 +350,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
               <button
                 onClick={() => setCurrentParcelIndex(Math.min(parcelsToDisplay.length - 1, currentParcelIndex + 1))}
                 disabled={currentParcelIndex === parcelsToDisplay.length - 1}
-                aria-label="Parcelle suivante"
+                aria-label={t('moduleView.nextParcel')}
                 className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-full p-2.5 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 z-10"
               >
                 <svg className="h-5 w-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -370,7 +372,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                       ? 'bg-green-600'
                       : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
                   }`}
-                  aria-label={`Aller à la parcelle ${index + 1}`}
+                  aria-label={t('moduleView.goToParcel', { number: index + 1 })}
                 />
               ))}
             </div>
@@ -379,7 +381,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {/* Parcel counter */}
           {parcelsToDisplay.length > 1 && (
             <div className="text-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {currentParcelIndex + 1} sur {parcelsToDisplay.length} parcelles
+              {t('moduleView.parcelCounter', { current: currentParcelIndex + 1, total: parcelsToDisplay.length })}
             </div>
           )}
         </div>
@@ -422,17 +424,17 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 text-center">
             <MapPin className="h-12 w-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Maximisez votre module
+              {t('moduleView.maximizeModule')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Assignez des parcelles à ce module pour obtenir des données et recommandations spécifiques.
+              {t('moduleView.assignDescription')}
             </p>
             <button
               onClick={() => setShowParcelManager(true)}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               <MapPin className="h-4 w-4 mr-2" />
-              Assigner des parcelles
+              {t('moduleView.assignParcels')}
             </button>
           </div>
         )}

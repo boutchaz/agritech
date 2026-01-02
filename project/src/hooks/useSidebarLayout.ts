@@ -1,0 +1,67 @@
+import { useState, useEffect } from 'react'
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed'
+
+/**
+ * Hook to detect desktop screen size (lg breakpoint = 1024px)
+ */
+export function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 1024
+  )
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    setIsDesktop(mediaQuery.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  return isDesktop
+}
+
+/**
+ * Hook to track sidebar collapsed state
+ */
+export function useSidebarCollapsed() {
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+  })
+
+  useEffect(() => {
+    const handleSidebarCollapse = (e: CustomEvent<{ collapsed: boolean }>) => {
+      setIsCollapsed(e.detail.collapsed)
+    }
+    window.addEventListener('sidebarCollapse', handleSidebarCollapse as EventListener)
+    return () => window.removeEventListener('sidebarCollapse', handleSidebarCollapse as EventListener)
+  }, [])
+
+  return isCollapsed
+}
+
+/**
+ * Hook that combines desktop detection and sidebar state to return the sidebar margin
+ * @param isRTL - Whether the layout is right-to-left
+ * @returns Object with marginLeft and marginRight values for the main content
+ */
+export function useSidebarMargin(isRTL = false) {
+  const isDesktop = useIsDesktop()
+  const isSidebarCollapsed = useSidebarCollapsed()
+
+  // Calculate sidebar margin for desktop (64px collapsed, 256px expanded)
+  const sidebarWidth = isDesktop ? (isSidebarCollapsed ? 64 : 256) : 0
+
+  return {
+    marginLeft: isRTL ? 0 : sidebarWidth,
+    marginRight: isRTL ? sidebarWidth : 0,
+    style: {
+      marginLeft: isRTL ? 0 : `${sidebarWidth}px`,
+      marginRight: isRTL ? `${sidebarWidth}px` : 0,
+    },
+    isDesktop,
+    isSidebarCollapsed,
+    sidebarWidth,
+  }
+}

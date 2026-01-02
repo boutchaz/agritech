@@ -32,6 +32,7 @@ import Sidebar from '@/components/Sidebar';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import type { Module } from '@/types';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -85,6 +86,7 @@ function CustomersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { style: sidebarStyle } = useSidebarMargin();
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -247,7 +249,7 @@ function CustomersPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -255,7 +257,7 @@ function CustomersPage() {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

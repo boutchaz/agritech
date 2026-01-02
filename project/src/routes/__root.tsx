@@ -28,7 +28,7 @@ export const Route = createRootRoute({
                     <Toaster richColors position="top-right" />
                     {import.meta.env.DEV && (
                       <>
-                        <TanStackRouterDevtools />
+                        {/* <TanStackRouterDevtools /> */}
                         <ReactQueryDevtools initialIsOpen={false} />
                       </>
                     )}
