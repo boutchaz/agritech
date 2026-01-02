@@ -8,7 +8,7 @@ export const useWorkers = (organizationId: string | null, farmId?: string | null
     queryKey: ['workers', organizationId, farmId],
     queryFn: async () => {
       if (!organizationId) return [];
-      return workersApi.getAll(organizationId, farmId || undefined);
+      return workersApi.getAll({ farm_id: farmId || undefined }, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -20,7 +20,7 @@ export const useActiveWorkers = (organizationId: string | null) => {
     queryKey: ['active-workers', organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
-      return workersApi.getActive(organizationId);
+      return workersApi.getActive({ is_active: true }, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -32,7 +32,7 @@ export const useWorker = (organizationId: string | null, workerId: string | null
     queryKey: ['worker', organizationId, workerId],
     queryFn: async () => {
       if (!organizationId || !workerId) return null;
-      return workersApi.getById(organizationId, workerId);
+      return workersApi.getById(workerId, organizationId);
     },
     enabled: !!organizationId && !!workerId,
   });
@@ -45,7 +45,7 @@ export const useCreateWorker = () => {
   return useMutation({
     mutationFn: async (data: WorkerFormData & { organization_id: string }) => {
       const { organization_id, ...workerData } = data;
-      return workersApi.create(organization_id, workerData);
+      return workersApi.create(workerData, organization_id);
     },
     onSuccess: (worker) => {
       queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
@@ -60,7 +60,7 @@ export const useUpdateWorker = () => {
 
   return useMutation({
     mutationFn: async ({ id, organizationId, data }: { id: string; organizationId: string; data: Partial<WorkerFormData> }) => {
-      return workersApi.update(organizationId, id, data);
+      return workersApi.update(id, data, organizationId);
     },
     onSuccess: (worker) => {
       queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
@@ -76,7 +76,7 @@ export const useDeleteWorker = () => {
 
   return useMutation({
     mutationFn: async ({ workerId, organizationId }: { workerId: string; organizationId: string }) => {
-      return workersApi.delete(organizationId, workerId);
+      return workersApi.delete(workerId, organizationId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['workers', variables.organizationId] });

@@ -22,7 +22,7 @@ export function useHarvests(organizationId: string, filters?: HarvestFilters) {
     queryKey: ['harvests', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      return harvestsApi.getAll(organizationId, filters);
+      return harvestsApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -35,7 +35,7 @@ export function useHarvest(organizationId: string, harvestId: string | null) {
       if (!harvestId || !organizationId) {
         return null;
       }
-      return harvestsApi.getById(organizationId, harvestId);
+      return harvestsApi.getById(harvestId, organizationId);
     },
     enabled: !!harvestId && !!organizationId,
   });
@@ -82,7 +82,7 @@ export function useDeliveries(organizationId: string, filters?: DeliveryFilters)
     queryKey: ['deliveries', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      return deliveriesApi.getAll(organizationId, filters);
+      return deliveriesApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -93,7 +93,7 @@ export function useDelivery(organizationId: string, deliveryId: string | null) {
     queryKey: ['delivery', deliveryId],
     queryFn: async () => {
       if (!deliveryId || !organizationId) return null;
-      return deliveriesApi.getById(organizationId, deliveryId);
+      return deliveriesApi.getById(deliveryId, organizationId);
     },
     enabled: !!deliveryId && !!organizationId,
   });
@@ -130,7 +130,7 @@ export function useCreateHarvest() {
 
   return useMutation({
     mutationFn: async ({ organizationId, data }: { organizationId: string; data: CreateHarvestRequest }) => {
-      return harvestsApi.create(organizationId, data);
+      return harvestsApi.create(data, organizationId);
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['harvests', variables.organizationId] });
@@ -152,7 +152,7 @@ export function useUpdateHarvest() {
       organizationId: string;
       updates: Partial<HarvestRecord>
     }) => {
-      return harvestsApi.update(organizationId, harvestId, updates);
+      return harvestsApi.update(harvestId, updates, organizationId);
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['harvest', variables.harvestId] });
@@ -166,7 +166,7 @@ export function useDeleteHarvest() {
 
   return useMutation({
     mutationFn: async ({ harvestId, organizationId }: { harvestId: string; organizationId: string }) => {
-      await harvestsApi.delete(organizationId, harvestId);
+      await harvestsApi.delete(harvestId, organizationId);
       return { harvestId, organizationId };
     },
     onSuccess: (data) => {

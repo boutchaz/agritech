@@ -159,7 +159,7 @@ export function WorkerConfiguration({
         metayage_percentage: data.metayage_percentage || undefined,
       };
 
-      return await workersApi.update(currentOrganization.id, workerId, updateData);
+      return await workersApi.update(workerId, updateData, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['worker', workerId] });

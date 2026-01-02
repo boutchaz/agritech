@@ -501,7 +501,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
     setIsCreatingReceipt(true);
     try {
-      const warehouses = await warehousesApi.getAll(currentOrganization.id);
+      const warehouses = await warehousesApi.getAll(undefined, currentOrganization.id);
 
       if (!warehouses || warehouses.length === 0) {
         toast.error('No warehouse found. Please create a warehouse first.');
