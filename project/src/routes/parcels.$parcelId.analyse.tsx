@@ -12,8 +12,9 @@ import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, Water
 const ParcelSoilAnalysis = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
+  const search = Route.useSearch();
   const { data: parcel, isLoading } = useParcelById(parcelId);
-  const [analysisTab, setAnalysisTab] = useState<AnalysisType>('soil');
+  const [analysisTab, setAnalysisTab] = useState<AnalysisType>(search.type || 'soil');
   const [showForm, setShowForm] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedFormType, setSelectedFormType] = useState<AnalysisType | null>(null);
@@ -416,4 +417,7 @@ const ParcelSoilAnalysis = () => {
 
 export const Route = createFileRoute('/parcels/$parcelId/analyse')({
   component: ParcelSoilAnalysis,
+  validateSearch: (search: Record<string, unknown>) => ({
+    type: (search.type as 'soil' | 'plant' | 'water') || undefined,
+  }),
 });

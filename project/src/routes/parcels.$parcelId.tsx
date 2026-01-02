@@ -44,7 +44,7 @@ const ParcelLayout = () => {
     { id: 'analyse', name: t('farmHierarchy.parcel.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/analyse` },
     { id: 'satellite', name: t('farmHierarchy.parcel.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
     { id: 'weather', name: t('farmHierarchy.parcel.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
-    { id: 'production', name: 'Production Intelligence', icon: TrendingUp, path: `/parcels/${parcelId}/production` },
+    { id: 'production', name: t('farmHierarchy.parcel.detail.tabs.production'), icon: TrendingUp, path: `/parcels/${parcelId}/production` },
     { id: 'profitability', name: t('farmHierarchy.parcel.detail.tabs.profitability'), icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
     { id: 'reports', name: t('farmHierarchy.parcel.detail.tabs.reports'), icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
   ];

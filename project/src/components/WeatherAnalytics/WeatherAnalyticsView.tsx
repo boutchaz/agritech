@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays } from 'lucide-react';
 import { useWeatherAnalytics, TimeRange } from '../../hooks/useWeatherAnalytics';
 import TemperatureCharts from './TemperatureCharts';
@@ -22,6 +23,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   treeType,
   variety,
 }) => {
+  const { t, i18n } = useTranslation();
   const [timeRange, setTimeRange] = useState<TimeRange>('last-12-months');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -100,7 +102,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">
-            Chargement des analyses météorologiques...
+            {t('weather.loading')}
           </p>
         </div>
       </div>
@@ -111,7 +113,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-          Erreur de chargement
+          {t('weather.errorTitle')}
         </h3>
         <p className="text-red-600 dark:text-red-300">{error}</p>
       </div>
@@ -126,10 +128,10 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Cloud className="h-7 w-7 text-blue-500" />
-              Analyses Météo & Climatiques
+              {t('weather.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {parcelName} • Comparaison avec les normales climatiques
+              {parcelName} • {t('weather.comparisonWithNormals')}
             </p>
           </div>
         </div>
@@ -138,7 +140,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <Calendar className="h-4 w-4" />
-            <span className="font-medium">Période d'analyse:</span>
+            <span className="font-medium">{t('weather.analysisPeriod')}</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -150,7 +152,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              3 derniers mois
+              {t('weather.timeRanges.last3Months')}
             </button>
             <button
               onClick={() => handleTimeRangeChange('last-6-months')}
@@ -160,7 +162,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              6 derniers mois
+              {t('weather.timeRanges.last6Months')}
             </button>
             <button
               onClick={() => handleTimeRangeChange('last-12-months')}
@@ -170,7 +172,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              12 derniers mois
+              {t('weather.timeRanges.last12Months')}
             </button>
             <button
               onClick={() => handleTimeRangeChange('ytd')}
@@ -180,7 +182,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              Année en cours
+              {t('weather.timeRanges.yearToDate')}
             </button>
             <button
               onClick={() => handleTimeRangeChange('custom')}
@@ -190,7 +192,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              Personnalisée
+              {t('weather.timeRanges.custom')}
             </button>
           </div>
 
@@ -199,7 +201,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             <div className="flex gap-4 items-end mt-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date de début
+                  {t('weather.customDates.startDate')}
                 </label>
                 <input
                   type="date"
@@ -210,7 +212,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date de fin
+                  {t('weather.customDates.endDate')}
                 </label>
                 <input
                   type="date"
@@ -224,9 +226,11 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
 
           {data && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Données du {new Date(data.start_date).toLocaleDateString('fr-FR')} au{' '}
-              {new Date(data.end_date).toLocaleDateString('fr-FR')} •{' '}
-              Localisation: {data.location.latitude.toFixed(4)}°, {data.location.longitude.toFixed(4)}°
+              {t('weather.dataRange', { 
+                startDate: new Date(data.start_date).toLocaleDateString(i18n.language), 
+                endDate: new Date(data.end_date).toLocaleDateString(i18n.language) 
+              })} •{' '}
+              {t('weather.location')}: {data.location.latitude.toFixed(4)}°, {data.location.longitude.toFixed(4)}°
             </p>
           )}
         </div>
@@ -236,7 +240,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-blue-500" />
-          Prévisions Météo sur 15 jours
+          {t('weather.forecast.title')}
         </h3>
         <WeatherForecast
           latitude={parcelCenter.latitude}
@@ -251,28 +255,28 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Température Moyenne
+                  {t('weather.summary.avgTemperature')}
                 </h3>
                 <TrendingUp className="h-5 w-5 text-blue-600" />
               </div>
               <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">
                 {data.temperature_series.length > 0
                   ? (
-                      data.temperature_series.reduce((sum, t) => sum + t.current_mean, 0) /
+                      data.temperature_series.reduce((sum, temp) => sum + temp.current_mean, 0) /
                       data.temperature_series.length
                     ).toFixed(1)
                   : 'N/A'}
                 °C
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-                Période analysée
+                {t('weather.summary.analyzedPeriod')}
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-cyan-900 dark:text-cyan-100">
-                  Précipitations Totales
+                  {t('weather.summary.totalPrecipitation')}
                 </h3>
                 <Droplets className="h-5 w-5 text-cyan-600" />
               </div>
@@ -285,14 +289,14 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                 <span className="text-lg ml-1">mm</span>
               </p>
               <p className="text-xs text-cyan-700 dark:text-cyan-300 mt-2">
-                Période analysée
+                {t('weather.summary.analyzedPeriod')}
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-green-900 dark:text-green-100">
-                  Jours de Pluie
+                  {t('weather.summary.rainyDays')}
                 </h3>
                 <Droplets className="h-5 w-5 text-green-600" />
               </div>
@@ -302,7 +306,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
                   : 'N/A'}
               </p>
               <p className="text-xs text-green-700 dark:text-green-300 mt-2">
-                Jours avec &gt; 1mm
+                {t('weather.summary.daysAbove1mm')}
               </p>
             </div>
           </div>
@@ -311,7 +315,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           <div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-blue-500" />
-              Analyse des Températures
+              {t('weather.sections.temperatureAnalysis')}
             </h3>
             <TemperatureCharts data={data.temperature_series} />
           </div>
@@ -330,7 +334,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           <div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Droplets className="h-6 w-6 text-cyan-500" />
-              Analyse des Précipitations
+              {t('weather.sections.precipitationAnalysis')}
             </h3>
             <PrecipitationChart data={data.monthly_precipitation} />
           </div>
@@ -339,7 +343,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           <div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Cloud className="h-6 w-6 text-amber-500" />
-              Conditions Sèches & Humides
+              {t('weather.sections.dryWetConditions')}
             </h3>
             <DryWetConditionsCharts data={data.monthly_precipitation} />
           </div>
@@ -347,28 +351,25 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           {/* Insights Section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Analyses et Recommandations
+              {t('weather.sections.insightsRecommendations')}
             </h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Les données sont comparées aux normales climatiques à long terme (LTN) pour
-                  identifier les écarts significatifs par rapport aux conditions habituelles.
+                  {t('weather.insights.comparison')}
                 </p>
               </div>
               <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Un jour humide est défini comme un jour avec plus de 1mm de précipitations.
-                  Les périodes sèches sont analysées pour optimiser la gestion de l'irrigation.
+                  {t('weather.insights.wetDay')}
                 </p>
               </div>
               <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                 <div className="w-2 h-2 bg-amber-500 rounded-full mt-2"></div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Les conditions de sécheresse (5 jours consécutifs avec moins de 5mm)
-                  nécessitent une attention particulière pour la gestion hydrique des cultures.
+                  {t('weather.insights.drought')}
                 </p>
               </div>
             </div>
@@ -378,7 +379,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-12 text-center">
           <Cloud className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
-            Sélectionnez une période pour afficher les analyses météorologiques
+            {t('weather.noData')}
           </p>
         </div>
       )}

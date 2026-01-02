@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense, lazy } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParcelById } from '../hooks/useParcelsQuery'
 import { Satellite, Loader2 } from 'lucide-react'
 
@@ -9,6 +10,7 @@ const IndicesCalculator = lazy(() => import('../components/SatelliteAnalysis/Ind
 const TimeSeriesChart = lazy(() => import('../components/SatelliteAnalysis/TimeSeriesChart'));
 
 const ParcelSatellite = () => {
+  const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
 
@@ -29,7 +31,7 @@ const ParcelSatellite = () => {
           fallback={
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement de l'analyse satellite...</span>
+              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('satellite.loading')}</span>
             </div>
           }
         >
@@ -62,16 +64,16 @@ const ParcelSatellite = () => {
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
           <Satellite className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Les données de délimitation de la parcelle sont requises pour l'analyse satellite.
+            {t('satellite.noBoundary.title')}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-            Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.
+            {t('satellite.noBoundary.description')}
           </p>
           <a
             href={`/parcels?farmId=${parcel.farm_id}`}
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
-            Définir les limites de la parcelle
+            {t('satellite.noBoundary.defineButton')}
           </a>
         </div>
       )}

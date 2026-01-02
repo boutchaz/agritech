@@ -685,12 +685,45 @@
           "soil": "Analyse Sol",
           "satellite": "Imagerie",
           "weather": "Météo & Climat",
+          "production": "Intelligence de Production",
           "profitability": "Rentabilité",
           "reports": "Rapports"
         },
         "breadcrumbs": {
           "farm": "Ferme",
           "parcels": "Parcelles"
+        },
+        "overview": {
+          "noSatelliteData": "Données satellite non disponibles",
+          "noSatelliteDataDesc": "Aucune donnée satellite n'a été trouvée pour cette parcelle. Rendez-vous dans l'onglet Satellite pour récupérer les données.",
+          "goToSatellite": "Accéder à l'analyse satellite",
+          "refreshData": "Actualiser les données",
+          "irrigationIndex": "Indice d'irrigation",
+          "basedOnNdmi": "Basé sur NDMI",
+          "expectedYield": "Rendement prévu",
+          "ndvi": "NDVI",
+          "updatedOn": "Mis à jour le",
+          "vegetationHealth": "Santé végétale",
+          "summary": "Résumé",
+          "area": "Surface",
+          "notDefined": "Non définie",
+          "soilType": "Type de sol",
+          "irrigation": "Irrigation",
+          "treeType": "Type d'arbre",
+          "variety": "Variété",
+          "plantingYear": "Année de plantation",
+          "lastUpdate": "Dernière mise à jour",
+          "description": "Description",
+          "healthStatus": {
+            "excellent": "Excellente",
+            "good": "Bonne",
+            "average": "Moyenne",
+            "low": "Faible",
+            "critical": "Critique"
+          }
+        },
+        "reports": {
+          "loading": "Chargement du générateur de rapports..."
         }
       },
       "soil": {
@@ -2903,15 +2936,24 @@
       "title": "Données disponibles",
       "loading": "Vérification des données...",
       "statusExcellent": "Excellente couverture",
+      "statusGood": "Bonne couverture",
+      "statusBasic": "Couverture de base",
+      "statusInsufficient": "Données insuffisantes",
       "statusPartial": "Couverture partielle",
       "statusLimited": "Couverture limitée",
+      "requiredSection": "Requis",
+      "optionalSection": "Optionnel (améliore la précision)",
+      "optional": "optionnel",
       "satellite": "Données satellites",
       "satelliteDetail": "{{count}} points",
       "soil": "Analyse de sol",
       "water": "Analyse d'eau",
       "plant": "Analyse végétale",
       "weather": "Données météo",
-      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats."
+      "canGenerateBasic": "Vous pouvez générer un rapport de base. Ajoutez des analyses pour plus de précision.",
+      "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
+      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
+      "addAnalysis": "Ajouter"
     }
   },
   "aiSettings": {
@@ -3058,6 +3100,117 @@
       "stockTransfer": "Transférer entre entrepôts",
       "stockReconciliation": "Ajuster les quantités en stock"
     }
+  },
+  "weather": {
+    "loading": "Chargement des analyses météorologiques...",
+    "loadingFallback": "Chargement des analyses météo...",
+    "errorTitle": "Erreur de chargement",
+    "noBoundary": {
+      "title": "Les données de localisation de la parcelle sont requises pour l'analyse météorologique.",
+      "description": "Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques."
+    },
+    "title": "Analyses Météo & Climatiques",
+    "comparisonWithNormals": "Comparaison avec les normales climatiques",
+    "analysisPeriod": "Période d'analyse:",
+    "timeRanges": {
+      "last3Months": "3 derniers mois",
+      "last6Months": "6 derniers mois",
+      "last12Months": "12 derniers mois",
+      "yearToDate": "Année en cours",
+      "custom": "Personnalisée"
+    },
+    "customDates": {
+      "startDate": "Date de début",
+      "endDate": "Date de fin"
+    },
+    "dataRange": "Données du {{startDate}} au {{endDate}}",
+    "location": "Localisation",
+    "forecast": {
+      "title": "Prévisions Météo sur 15 jours"
+    },
+    "summary": {
+      "avgTemperature": "Température Moyenne",
+      "totalPrecipitation": "Précipitations Totales",
+      "rainyDays": "Jours de Pluie",
+      "analyzedPeriod": "Période analysée",
+      "daysAbove1mm": "Jours avec > 1mm"
+    },
+    "sections": {
+      "temperatureAnalysis": "Analyse des Températures",
+      "precipitationAnalysis": "Analyse des Précipitations",
+      "dryWetConditions": "Conditions Sèches & Humides",
+      "insightsRecommendations": "Analyses et Recommandations"
+    },
+    "insights": {
+      "comparison": "Les données sont comparées aux normales climatiques à long terme (LTN) pour identifier les écarts significatifs par rapport aux conditions habituelles.",
+      "wetDay": "Un jour humide est défini comme un jour avec plus de 1mm de précipitations. Les périodes sèches sont analysées pour optimiser la gestion de l'irrigation.",
+      "drought": "Les conditions de sécheresse (5 jours consécutifs avec moins de 5mm) nécessitent une attention particulière pour la gestion hydrique des cultures."
+    },
+    "noData": "Sélectionnez une période pour afficher les analyses météorologiques"
+  },
+  "satellite": {
+    "loading": "Chargement de l'analyse satellite...",
+    "noBoundary": {
+      "title": "Les données de délimitation de la parcelle sont requises pour l'analyse satellite.",
+      "description": "Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.",
+      "defineButton": "Définir les limites de la parcelle"
+    }
+  },
+  "harvests": {
+    "title": "Gestion des Récoltes",
+    "subtitle": "Suivez et gérez vos récoltes",
+    "loading": "Chargement de l'organisation...",
+    "searchPlaceholder": "Rechercher par culture, parcelle, ferme...",
+    "deleteError": "Erreur lors de la suppression de la récolte",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette récolte ?",
+    "noResults": "Aucun résultat trouvé",
+    "noHarvests": "Aucune récolte enregistrée",
+    "harvestsCount": "{{count}} récolte enregistrée",
+    "harvestsCount_plural": "{{count}} récoltes enregistrées",
+    "filters": "Filtres",
+    "export": "Exporter",
+    "newHarvest": "Nouvelle Récolte",
+    "filterLabels": {
+      "farm": "Ferme",
+      "status": "Statut",
+      "startDate": "Date début",
+      "endDate": "Date fin",
+      "allFarms": "Toutes les fermes",
+      "allStatuses": "Tous les statuts",
+      "reset": "Réinitialiser"
+    },
+    "statuses": {
+      "stored": "Stocké",
+      "in_delivery": "En livraison",
+      "delivered": "Livré",
+      "sold": "Vendu",
+      "spoiled": "Gâté"
+    },
+    "emptyState": {
+      "modifySearch": "Essayez de modifier votre recherche",
+      "startFirst": "Commencez par enregistrer votre première récolte"
+    }
+  },
+  "utilities": {
+    "title": "Gestion des Utilités",
+    "subtitle": "Suivez et gérez la consommation d'eau et d'électricité de vos fermes",
+    "loading": "Chargement de l'organisation...",
+    "loadingDashboard": "Chargement du tableau de bord..."
+  },
+  "receptionBatches": {
+    "title": "Gestion des Lots de Réception",
+    "subtitle": "Traçabilité de la réception et contrôle qualité des récoltes",
+    "loading": "Chargement de l'organisation..."
+  },
+  "analyses": {
+    "title": "Analyses de Sol, Plante et Eau",
+    "subtitle": "Gérez et suivez vos analyses agricoles",
+    "loading": "Chargement de l'organisation..."
+  },
+  "labServices": {
+    "title": "Services de Laboratoire",
+    "subtitle": "Programmez des analyses de sol et foliaires, suivez les échantillons et intégrez les résultats dans vos recommandations",
+    "loading": "Chargement de l'organisation..."
   }
 }
 

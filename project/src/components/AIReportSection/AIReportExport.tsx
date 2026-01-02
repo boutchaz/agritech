@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, FileText, Loader } from 'lucide-react';
+import { Download, Loader } from 'lucide-react';
 import jsPDF from 'jspdf';
 import type { AIReportSections } from '../../lib/api/ai-reports';
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -23,6 +24,7 @@ const mockModules: Module[] = [
 ];
 
 function ReceptionBatchesPage() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('reception-batches');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -70,7 +72,7 @@ function ReceptionBatchesPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('receptionBatches.loading')}</p>
         </div>
       </div>
     );
@@ -89,17 +91,17 @@ function ReceptionBatchesPage() {
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
-        <MobileNavBar title="Lots de Réception" />
+        <MobileNavBar title={t('receptionBatches.title')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: ClipboardCheck, label: 'Lots de Réception', isActive: true }
+              { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
             ]}
-            title="Gestion des Lots de Réception"
-            subtitle="Traçabilité de la réception et contrôle qualité des récoltes"
+            title={t('receptionBatches.title')}
+            subtitle={t('receptionBatches.subtitle')}
           />
         </div>
 

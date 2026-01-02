@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import ModernPageHeader from '../components/ModernPageHeader';
@@ -14,7 +15,6 @@ import HarvestStatistics from '../components/Harvests/HarvestStatistics';
 import type { Module } from '../types';
 import type { HarvestSummary, HarvestFilters } from '../types/harvests';
 import { format } from 'date-fns';
-// import { fr } from 'date-fns/locale';
 
 const mockModules: Module[] = [
   {
@@ -29,6 +29,7 @@ const mockModules: Module[] = [
 ];
 
 function HarvestsPage() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [activeModule, setActiveModule] = useState('harvests');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -76,7 +77,7 @@ function HarvestsPage() {
   };
 
   const handleDeleteHarvest = async (harvestId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette récolte ?')) return;
+    if (!confirm(t('harvests.deleteConfirm'))) return;
 
     try {
       await deleteHarvestMutation.mutateAsync({
@@ -85,7 +86,7 @@ function HarvestsPage() {
       });
     } catch (error) {
       console.error('Error deleting harvest:', error);
-      alert('Erreur lors de la suppression de la récolte');
+      alert(t('harvests.deleteError'));
     }
   };
 
@@ -138,7 +139,7 @@ function HarvestsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('harvests.loading')}</p>
         </div>
       </div>
     );
@@ -157,19 +158,19 @@ function HarvestsPage() {
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
         {/* Mobile Navigation Bar */}
-        <MobileNavBar title="Gestion des Récoltes" />
+        <MobileNavBar title={t('harvests.title')} />
 
         {/* Desktop Header */}
         <div className="hidden md:block">
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-              { icon: Package, label: 'Récoltes', isActive: true }
+              { icon: Package, label: t('harvests.title'), isActive: true }
             ]}
-            title="Gestion des Récoltes"
-            subtitle={`${filteredHarvests.length} récolte${filteredHarvests.length !== 1 ? 's' : ''} enregistrée${filteredHarvests.length !== 1 ? 's' : ''}`}
+            title={t('harvests.title')}
+            subtitle={t('harvests.harvestsCount', { count: filteredHarvests.length })}
             showSearch={true}
-            searchPlaceholder="Rechercher par culture, parcelle, ferme..."
+            searchPlaceholder={t('harvests.searchPlaceholder')}
             onSearch={setSearchQuery}
             actions={
               <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
@@ -178,7 +179,7 @@ function HarvestsPage() {
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
                 >
                   <Filter className="h-4 w-4" />
-                  Filtres
+                  {t('harvests.filters')}
                 </button>
 
                 <button
@@ -187,7 +188,7 @@ function HarvestsPage() {
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4" />
-                  Exporter
+                  {t('harvests.export')}
                 </button>
 
                 <button
@@ -196,7 +197,7 @@ function HarvestsPage() {
                   className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
-                  Nouvelle Récolte
+                  {t('harvests.newHarvest')}
                 </button>
               </div>
             }
@@ -211,7 +212,7 @@ function HarvestsPage() {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
             >
               <Plus className="h-5 w-5" />
-              Nouvelle Récolte
+              {t('harvests.newHarvest')}
             </button>
           </div>
 
@@ -221,19 +222,19 @@ function HarvestsPage() {
           {/* Filters Panel */}
           {showFilters && (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 space-y-4" data-tour="harvest-filters">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Filtres</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('harvests.filters')}</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Ferme
+                    {t('harvests.filterLabels.farm')}
                   </label>
                   <select
                     value={filters.farm_id || ''}
                     onChange={(e) => setFilters({ ...filters, farm_id: e.target.value || undefined })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">Toutes les fermes</option>
+                    <option value="">{t('harvests.filterLabels.allFarms')}</option>
                     {farms.map(farm => (
                       <option key={farm.id} value={farm.id}>{farm.name}</option>
                     ))}
@@ -242,25 +243,25 @@ function HarvestsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Statut
+                    {t('harvests.filterLabels.status')}
                   </label>
                   <select
                     value={filters.status || ''}
                     onChange={(e) => setFilters({ ...filters, status: e.target.value as any || undefined })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">Tous les statuts</option>
-                    <option value="stored">Stocké</option>
-                    <option value="in_delivery">En livraison</option>
-                    <option value="delivered">Livré</option>
-                    <option value="sold">Vendu</option>
-                    <option value="spoiled">Gâté</option>
+                    <option value="">{t('harvests.filterLabels.allStatuses')}</option>
+                    <option value="stored">{t('harvests.statuses.stored')}</option>
+                    <option value="in_delivery">{t('harvests.statuses.in_delivery')}</option>
+                    <option value="delivered">{t('harvests.statuses.delivered')}</option>
+                    <option value="sold">{t('harvests.statuses.sold')}</option>
+                    <option value="spoiled">{t('harvests.statuses.spoiled')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date début
+                    {t('harvests.filterLabels.startDate')}
                   </label>
                   <input
                     type="date"
@@ -272,7 +273,7 @@ function HarvestsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date fin
+                    {t('harvests.filterLabels.endDate')}
                   </label>
                   <input
                     type="date"
@@ -288,7 +289,7 @@ function HarvestsPage() {
                   onClick={() => setFilters({})}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
-                  Réinitialiser
+                  {t('harvests.filterLabels.reset')}
                 </button>
               </div>
             </div>
@@ -305,10 +306,10 @@ function HarvestsPage() {
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
               <Package className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {searchQuery ? 'Aucun résultat trouvé' : 'Aucune récolte enregistrée'}
+                {searchQuery ? t('harvests.noResults') : t('harvests.noHarvests')}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {searchQuery ? 'Essayez de modifier votre recherche' : 'Commencez par enregistrer votre première récolte'}
+                {searchQuery ? t('harvests.emptyState.modifySearch') : t('harvests.emptyState.startFirst')}
               </p>
               {!searchQuery && (
                 <button
@@ -316,7 +317,7 @@ function HarvestsPage() {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
                 >
                   <Plus className="h-4 w-4" />
-                  Nouvelle Récolte
+                  {t('harvests.newHarvest')}
                 </button>
               )}
             </div>

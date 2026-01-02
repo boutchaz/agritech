@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import Sidebar from '../components/Sidebar';
 import AnalysisPage from '../components/AnalysisPage';
@@ -33,6 +34,7 @@ const mockModules: Module[] = [
 ];
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm: _currentFarm } = useAuth();
   const [activeModule, setActiveModule] = useState('analyses');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -48,7 +50,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('analyses.loading')}</p>
         </div>
       </div>
     );
@@ -68,10 +70,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-            { icon: Beaker, label: 'Analyses', isActive: true }
+            { icon: Beaker, label: t('analyses.title'), isActive: true }
           ]}
-          title="Analyses de Sol, Plante et Eau"
-          subtitle="Gérez et suivez vos analyses agricoles"
+          title={t('analyses.title')}
+          subtitle={t('analyses.subtitle')}
         />
 
         {/* Lab Services Banner */}

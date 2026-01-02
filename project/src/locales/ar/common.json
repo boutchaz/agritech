@@ -685,12 +685,45 @@
           "soil": "تحليل التربة",
           "satellite": "الصور الفضائية",
           "weather": "الطقس والمناخ",
+          "production": "ذكاء الإنتاج",
           "profitability": "الربحية",
           "reports": "التقارير"
         },
         "breadcrumbs": {
           "farm": "المزرعة",
           "parcels": "القطع"
+        },
+        "overview": {
+          "noSatelliteData": "بيانات الأقمار الصناعية غير متوفرة",
+          "noSatelliteDataDesc": "لم يتم العثور على بيانات أقمار صناعية لهذه القطعة. انتقل إلى علامة التبويب 'الأقمار الصناعية' لجلب البيانات.",
+          "goToSatellite": "الذهاب إلى تحليل الأقمار الصناعية",
+          "refreshData": "تحديث البيانات",
+          "irrigationIndex": "مؤشر الري",
+          "basedOnNdmi": "بناءً على NDMI",
+          "expectedYield": "المحصول المتوقع",
+          "ndvi": "NDVI",
+          "updatedOn": "تم التحديث في",
+          "vegetationHealth": "صحة النباتات",
+          "summary": "ملخص",
+          "area": "المساحة",
+          "notDefined": "غير محددة",
+          "soilType": "نوع التربة",
+          "irrigation": "الري",
+          "treeType": "نوع الشجرة",
+          "variety": "الصنف",
+          "plantingYear": "سنة الزراعة",
+          "lastUpdate": "آخر تحديث",
+          "description": "الوصف",
+          "healthStatus": {
+            "excellent": "ممتازة",
+            "good": "جيدة",
+            "average": "متوسطة",
+            "low": "ضعيفة",
+            "critical": "حرجة"
+          }
+        },
+        "reports": {
+          "loading": "جاري تحميل منشئ التقارير..."
         }
       },
       "soil": {
@@ -2903,15 +2936,24 @@
       "title": "البيانات المتاحة",
       "loading": "جاري التحقق من البيانات...",
       "statusExcellent": "تغطية ممتازة",
+      "statusGood": "تغطية جيدة",
+      "statusBasic": "تغطية أساسية",
+      "statusInsufficient": "بيانات غير كافية",
       "statusPartial": "تغطية جزئية",
       "statusLimited": "تغطية محدودة",
+      "requiredSection": "مطلوب",
+      "optionalSection": "اختياري (يحسن الدقة)",
+      "optional": "اختياري",
       "satellite": "بيانات الأقمار الصناعية",
       "satelliteDetail": "{{count}} نقاط",
       "soil": "تحليل التربة",
       "water": "تحليل المياه",
       "plant": "تحليل النبات",
       "weather": "بيانات الطقس",
-      "lowCoverageWarning": "سيكون تقرير الذكاء الاصطناعي أقل دقة مع البيانات المحدودة. أضف تحليلات للحصول على نتائج أفضل."
+      "canGenerateBasic": "يمكنك إنشاء تقرير أساسي. أضف تحليلات لمزيد من الدقة.",
+      "cannotGenerate": "بيانات الأقمار الصناعية والطقس مطلوبة لإنشاء تقرير.",
+      "lowCoverageWarning": "سيكون تقرير الذكاء الاصطناعي أقل دقة مع البيانات المحدودة. أضف تحليلات للحصول على نتائج أفضل.",
+      "addAnalysis": "إضافة"
     }
   },
   "aiSettings": {
@@ -3058,5 +3100,116 @@
       "stockTransfer": "التحويل بين المستودعات",
       "stockReconciliation": "تعديل كميات المخزون"
     }
+  },
+  "weather": {
+    "loading": "جاري تحميل تحليلات الطقس...",
+    "loadingFallback": "جاري تحميل بيانات الطقس...",
+    "errorTitle": "خطأ في التحميل",
+    "noBoundary": {
+      "title": "بيانات موقع القطعة مطلوبة لتحليل الطقس.",
+      "description": "يرجى تحديد حدود القطعة للوصول إلى تحليلات الطقس والمناخ."
+    },
+    "title": "تحليلات الطقس والمناخ",
+    "comparisonWithNormals": "مقارنة مع المعدلات المناخية",
+    "analysisPeriod": "فترة التحليل:",
+    "timeRanges": {
+      "last3Months": "آخر 3 أشهر",
+      "last6Months": "آخر 6 أشهر",
+      "last12Months": "آخر 12 شهراً",
+      "yearToDate": "منذ بداية السنة",
+      "custom": "مخصصة"
+    },
+    "customDates": {
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية"
+    },
+    "dataRange": "البيانات من {{startDate}} إلى {{endDate}}",
+    "location": "الموقع",
+    "forecast": {
+      "title": "توقعات الطقس لـ 15 يوماً"
+    },
+    "summary": {
+      "avgTemperature": "متوسط درجة الحرارة",
+      "totalPrecipitation": "إجمالي التساقطات",
+      "rainyDays": "أيام المطر",
+      "analyzedPeriod": "الفترة المحللة",
+      "daysAbove1mm": "أيام بأكثر من 1 مم"
+    },
+    "sections": {
+      "temperatureAnalysis": "تحليل درجات الحرارة",
+      "precipitationAnalysis": "تحليل التساقطات",
+      "dryWetConditions": "الظروف الجافة والرطبة",
+      "insightsRecommendations": "التحليلات والتوصيات"
+    },
+    "insights": {
+      "comparison": "تتم مقارنة البيانات مع المعدلات المناخية طويلة المدى (LTN) لتحديد الانحرافات الكبيرة عن الظروف المعتادة.",
+      "wetDay": "يُعرَّف اليوم الرطب بأنه يوم به أكثر من 1 مم من التساقطات. يتم تحليل الفترات الجافة لتحسين إدارة الري.",
+      "drought": "ظروف الجفاف (5 أيام متتالية بأقل من 5 مم) تتطلب اهتماماً خاصاً لإدارة المياه للمحاصيل."
+    },
+    "noData": "اختر فترة لعرض تحليلات الطقس"
+  },
+  "satellite": {
+    "loading": "جاري تحميل تحليل الأقمار الصناعية...",
+    "noBoundary": {
+      "title": "بيانات حدود القطعة مطلوبة لتحليل الأقمار الصناعية.",
+      "description": "يرجى تحديد حدود القطعة للوصول إلى ميزات الصور الفضائية.",
+      "defineButton": "تحديد حدود القطعة"
+    }
+  },
+  "harvests": {
+    "title": "إدارة الحصاد",
+    "subtitle": "تتبع وإدارة محاصيلك",
+    "loading": "جاري تحميل المنظمة...",
+    "searchPlaceholder": "البحث حسب المحصول، القطعة، المزرعة...",
+    "deleteError": "خطأ في حذف الحصاد",
+    "deleteConfirm": "هل أنت متأكد من رغبتك في حذف هذا الحصاد؟",
+    "noResults": "لا توجد نتائج",
+    "noHarvests": "لا توجد محاصيل مسجلة",
+    "harvestsCount": "{{count}} حصاد مسجل",
+    "harvestsCount_plural": "{{count}} محاصيل مسجلة",
+    "filters": "الفلاتر",
+    "export": "تصدير",
+    "newHarvest": "حصاد جديد",
+    "filterLabels": {
+      "farm": "المزرعة",
+      "status": "الحالة",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "allFarms": "جميع المزارع",
+      "allStatuses": "جميع الحالات",
+      "reset": "إعادة تعيين"
+    },
+    "statuses": {
+      "stored": "مخزن",
+      "in_delivery": "قيد التوصيل",
+      "delivered": "تم التوصيل",
+      "sold": "تم البيع",
+      "spoiled": "تالف"
+    },
+    "emptyState": {
+      "modifySearch": "حاول تعديل بحثك",
+      "startFirst": "ابدأ بتسجيل حصادك الأول"
+    }
+  },
+  "utilities": {
+    "title": "إدارة المرافق",
+    "subtitle": "تتبع وإدارة استهلاك المياه والكهرباء لمزارعك",
+    "loading": "جاري تحميل المنظمة...",
+    "loadingDashboard": "جاري تحميل لوحة التحكم..."
+  },
+  "receptionBatches": {
+    "title": "إدارة دفعات الاستلام",
+    "subtitle": "تتبع الاستلام ومراقبة جودة المحاصيل",
+    "loading": "جاري تحميل المنظمة..."
+  },
+  "analyses": {
+    "title": "تحليلات التربة والنبات والمياه",
+    "subtitle": "إدارة ومتابعة تحليلاتك الزراعية",
+    "loading": "جاري تحميل المنظمة..."
+  },
+  "labServices": {
+    "title": "خدمات المختبر",
+    "subtitle": "جدولة تحليلات التربة والأوراق، تتبع العينات ودمج النتائج في توصياتك",
+    "loading": "جاري تحميل المنظمة..."
   }
 }
