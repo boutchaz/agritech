@@ -21,7 +21,7 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
     queryKey: ['tasks', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      return tasksApi.getAll(organizationId, filters);
+      return tasksApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -32,7 +32,7 @@ export function useTask(organizationId: string | null, taskId: string | null) {
     queryKey: ['task', organizationId, taskId],
     queryFn: async () => {
       if (!organizationId || !taskId) return null;
-      return tasksApi.getById(organizationId, taskId);
+      return tasksApi.getById(taskId, organizationId);
     },
     enabled: !!organizationId && !!taskId,
   });
@@ -109,7 +109,7 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: async (request: CreateTaskRequest & { organization_id: string }) => {
       const { organization_id, ...taskData } = request;
-      return tasksApi.create(organization_id, taskData);
+      return tasksApi.create(taskData, organization_id);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
@@ -123,7 +123,7 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: async ({ taskId, organizationId, updates }: { taskId: string; organizationId: string; updates: UpdateTaskRequest }) => {
-      return tasksApi.update(organizationId, taskId, updates);
+      return tasksApi.update(taskId, updates, organizationId);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
@@ -138,7 +138,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async ({ taskId, organizationId }: { taskId: string; organizationId: string }) => {
-      await tasksApi.delete(organizationId, taskId);
+      await tasksApi.delete(taskId, organizationId);
       return { taskId, organizationId };
     },
     onSuccess: (data) => {

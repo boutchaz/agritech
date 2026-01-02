@@ -97,7 +97,7 @@ export function PieceWorkEntry({
     queryKey: ['workers', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-      return workersApi.getActive(currentOrganization.id);
+      return workersApi.getActive({ is_active: true }, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -117,10 +117,10 @@ export function PieceWorkEntry({
     queryKey: ['tasks', currentOrganization?.id, currentFarm?.id],
     queryFn: async () => {
       if (!currentOrganization?.id || !currentFarm?.id) return [];
-      return tasksApi.getAll(currentOrganization.id, {
+      return tasksApi.getAll({
         farm_id: currentFarm.id,
         status: ['assigned', 'in_progress', 'completed'],
-      });
+      }, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });

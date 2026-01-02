@@ -208,7 +208,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const data = await warehousesApi.getAll(currentOrganization.id);
+      const data = await warehousesApi.getAll(undefined, currentOrganization.id);
       setWarehouses(data || []);
     } catch (error) {
       console.error('Error fetching warehouses:', error);
