@@ -40,9 +40,11 @@ function WorkersPage() {
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      setFarms(data || []);
+      // Ensure data is always an array
+      setFarms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching farms:', error);
+      setFarms([]); // Set empty array on error
     } finally {
       setFarmsLoading(false);
     }

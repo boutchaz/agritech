@@ -42,6 +42,9 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [workerToPay, setWorkerToPay] = useState<Worker | null>(null);
 
+  // Ensure farms is always an array
+  const farmsArray = Array.isArray(farms) ? farms : [];
+
   const { data: workers = [], isLoading } = useWorkers(organizationId);
   const deactivateWorker = useDeactivateWorker();
   const deleteWorker = useDeleteWorker();
@@ -221,7 +224,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
             >
               <option value="all">{t('workers.filters.allFarms')}</option>
-              {farms.map(farm => (
+              {farmsArray.map(farm => (
                 <option key={farm.id} value={farm.id}>
                   {farm.name}
                 </option>
@@ -600,7 +603,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
         open={showForm}
         worker={selectedWorker}
         organizationId={organizationId}
-        farms={farms}
+        farms={farmsArray}
         onClose={() => {
           setShowForm(false);
           setSelectedWorker(null);
