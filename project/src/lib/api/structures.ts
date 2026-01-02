@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { requireOrganizationId } from './createCrudApi';
 
 export interface Structure {
   id: string;
@@ -80,7 +81,7 @@ export const structuresApi = {
    * Create a new structure
    */
   async create(data: CreateStructureInput, organizationId?: string): Promise<Structure> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'structuresApi.create');
     return apiClient.post<Structure>(getBaseUrl(organizationId), data);
   },
 
@@ -88,17 +89,19 @@ export const structuresApi = {
    * Update a structure
    */
   async update(
-    organizationId: string,
     id: string,
     data: UpdateStructureInput,
+    organizationId?: string,
   ): Promise<Structure> {
-    return apiClient.patch<Structure>(`${getBaseUrl(organizationId)}/${id}`, data);
+    requireOrganizationId(organizationId, 'structuresApi.update');
+    return apiClient.patch<Structure>(`${getBaseUrl(organizationId!)}/${id}`, data);
   },
 
   /**
    * Delete a structure (soft delete)
    */
-  async delete(organizationId: string, id: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${getBaseUrl(organizationId)}/${id}`);
+  async delete(id: string, organizationId?: string): Promise<{ message: string }> {
+    requireOrganizationId(organizationId, 'structuresApi.delete');
+    return apiClient.delete<{ message: string }>(`${getBaseUrl(organizationId!)}/${id}`);
   },
 };

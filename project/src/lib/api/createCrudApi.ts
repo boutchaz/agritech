@@ -1,6 +1,17 @@
 import { apiClient } from '../api-client';
 
 /**
+ * Validate that organizationId is provided
+ * @throws Error if organizationId is missing
+ */
+export function requireOrganizationId(organizationId?: string, methodName?: string): asserts organizationId is string {
+  if (!organizationId) {
+    const context = methodName ? ` in ${methodName}` : '';
+    throw new Error(`organizationId is required${context}`);
+  }
+}
+
+/**
  * Utility to build URL query string from filters object
  */
 export function buildQueryUrl(baseUrl: string, filters?: Record<string, unknown>): string {
@@ -12,7 +23,12 @@ export function buildQueryUrl(baseUrl: string, filters?: Record<string, unknown>
 
   for (const [key, value] of Object.entries(filters)) {
     if (value !== undefined && value !== null && value !== '') {
-      params.append(key, String(value));
+      // Handle arrays by joining with comma
+      if (Array.isArray(value)) {
+        params.append(key, value.join(','));
+      } else {
+        params.append(key, String(value));
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
 import type {
   ReceptionBatch,
   CreateReceptionBatchDto,
@@ -14,7 +15,7 @@ export const receptionBatchesApi = {
    * Get all reception batches with optional filters
    */
   async getAll(filters?: ReceptionBatchFilters, organizationId?: string): Promise<ReceptionBatch[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'receptionBatchesApi.getAll');
     const params = new URLSearchParams();
 
     if (filters?.warehouse_id) {
@@ -63,7 +64,7 @@ export const receptionBatchesApi = {
    * Get a single reception batch by ID
    */
   async getOne(id: string, organizationId?: string): Promise<ReceptionBatch> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'receptionBatchesApi.getOne');
     return apiClient.get<ReceptionBatch>(
       `/api/v1/organizations/${organizationId}/reception-batches/${id}`
     );
@@ -78,7 +79,7 @@ export const receptionBatchesApi = {
    * Step 1: Create initial reception batch
    */
   async create(data: CreateReceptionBatchDto, organizationId?: string): Promise<ReceptionBatch> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'receptionBatchesApi.create');
     return apiClient.post<ReceptionBatch>(
       `/api/v1/organizations/${organizationId}/reception-batches`,
       data

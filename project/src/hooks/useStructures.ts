@@ -14,7 +14,7 @@ export const useStructures = () => {
     queryKey: ['structures', currentOrganization?.id],
     queryFn: async (): Promise<Structure[]> => {
       if (!currentOrganization?.id) return [];
-      return structuresApi.getAll(currentOrganization.id);
+      return structuresApi.getAll(undefined, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -28,7 +28,7 @@ export const useStructure = (id: string | undefined) => {
     queryKey: ['structures', currentOrganization?.id, id],
     queryFn: async (): Promise<Structure | null> => {
       if (!currentOrganization?.id || !id) return null;
-      return structuresApi.getOne(currentOrganization.id, id);
+      return structuresApi.getOne(id, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!id,
     staleTime: 2 * 60 * 1000,
@@ -44,7 +44,7 @@ export const useCreateStructure = () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return structuresApi.create(currentOrganization.id, data);
+      return structuresApi.create(data, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['structures', currentOrganization?.id] });
@@ -61,7 +61,7 @@ export const useUpdateStructure = () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return structuresApi.update(currentOrganization.id, id, data);
+      return structuresApi.update(id, data, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['structures', currentOrganization?.id] });
@@ -81,7 +81,7 @@ export const useDeleteStructure = () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return structuresApi.delete(currentOrganization.id, id);
+      return structuresApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['structures', currentOrganization?.id] });

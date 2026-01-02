@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { requireOrganizationId } from './createCrudApi';
 
 export type UtilityType = 'electricity' | 'water' | 'diesel' | 'gas' | 'internet' | 'phone' | 'other';
 export type PaymentStatus = 'pending' | 'paid' | 'overdue';
@@ -56,7 +57,7 @@ export const utilitiesApi = {
    * Get all utilities for a farm
    */
   async getAll(farmId: string, organizationId?: string): Promise<Utility[]> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'utilitiesApi.getAll');
     return apiClient.get<Utility[]>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`);
   },
 
@@ -64,7 +65,7 @@ export const utilitiesApi = {
    * Get a single utility by ID
    */
   async getOne(utilityId: string, farmId: string, organizationId?: string): Promise<Utility> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'utilitiesApi.getOne');
     return apiClient.get<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`);
   },
 
@@ -77,7 +78,7 @@ export const utilitiesApi = {
    * Create a new utility
    */
   async create(data: CreateUtilityInput, organizationId?: string): Promise<Utility> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'utilitiesApi.create');
     return apiClient.post<Utility>(`/api/v1/organizations/${organizationId}/farms/${data.farm_id}/utilities`, data);
   },
 
@@ -85,7 +86,7 @@ export const utilitiesApi = {
    * Update a utility
    */
   async update(utilityId: string, data: UpdateUtilityInput, farmId: string, organizationId?: string): Promise<Utility> {
-    if (!organizationId) throw new Error('organizationId is required');
+    requireOrganizationId(organizationId, 'utilitiesApi.update');
     return apiClient.patch<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, data);
   },
 
