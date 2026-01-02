@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { farmsApi } from '../lib/api/farms';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -38,6 +39,7 @@ function WorkersPage() {
   const [modules] = useState(mockModules);
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
+  const { style: sidebarStyle } = useSidebarMargin();
   
   // Check if we're on a child route (like /workers/:workerId)
   const isChildRoute = location.pathname !== '/workers' && location.pathname !== '/workers/';
@@ -89,7 +91,7 @@ function WorkersPage() {
   // Access denied - user doesn't have permission to view workers
   if (!canReadWorkers) {
     return (
-      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+      <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -97,7 +99,7 @@ function WorkersPage() {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -136,7 +138,7 @@ function WorkersPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -144,7 +146,7 @@ function WorkersPage() {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

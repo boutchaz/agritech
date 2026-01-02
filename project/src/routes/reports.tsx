@@ -6,6 +6,7 @@ import Reports from '../components/Reports'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
 import { useState } from 'react'
 import type { Module } from '../types'
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -28,6 +29,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('reports');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -46,7 +48,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -54,7 +56,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">

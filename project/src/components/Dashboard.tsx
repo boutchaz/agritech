@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Droplets, Thermometer, Wrench, AlertTriangle, MapPin } from 'lucide-react';
+import { Activity, AlertTriangle, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -11,6 +11,8 @@ import StockAlertsWidget from './Dashboard/StockAlertsWidget';
 import WorkersActivityWidget from './Dashboard/WorkersActivityWidget';
 import AnalysisWidget from './Dashboard/AnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
+import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
+import AccountingWidget from './Dashboard/AccountingWidget';
 import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
@@ -30,33 +32,6 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
     return latestReadings[type]?.value.toFixed(1) || '0';
   };
 
-  const infrastructureStatus = {
-    pump: {
-      status: 'active',
-      lastStarted: new Date().toLocaleTimeString(),
-      flowRate: 25.5
-    },
-    basin: {
-      currentLevel: 850,
-      capacity: 1000,
-      lastUpdated: new Date().toLocaleTimeString()
-    },
-    irrigation: {
-      status: 'active',
-      startTime: '08:00',
-      duration: 120,
-      sector: 'Secteur A'
-    },
-    maintenance: [
-      {
-        id: 1,
-        type: 'Pompe principale',
-        status: 'En cours',
-        startDate: '2024-05-15',
-        expectedEndDate: '2024-05-16'
-      }
-    ]
-  };
 
   // Get summary data from dashboard API
   const parcelCount = dashboardData?.parcels.total ?? 0;
@@ -132,103 +107,6 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
           </div>
         );
 
-      case 'climate':
-        return settings.showClimateData && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.climate.temperature')}</p>
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2">
-                  {getSensorValue('temperature')}°C
-                </h3>
-              </div>
-              <Thermometer className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 flex-shrink-0" />
-            </div>
-            <div className="mt-3 sm:mt-4">
-              <div className="h-2 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <div
-                  className="h-2 bg-red-500 rounded-full transition-all duration-300"
-                  style={{ width: `${(Number(getSensorValue('temperature')) / 50) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'irrigation':
-        return settings.showIrrigationData && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.irrigation.title')}</p>
-                <div className="flex items-center space-x-2 mt-1 sm:mt-2">
-                  <h3 className={`text-base sm:text-lg font-bold ${infrastructureStatus.irrigation.status === 'active'
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-600 dark:text-gray-400'
-                    }`}>
-                    {infrastructureStatus.irrigation.status === 'active' ? t('dashboard.widgets.irrigation.active') : t('dashboard.widgets.irrigation.stopped')}
-                  </h3>
-                  <Droplets className={`h-4 w-4 sm:h-5 sm:w-5 ${infrastructureStatus.irrigation.status === 'active'
-                    ? 'text-green-500'
-                    : 'text-gray-500'
-                    }`} />
-                </div>
-              </div>
-            </div>
-            {infrastructureStatus.irrigation.status === 'active' && (
-              <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.sector')}</span>
-                  <span className="font-medium">{infrastructureStatus.irrigation.sector}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.start')}</span>
-                  <span className="font-medium">{infrastructureStatus.irrigation.startTime}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">{t('dashboard.widgets.irrigation.duration')}</span>
-                  <span className="font-medium">{infrastructureStatus.irrigation.duration} min</span>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'maintenance':
-        return settings.showMaintenanceData && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.maintenance.title')}</p>
-                <div className="flex items-center space-x-2 mt-1 sm:mt-2">
-                  <h3 className="text-base sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                    {infrastructureStatus.maintenance.length} {t('dashboard.widgets.maintenance.inProgress')}
-                  </h3>
-                  <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2 sm:space-y-3">
-              {infrastructureStatus.maintenance.map(item => (
-                <div
-                  key={item.id}
-                  className="p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg"
-                >
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-orange-700 dark:text-orange-300">
-                      {item.type}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-orange-600 dark:text-orange-400 space-y-0.5">
-                    <p>{t('dashboard.widgets.maintenance.start')}: {new Date(item.startDate).toLocaleDateString()}</p>
-                    <p>{t('dashboard.widgets.maintenance.expectedEnd')}: {new Date(item.expectedEndDate).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
 
       case 'production':
         return settings.showProductionData && (
@@ -294,18 +172,24 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         </div>
       )}
 
-      {/* Main Widgets Row */}
+      {/* Row 1: Key Performance Indicators */}
       <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
-        <WorkersActivityWidget />
         {settings.showStockAlerts && <StockAlertsWidget />}
         <HarvestSummaryWidget />
+        <SalesOverviewWidget />
       </div>
 
-      {/* Tasks and Soil Row */}
+      {/* Row 2: Action Items & Financial Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {settings.showTaskAlerts && <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>}
+        <AccountingWidget />
+      </div>
+
+      {/* Row 3: Operational Data */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {settings.showSoilData && <AnalysisWidget />}
+        <WorkersActivityWidget />
       </div>
 
       {/* Additional Widgets from Settings */}

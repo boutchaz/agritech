@@ -8,6 +8,7 @@ import ModernPageHeader from '../components/ModernPageHeader';
 import SubscriptionBanner from '../components/SubscriptionBanner';
 import { Building2, Beaker, FlaskConical, ArrowRight } from 'lucide-react';
 import type { Module } from '../types';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -39,6 +40,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('analyses');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -57,7 +59,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -65,7 +67,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <SubscriptionBanner />
         <ModernPageHeader
           breadcrumbs={[

@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import OrganizationSwitcher from '../components/OrganizationSwitcher'
 import FarmSwitcher from '../components/FarmSwitcher'
@@ -10,6 +10,29 @@ import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
 import { LevelUpSuggestion } from '../components/adaptive'
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed'
+
+// Hook to detect desktop screen size (lg breakpoint = 1024px)
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth >= 1024
+  )
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+
+    // Set initial value
+    setIsDesktop(mediaQuery.matches)
+
+    // Listen for changes
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  return isDesktop
+}
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -32,6 +55,24 @@ function AuthenticatedLayout() {
   const { data: subscription, isLoading: subscriptionLoading } = useSubscription()
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [activeModule, setActiveModule] = useState('dashboard')
+  const isDesktop = useIsDesktop()
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
+    return saved === 'true'
+  })
+
+  // Listen for sidebar collapse changes
+  useEffect(() => {
+    const handleSidebarCollapse = (e: CustomEvent<{ collapsed: boolean }>) => {
+      setIsSidebarCollapsed(e.detail.collapsed)
+    }
+
+    window.addEventListener('sidebarCollapse', handleSidebarCollapse as EventListener)
+
+    return () => {
+      window.removeEventListener('sidebarCollapse', handleSidebarCollapse as EventListener)
+    }
+  }, [])
 
   // Mock modules data - this should come from your state management
   const modules = [
@@ -85,9 +126,12 @@ function AuthenticatedLayout() {
 
   console.log('✅ ACCESS GRANTED')
 
+  // Calculate sidebar width for main content offset
+  const sidebarWidth = isDesktop ? (isSidebarCollapsed ? 64 : 256) : 0
+
   return (
     <div className={isDarkMode ? 'dark' : ''}>
-      <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
         <Sidebar
           modules={modules}
           activeModule={activeModule}
@@ -95,7 +139,11 @@ function AuthenticatedLayout() {
           isDarkMode={isDarkMode}
           onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         />
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* Main content with margin for fixed sidebar (desktop only) */}
+        <div
+          className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+          style={{ marginLeft: `${sidebarWidth}px` }}
+        >
           <LegacyUserBanner />
           <SubscriptionBanner />
           <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

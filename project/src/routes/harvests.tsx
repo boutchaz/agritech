@@ -15,6 +15,7 @@ import HarvestStatistics from '../components/Harvests/HarvestStatistics';
 import type { Module } from '../types';
 import type { HarvestSummary, HarvestFilters } from '../types/harvests';
 import { format } from 'date-fns';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -42,6 +43,7 @@ function HarvestsPage() {
   // Filters state
   const [filters, setFilters] = useState<HarvestFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const { style: sidebarStyle } = useSidebarMargin();
   const navigate = useNavigate();
 
   // Data fetching
@@ -146,7 +148,7 @@ function HarvestsPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -156,7 +158,7 @@ function HarvestsPage() {
         onThemeToggle={toggleTheme}
       />
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('harvests.title')} />
 

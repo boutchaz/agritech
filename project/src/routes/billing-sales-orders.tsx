@@ -12,6 +12,7 @@ import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useSalesOrders, type SalesOrder } from '../hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '../components/Billing/SalesOrderDetailDialog';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
   const [modules, _setModules] = useState(mockModules);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
   const [statusFilter, _setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
 
   const { data: orders = [], isLoading, error } = useSalesOrders(statusFilter);
@@ -107,7 +109,7 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="min-h-screen">
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -115,7 +117,7 @@ const AppContent: React.FC = () => {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -145,7 +147,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -153,7 +155,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

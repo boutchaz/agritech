@@ -12,6 +12,7 @@ import { withRouteProtection } from '../components/authorization/withRouteProtec
 import { useInvoices, useInvoiceStats } from '../hooks/useInvoices';
 import { useAccountingPayments, usePaymentStats } from '../hooks/useAccountingPayments';
 import { useJournalStats } from '../hooks/useJournalEntries';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -34,6 +35,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('accounting');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
   const navigate = useNavigate();
 
   // Real data from hooks
@@ -132,7 +134,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -140,7 +142,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

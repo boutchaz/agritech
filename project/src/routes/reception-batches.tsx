@@ -10,6 +10,7 @@ import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
 import { Building2, ClipboardCheck } from 'lucide-react';
 import type { Module } from '../types';
 import type { ReceptionBatch } from '@/types/reception';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -30,6 +31,7 @@ function ReceptionBatchesPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
   const [showForm, setShowForm] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
   const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
   const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
@@ -79,7 +81,7 @@ function ReceptionBatchesPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -89,7 +91,7 @@ function ReceptionBatchesPage() {
         onThemeToggle={toggleTheme}
       />
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('receptionBatches.title')} />
 

@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import type { Module } from '../types';
 import { useAutoStartTour } from '@/contexts/TourContext';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -33,6 +34,7 @@ function FarmHierarchyPage() {
   const [activeModule, setActiveModule] = useState('farm-hierarchy');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   // Auto-start farm management tour for first-time visitors
   useAutoStartTour('farm-management', 1500);
@@ -65,7 +67,7 @@ function FarmHierarchyPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -73,7 +75,7 @@ function FarmHierarchyPage() {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

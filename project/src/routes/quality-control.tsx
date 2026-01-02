@@ -5,6 +5,7 @@ import ModernPageHeader from '../components/ModernPageHeader';
 import { ClipboardCheck, Building2 } from 'lucide-react';
 import type { Module } from '../types';
 import { useState } from 'react';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -23,6 +24,7 @@ function QualityControlPage() {
   const [activeModule, setActiveModule] = useState('quality-control');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -41,7 +43,7 @@ function QualityControlPage() {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -50,7 +52,7 @@ function QualityControlPage() {
         onThemeToggle={toggleTheme}
       />
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

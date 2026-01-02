@@ -33,6 +33,8 @@ import {
   Bell,
   BarChart3,
   ExternalLink,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -42,6 +44,11 @@ import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { cn } from '../lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from './ui/popover';
 
 interface SidebarProps {
   modules: Module[];
@@ -50,6 +57,8 @@ interface SidebarProps {
   isDarkMode: boolean;
   onThemeToggle: () => void;
 }
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed';
 
 const Sidebar: React.FC<SidebarProps> = ({
   modules,
@@ -63,6 +72,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { currentOrganization } = useAuth();
   const isRTL = i18n.language === 'ar';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === 'true';
+  });
+
+  const toggleCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newValue));
+    // Dispatch custom event for layout to listen
+    window.dispatchEvent(new CustomEvent('sidebarCollapse', { detail: { collapsed: newValue } }));
+  };
 
   const currentPath = location.pathname;
 
@@ -200,7 +221,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const getButtonClassName = (isActive: boolean, additionalClasses?: string) => {
     return cn(
       "w-full text-gray-600 dark:text-gray-400 h-9",
-      isRTL ? "flex-row-reverse justify-end text-right" : "justify-start",
+      isCollapsed ? "lg:justify-center lg:px-2" : isRTL ? "flex-row-reverse justify-end text-right" : "justify-start",
       isActive && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
       additionalClasses
     );
@@ -209,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const getSubItemClassName = (isActive: boolean) => {
     return cn(
       "w-full text-gray-600 dark:text-gray-400 h-8 text-sm",
-      isRTL ? "flex-row-reverse justify-end text-right pr-8" : "justify-start pl-8",
+      isCollapsed ? "lg:justify-center lg:px-2 lg:pl-2" : isRTL ? "flex-row-reverse justify-end text-right pr-8" : "justify-start pl-8",
       isActive && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
     );
   };
@@ -217,17 +238,26 @@ const Sidebar: React.FC<SidebarProps> = ({
   const getSectionHeaderClassName = () => {
     return cn(
       "w-full justify-between px-3 h-9 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
+      isCollapsed && "lg:justify-center lg:px-2",
       isRTL && "flex-row-reverse text-right"
     );
   };
 
   const renderIcon = (IconComponent: React.ComponentType<{ className?: string }>, className?: string) => {
-    return <IconComponent className={cn("h-4 w-4 flex-shrink-0", isRTL ? "ml-3" : "mr-3", className)} />;
+    return <IconComponent className={cn(
+      "h-4 w-4 flex-shrink-0",
+      isCollapsed ? "lg:mx-auto" : isRTL ? "ml-3" : "mr-3",
+      className
+    )} />;
   };
 
   const renderText = (text: string) => {
     return (
-      <span className={cn("flex-1 truncate", isRTL ? "text-right" : "text-left")}>
+      <span className={cn(
+        "flex-1 truncate",
+        isRTL ? "text-right" : "text-left",
+        isCollapsed && "lg:hidden"
+      )}>
         {text}
       </span>
     );
@@ -235,9 +265,66 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const renderChevron = (isOpen: boolean) => {
     return isOpen
-      ? <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />
-      : <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400" />;
+      ? <ChevronDown className={cn("h-4 w-4 flex-shrink-0 text-gray-400", isCollapsed && "lg:hidden")} />
+      : <ChevronRight className={cn("h-4 w-4 flex-shrink-0 text-gray-400", isCollapsed && "lg:hidden")} />;
   };
+
+  const renderSectionTitle = (text: string) => {
+    return <span className={cn(isCollapsed && "lg:hidden")}>{text}</span>;
+  };
+
+  // Component for collapsed section with hover popover
+  const CollapsedSectionPopover: React.FC<{
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+    children: React.ReactNode;
+  }> = ({ icon: Icon, title, children }) => {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full h-9 justify-center px-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side={isRTL ? "left" : "right"}
+          align="start"
+          sideOffset={8}
+          className="w-48 p-1 bg-white dark:bg-gray-800"
+        >
+          <div className="px-2 py-1.5 text-sm font-medium text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 mb-1">
+            {title}
+          </div>
+          <div className="space-y-0.5">
+            {children}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  // Submenu item for collapsed popover
+  const PopoverNavItem: React.FC<{
+    path: string;
+    label: string;
+    isActive: boolean;
+  }> = ({ path, label, isActive }) => (
+    <Button
+      variant="ghost"
+      className={cn(
+        "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400",
+        isActive && "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"
+      )}
+      onClick={(e) => handleNavigation(path, e)}
+    >
+      {label}
+    </Button>
+  );
 
   return (
     <>
@@ -264,33 +351,42 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar */}
-      <div 
+      <div
         data-tour="sidebar"
         className={cn(
-          "fixed lg:static inset-y-0 z-50",
+          "fixed inset-y-0 z-50",
           isRTL ? "right-0 border-l" : "left-0 border-r",
-          "h-screen w-64 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
-          "transform transition-transform duration-300 ease-in-out",
+          "h-screen bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
+          "transform transition-all duration-300 ease-in-out",
+          isCollapsed ? "lg:w-16 w-64" : "w-64",
           isMobileMenuOpen ? "translate-x-0" : isRTL ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )} 
+        )}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
 
         {/* Header */}
-        <div className={cn("flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800", isRTL && "text-right")}>
+        <div className={cn(
+          "flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+          isCollapsed ? "lg:p-2 p-4" : "p-4",
+          isRTL && "text-right"
+        )}>
           <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-            <div className={cn("flex items-center min-w-0 flex-1 gap-3", isRTL && "flex-row-reverse")}>
+            <div className={cn(
+              "flex items-center min-w-0 flex-1 gap-3",
+              isRTL && "flex-row-reverse",
+              isCollapsed && "lg:justify-center"
+            )}>
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
                 <Leaf className="h-6 w-6 text-white" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t('app.name')}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 text-start">AgriTech Platform</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse", isCollapsed && "lg:hidden")}>
               <LanguageSwitcher />
               <Button
                 variant="ghost"
@@ -328,6 +424,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   data-tour="nav-dashboard"
                   className={getButtonClassName(currentPath === '/dashboard')}
                   onClick={(e) => handleNavigation('/dashboard', e)}
+                  title={isCollapsed ? t('nav.dashboard') : undefined}
                 >
                   {renderIcon(Home)}
                   {renderText(t('nav.dashboard'))}
@@ -341,6 +438,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   data-tour="nav-farms"
                   className={getButtonClassName(currentPath === '/farm-hierarchy')}
                   onClick={(e) => handleNavigation('/farm-hierarchy', e)}
+                  title={isCollapsed ? t('nav.farmHierarchy') : undefined}
                 >
                   {renderIcon(Network)}
                   {renderText(t('nav.farmHierarchy'))}
@@ -354,6 +452,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   data-tour="nav-parcels"
                   className={getButtonClassName(currentPath === '/parcels')}
                   onClick={(e) => handleNavigation('/parcels', e)}
+                  title={isCollapsed ? t('nav.parcels') : undefined}
                 >
                   {renderIcon(Map)}
                   {renderText(t('nav.parcels'))}
@@ -367,6 +466,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   data-tour="nav-stock"
                   className={getButtonClassName(currentPath === '/stock' || currentPath.startsWith('/stock/'))}
                   onClick={(e) => handleNavigation('/stock', e)}
+                  title={isCollapsed ? t('nav.stock') : undefined}
                 >
                   {renderIcon(Package)}
                   {renderText(t('nav.stock'))}
@@ -380,6 +480,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   data-tour="nav-infrastructure"
                   className={getButtonClassName(currentPath === '/infrastructure')}
                   onClick={(e) => handleNavigation('/infrastructure', e)}
+                  title={isCollapsed ? t('nav.infrastructure') : undefined}
                 >
                   {renderIcon(Building2)}
                   {renderText(t('nav.infrastructure'))}
@@ -390,37 +491,52 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== PERSONNEL SECTION ========== */}
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-personnel">
-              <Button
-                variant="ghost"
-                className={getSectionHeaderClassName()}
-                onClick={() => setShowPersonnel(!showPersonnel)}
-              >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                  {renderIcon(Users)}
-                  <span>{t('nav.personnel')}</span>
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={Users} title={t('nav.personnel')}>
+                    <ProtectedNavItem action="read" subject="Worker">
+                      <PopoverNavItem path="/workers" label={t('nav.workers')} isActive={currentPath === '/workers'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Task">
+                      <PopoverNavItem path="/tasks" label={t('nav.tasks')} isActive={currentPath === '/tasks'} />
+                    </ProtectedNavItem>
+                  </CollapsedSectionPopover>
                 </div>
-                {renderChevron(showPersonnel)}
-              </Button>
-              {showPersonnel && (
+              ) : (
                 <>
-                  <ProtectedNavItem action="read" subject="Worker">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/workers')}
-                      onClick={(e) => handleNavigation('/workers', e)}
-                    >
-                      {renderText(t('nav.workers'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Task">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/tasks')}
-                      onClick={(e) => handleNavigation('/tasks', e)}
-                    >
-                      {renderText(t('nav.tasks'))}
-                    </Button>
-                  </ProtectedNavItem>
+                  <Button
+                    variant="ghost"
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowPersonnel(!showPersonnel)}
+                  >
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(Users)}
+                      {renderSectionTitle(t('nav.personnel'))}
+                    </div>
+                    {renderChevron(showPersonnel)}
+                  </Button>
+                  {showPersonnel && (
+                    <>
+                      <ProtectedNavItem action="read" subject="Worker">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/workers')}
+                          onClick={(e) => handleNavigation('/workers', e)}
+                        >
+                          {renderText(t('nav.workers'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Task">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/tasks')}
+                          onClick={(e) => handleNavigation('/tasks', e)}
+                        >
+                          {renderText(t('nav.tasks'))}
+                        </Button>
+                      </ProtectedNavItem>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -428,64 +544,88 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== PRODUCTION SECTION ========== */}
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-production">
-              <Button
-                variant="ghost"
-                className={getSectionHeaderClassName()}
-                onClick={() => setShowProduction(!showProduction)}
-              >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                  {renderIcon(Wheat)}
-                  <span>{t('nav.production')}</span>
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={Wheat} title={t('nav.production')}>
+                    <ProtectedNavItem action="read" subject="Campaign">
+                      <PopoverNavItem path="/campaigns" label={t('nav.campaigns', 'Campaigns')} isActive={currentPath === '/campaigns'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="CropCycle">
+                      <PopoverNavItem path="/crop-cycles" label={t('nav.cropCycles', 'Crop Cycles')} isActive={currentPath === '/crop-cycles'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Harvest">
+                      <PopoverNavItem path="/harvests" label={t('nav.harvests')} isActive={currentPath === '/harvests'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="ReceptionBatch">
+                      <PopoverNavItem path="/reception-batches" label={t('nav.receptionBatches')} isActive={currentPath === '/reception-batches'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="ReceptionBatch">
+                      <PopoverNavItem path="/quality-control" label={t('nav.qualityControl')} isActive={currentPath === '/quality-control'} />
+                    </ProtectedNavItem>
+                  </CollapsedSectionPopover>
                 </div>
-                {renderChevron(showProduction)}
-              </Button>
-              {showProduction && (
+              ) : (
                 <>
-                  <ProtectedNavItem action="read" subject="Campaign">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/campaigns')}
-                      onClick={(e) => handleNavigation('/campaigns', e)}
-                    >
-                      {renderText(t('nav.campaigns', 'Campaigns'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="CropCycle">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/crop-cycles')}
-                      onClick={(e) => handleNavigation('/crop-cycles', e)}
-                    >
-                      {renderText(t('nav.cropCycles', 'Crop Cycles'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Harvest">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/harvests')}
-                      onClick={(e) => handleNavigation('/harvests', e)}
-                    >
-                      {renderText(t('nav.harvests'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="ReceptionBatch">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/reception-batches')}
-                      onClick={(e) => handleNavigation('/reception-batches', e)}
-                    >
-                      {renderText(t('nav.receptionBatches'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="ReceptionBatch">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/quality-control')}
-                      onClick={(e) => handleNavigation('/quality-control', e)}
-                    >
-                      {renderText(t('nav.qualityControl'))}
-                    </Button>
-                  </ProtectedNavItem>
+                  <Button
+                    variant="ghost"
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowProduction(!showProduction)}
+                  >
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(Wheat)}
+                      {renderSectionTitle(t('nav.production'))}
+                    </div>
+                    {renderChevron(showProduction)}
+                  </Button>
+                  {showProduction && (
+                    <>
+                      <ProtectedNavItem action="read" subject="Campaign">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/campaigns')}
+                          onClick={(e) => handleNavigation('/campaigns', e)}
+                        >
+                          {renderText(t('nav.campaigns', 'Campaigns'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="CropCycle">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/crop-cycles')}
+                          onClick={(e) => handleNavigation('/crop-cycles', e)}
+                        >
+                          {renderText(t('nav.cropCycles', 'Crop Cycles'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Harvest">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/harvests')}
+                          onClick={(e) => handleNavigation('/harvests', e)}
+                        >
+                          {renderText(t('nav.harvests'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="ReceptionBatch">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/reception-batches')}
+                          onClick={(e) => handleNavigation('/reception-batches', e)}
+                        >
+                          {renderText(t('nav.receptionBatches'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="ReceptionBatch">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/quality-control')}
+                          onClick={(e) => handleNavigation('/quality-control', e)}
+                        >
+                          {renderText(t('nav.qualityControl'))}
+                        </Button>
+                      </ProtectedNavItem>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -493,46 +633,64 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== SALES & PURCHASING SECTION ========== */}
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-billing">
-              <Button
-                variant="ghost"
-                className={getSectionHeaderClassName()}
-                onClick={() => setShowSalesPurchasing(!showSalesPurchasing)}
-              >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                  {renderIcon(ShoppingCart)}
-                  <span>{t('nav.salesPurchasing')}</span>
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={ShoppingCart} title={t('nav.salesPurchasing')}>
+                    <ProtectedNavItem action="read" subject="Invoice">
+                      <PopoverNavItem path="/billing-quotes" label={t('nav.quotes')} isActive={currentPath === '/billing-quotes'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Invoice">
+                      <PopoverNavItem path="/billing-sales-orders" label={t('nav.salesOrders')} isActive={currentPath === '/billing-sales-orders'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Invoice">
+                      <PopoverNavItem path="/billing-purchase-orders" label={t('nav.purchaseOrders')} isActive={currentPath === '/billing-purchase-orders'} />
+                    </ProtectedNavItem>
+                  </CollapsedSectionPopover>
                 </div>
-                {renderChevron(showSalesPurchasing)}
-              </Button>
-              {showSalesPurchasing && (
+              ) : (
                 <>
-                  <ProtectedNavItem action="read" subject="Invoice">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/billing-quotes')}
-                      onClick={(e) => handleNavigation('/billing-quotes', e)}
-                    >
-                      {renderText(t('nav.quotes'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Invoice">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/billing-sales-orders')}
-                      onClick={(e) => handleNavigation('/billing-sales-orders', e)}
-                    >
-                      {renderText(t('nav.salesOrders'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Invoice">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/billing-purchase-orders')}
-                      onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
-                    >
-                      {renderText(t('nav.purchaseOrders'))}
-                    </Button>
-                  </ProtectedNavItem>
+                  <Button
+                    variant="ghost"
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowSalesPurchasing(!showSalesPurchasing)}
+                  >
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(ShoppingCart)}
+                      {renderSectionTitle(t('nav.salesPurchasing'))}
+                    </div>
+                    {renderChevron(showSalesPurchasing)}
+                  </Button>
+                  {showSalesPurchasing && (
+                    <>
+                      <ProtectedNavItem action="read" subject="Invoice">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/billing-quotes')}
+                          onClick={(e) => handleNavigation('/billing-quotes', e)}
+                        >
+                          {renderText(t('nav.quotes'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Invoice">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/billing-sales-orders')}
+                          onClick={(e) => handleNavigation('/billing-sales-orders', e)}
+                        >
+                          {renderText(t('nav.salesOrders'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Invoice">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/billing-purchase-orders')}
+                          onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
+                        >
+                          {renderText(t('nav.purchaseOrders'))}
+                        </Button>
+                      </ProtectedNavItem>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -541,63 +699,80 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Separator className="my-3" />
             <ProtectedNavItem action="read" subject="Invoice">
               <div className="space-y-1" data-tour="nav-accounting">
-                <Button
-                  variant="ghost"
-                  className={getSectionHeaderClassName()}
-                  onClick={() => setShowAccounting(!showAccounting)}
-                >
-                  <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                    {renderIcon(BookOpen)}
-                    <span>{t('nav.accounting')}</span>
+                {isCollapsed ? (
+                  <div className="hidden lg:block">
+                    <CollapsedSectionPopover icon={BookOpen} title={t('nav.accounting')}>
+                      <PopoverNavItem path="/accounting" label={t('nav.overview')} isActive={currentPath === '/accounting'} />
+                      <PopoverNavItem path="/accounting-accounts" label={t('nav.chartOfAccounts')} isActive={currentPath === '/accounting-accounts'} />
+                      <PopoverNavItem path="/accounting-invoices" label={t('nav.invoices')} isActive={currentPath === '/accounting-invoices'} />
+                      <PopoverNavItem path="/accounting-payments" label={t('nav.payments')} isActive={currentPath === '/accounting-payments'} />
+                      <PopoverNavItem path="/accounting-journal" label={t('nav.journal')} isActive={currentPath === '/accounting-journal'} />
+                      <ProtectedNavItem action="read" subject="Utility">
+                        <PopoverNavItem path="/utilities" label={t('nav.expenses')} isActive={currentPath === '/utilities'} />
+                      </ProtectedNavItem>
+                    </CollapsedSectionPopover>
                   </div>
-                  {renderChevron(showAccounting)}
-                </Button>
-                {showAccounting && (
+                ) : (
                   <>
                     <Button
                       variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting')}
-                      onClick={(e) => handleNavigation('/accounting', e)}
+                      className={getSectionHeaderClassName()}
+                      onClick={() => setShowAccounting(!showAccounting)}
                     >
-                      {renderText(t('nav.overview'))}
+                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                        {renderIcon(BookOpen)}
+                        {renderSectionTitle(t('nav.accounting'))}
+                      </div>
+                      {renderChevron(showAccounting)}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting-accounts')}
-                      onClick={(e) => handleNavigation('/accounting-accounts', e)}
-                    >
-                      {renderText(t('nav.chartOfAccounts'))}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting-invoices')}
-                      onClick={(e) => handleNavigation('/accounting-invoices', e)}
-                    >
-                      {renderText(t('nav.invoices'))}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting-payments')}
-                      onClick={(e) => handleNavigation('/accounting-payments', e)}
-                    >
-                      {renderText(t('nav.payments'))}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting-journal')}
-                      onClick={(e) => handleNavigation('/accounting-journal', e)}
-                    >
-                      {renderText(t('nav.journal'))}
-                    </Button>
-                    <ProtectedNavItem action="read" subject="Utility">
-                      <Button
-                        variant="ghost"
-                        className={getSubItemClassName(currentPath === '/utilities')}
-                        onClick={(e) => handleNavigation('/utilities', e)}
-                      >
-                        {renderText(t('nav.expenses'))}
-                      </Button>
-                    </ProtectedNavItem>
+                    {showAccounting && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting')}
+                          onClick={(e) => handleNavigation('/accounting', e)}
+                        >
+                          {renderText(t('nav.overview'))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting-accounts')}
+                          onClick={(e) => handleNavigation('/accounting-accounts', e)}
+                        >
+                          {renderText(t('nav.chartOfAccounts'))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting-invoices')}
+                          onClick={(e) => handleNavigation('/accounting-invoices', e)}
+                        >
+                          {renderText(t('nav.invoices'))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting-payments')}
+                          onClick={(e) => handleNavigation('/accounting-payments', e)}
+                        >
+                          {renderText(t('nav.payments'))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting-journal')}
+                          onClick={(e) => handleNavigation('/accounting-journal', e)}
+                        >
+                          {renderText(t('nav.journal'))}
+                        </Button>
+                        <ProtectedNavItem action="read" subject="Utility">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/utilities')}
+                            onClick={(e) => handleNavigation('/utilities', e)}
+                          >
+                            {renderText(t('nav.expenses'))}
+                          </Button>
+                        </ProtectedNavItem>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -606,55 +781,76 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== CONFIGURATION SECTION ========== */}
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-settings">
-              <Button
-                variant="ghost"
-                className={getSectionHeaderClassName()}
-                onClick={() => setShowConfiguration(!showConfiguration)}
-              >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                  {renderIcon(Settings)}
-                  <span>{t('nav.configuration')}</span>
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
+                    <ProtectedNavItem action="read" subject="Invoice">
+                      <PopoverNavItem path="/accounting-customers" label={t('nav.customers')} isActive={currentPath === '/accounting-customers'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Stock">
+                      <PopoverNavItem path="/stock/suppliers" label={t('nav.suppliers')} isActive={currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers')} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Stock">
+                      <PopoverNavItem path="/stock/warehouses" label={t('nav.warehouses')} isActive={currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses')} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Settings">
+                      <PopoverNavItem path="/settings/profile" label={t('nav.settings')} isActive={currentPath.startsWith('/settings')} />
+                    </ProtectedNavItem>
+                  </CollapsedSectionPopover>
                 </div>
-                {renderChevron(showConfiguration)}
-              </Button>
-              {showConfiguration && (
+              ) : (
                 <>
-                  <ProtectedNavItem action="read" subject="Invoice">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/accounting-customers')}
-                      onClick={(e) => handleNavigation('/accounting-customers', e)}
-                    >
-                      {renderText(t('nav.customers'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Stock">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
-                      onClick={(e) => handleNavigation('/stock/suppliers', e)}
-                    >
-                      {renderText(t('nav.suppliers'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Stock">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
-                      onClick={(e) => handleNavigation('/stock/warehouses', e)}
-                    >
-                      {renderText(t('nav.warehouses'))}
-                    </Button>
-                  </ProtectedNavItem>
-                  <ProtectedNavItem action="read" subject="Settings">
-                    <Button
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath.startsWith('/settings'))}
-                      onClick={(e) => handleNavigation('/settings/profile', e)}
-                    >
-                      {renderText(t('nav.settings'))}
-                    </Button>
-                  </ProtectedNavItem>
+                  <Button
+                    variant="ghost"
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowConfiguration(!showConfiguration)}
+                  >
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(Settings)}
+                      {renderSectionTitle(t('nav.configuration'))}
+                    </div>
+                    {renderChevron(showConfiguration)}
+                  </Button>
+                  {showConfiguration && (
+                    <>
+                      <ProtectedNavItem action="read" subject="Invoice">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/accounting-customers')}
+                          onClick={(e) => handleNavigation('/accounting-customers', e)}
+                        >
+                          {renderText(t('nav.customers'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Stock">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
+                          onClick={(e) => handleNavigation('/stock/suppliers', e)}
+                        >
+                          {renderText(t('nav.suppliers'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Stock">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
+                          onClick={(e) => handleNavigation('/stock/warehouses', e)}
+                        >
+                          {renderText(t('nav.warehouses'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Settings">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath.startsWith('/settings'))}
+                          onClick={(e) => handleNavigation('/settings/profile', e)}
+                        >
+                          {renderText(t('nav.settings'))}
+                        </Button>
+                      </ProtectedNavItem>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -662,49 +858,78 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* ========== MARKETPLACE ========== */}
             <Separator className="my-3" />
             <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className={getSectionHeaderClassName()}
-                onClick={() => setShowMarketplace(!showMarketplace)}
-              >
-                <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                  {renderIcon(ShoppingBag)}
-                  <span>{renderText("Marketplace")}</span>
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={ShoppingBag} title="Marketplace">
+                    <PopoverNavItem path="/marketplace/quote-requests/received" label="Demandes reçues" isActive={currentPath === '/marketplace/quote-requests/received'} />
+                    <PopoverNavItem path="/marketplace/quote-requests/sent" label="Demandes envoyées" isActive={currentPath === '/marketplace/quote-requests/sent'} />
+                    <a
+                      href="https://marketplace.thebzlab.online"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group"
+                        )}
+                      >
+                        <div className="flex items-center w-full">
+                          <span className="flex-1">Voir la marketplace</span>
+                          <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </Button>
+                    </a>
+                  </CollapsedSectionPopover>
                 </div>
-                {renderChevron(showMarketplace)}
-              </Button>
-              {showMarketplace && (
+              ) : (
                 <>
                   <Button
                     variant="ghost"
-                    className={getSubItemClassName(currentPath === '/marketplace/quote-requests/received')}
-                    onClick={(e) => handleNavigation('/marketplace/quote-requests/received', e)}
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowMarketplace(!showMarketplace)}
                   >
-                    {renderText("Demandes reçues")}
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(ShoppingBag)}
+                      {renderSectionTitle("Marketplace")}
+                    </div>
+                    {renderChevron(showMarketplace)}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    className={getSubItemClassName(currentPath === '/marketplace/quote-requests/sent')}
-                    onClick={(e) => handleNavigation('/marketplace/quote-requests/sent', e)}
-                  >
-                    {renderText("Demandes envoyées")}
-                  </Button>
-                  <a
-                    href="https://marketplace.thebzlab.online"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <Button
-                      variant="ghost"
-                      className={cn(getSubItemClassName(false), "group")}
-                    >
-                      <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
-                        <span className="flex-1">{renderText("Voir la marketplace")}</span>
-                        <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </Button>
-                  </a>
+                  {showMarketplace && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className={getSubItemClassName(currentPath === '/marketplace/quote-requests/received')}
+                        onClick={(e) => handleNavigation('/marketplace/quote-requests/received', e)}
+                      >
+                        {renderText("Demandes reçues")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={getSubItemClassName(currentPath === '/marketplace/quote-requests/sent')}
+                        onClick={(e) => handleNavigation('/marketplace/quote-requests/sent', e)}
+                      >
+                        {renderText("Demandes envoyées")}
+                      </Button>
+                      <a
+                        href="https://marketplace.thebzlab.online"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <Button
+                          variant="ghost"
+                          className={cn(getSubItemClassName(false), "group")}
+                        >
+                          <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
+                            <span className="flex-1">{renderText("Voir la marketplace")}</span>
+                            <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </Button>
+                      </a>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -714,28 +939,45 @@ const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <Separator className="my-3" />
                 <div className="space-y-1">
-                  <Button
-                    variant="ghost"
-                    className={getSectionHeaderClassName()}
-                    onClick={() => setShowAgricultureModules(!showAgricultureModules)}
-                  >
-                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                      {renderIcon(Sprout)}
-                      <span>{t('nav.agriculture')} ({agricultureModules.length})</span>
+                  {isCollapsed ? (
+                    <div className="hidden lg:block">
+                      <CollapsedSectionPopover icon={Sprout} title={`${t('nav.agriculture')} (${agricultureModules.length})`}>
+                        {agricultureModules.map((module) => (
+                          <PopoverNavItem
+                            key={module.id}
+                            path={`/${module.id}`}
+                            label={module.name}
+                            isActive={currentPath === `/${module.id}`}
+                          />
+                        ))}
+                      </CollapsedSectionPopover>
                     </div>
-                    {renderChevron(showAgricultureModules)}
-                  </Button>
-                  {showAgricultureModules && agricultureModules.map((module) => (
-                    <Button
-                      key={module.id}
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === `/${module.id}`)}
-                      onClick={(e) => handleNavigation(`/${module.id}`, e)}
-                    >
-                      <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
-                      {renderText(module.name)}
-                    </Button>
-                  ))}
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className={getSectionHeaderClassName()}
+                        onClick={() => setShowAgricultureModules(!showAgricultureModules)}
+                      >
+                        <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                          {renderIcon(Sprout)}
+                          {renderSectionTitle(`${t('nav.agriculture')} (${agricultureModules.length})`)}
+                        </div>
+                        {renderChevron(showAgricultureModules)}
+                      </Button>
+                      {showAgricultureModules && agricultureModules.map((module) => (
+                        <Button
+                          key={module.id}
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === `/${module.id}`)}
+                          onClick={(e) => handleNavigation(`/${module.id}`, e)}
+                        >
+                          <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
+                          {renderText(module.name)}
+                        </Button>
+                      ))}
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -745,28 +987,45 @@ const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <Separator className="my-3" />
                 <div className="space-y-1">
-                  <Button
-                    variant="ghost"
-                    className={getSectionHeaderClassName()}
-                    onClick={() => setShowElevageModules(!showElevageModules)}
-                  >
-                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                      {renderIcon(Beef)}
-                      <span>{t('nav.elevage')} ({elevageModules.length})</span>
+                  {isCollapsed ? (
+                    <div className="hidden lg:block">
+                      <CollapsedSectionPopover icon={Beef} title={`${t('nav.elevage')} (${elevageModules.length})`}>
+                        {elevageModules.map((module) => (
+                          <PopoverNavItem
+                            key={module.id}
+                            path={`/${module.id}`}
+                            label={module.name}
+                            isActive={currentPath === `/${module.id}`}
+                          />
+                        ))}
+                      </CollapsedSectionPopover>
                     </div>
-                    {renderChevron(showElevageModules)}
-                  </Button>
-                  {showElevageModules && elevageModules.map((module) => (
-                    <Button
-                      key={module.id}
-                      variant="ghost"
-                      className={getSubItemClassName(currentPath === `/${module.id}`)}
-                      onClick={(e) => handleNavigation(`/${module.id}`, e)}
-                    >
-                      <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
-                      {renderText(module.name)}
-                    </Button>
-                  ))}
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className={getSectionHeaderClassName()}
+                        onClick={() => setShowElevageModules(!showElevageModules)}
+                      >
+                        <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                          {renderIcon(Beef)}
+                          {renderSectionTitle(`${t('nav.elevage')} (${elevageModules.length})`)}
+                        </div>
+                        {renderChevron(showElevageModules)}
+                      </Button>
+                      {showElevageModules && elevageModules.map((module) => (
+                        <Button
+                          key={module.id}
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === `/${module.id}`)}
+                          onClick={(e) => handleNavigation(`/${module.id}`, e)}
+                        >
+                          <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
+                          {renderText(module.name)}
+                        </Button>
+                      ))}
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -774,12 +1033,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         </ScrollArea>
 
         {/* ========== FOOTER ========== */}
-        <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1">
+        <div className={cn(
+          "flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1",
+          isCollapsed ? "lg:p-2 p-3" : "p-3"
+        )}>
           <ProtectedNavItem action="read" subject="Dashboard">
             <Button
               variant="ghost"
               className={getButtonClassName(currentPath === '/alerts')}
               onClick={(e) => handleNavigation('/alerts', e)}
+              title={isCollapsed ? t('nav.alerts') : undefined}
             >
               {renderIcon(Bell)}
               {renderText(t('nav.alerts'))}
@@ -792,6 +1055,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               data-tour="nav-reports"
               className={getButtonClassName(currentPath === '/reports' || currentPath === '/accounting-reports')}
               onClick={(e) => handleNavigation('/accounting-reports', e)}
+              title={isCollapsed ? t('nav.reports') : undefined}
             >
               {renderIcon(BarChart3)}
               {renderText(t('nav.reports'))}
@@ -804,9 +1068,30 @@ const Sidebar: React.FC<SidebarProps> = ({
             variant="ghost"
             className={getButtonClassName(false, "hover:text-gray-900 dark:hover:text-gray-100")}
             onClick={onThemeToggle}
+            title={isCollapsed ? (isDarkMode ? t('app.lightMode') : t('app.darkMode')) : undefined}
           >
             {isDarkMode ? renderIcon(Sun) : renderIcon(Moon)}
             {renderText(isDarkMode ? t('app.lightMode') : t('app.darkMode'))}
+          </Button>
+
+          {/* Collapse Toggle Button - Desktop only */}
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full h-9 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hidden lg:flex",
+              isCollapsed ? "justify-center" : "justify-start"
+            )}
+            onClick={toggleCollapse}
+            title={isCollapsed ? t('sidebar.expand', 'Expand sidebar') : t('sidebar.collapse', 'Collapse sidebar')}
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <>
+                <PanelLeftClose className={cn("h-4 w-4 flex-shrink-0", isRTL ? "ml-3" : "mr-3")} />
+                <span className="flex-1 text-left">{t('sidebar.collapse', 'Collapse')}</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

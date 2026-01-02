@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar'
 import ModernPageHeader from '../components/ModernPageHeader'
 import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp } from 'lucide-react'
 import type { Module } from '../types'
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -30,6 +31,7 @@ const ParcelLayout = () => {
   const { currentOrganization } = useAuth();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: farms = [] } = useFarms(currentOrganization?.id);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   console.log('🔍 ParcelLayout RENDERED!', {
     parcelId,
@@ -81,7 +83,7 @@ const ParcelLayout = () => {
   console.log('ParcelLayout rendering:', { parcelId, parcel: parcel?.name, tabsCount: tabs.length });
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar
         modules={mockModules.filter(m => m.active)}
         activeModule="parcels"
@@ -89,7 +91,7 @@ const ParcelLayout = () => {
         isDarkMode={false}
         onThemeToggle={() => {}}
       />
-      <main className="flex-1 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || '', path: '/settings/organization' },

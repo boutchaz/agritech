@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
 
 interface TourInfo {
   id: TourId;
@@ -106,6 +107,7 @@ const TOUR_CONFIGS: TourInfo[] = [
 export const TourHelpButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { startTour, isTourCompleted, resetTour, resetAllTours, isRunning } = useTour();
 
   const tours = useMemo(() => 
@@ -116,6 +118,10 @@ export const TourHelpButton: React.FC = () => {
     })),
     [t]
   );
+
+  if (!user) {
+    return null;
+  }
 
   const handleStartTour = (tourId: TourId) => {
     setIsOpen(false);

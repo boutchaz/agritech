@@ -12,6 +12,7 @@ import { withRouteProtection } from '../components/authorization/withRouteProtec
 import { useAccountingPayments, usePaymentStats, type Payment } from '../hooks/useAccountingPayments';
 import { PaymentForm } from '../components/Accounting/PaymentForm';
 import { PaymentDetailDialog } from '../components/Accounting/PaymentDetailDialog';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -36,6 +37,7 @@ const AppContent: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   // Real data from database
   const { data: payments = [], isLoading, error } = useAccountingPayments();
@@ -104,7 +106,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -112,7 +114,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

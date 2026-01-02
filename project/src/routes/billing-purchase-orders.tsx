@@ -24,6 +24,7 @@ import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
 import { authSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -47,6 +48,7 @@ const AppContent: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { style: sidebarStyle } = useSidebarMargin();
   const [editOrder, setEditOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [statusFilter, _setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
 
@@ -179,7 +181,7 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="min-h-screen">
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -187,7 +189,7 @@ const AppContent: React.FC = () => {
           isDarkMode={isDarkMode}
           onThemeToggle={toggleTheme}
         />
-        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+        <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
           <ModernPageHeader
             breadcrumbs={[
               { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
@@ -217,7 +219,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -226,7 +228,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 w-full lg:w-auto bg-gray-50 dark:bg-gray-900">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('billingModule.purchaseOrders.title', 'Purchase Orders')} />
 

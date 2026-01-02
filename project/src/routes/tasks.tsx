@@ -8,6 +8,7 @@ import type { Module } from '../types';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 const mockModules: Module[] = [
   {
@@ -28,6 +29,7 @@ function TasksLayout() {
   const [activeModule, setActiveModule] = useState('tasks');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -51,7 +53,7 @@ function TasksLayout() {
   ];
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar
         modules={modules.filter(m => m.active)}
         activeModule={activeModule}
@@ -59,7 +61,7 @@ function TasksLayout() {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },

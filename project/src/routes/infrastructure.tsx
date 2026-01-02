@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { Building2, Building } from 'lucide-react'
 import type { Module } from '../types'
 import { useTranslation } from 'react-i18next'
+import { useSidebarMargin } from '../hooks/useSidebarLayout';
 
 // Note: These mock modules are not displayed in the infrastructure page
 // They are left for reference but not actively used
@@ -21,6 +22,7 @@ const AppContent: React.FC = () => {
   const [activeModule, setActiveModule] = useState('infrastructure');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modules, _setModules] = useState(mockModules);
+  const { style: sidebarStyle } = useSidebarMargin();
   const isRTL = i18n.language === 'ar';
 
   const toggleTheme = () => {
@@ -40,7 +42,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Sidebar with mobile menu support */}
       <Sidebar
         modules={modules.filter(m => m.active)}
@@ -49,7 +51,7 @@ const AppContent: React.FC = () => {
         isDarkMode={isDarkMode}
         onThemeToggle={toggleTheme}
       />
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto">
+      <main className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out" style={sidebarStyle}>
         {/* Mobile Navigation Bar */}
         <MobileNavBar title={t('nav.infrastructure')} />
 

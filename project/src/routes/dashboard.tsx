@@ -15,6 +15,7 @@ import { authSupabase } from '../lib/auth-supabase'
 import { withRouteProtection } from '../components/authorization/withRouteProtection'
 import { useTranslation } from 'react-i18next'
 import { useAutoStartTour } from '../contexts/TourContext'
+import { useSidebarMargin } from '../hooks/useSidebarLayout'
 
 const mockModules: Module[] = [
   {
@@ -68,6 +69,7 @@ const AppContent: React.FC = () => {
   const [modules, _setModules] = useState(mockModules);
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
   const isRTL = i18n.language === 'ar';
+  const { style: sidebarStyle } = useSidebarMargin(isRTL);
 
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
@@ -270,7 +272,7 @@ const AppContent: React.FC = () => {
 
   return (
     <CommandPalette actions={commandActions}>
-      <div className={`flex min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
         <Sidebar
           modules={modules.filter(m => m.active)}
           activeModule={activeModule}
@@ -279,7 +281,8 @@ const AppContent: React.FC = () => {
           onThemeToggle={toggleTheme}
         />
         <main
-          className="flex-1 bg-gray-50 dark:bg-gray-900 w-full lg:w-auto"
+          className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-all duration-300 ease-in-out"
+          style={sidebarStyle}
           role="main"
           aria-labelledby="dashboard-hero-title"
         >

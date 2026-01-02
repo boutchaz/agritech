@@ -2,6 +2,13 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
+  safelist: [
+    'ml-0',
+    'lg:ml-16',
+    'lg:ml-64',
+    'lg:w-16',
+    'lg:w-64',
+  ],
   theme: {
     extend: {
       colors: {
