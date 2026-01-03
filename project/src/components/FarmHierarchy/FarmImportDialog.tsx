@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authSupabase } from '../../lib/auth-supabase';
 import {
   Dialog,
@@ -22,6 +23,7 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
   organizationId,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,7 @@ interface OrderLabServiceDialogProps {
 }
 
 export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServiceDialogProps) {
+  const { t } = useTranslation();
   const [selectedFarmId, setSelectedFarmId] = useState<string>('');
 
   const { data: farms } = useFarms();
@@ -65,12 +67,12 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
         status: 'pending',
       });
 
-      toast.success('Commande créée avec succès');
+      toast.success(t('dialogs.orderLabService.orderCreated'));
       reset();
       onClose();
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error('Erreur lors de la création de la commande');
+      toast.error(t('dialogs.orderLabService.orderFailed'));
     }
   };
 
@@ -80,25 +82,25 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Commander: {service.name}</DialogTitle>
+          <DialogTitle>{t('dialogs.orderLabService.title')}: {service.name}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Service Details */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
             <div className="flex justify-between">
-              <span className="font-medium">Prix:</span>
+              <span className="font-medium">{t('dialogs.orderLabService.price')}:</span>
               <span className="text-green-600 dark:text-green-400 font-semibold">
                 {service.price?.toFixed(2)} {service.currency}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Délai:</span>
-              <span>{service.turnaround_days} jours</span>
+              <span className="font-medium">{t('dialogs.orderLabService.leadTime')}:</span>
+              <span>{service.turnaround_days} {t('dialogs.orderLabService.days')}</span>
             </div>
             {service.parameters_tested && service.parameters_tested.length > 0 && (
               <div>
-                <span className="font-medium">Paramètres:</span>
+                <span className="font-medium">{t('dialogs.orderLabService.parameters')}:</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {service.parameters_tested.map((param: string, idx: number) => (
                     <span
@@ -115,12 +117,12 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
 
           {/* Farm Selection */}
           <FormField
-            label="Ferme *"
+            label={t('dialogs.orderLabService.farm')}
             error={errors.farm_id?.message}
             htmlFor="farm_id"
           >
             <NativeSelect id="farm_id" {...register('farm_id')} error={!!errors.farm_id}>
-              <option value="">Sélectionnez une ferme</option>
+              <option value="">{t('dialogs.orderLabService.selectFarm')}</option>
               {farms?.map((farm) => (
                 <option key={farm.id} value={farm.id}>
                   {farm.name}
@@ -132,12 +134,12 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
           {/* Parcel Selection */}
           {selectedFarmId && (
             <FormField
-              label="Parcelle (optionnel)"
+              label={t('dialogs.orderLabService.parcelOptional')}
               error={errors.parcel_id?.message}
               htmlFor="parcel_id"
             >
               <NativeSelect id="parcel_id" {...register('parcel_id')} error={!!errors.parcel_id}>
-                <option value="">Sélectionnez une parcelle</option>
+                <option value="">{t('dialogs.orderLabService.selectParcel')}</option>
                 {parcels?.map((parcel) => (
                   <option key={parcel.id} value={parcel.id}>
                     {parcel.name}
@@ -151,18 +153,18 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
           {service.sample_requirements && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Instructions de prélèvement
+                {t('dialogs.orderLabService.sampleInstructions')}
               </h4>
               <p className="text-sm text-blue-800 dark:text-blue-200">{service.sample_requirements}</p>
             </div>
           )}
 
           {/* Notes */}
-          <FormField label="Notes" error={errors.notes?.message} htmlFor="notes">
+          <FormField label={t('dialogs.orderLabService.notes')} error={errors.notes?.message} htmlFor="notes">
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder="Notes ou instructions particulières..."
+              placeholder={t('dialogs.orderLabService.notesPlaceholder')}
               rows={3}
             />
           </FormField>
@@ -170,10 +172,10 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
+              {t('app.cancel')}
             </Button>
             <Button type="submit" disabled={createOrder.isPending}>
-              {createOrder.isPending ? 'Création...' : 'Créer la commande'}
+              {createOrder.isPending ? t('dialogs.orderLabService.creating') : t('dialogs.orderLabService.createOrder')}
             </Button>
           </div>
         </form>

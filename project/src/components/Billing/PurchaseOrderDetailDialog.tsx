@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '@/lib/supabase';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';

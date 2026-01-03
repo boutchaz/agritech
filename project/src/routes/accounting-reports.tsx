@@ -55,7 +55,7 @@ const AppContent: React.FC = () => {
       description: 'Track outstanding invoices and customer payment aging',
       icon: Calendar,
       iconBg: 'bg-red-500',
-      available: false,
+      available: true,
       path: '/report-aged-receivables',
     },
     {
@@ -64,7 +64,7 @@ const AppContent: React.FC = () => {
       description: 'Monitor outstanding bills and supplier payment aging',
       icon: Users,
       iconBg: 'bg-indigo-500',
-      available: false,
+      available: true,
       path: '/report-aged-payables',
     },
   ];

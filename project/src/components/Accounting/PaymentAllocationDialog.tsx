@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
   onOpenChange,
   onAllocated,
 }) => {
+  const { t } = useTranslation();
   const invoiceType = payment.payment_type === 'receive' ? 'sales' : 'purchase';
   const { data: invoices = [], isLoading } = useInvoices();
   const allocatePayment = useAllocatePayment();
@@ -65,17 +67,17 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
   const handleAllocate = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedInvoice) {
-      setError('Veuillez sélectionner une facture à régler.');
+      setError(t('dialogs.paymentAllocation.selectInvoiceError'));
       return;
     }
 
     if (!allocationAmount || allocationAmount <= 0) {
-      setError('Le montant alloué doit être supérieur à zéro.');
+      setError(t('dialogs.paymentAllocation.amountError'));
       return;
     }
 
     if (allocationAmount - maxAllocatable > 0.01) {
-      setError('Le montant dépasse le solde restant pour cette facture ou le montant du paiement.');
+      setError(t('dialogs.paymentAllocation.exceedsBalanceError'));
       return;
     }
 
@@ -93,7 +95,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
       onOpenChange(false);
       onAllocated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec de l’allocation du paiement.');
+      setError(err instanceof Error ? err.message : t('dialogs.paymentAllocation.allocationFailed'));
     }
   };
 
@@ -103,9 +105,9 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Allouer et comptabiliser le paiement</DialogTitle>
+          <DialogTitle>{t('dialogs.paymentAllocation.title')}</DialogTitle>
           <DialogDescription>
-            Sélectionnez une facture en attente et indiquez le montant à lui affecter. L’écriture comptable sera générée automatiquement.
+            {t('dialogs.paymentAllocation.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -117,15 +119,15 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-muted-foreground dark:border-gray-700">
               <AlertCircle className="h-6 w-6 text-emerald-500" />
               <div>
-                Aucune facture en attente de paiement n'a été trouvée.
+                {t('dialogs.paymentAllocation.noInvoicesFound')}
                 {invoiceType === 'sales'
-                  ? " Assurez-vous qu'une facture de vente est soumise et a un solde restant."
-                  : " Assurez-vous qu'une facture d'achat est soumise et a un solde restant."}
+                  ? ` ${t('dialogs.paymentAllocation.ensureSalesInvoice')}`
+                  : ` ${t('dialogs.paymentAllocation.ensurePurchaseInvoice')}`}
               </div>
             </div>
         ) : (
           <form className="space-y-4" onSubmit={handleAllocate}>
-            <FormField label="Facture à régler" htmlFor="invoice-select" required>
+            <FormField label={t('dialogs.paymentAllocation.invoiceToSettle')} htmlFor="invoice-select" required>
               <select
                 id="invoice-select"
                 value={selectedInvoiceId}
@@ -145,10 +147,10 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                 }}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                <option value="">Sélectionnez une facture…</option>
+                <option value="">{t('dialogs.paymentAllocation.selectInvoice')}</option>
                 {eligibleInvoices.map((invoice) => (
                   <option key={invoice.id} value={invoice.id}>
-                    {invoice.invoice_number} — reste dû {Number(invoice.outstanding_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: invoice.currency_code || 'MAD' })}
+                    {invoice.invoice_number} — {t('dialogs.paymentAllocation.remaining')} {Number(invoice.outstanding_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: invoice.currency_code || 'MAD' })}
                   </option>
                 ))}
               </select>
@@ -157,7 +159,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
             {selectedInvoice && (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
                 <div className="flex justify-between">
-                  <span>Solde de la facture</span>
+                  <span>{t('dialogs.paymentAllocation.invoiceBalance')}</span>
                   <span>
                     {Number(selectedInvoice.outstanding_amount ?? 0).toLocaleString('fr-FR', {
                       style: 'currency',
@@ -166,7 +168,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Montant du paiement</span>
+                  <span>{t('dialogs.paymentAllocation.paymentAmount')}</span>
                   <span>
                     {Number(payment.amount).toLocaleString('fr-FR', {
                       style: 'currency',
@@ -178,7 +180,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
             )}
 
             {selectedInvoice && (
-              <FormField label="Montant à allouer" required>
+              <FormField label={t('dialogs.paymentAllocation.amountToAllocate')} required>
                 <input
                   type="number"
                   step="0.01"
@@ -189,7 +191,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Maximum allouable: {maxAllocatable.toLocaleString('fr-FR', {
+                  {t('dialogs.paymentAllocation.maxAllocatable')}: {maxAllocatable.toLocaleString('fr-FR', {
                     style: 'currency',
                     currency: selectedInvoice.currency_code || 'MAD',
                   })}
@@ -210,16 +212,16 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
-                Annuler
+                {t('app.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting || !selectedInvoice}>
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Comptabilisation…
+                    {t('dialogs.paymentAllocation.posting')}
                   </span>
                 ) : (
-                  'Allouer et comptabiliser'
+                  t('dialogs.paymentAllocation.allocateAndPost')
                 )}
               </Button>
             </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
   onOpenChange,
   mode: initialMode = 'view',
 }) => {
+  const { t } = useTranslation();
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);
   const deletePayment = useDeletePayment();
   const [allocationOpen, setAllocationOpen] = React.useState(false);
@@ -37,13 +39,13 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
   if (!payment) return null;
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this payment? This action cannot be undone.')) {
+    if (window.confirm(t('dialogs.paymentDetail.confirmDelete'))) {
       try {
         await deletePayment.mutateAsync(payment.id);
         onOpenChange(false);
       } catch (error) {
         console.error('Failed to delete payment:', error);
-        alert('Failed to delete payment. Please try again.');
+        alert(t('dialogs.paymentDetail.deleteFailed'));
       }
     }
   };
@@ -79,7 +81,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{mode === 'edit' ? 'Edit Payment' : 'Payment Details'}</span>
+            <span>{mode === 'edit' ? t('dialogs.paymentDetail.editTitle') : t('dialogs.paymentDetail.title')}</span>
             {mode === 'view' && (
               <Badge className={`${getStatusColor(payment.status)} flex items-center gap-1`}>
                 {getStatusIcon(payment.status)}
@@ -88,7 +90,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             )}
           </DialogTitle>
           <DialogDescription>
-            {mode === 'edit' ? 'Update payment information below' : `Payment ${payment.payment_number}`}
+            {mode === 'edit' ? t('dialogs.paymentDetail.editDescription') : `${t('dialogs.paymentDetail.paymentNumber')} ${payment.payment_number}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,14 +110,14 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
               <div className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Payment Number</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.paymentDetail.paymentNumber')}</p>
                   <p className="font-semibold">{payment.payment_number}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-gray-500" />
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Payment Date</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.paymentDetail.paymentDate')}</p>
                   <p className="font-semibold">{new Date(payment.payment_date).toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
@@ -123,7 +125,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
 
             {/* Amount */}
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Amount</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.amount')}</p>
               <p className={`text-3xl font-bold ${payment.payment_type === 'received' ? 'text-green-600' : 'text-red-600'}`}>
                 {payment.payment_type === 'received' ? '+' : '-'} {payment.currency_code} {Number(payment.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
               </p>
@@ -132,13 +134,13 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             {/* Party Information */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Payment Type</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.paymentType')}</p>
                 <Badge variant={payment.payment_type === 'received' ? 'default' : 'secondary'}>
-                  {payment.payment_type === 'received' ? 'Payment Received' : 'Payment Made'}
+                  {payment.payment_type === 'received' ? t('dialogs.paymentDetail.paymentReceived') : t('dialogs.paymentDetail.paymentMade')}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Party</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.party')}</p>
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-gray-400" />
                   <p className="font-medium">{payment.party_name}</p>
@@ -152,12 +154,12 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             {/* Payment Method */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Payment Method</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.paymentMethod')}</p>
                 <p className="font-medium capitalize">{payment.payment_method.replace('_', ' ')}</p>
               </div>
               {payment.reference_number && (
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Reference Number</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.referenceNumber')}</p>
                   <p className="font-medium">{payment.reference_number}</p>
                 </div>
               )}
@@ -168,7 +170,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Remarks
+                  {t('dialogs.paymentDetail.remarks')}
                 </p>
                 <p className="text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded">{payment.remarks}</p>
               </div>
@@ -176,9 +178,9 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
 
             {/* Metadata */}
             <div className="border-t pt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p>Created: {new Date(payment.created_at || '').toLocaleString('fr-FR')}</p>
+              <p>{t('dialogs.paymentDetail.created')}: {new Date(payment.created_at || '').toLocaleString('fr-FR')}</p>
               {payment.updated_at && payment.updated_at !== payment.created_at && (
-                <p>Updated: {new Date(payment.updated_at).toLocaleString('fr-FR')}</p>
+                <p>{t('dialogs.paymentDetail.updated')}: {new Date(payment.updated_at).toLocaleString('fr-FR')}</p>
               )}
             </div>
 
@@ -192,21 +194,21 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
                       size="sm"
                       onClick={() => setMode('edit')}
                     >
-                      Edit
+                      {t('app.edit')}
                     </Button>
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => setAllocationOpen(true)}
                     >
-                      Allouer &amp; comptabiliser
+                      {t('dialogs.paymentDetail.allocateAndPost')}
                     </Button>
                   </>
                 )}
                 {payment.status === 'submitted' && (
                   <Badge variant="default" className="flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
-                    Payment Submitted
+                    {t('dialogs.paymentDetail.paymentSubmitted')}
                   </Badge>
                 )}
               </div>
@@ -218,7 +220,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
                   disabled={deletePayment.isPending}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {deletePayment.isPending ? 'Deleting...' : 'Delete'}
+                  {deletePayment.isPending ? t('dialogs.paymentDetail.deleting') : t('app.delete')}
                 </Button>
               )}
             </div>

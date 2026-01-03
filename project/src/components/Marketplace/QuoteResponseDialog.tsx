@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QuoteRequest } from '../../lib/api/quote-requests';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -26,6 +27,7 @@ export function QuoteResponseDialog({
   quote,
   onSubmit,
 }: QuoteResponseDialogProps) {
+  const { t } = useTranslation();
   const [quotedPrice, setQuotedPrice] = useState<string>(
     quote.item?.standard_rate?.toString() || quote.listing?.price?.toString() || ''
   );
@@ -60,33 +62,33 @@ export function QuoteResponseDialog({
       <DialogContent className="sm:max-w-[600px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Envoyer un Devis</DialogTitle>
+            <DialogTitle>{t('dialogs.quoteResponse.title')}</DialogTitle>
             <DialogDescription>
-              Répondez à la demande de devis pour "{quote.product_title}"
+              {t('dialogs.quoteResponse.description', { product: quote.product_title })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Customer Info */}
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
-              <h4 className="font-medium text-sm">Informations du client</h4>
+              <h4 className="font-medium text-sm">{t('dialogs.quoteResponse.customerInfo')}</h4>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p><strong>Nom:</strong> {quote.buyer_contact_name || quote.requester?.name}</p>
+                <p><strong>{t('dialogs.quoteResponse.name')}:</strong> {quote.buyer_contact_name || quote.requester?.name}</p>
                 {quote.buyer_contact_email && (
-                  <p><strong>Email:</strong> {quote.buyer_contact_email}</p>
+                  <p><strong>{t('dialogs.quoteResponse.email')}:</strong> {quote.buyer_contact_email}</p>
                 )}
                 {quote.buyer_contact_phone && (
-                  <p><strong>Téléphone:</strong> {quote.buyer_contact_phone}</p>
+                  <p><strong>{t('dialogs.quoteResponse.phone')}:</strong> {quote.buyer_contact_phone}</p>
                 )}
                 {quote.requested_quantity && (
                   <p>
-                    <strong>Quantité demandée:</strong> {quote.requested_quantity} {quote.unit_of_measure || 'unités'}
+                    <strong>{t('dialogs.quoteResponse.requestedQuantity')}:</strong> {quote.requested_quantity} {quote.unit_of_measure || t('dialogs.quoteResponse.units')}
                   </p>
                 )}
               </div>
               {quote.message && (
                 <div className="mt-2">
-                  <p className="font-medium text-sm mb-1">Message du client:</p>
+                  <p className="font-medium text-sm mb-1">{t('dialogs.quoteResponse.customerMessage')}:</p>
                   <p className="text-sm italic text-gray-600 dark:text-gray-400">
                     "{quote.message}"
                   </p>
@@ -98,7 +100,7 @@ export function QuoteResponseDialog({
             <div className="space-y-2">
               <Label htmlFor="quotedPrice">
                 <DollarSign className="inline h-4 w-4 mr-1" />
-                Prix Proposé *
+                {t('dialogs.quoteResponse.quotedPrice')} *
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -123,7 +125,7 @@ export function QuoteResponseDialog({
                 </select>
               </div>
               {quote.unit_of_measure && (
-                <p className="text-xs text-gray-500">Prix par {quote.unit_of_measure}</p>
+                <p className="text-xs text-gray-500">{t('dialogs.quoteResponse.pricePerUnit', { unit: quote.unit_of_measure })}</p>
               )}
             </div>
 
@@ -131,7 +133,7 @@ export function QuoteResponseDialog({
             <div className="space-y-2">
               <Label htmlFor="validUntil">
                 <Calendar className="inline h-4 w-4 mr-1" />
-                Valide jusqu'au (optionnel)
+                {t('dialogs.quoteResponse.validUntil')}
               </Label>
               <Input
                 id="validUntil"
@@ -145,39 +147,39 @@ export function QuoteResponseDialog({
             {/* Response Message */}
             <div className="space-y-2">
               <Label htmlFor="response">
-                Message / Conditions *
+                {t('dialogs.quoteResponse.messageConditions')} *
               </Label>
               <Textarea
                 id="response"
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
-                placeholder="Ex: Prix unitaire pour une commande de minimum 100 unités. Livraison incluse dans un rayon de 50km..."
+                placeholder={t('dialogs.quoteResponse.messagePlaceholder')}
                 rows={4}
                 required
               />
               <p className="text-xs text-gray-500">
-                Ajoutez des détails sur votre offre, conditions de paiement, délais de livraison, etc.
+                {t('dialogs.quoteResponse.messageHint')}
               </p>
             </div>
 
             {/* Summary */}
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
               <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                Récapitulatif
+                {t('dialogs.quoteResponse.summary')}
               </p>
               <div className="mt-2 space-y-1 text-sm text-green-800 dark:text-green-200">
                 <p>
-                  Prix proposé: <strong>{quotedPrice || '0'} {currency}</strong>
+                  {t('dialogs.quoteResponse.proposedPrice')}: <strong>{quotedPrice || '0'} {currency}</strong>
                   {quote.unit_of_measure && ` / ${quote.unit_of_measure}`}
                 </p>
                 {quote.requested_quantity && quotedPrice && (
                   <p>
-                    Total estimé: <strong>{(parseFloat(quotedPrice) * quote.requested_quantity).toFixed(2)} {currency}</strong>
+                    {t('dialogs.quoteResponse.estimatedTotal')}: <strong>{(parseFloat(quotedPrice) * quote.requested_quantity).toFixed(2)} {currency}</strong>
                   </p>
                 )}
                 {validUntil && (
                   <p>
-                    Offre valide jusqu'au: <strong>{new Date(validUntil).toLocaleDateString('fr-FR')}</strong>
+                    {t('dialogs.quoteResponse.offerValidUntil')}: <strong>{new Date(validUntil).toLocaleDateString('fr-FR')}</strong>
                   </p>
                 )}
               </div>
@@ -191,7 +193,7 @@ export function QuoteResponseDialog({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Annuler
+              {t('app.cancel')}
             </Button>
             <Button
               type="submit"
@@ -199,11 +201,11 @@ export function QuoteResponseDialog({
               className="bg-green-600 hover:bg-green-700"
             >
               {submitting ? (
-                <>Envoi en cours...</>
+                <>{t('dialogs.quoteResponse.sending')}</>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Envoyer le Devis
+                  {t('dialogs.quoteResponse.sendQuote')}
                 </>
               )}
             </Button>

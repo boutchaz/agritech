@@ -330,33 +330,33 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         </h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="Nom de la parcelle *" htmlFor="name" error={errors.name?.message}>
+                        <FormField label={`${t('farmHierarchy.parcel.name')} *`} htmlFor="name" error={errors.name?.message}>
                           <Input
                             id="name"
                             {...register('name')}
-                            placeholder="Ex: Parcelle Nord"
+                            placeholder={t('farmHierarchy.parcel.namePlaceholder')}
                             invalid={!!errors.name}
                           />
                         </FormField>
 
-                        <FormField label="Surface (ha) *" htmlFor="area" error={errors.area?.message}>
+                        <FormField label={`${t('farmHierarchy.parcel.area')} *`} htmlFor="area" error={errors.area?.message}>
                           <Input
                             id="area"
                             type="number"
                             step="0.01"
                             {...register('area', { valueAsNumber: true })}
-                            placeholder="0.00"
+                            placeholder={t('farmHierarchy.parcel.areaPlaceholder')}
                             invalid={!!errors.area}
                           />
                         </FormField>
 
                         <div className="md:col-span-2">
-                          <FormField label="Description" htmlFor="description">
+                          <FormField label={t('farmHierarchy.parcel.description')} htmlFor="description">
                             <Textarea
                               id="description"
                               {...register('description')}
                               rows={2}
-                              placeholder="Description de la parcelle..."
+                              placeholder={t('farmHierarchy.parcel.descriptionPlaceholder')}
                             />
                           </FormField>
                         </div>
@@ -368,29 +368,29 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                       <div className="flex items-center gap-2">
                         <Leaf className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Culture et plantation
+                          {t('farmHierarchy.parcel.sections.cropInfo')}
                         </h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="Catégorie de culture" htmlFor="crop_category">
+                        <FormField label={t('farmHierarchy.parcel.cropCategory')} htmlFor="crop_category">
                           <Select value={watch('crop_category') || undefined} onValueChange={(value) => setValue('crop_category', value)}>
                             <SelectTrigger id="crop_category">
-                              <SelectValue placeholder="Sélectionner..." />
+                              <SelectValue placeholder={t('common.selectOption')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="trees">Arbres fruitiers</SelectItem>
-                              <SelectItem value="cereals">Céréales</SelectItem>
-                              <SelectItem value="vegetables">Légumes</SelectItem>
-                              <SelectItem value="other">Autre</SelectItem>
+                              <SelectItem value="trees">{t('farmHierarchy.parcel.categories.trees')}</SelectItem>
+                              <SelectItem value="cereals">{t('farmHierarchy.parcel.categories.cereals')}</SelectItem>
+                              <SelectItem value="vegetables">{t('farmHierarchy.parcel.categories.vegetables')}</SelectItem>
+                              <SelectItem value="other">{t('farmHierarchy.parcel.categories.other')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormField>
 
-                        <FormField label="Type de culture" htmlFor="crop_type">
+                        <FormField label={t('farmHierarchy.parcel.cropType')} htmlFor="crop_type">
                           {availableCropTypes.length > 0 ? (
                             <Select value={watch('crop_type') || undefined} onValueChange={(value) => setValue('crop_type', value)}>
                               <SelectTrigger id="crop_type">
-                                <SelectValue placeholder="Sélectionner..." />
+                                <SelectValue placeholder={t('common.selectOption')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {availableCropTypes.map(crop => (
@@ -402,16 +402,16 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                             <Input
                               id="crop_type"
                               {...register('crop_type')}
-                              placeholder="Ex: Tomates"
+                              placeholder={t('farmHierarchy.parcel.cropTypePlaceholder')}
                             />
                           )}
                         </FormField>
 
                         {availableVarieties.length > 0 && (
-                          <FormField label="Variété" htmlFor="variety">
+                          <FormField label={t('farmHierarchy.parcel.variety')} htmlFor="variety">
                             <Select value={watch('variety') || undefined} onValueChange={(value) => setValue('variety', value)}>
                               <SelectTrigger id="variety">
-                                <SelectValue placeholder="Sélectionner..." />
+                                <SelectValue placeholder={t('common.selectOption')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {availableVarieties.map(variety => (
@@ -423,11 +423,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         )}
 
                         {selectedCategory === 'trees' && (
-                          <FormField label="Porte-greffe" htmlFor="rootstock">
+                          <FormField label={t('farmHierarchy.parcel.rootstock')} htmlFor="rootstock">
                             <Input
                               id="rootstock"
                               {...register('rootstock')}
-                              placeholder="Ex: GF677"
+                              placeholder={t('farmHierarchy.parcel.rootstockPlaceholder')}
                             />
                           </FormField>
                         )}
@@ -438,13 +438,13 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                     {availablePlantingSystems.length > 0 && (
                       <div className="space-y-4">
                         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Système de plantation
+                          {t('farmHierarchy.parcel.sections.plantingSystem')}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField label="Type de système" htmlFor="planting_system">
+                          <FormField label={t('farmHierarchy.parcel.plantingSystem')} htmlFor="planting_system">
                             <Select value={watch('planting_system') || undefined} onValueChange={(value) => setValue('planting_system', value)}>
                               <SelectTrigger id="planting_system">
-                                <SelectValue placeholder="Sélectionner..." />
+                                <SelectValue placeholder={t('common.selectOption')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {availablePlantingSystems.map((system, idx) => (
@@ -456,17 +456,17 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                             </Select>
                           </FormField>
 
-                          <FormField label="Espacement" htmlFor="spacing">
+                          <FormField label={t('farmHierarchy.parcel.spacing')} htmlFor="spacing">
                             <Input
                               id="spacing"
                               {...register('spacing')}
-                              placeholder="Ex: 4x1.5"
+                              placeholder={t('farmHierarchy.parcel.spacingPlaceholder')}
                               readOnly
                               className="bg-gray-50 dark:bg-gray-800"
                             />
                           </FormField>
 
-                          <FormField label="Densité (plants/ha)" htmlFor="density_per_hectare">
+                          <FormField label={t('farmHierarchy.parcel.densityPerHectare')} htmlFor="density_per_hectare">
                             <Input
                               id="density_per_hectare"
                               type="number"
@@ -477,7 +477,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                             />
                           </FormField>
 
-                          <FormField label="Nombre total de plants" htmlFor="plant_count">
+                          <FormField label={t('farmHierarchy.parcel.plantCount')} htmlFor="plant_count">
                             <Input
                               id="plant_count"
                               type="number"
@@ -488,7 +488,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                             />
                           </FormField>
 
-                          <FormField label="Date de plantation" htmlFor="planting_date">
+                          <FormField label={t('farmHierarchy.parcel.plantingDate')} htmlFor="planting_date">
                             <Input
                               id="planting_date"
                               type="date"
@@ -496,7 +496,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                             />
                           </FormField>
 
-                          <FormField label="Année de plantation" htmlFor="planting_year">
+                          <FormField label={t('farmHierarchy.parcel.plantingYear')} htmlFor="planting_year">
                             <Input
                               id="planting_year"
                               type="number"
@@ -511,29 +511,29 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                     {/* Additional Information */}
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Informations complémentaires
+                        {t('farmHierarchy.parcel.sections.additionalInfo')}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="Type de sol" htmlFor="soil_type">
+                        <FormField label={t('farmHierarchy.parcel.soilType')} htmlFor="soil_type">
                           <Input
                             id="soil_type"
                             {...register('soil_type')}
-                            placeholder="Ex: Argileux"
+                            placeholder={t('farmHierarchy.parcel.soilTypePlaceholder')}
                           />
                         </FormField>
 
-                        <FormField label="Type d'irrigation" htmlFor="irrigation_type">
+                        <FormField label={t('farmHierarchy.parcel.irrigationType')} htmlFor="irrigation_type">
                           <Select value={watch('irrigation_type') || undefined} onValueChange={(value) => setValue('irrigation_type', value)}>
                             <SelectTrigger id="irrigation_type">
-                              <SelectValue placeholder="Sélectionner..." />
+                              <SelectValue placeholder={t('common.selectOption')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Goutte à goutte">Goutte à goutte</SelectItem>
-                              <SelectItem value="Aspersion">Aspersion</SelectItem>
-                              <SelectItem value="Gravitaire">Gravitaire</SelectItem>
-                              <SelectItem value="Pivot">Pivot</SelectItem>
-                              <SelectItem value="Submersion">Submersion</SelectItem>
-                              <SelectItem value="Pluvial">Pluvial (bour)</SelectItem>
+                              <SelectItem value="drip">{t('farmHierarchy.parcel.irrigation.drip')}</SelectItem>
+                              <SelectItem value="sprinkler">{t('farmHierarchy.parcel.irrigation.sprinkler')}</SelectItem>
+                              <SelectItem value="gravity">{t('farmHierarchy.parcel.irrigation.gravity')}</SelectItem>
+                              <SelectItem value="pivot">{t('farmHierarchy.parcel.irrigation.pivot')}</SelectItem>
+                              <SelectItem value="submersion">{t('farmHierarchy.parcel.irrigation.submersion')}</SelectItem>
+                              <SelectItem value="rainfed">{t('farmHierarchy.parcel.irrigation.rainfed')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormField>
@@ -627,14 +627,14 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                     <CardContent>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">Surface:</span>
+                          <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.area')}:</span>
                           <span className="font-medium text-gray-900 dark:text-white">
                             {parcel.area} ha
                           </span>
                         </div>
                         {parcel.soil_type && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">Sol:</span>
+                            <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.soilType')}:</span>
                             <span className="text-gray-900 dark:text-white">{parcel.soil_type}</span>
                           </div>
                         )}
