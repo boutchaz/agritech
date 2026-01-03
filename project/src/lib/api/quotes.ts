@@ -29,10 +29,10 @@ export interface QuoteFilters {
   customer_id?: string;
   customer_name?: string;
   quote_number?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
-  limit?: number;
+  pageSize?: number;
 }
 
 export interface UpdateQuoteStatusInput {

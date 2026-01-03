@@ -56,11 +56,11 @@ export interface PurchaseOrderFilters {
   supplier_id?: string;
   supplier_name?: string;
   order_number?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   stock_received?: string;
   page?: number;
-  limit?: number;
+  pageSize?: number;
 }
 
 export interface UpdateStatusInput {
@@ -78,11 +78,11 @@ export const purchaseOrdersApi = {
     if (filters?.supplier_id) params.append('supplier_id', filters.supplier_id);
     if (filters?.supplier_name) params.append('supplier_name', filters.supplier_name);
     if (filters?.order_number) params.append('order_number', filters.order_number);
-    if (filters?.date_from) params.append('date_from', filters.date_from);
-    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+    if (filters?.dateTo) params.append('dateTo', filters.dateTo);
     if (filters?.stock_received) params.append('stock_received', filters.stock_received);
     if (filters?.page) params.append('page', String(filters.page));
-    if (filters?.limit) params.append('limit', String(filters.limit));
+    if (filters?.pageSize) params.append('pageSize', String(filters.pageSize));
 
     const queryString = params.toString();
     const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;

@@ -19,10 +19,12 @@ export interface InvoiceFilters {
   party_id?: string;
   party_name?: string;
   invoice_number?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   farm_id?: string;
   parcel_id?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface PaginatedInvoiceQuery extends PaginatedQuery {
