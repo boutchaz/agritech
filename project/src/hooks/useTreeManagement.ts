@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './useAuth';
 import {
   treeManagementApi,
@@ -7,11 +8,14 @@ import {
   type Tree,
   type PlantationType,
 } from '@/lib/api/tree-management';
+import { localizeItems, localizeItem } from '@/lib/utils/localization';
 
 export type { TreeCategoryWithTrees, TreeCategory, Tree, PlantationType };
 
 export function useTreeCategories(organizationId: string | null) {
   const queryClient = useQueryClient();
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
 
   const {
     data: categories = [],
@@ -19,10 +23,14 @@ export function useTreeCategories(organizationId: string | null) {
     error: queryError,
     refetch,
   } = useQuery({
-    queryKey: ['tree-categories', organizationId],
+    queryKey: ['tree-categories', organizationId, locale],
     queryFn: () => treeManagementApi.getCategories(organizationId!),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
+    select: (data) => data.map((category: TreeCategoryWithTrees) => ({
+      ...localizeItem(category, locale),
+      trees: localizeItems(category.trees || [], locale),
+    })),
   });
 
   const addCategoryMutation = useMutation({
@@ -116,6 +124,8 @@ export function useTreeCategories(organizationId: string | null) {
 
 export function usePlantationTypes(organizationId: string | null) {
   const queryClient = useQueryClient();
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
 
   const {
     data: plantationTypes = [],
@@ -123,10 +133,11 @@ export function usePlantationTypes(organizationId: string | null) {
     error: queryError,
     refetch,
   } = useQuery({
-    queryKey: ['plantation-types', organizationId],
+    queryKey: ['plantation-types', organizationId, locale],
     queryFn: () => treeManagementApi.getPlantationTypes(organizationId!),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
+    select: (data) => localizeItems(data, locale),
   });
 
   const addPlantationTypeMutation = useMutation({
