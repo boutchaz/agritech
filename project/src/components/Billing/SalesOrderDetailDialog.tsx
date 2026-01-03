@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
 import {
@@ -66,6 +67,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();

@@ -22,6 +22,8 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReportTrialBalanceRouteImport } from './routes/report-trial-balance'
 import { Route as ReportProfitLossRouteImport } from './routes/report-profit-loss'
 import { Route as ReportBalanceSheetRouteImport } from './routes/report-balance-sheet'
+import { Route as ReportAgedReceivablesRouteImport } from './routes/report-aged-receivables'
+import { Route as ReportAgedPayablesRouteImport } from './routes/report-aged-payables'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReceptionBatchesRouteImport } from './routes/reception-batches'
 import { Route as QualityControlRouteImport } from './routes/quality-control'
@@ -166,6 +168,16 @@ const ReportProfitLossRoute = ReportProfitLossRouteImport.update({
 const ReportBalanceSheetRoute = ReportBalanceSheetRouteImport.update({
   id: '/report-balance-sheet',
   path: '/report-balance-sheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportAgedReceivablesRoute = ReportAgedReceivablesRouteImport.update({
+  id: '/report-aged-receivables',
+  path: '/report-aged-receivables',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportAgedPayablesRoute = ReportAgedPayablesRouteImport.update({
+  id: '/report-aged-payables',
+  path: '/report-aged-payables',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -610,6 +622,8 @@ export interface FileRoutesByFullPath {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-aged-payables': typeof ReportAgedPayablesRoute
+  '/report-aged-receivables': typeof ReportAgedReceivablesRoute
   '/report-balance-sheet': typeof ReportBalanceSheetRoute
   '/report-profit-loss': typeof ReportProfitLossRoute
   '/report-trial-balance': typeof ReportTrialBalanceRoute
@@ -703,6 +717,8 @@ export interface FileRoutesByTo {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-aged-payables': typeof ReportAgedPayablesRoute
+  '/report-aged-receivables': typeof ReportAgedReceivablesRoute
   '/report-balance-sheet': typeof ReportBalanceSheetRoute
   '/report-profit-loss': typeof ReportProfitLossRoute
   '/report-trial-balance': typeof ReportTrialBalanceRoute
@@ -794,6 +810,8 @@ export interface FileRoutesById {
   '/quality-control': typeof QualityControlRoute
   '/reception-batches': typeof ReceptionBatchesRoute
   '/register': typeof RegisterRoute
+  '/report-aged-payables': typeof ReportAgedPayablesRoute
+  '/report-aged-receivables': typeof ReportAgedReceivablesRoute
   '/report-balance-sheet': typeof ReportBalanceSheetRoute
   '/report-profit-loss': typeof ReportProfitLossRoute
   '/report-trial-balance': typeof ReportTrialBalanceRoute
@@ -890,6 +908,8 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-aged-payables'
+    | '/report-aged-receivables'
     | '/report-balance-sheet'
     | '/report-profit-loss'
     | '/report-trial-balance'
@@ -983,6 +1003,8 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-aged-payables'
+    | '/report-aged-receivables'
     | '/report-balance-sheet'
     | '/report-profit-loss'
     | '/report-trial-balance'
@@ -1073,6 +1095,8 @@ export interface FileRouteTypes {
     | '/quality-control'
     | '/reception-batches'
     | '/register'
+    | '/report-aged-payables'
+    | '/report-aged-receivables'
     | '/report-balance-sheet'
     | '/report-profit-loss'
     | '/report-trial-balance'
@@ -1169,6 +1193,8 @@ export interface RootRouteChildren {
   QualityControlRoute: typeof QualityControlRoute
   ReceptionBatchesRoute: typeof ReceptionBatchesRoute
   RegisterRoute: typeof RegisterRoute
+  ReportAgedPayablesRoute: typeof ReportAgedPayablesRoute
+  ReportAgedReceivablesRoute: typeof ReportAgedReceivablesRoute
   ReportBalanceSheetRoute: typeof ReportBalanceSheetRoute
   ReportProfitLossRoute: typeof ReportProfitLossRoute
   ReportTrialBalanceRoute: typeof ReportTrialBalanceRoute
@@ -1276,6 +1302,20 @@ declare module '@tanstack/react-router' {
       path: '/report-balance-sheet'
       fullPath: '/report-balance-sheet'
       preLoaderRoute: typeof ReportBalanceSheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report-aged-receivables': {
+      id: '/report-aged-receivables'
+      path: '/report-aged-receivables'
+      fullPath: '/report-aged-receivables'
+      preLoaderRoute: typeof ReportAgedReceivablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report-aged-payables': {
+      id: '/report-aged-payables'
+      path: '/report-aged-payables'
+      fullPath: '/report-aged-payables'
+      preLoaderRoute: typeof ReportAgedPayablesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -2056,6 +2096,8 @@ const rootRouteChildren: RootRouteChildren = {
   QualityControlRoute: QualityControlRoute,
   ReceptionBatchesRoute: ReceptionBatchesRoute,
   RegisterRoute: RegisterRoute,
+  ReportAgedPayablesRoute: ReportAgedPayablesRoute,
+  ReportAgedReceivablesRoute: ReportAgedReceivablesRoute,
   ReportBalanceSheetRoute: ReportBalanceSheetRoute,
   ReportProfitLossRoute: ReportProfitLossRoute,
   ReportTrialBalanceRoute: ReportTrialBalanceRoute,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Banknote, Calculator, Loader2, AlertCircle } from 'lucide-react';
 import {
   Dialog,
@@ -67,6 +68,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const defaultDates = getDefaultPeriodDates();
   const [periodStart, setPeriodStart] = useState(defaultDates.start);
   const [periodEnd, setPeriodEnd] = useState(defaultDates.end);
@@ -74,7 +76,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [calculatedPayment, setCalculatedPayment] = useState<CalculatePaymentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const calculatePayment = useCalculatePayment();
   const createPayment = useCreatePaymentRecord();
 
@@ -97,7 +99,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
       });
       setCalculatedPayment(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du calcul');
+      setError(err instanceof Error ? err.message : t('dialogs.workerPayment.calculationError'));
     }
   };
 
@@ -134,7 +136,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la création du paiement');
+      setError(err instanceof Error ? err.message : t('dialogs.workerPayment.createError'));
     }
   };
 
@@ -149,7 +151,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
               <Banknote className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <DialogTitle>Créer un paiement</DialogTitle>
+              <DialogTitle>{t('dialogs.workerPayment.title')}</DialogTitle>
               <DialogDescription>
                 {worker.first_name} {worker.last_name}
               </DialogDescription>
@@ -168,20 +170,20 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
           <Card className="bg-gray-50 dark:bg-gray-900/50 border-0">
             <CardContent className="p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Type:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.type')}:</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {getWorkerTypeLabel(worker.worker_type, 'fr')}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Rémunération:</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.compensation')}:</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {getCompensationDisplay(worker)}
                 </span>
               </div>
               {worker.farm_name && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Ferme:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.farm')}:</span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {worker.farm_name}
                   </span>
@@ -192,7 +194,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="period_start">Début période</Label>
+              <Label htmlFor="period_start">{t('dialogs.workerPayment.periodStart')}</Label>
               <Input
                 id="period_start"
                 type="date"
@@ -201,7 +203,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="period_end">Fin période</Label>
+              <Label htmlFor="period_end">{t('dialogs.workerPayment.periodEnd')}</Label>
               <Input
                 id="period_end"
                 type="date"
@@ -213,7 +215,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="payment_type">Type de paiement</Label>
+              <Label htmlFor="payment_type">{t('dialogs.workerPayment.paymentType')}</Label>
               <Select
                 value={paymentType}
                 onValueChange={(value) => setPaymentType(value as PaymentType)}
@@ -231,7 +233,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="payment_method">Mode de paiement</Label>
+              <Label htmlFor="payment_method">{t('dialogs.workerPayment.paymentMethod')}</Label>
               <Select
                 value={paymentMethod}
                 onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
@@ -262,73 +264,73 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
               ) : (
                 <Calculator className="w-4 h-4 mr-2" />
               )}
-              Calculer le montant
+              {t('dialogs.workerPayment.calculateAmount')}
             </Button>
           ) : (
             <div className="space-y-4">
               <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                 <CardContent className="p-4 space-y-3">
                   <h4 className="font-medium text-green-800 dark:text-green-200">
-                    Détail du calcul
+                    {t('dialogs.workerPayment.calculationDetails')}
                   </h4>
-                  
+
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Montant de base:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.baseAmount')}:</span>
                       <span className="font-medium">{formatCurrency(calculatedPayment.base_amount)}</span>
                     </div>
-                    
+
                     {calculatedPayment.days_worked > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Jours travaillés:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.daysWorked')}:</span>
                         <span>{calculatedPayment.days_worked}</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.hours_worked > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Heures travaillées:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.hoursWorked')}:</span>
                         <span>{calculatedPayment.hours_worked}h</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.tasks_completed > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Tâches terminées:</span>
+                        <span className="text-gray-600 dark:text-gray-400">{t('dialogs.workerPayment.tasksCompleted')}:</span>
                         <span>{calculatedPayment.tasks_completed}</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.overtime_amount > 0 && (
                       <div className="flex justify-between text-blue-600 dark:text-blue-400">
-                        <span>+ Heures supp.:</span>
+                        <span>+ {t('dialogs.workerPayment.overtime')}:</span>
                         <span>{formatCurrency(calculatedPayment.overtime_amount)}</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.bonuses && calculatedPayment.bonuses.length > 0 && (
                       <div className="flex justify-between text-blue-600 dark:text-blue-400">
-                        <span>+ Primes:</span>
+                        <span>+ {t('dialogs.workerPayment.bonuses')}:</span>
                         <span>{formatCurrency(calculatedPayment.bonuses.reduce((sum, b) => sum + b.amount, 0))}</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.total_deductions > 0 && (
                       <div className="flex justify-between text-red-600 dark:text-red-400">
-                        <span>- Déductions:</span>
+                        <span>- {t('dialogs.workerPayment.deductions')}:</span>
                         <span>{formatCurrency(calculatedPayment.total_deductions)}</span>
                       </div>
                     )}
-                    
+
                     {calculatedPayment.advance_deductions > 0 && (
                       <div className="flex justify-between text-red-600 dark:text-red-400">
-                        <span>- Avances:</span>
+                        <span>- {t('dialogs.workerPayment.advances')}:</span>
                         <span>{formatCurrency(calculatedPayment.advance_deductions)}</span>
                       </div>
                     )}
-                    
+
                     <div className="border-t dark:border-gray-700 pt-2 flex justify-between font-bold text-lg">
-                      <span>Net à payer:</span>
+                      <span>{t('dialogs.workerPayment.netToPay')}:</span>
                       <span className="text-green-600 dark:text-green-400">
                         {formatCurrency(calculatedPayment.net_amount)}
                       </span>
@@ -343,7 +345,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                   onClick={() => setCalculatedPayment(null)}
                   className="flex-1"
                 >
-                  Recalculer
+                  {t('dialogs.workerPayment.recalculate')}
                 </Button>
                 <Button
                   onClick={handleCreatePayment}
@@ -355,7 +357,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                   ) : (
                     <Banknote className="w-4 h-4 mr-2" />
                   )}
-                  Créer le paiement
+                  {t('dialogs.workerPayment.createPayment')}
                 </Button>
               </div>
             </div>
@@ -364,7 +366,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Annuler
+            {t('app.cancel')}
           </Button>
         </DialogFooter>
       </DialogContent>

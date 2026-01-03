@@ -19,7 +19,7 @@ export function usePayments(organizationId: string, filters?: PaymentFilters) {
     queryKey: ['payments', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      return paymentRecordsApi.getAll(organizationId, filters);
+      return paymentRecordsApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
   });

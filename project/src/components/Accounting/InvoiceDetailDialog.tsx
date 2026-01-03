@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
+import { invoicesApi } from '@/lib/api/invoices';
+import { toast } from 'sonner';
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -22,7 +27,28 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   onClose,
   invoiceId,
 }) => {
+  const { t } = useTranslation();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleSendEmail = async () => {
+    if (!invoiceId) return;
+    
+    setIsSendingEmail(true);
+    try {
+      const result = await invoicesApi.sendEmail(invoiceId);
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (err) {
+      console.error('Error sending invoice email:', err);
+      toast.error(err instanceof Error ? err.message : t('invoices.email.error', 'Failed to send email'));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   if (!invoiceId) return null;
 
@@ -32,10 +58,10 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5 text-green-600" />
-            Invoice Details
+            {t('dialogs.invoiceDetail.title')}
           </DialogTitle>
           <DialogDescription>
-            View invoice information and line items
+            {t('dialogs.invoiceDetail.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -48,8 +74,8 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
         {error && (
           <div className="text-center py-8">
             <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600 dark:text-red-400">Error loading invoice</p>
-            <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : 'Unknown error'}</p>
+            <p className="text-red-600 dark:text-red-400">{t('dialogs.invoiceDetail.errorLoading')}</p>
+            <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('app.unknownError')}</p>
           </div>
         )}
 
@@ -62,7 +88,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   <div className="flex items-start gap-3">
                     <Receipt className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Invoice Number</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.invoiceNumber')}</p>
                       <p className="font-semibold text-gray-900 dark:text-white">{invoice.invoice_number}</p>
                     </div>
                   </div>
@@ -74,13 +100,13 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   <div className="flex items-start gap-3">
                     <FileText className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Type</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.type')}</p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${
                         invoice.invoice_type === 'sales'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                           : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
                       }`}>
-                        {invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice'}
+                        {invoice.invoice_type === 'sales' ? t('dialogs.invoiceDetail.salesInvoice') : t('dialogs.invoiceDetail.purchaseInvoice')}
                       </span>
                     </div>
                   </div>
@@ -93,7 +119,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                     <User className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {invoice.invoice_type === 'sales' ? 'Customer' : 'Supplier'}
+                        {invoice.invoice_type === 'sales' ? t('dialogs.invoiceDetail.customer') : t('dialogs.invoiceDetail.supplier')}
                       </p>
                       <p className="font-semibold text-gray-900 dark:text-white">{invoice.party_name}</p>
                     </div>
@@ -106,7 +132,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Invoice Date</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.invoiceDate')}</p>
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
                       </p>
@@ -120,7 +146,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Due Date</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.dueDate')}</p>
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {new Date(invoice.due_date).toLocaleDateString('fr-FR')}
                       </p>
@@ -134,7 +160,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.status')}</p>
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${invoiceStatus.getColor(invoice.status)}`}>
                         {renderStatusIcon(invoice.status)}
                         {invoice.status}
@@ -147,22 +173,22 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
 
             {/* Line Items */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Line Items</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dialogs.invoiceDetail.lineItems')}</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Item
+                        {t('dialogs.invoiceDetail.item')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Quantity
+                        {t('dialogs.invoiceDetail.quantity')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Rate
+                        {t('dialogs.invoiceDetail.rate')}
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Amount
+                        {t('dialogs.invoiceDetail.amount')}
                       </th>
                     </tr>
                   </thead>
@@ -197,25 +223,25 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <div className="max-w-xs ml-auto space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('dialogs.invoiceDetail.subtotal')}:</span>
                   <span className="text-gray-900 dark:text-white font-medium">
                     {invoice.currency_code} {Number(invoice.subtotal).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Tax:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('dialogs.invoiceDetail.tax')}:</span>
                   <span className="text-gray-900 dark:text-white font-medium">
                     {invoice.currency_code} {Number(invoice.tax_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t border-gray-200 dark:border-gray-700 pt-2">
-                  <span className="text-gray-900 dark:text-white">Grand Total:</span>
+                  <span className="text-gray-900 dark:text-white">{t('dialogs.invoiceDetail.grandTotal')}:</span>
                   <span className="text-green-600 dark:text-green-500">
                     {invoice.currency_code} {Number(invoice.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Outstanding:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('dialogs.invoiceDetail.outstanding')}:</span>
                   <span className="text-red-600 dark:text-red-500 font-medium">
                     {invoice.currency_code} {Number(invoice.outstanding_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </span>
@@ -226,12 +252,28 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
             {/* Remarks */}
             {invoice.remarks && (
               <div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Remarks</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('dialogs.invoiceDetail.remarks')}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
                   {invoice.remarks}
                 </p>
               </div>
             )}
+
+            {/* Actions */}
+            <DialogFooter className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="outline"
+                onClick={handleSendEmail}
+                disabled={isSendingEmail}
+              >
+                {isSendingEmail ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
+                {t('invoices.actions.sendEmail', 'Send Email')}
+              </Button>
+            </DialogFooter>
           </div>
         )}
       </DialogContent>

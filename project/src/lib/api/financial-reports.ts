@@ -118,6 +118,42 @@ export interface GeneralLedgerReport {
 }
 
 // API Client
+export interface AgedInvoice {
+  invoice_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  party_id: string;
+  party_name: string;
+  grand_total: number;
+  outstanding_amount: number;
+  days_overdue: number;
+  age_bucket: 'current' | '1-30' | '31-60' | '61-90' | 'over-90';
+}
+
+export interface AgedReport {
+  as_of_date: string;
+  invoices: AgedInvoice[];
+  summary: {
+    current: number;
+    days_1_30: number;
+    days_31_60: number;
+    days_61_90: number;
+    over_90: number;
+    total: number;
+  };
+  by_party: Array<{
+    party_id: string;
+    party_name: string;
+    current: number;
+    days_1_30: number;
+    days_31_60: number;
+    days_61_90: number;
+    over_90: number;
+    total: number;
+  }>;
+}
+
 export const financialReportsApi = {
   /**
    * Get trial balance report
@@ -190,6 +226,24 @@ export const financialReportsApi = {
     const query = params.toString();
     return apiClient.get<AccountBalance | null>(
       `/api/v1/financial-reports/account-balance/${accountId}${query ? `?${query}` : ''}`
+    );
+  },
+
+  async getAgedReceivables(asOfDate?: string): Promise<AgedReport> {
+    const params = new URLSearchParams();
+    if (asOfDate) params.append('as_of_date', asOfDate);
+    const query = params.toString();
+    return apiClient.get<AgedReport>(
+      `/api/v1/financial-reports/aged-receivables${query ? `?${query}` : ''}`
+    );
+  },
+
+  async getAgedPayables(asOfDate?: string): Promise<AgedReport> {
+    const params = new URLSearchParams();
+    if (asOfDate) params.append('as_of_date', asOfDate);
+    const query = params.toString();
+    return apiClient.get<AgedReport>(
+      `/api/v1/financial-reports/aged-payables${query ? `?${query}` : ''}`
     );
   },
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   X,
   Play,
@@ -53,6 +54,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   onClose,
   onEdit,
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
   const [showHarvestForm, setShowHarvestForm] = useState(false);

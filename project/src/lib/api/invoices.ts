@@ -92,14 +92,19 @@ export const invoicesApi = {
     return apiClient.patch<Invoice>(`${BASE_URL}/${invoiceId}/status`, data, {}, organizationId);
   },
 
-  /**
-   * Post an invoice (creates journal entry)
-   */
   async postInvoice(
     invoiceId: string,
     postingDate: string,
     organizationId?: string
   ): Promise<{ success: boolean; message: string; data: { invoice_id: string; journal_entry_id: string } }> {
     return apiClient.post(`${BASE_URL}/${invoiceId}/post`, { posting_date: postingDate }, {}, organizationId);
+  },
+
+  async sendEmail(
+    invoiceId: string,
+    email?: string,
+    organizationId?: string
+  ): Promise<{ success: boolean; message: string }> {
+    return apiClient.post(`${BASE_URL}/${invoiceId}/send-email`, { email }, {}, organizationId);
   },
 };

@@ -103,3 +103,33 @@ export async function signupViaApi(signupData: SignupData): Promise<SignupRespon
 export async function loginAfterSignup(email: string, password: string): Promise<void> {
   await loginViaApi(email, password);
 }
+
+export async function signInWithGoogle(): Promise<void> {
+  const { error } = await authSupabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function signInWithGitHub(): Promise<void> {
+  const { error } = await authSupabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
