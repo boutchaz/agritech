@@ -145,4 +145,25 @@ export class InvoicesController {
     const organizationId = req.headers['x-organization-id'];
     return this.invoicesService.delete(id, organizationId);
   }
+
+  @Post(':id/send-email')
+  @ApiOperation({
+    summary: 'Send invoice email to customer/supplier',
+    description: 'Sends the invoice details via email to the party. Can optionally specify a different recipient email.',
+  })
+  @ApiParam({ name: 'id', description: 'Invoice ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoice email sent successfully',
+  })
+  @ApiResponse({ status: 400, description: 'No email address found for party' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async sendEmail(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: { email?: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.invoicesService.sendInvoiceEmail(id, organizationId, dto.email);
+  }
 }

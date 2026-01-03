@@ -51,6 +51,28 @@ export interface OrderEmailData {
   status?: string;
 }
 
+export interface InvoiceEmailData {
+  invoiceNumber: string;
+  invoiceType: 'sales' | 'purchase';
+  partyName: string;
+  partyEmail: string;
+  organizationName: string;
+  invoiceDate: string;
+  dueDate: string;
+  subtotal: number;
+  taxAmount: number;
+  grandTotal: number;
+  currency: string;
+  items: Array<{
+    description: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }>;
+  notes?: string;
+  invoiceUrl?: string;
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -1097,6 +1119,261 @@ export class NotificationsService {
     }
 
     text += `© 2025 AgriTech Marketplace\n`;
+
+    return text;
+  }
+
+  /**
+   * Send invoice email to customer/supplier
+   */
+  async sendInvoiceEmail(data: InvoiceEmailData): Promise<boolean> {
+    const isSales = data.invoiceType === 'sales';
+    const subject = isSales 
+      ? `Facture ${data.invoiceNumber} - ${data.organizationName}`
+      : `Facture d'achat ${data.invoiceNumber} - ${data.organizationName}`;
+
+    const html = this.generateInvoiceEmail(data);
+    const text = this.generateInvoiceEmailText(data);
+
+    return this.sendEmail({
+      to: data.partyEmail,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Generate HTML email template for invoice
+   */
+  private generateInvoiceEmail(data: InvoiceEmailData): string {
+    const isSales = data.invoiceType === 'sales';
+    const itemsHtml = data.items.map(item => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+          ${item.description}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">
+          ${item.quantity}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+          ${item.rate.toLocaleString()} ${data.currency}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+          ${item.amount.toLocaleString()} ${data.currency}
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .content {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      padding: 30px;
+      border-radius: 0 0 10px 10px;
+    }
+    .invoice-number {
+      background: #f0fdf4;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: center;
+      border: 2px solid #10b981;
+    }
+    .invoice-number strong {
+      font-size: 20px;
+      color: #059669;
+    }
+    .info-row {
+      margin: 15px 0;
+      padding: 10px;
+      background: #f9fafb;
+      border-left: 3px solid #10b981;
+      border-radius: 4px;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 30px;
+      background: #10b981;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 20px 0;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .total-row {
+      background: #f0fdf4;
+      font-weight: 600;
+      font-size: 18px;
+    }
+    .footer {
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📄 ${isSales ? 'Facture' : 'Facture d\'achat'}</h1>
+  </div>
+
+  <div class="content">
+    <p>Bonjour ${data.partyName},</p>
+
+    <p>${isSales 
+      ? `Veuillez trouver ci-joint votre facture de ${data.organizationName}.`
+      : `Voici le récapitulatif de la facture ${data.invoiceNumber}.`}</p>
+
+    <div class="invoice-number">
+      <strong>Facture #${data.invoiceNumber}</strong>
+    </div>
+
+    <div class="info-row">
+      <strong>Date de facturation:</strong> ${new Date(data.invoiceDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+
+    <div class="info-row">
+      <strong>Date d'échéance:</strong> ${new Date(data.dueDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+
+    <h3 style="color: #059669; margin-top: 30px;">Détails de la facture</h3>
+
+    <table>
+      <thead>
+        <tr style="background: #f9fafb;">
+          <th style="padding: 10px; text-align: left;">Description</th>
+          <th style="padding: 10px; text-align: center;">Qté</th>
+          <th style="padding: 10px; text-align: right;">Prix unitaire</th>
+          <th style="padding: 10px; text-align: right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+        <tr>
+          <td colspan="3" style="padding: 10px; text-align: right;">Sous-total</td>
+          <td style="padding: 10px; text-align: right;">${data.subtotal.toLocaleString()} ${data.currency}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding: 10px; text-align: right;">TVA</td>
+          <td style="padding: 10px; text-align: right;">${data.taxAmount.toLocaleString()} ${data.currency}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3" style="padding: 15px; text-align: right;">Total TTC</td>
+          <td style="padding: 15px; text-align: right; color: #059669;">
+            ${data.grandTotal.toLocaleString()} ${data.currency}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    ${data.notes ? `
+    <div class="info-row">
+      <strong>Notes:</strong><br>
+      ${data.notes}
+    </div>
+    ` : ''}
+
+    ${data.invoiceUrl ? `
+    <div style="text-align: center;">
+      <a href="${data.invoiceUrl}" class="button">
+        Voir la facture
+      </a>
+    </div>
+    ` : ''}
+
+    <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+      ${isSales 
+        ? `Merci pour votre confiance. Pour toute question concernant cette facture, n'hésitez pas à nous contacter.`
+        : `Cette facture a été envoyée automatiquement depuis AgriProfy.`}
+    </p>
+  </div>
+
+  <div class="footer">
+    <p>
+      ${data.organizationName}<br>
+      Envoyé via AgriProfy
+    </p>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Generate plain text version of invoice email
+   */
+  private generateInvoiceEmailText(data: InvoiceEmailData): string {
+    const isSales = data.invoiceType === 'sales';
+    
+    let text = `${isSales ? 'Facture' : 'Facture d\'achat'}\n\n`;
+    text += `Bonjour ${data.partyName},\n\n`;
+    text += `${isSales 
+      ? `Veuillez trouver ci-joint votre facture de ${data.organizationName}.`
+      : `Voici le récapitulatif de la facture ${data.invoiceNumber}.`}\n\n`;
+    text += `Facture #${data.invoiceNumber}\n`;
+    text += `Date de facturation: ${new Date(data.invoiceDate).toLocaleDateString('fr-FR')}\n`;
+    text += `Date d'échéance: ${new Date(data.dueDate).toLocaleDateString('fr-FR')}\n\n`;
+    text += `DÉTAILS DE LA FACTURE\n`;
+    text += `${'='.repeat(50)}\n\n`;
+
+    data.items.forEach(item => {
+      text += `${item.description}\n`;
+      text += `  Quantité: ${item.quantity}\n`;
+      text += `  Prix unitaire: ${item.rate.toLocaleString()} ${data.currency}\n`;
+      text += `  Total: ${item.amount.toLocaleString()} ${data.currency}\n\n`;
+    });
+
+    text += `${'='.repeat(50)}\n`;
+    text += `Sous-total: ${data.subtotal.toLocaleString()} ${data.currency}\n`;
+    text += `TVA: ${data.taxAmount.toLocaleString()} ${data.currency}\n`;
+    text += `TOTAL TTC: ${data.grandTotal.toLocaleString()} ${data.currency}\n\n`;
+
+    if (data.notes) {
+      text += `Notes: ${data.notes}\n\n`;
+    }
+
+    if (data.invoiceUrl) {
+      text += `Voir la facture: ${data.invoiceUrl}\n\n`;
+    }
+
+    text += `${data.organizationName}\n`;
+    text += `Envoyé via AgriProfy\n`;
 
     return text;
   }
