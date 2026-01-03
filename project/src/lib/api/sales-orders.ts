@@ -62,11 +62,11 @@ export interface SalesOrderFilters {
   customer_id?: string;
   customer_name?: string;
   order_number?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   stock_issued?: string;
   page?: number;
-  limit?: number;
+  pageSize?: number;
 }
 
 export interface UpdateStatusInput {
