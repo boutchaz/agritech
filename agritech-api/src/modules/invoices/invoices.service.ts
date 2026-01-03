@@ -4,6 +4,7 @@ import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
+import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class InvoicesService {
@@ -15,66 +16,95 @@ export class InvoicesService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /**
-   * Get all invoices with optional filters
-   */
   async findAll(
     organizationId: string,
     filters?: InvoiceFiltersDto
-  ): Promise<any> {
+  ): Promise<PaginatedResponse<any>> {
     const supabaseClient = this.databaseService.getAdminClient();
 
-    let query = supabaseClient
+    const {
+      page = 1,
+      pageSize = 10,
+      sortBy = 'invoice_date',
+      sortDir = SortDirection.DESC,
+      search,
+      dateFrom,
+      dateTo,
+      invoice_type,
+      status,
+      party_id,
+    } = filters || {};
+
+    const offset = (page - 1) * pageSize;
+
+    let countQuery = supabaseClient
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
+    let dataQuery = supabaseClient
       .from('invoices')
       .select('*')
-      .eq('organization_id', organizationId)
-      .order('invoice_date', { ascending: false });
+      .eq('organization_id', organizationId);
 
-    // Apply filters
-    if (filters?.invoice_type) {
-      query = query.eq('invoice_type', filters.invoice_type);
+    if (search) {
+      const searchFilter = `invoice_number.ilike.%${search}%,party_name.ilike.%${search}%`;
+      countQuery = countQuery.or(searchFilter);
+      dataQuery = dataQuery.or(searchFilter);
     }
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
+    if (invoice_type) {
+      countQuery = countQuery.eq('invoice_type', invoice_type);
+      dataQuery = dataQuery.eq('invoice_type', invoice_type);
     }
 
-    if (filters?.party_id) {
-      query = query.eq('party_id', filters.party_id);
+    if (status) {
+      countQuery = countQuery.eq('status', status);
+      dataQuery = dataQuery.eq('status', status);
     }
 
-    if (filters?.party_name) {
-      query = query.ilike('party_name', `%${filters.party_name}%`);
+    if (party_id) {
+      countQuery = countQuery.eq('party_id', party_id);
+      dataQuery = dataQuery.eq('party_id', party_id);
     }
 
-    if (filters?.invoice_number) {
-      query = query.ilike('invoice_number', `%${filters.invoice_number}%`);
+    if (dateFrom) {
+      countQuery = countQuery.gte('invoice_date', dateFrom);
+      dataQuery = dataQuery.gte('invoice_date', dateFrom);
     }
 
-    if (filters?.date_from) {
-      query = query.gte('invoice_date', filters.date_from);
+    if (dateTo) {
+      countQuery = countQuery.lte('invoice_date', dateTo);
+      dataQuery = dataQuery.lte('invoice_date', dateTo);
     }
 
-    if (filters?.date_to) {
-      query = query.lte('invoice_date', filters.date_to);
+    const validSortFields = ['invoice_number', 'invoice_date', 'party_name', 'grand_total', 'status', 'invoice_type', 'due_date'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'invoice_date';
+    dataQuery = dataQuery.order(sortField, { ascending: sortDir === SortDirection.ASC });
+
+    dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+
+    const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+    if (countResult.error) {
+      this.logger.error(`Failed to count invoices: ${countResult.error.message}`);
+      throw new BadRequestException(`Failed to count invoices: ${countResult.error.message}`);
     }
 
-    // Apply pagination
-    if (filters?.page && filters?.limit) {
-      const offset = (filters.page - 1) * filters.limit;
-      query = query.range(offset, offset + filters.limit - 1);
-    } else if (filters?.limit) {
-      query = query.limit(filters.limit);
+    if (dataResult.error) {
+      this.logger.error(`Failed to fetch invoices: ${dataResult.error.message}`);
+      throw new BadRequestException(`Failed to fetch invoices: ${dataResult.error.message}`);
     }
 
-    const { data, error } = await query;
+    const total = countResult.count || 0;
 
-    if (error) {
-      this.logger.error(`Failed to fetch invoices: ${error.message}`);
-      throw new BadRequestException(`Failed to fetch invoices: ${error.message}`);
-    }
-
-    return data;
+    return {
+      data: dataResult.data || [],
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   /**

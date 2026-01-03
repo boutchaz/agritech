@@ -9,6 +9,7 @@ import {
   ConvertToBillDto,
   PurchaseOrderStatus,
 } from './dto';
+import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -27,7 +28,7 @@ export class PurchaseOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Generate order number if not provided
@@ -102,77 +103,93 @@ export class PurchaseOrdersService {
     }
   }
 
-  /**
-   * Find all purchase orders with filters
-   */
-  async findAll(filters: PurchaseOrderFiltersDto, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+  async findAll(filters: PurchaseOrderFiltersDto, organizationId: string): Promise<PaginatedResponse<any>> {
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
-      let query = supabaseClient
+      const {
+        page = 1,
+        pageSize = 10,
+        sortBy = 'order_date',
+        sortDir = SortDirection.DESC,
+        search,
+        dateFrom,
+        dateTo,
+        status,
+        supplier_id,
+        stock_received,
+      } = filters || {};
+
+      const offset = (page - 1) * pageSize;
+
+      let countQuery = supabaseClient
         .from('purchase_orders')
-        .select(
-          `
-          *,
-          purchase_order_items (*)
-        `,
-        )
-        .eq('organization_id', organizationId)
-        .order('order_date', { ascending: false });
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
 
-      // Apply filters
-      if (filters.status) {
-        query = query.eq('status', filters.status);
+      let dataQuery = supabaseClient
+        .from('purchase_orders')
+        .select(`*, purchase_order_items (*)`)
+        .eq('organization_id', organizationId);
+
+      if (search) {
+        const searchFilter = `order_number.ilike.%${search}%,supplier_name.ilike.%${search}%`;
+        countQuery = countQuery.or(searchFilter);
+        dataQuery = dataQuery.or(searchFilter);
       }
 
-      if (filters.supplier_id) {
-        query = query.eq('supplier_id', filters.supplier_id);
+      if (status) {
+        countQuery = countQuery.eq('status', status);
+        dataQuery = dataQuery.eq('status', status);
       }
 
-      if (filters.supplier_name) {
-        query = query.ilike('supplier_name', `%${filters.supplier_name}%`);
+      if (supplier_id) {
+        countQuery = countQuery.eq('supplier_id', supplier_id);
+        dataQuery = dataQuery.eq('supplier_id', supplier_id);
       }
 
-      if (filters.order_number) {
-        query = query.ilike('order_number', `%${filters.order_number}%`);
+      if (stock_received !== undefined) {
+        const stockReceivedBool = stock_received === 'true';
+        countQuery = countQuery.eq('stock_received', stockReceivedBool);
+        dataQuery = dataQuery.eq('stock_received', stockReceivedBool);
       }
 
-      if (filters.date_from) {
-        query = query.gte('order_date', filters.date_from);
+      if (dateFrom) {
+        countQuery = countQuery.gte('order_date', dateFrom);
+        dataQuery = dataQuery.gte('order_date', dateFrom);
       }
 
-      if (filters.date_to) {
-        query = query.lte('order_date', filters.date_to);
+      if (dateTo) {
+        countQuery = countQuery.lte('order_date', dateTo);
+        dataQuery = dataQuery.lte('order_date', dateTo);
       }
 
-      if (filters.stock_received !== undefined) {
-        const stockReceived = filters.stock_received === 'true';
-        query = query.eq('stock_received', stockReceived);
+      const validSortFields = ['order_number', 'order_date', 'supplier_name', 'total_amount', 'status'];
+      const sortField = validSortFields.includes(sortBy) ? sortBy : 'order_date';
+      dataQuery = dataQuery.order(sortField, { ascending: sortDir === SortDirection.ASC });
+
+      dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+
+      const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+      if (countResult.error) {
+        this.logger.error('Error counting purchase orders:', countResult.error);
+        throw new BadRequestException(`Failed to count purchase orders: ${countResult.error.message}`);
       }
 
-      // Pagination
-      const page = filters.page || 1;
-      const limit = filters.limit || 20;
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-
-      query = query.range(from, to);
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        this.logger.error('Error fetching purchase orders:', error);
-        throw new BadRequestException(`Failed to fetch purchase orders: ${error.message}`);
+      if (dataResult.error) {
+        this.logger.error('Error fetching purchase orders:', dataResult.error);
+        throw new BadRequestException(`Failed to fetch purchase orders: ${dataResult.error.message}`);
       }
+
+      const total = countResult.count || 0;
 
       return {
-        data,
-        pagination: {
-          page,
-          limit,
-          total: count,
-          totalPages: Math.ceil((count || 0) / limit),
-        },
+        data: dataResult.data || [],
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
       };
     } catch (error) {
       this.logger.error('Error in findAll purchase orders:', error);
@@ -184,7 +201,7 @@ export class PurchaseOrdersService {
    * Find one purchase order by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -218,7 +235,7 @@ export class PurchaseOrdersService {
     updatePurchaseOrderDto: UpdatePurchaseOrderDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if order exists
@@ -255,7 +272,7 @@ export class PurchaseOrdersService {
     updateStatusDto: UpdateStatusDto,
     organizationId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if order exists
@@ -302,7 +319,7 @@ export class PurchaseOrdersService {
    * Delete a purchase order (only if status is draft)
    */
   async remove(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const order = await this.findOne(id, organizationId);
@@ -418,7 +435,7 @@ export class PurchaseOrdersService {
     organizationId: string,
     userId: string,
   ) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Fetch purchase order with items

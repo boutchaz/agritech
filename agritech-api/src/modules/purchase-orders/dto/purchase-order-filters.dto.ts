@@ -1,5 +1,6 @@
-import { IsOptional, IsString, IsDateString, IsUUID, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
 export enum PurchaseOrderStatus {
   DRAFT = 'draft',
@@ -11,7 +12,7 @@ export enum PurchaseOrderStatus {
   COMPLETED = 'completed',
 }
 
-export class PurchaseOrderFiltersDto {
+export class PurchaseOrderFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by order status', enum: PurchaseOrderStatus })
   @IsEnum(PurchaseOrderStatus)
   @IsOptional()
@@ -22,36 +23,8 @@ export class PurchaseOrderFiltersDto {
   @IsOptional()
   supplier_id?: string;
 
-  @ApiPropertyOptional({ description: 'Search by supplier name' })
-  @IsString()
-  @IsOptional()
-  supplier_name?: string;
-
-  @ApiPropertyOptional({ description: 'Search by order number' })
-  @IsString()
-  @IsOptional()
-  order_number?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by start date', example: '2024-01-01' })
-  @IsDateString()
-  @IsOptional()
-  date_from?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by end date', example: '2024-12-31' })
-  @IsDateString()
-  @IsOptional()
-  date_to?: string;
-
   @ApiPropertyOptional({ description: 'Filter by stock received status' })
   @IsString()
   @IsOptional()
-  stock_received?: string; // Will be converted to boolean
-
-  @ApiPropertyOptional({ description: 'Page number for pagination', example: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Items per page', example: 20 })
-  @IsOptional()
-  limit?: number;
+  stock_received?: string;
 }

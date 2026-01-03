@@ -1,6 +1,7 @@
 import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
 import type { Database } from '@/types/database.types';
+import { type PaginatedQuery, type PaginatedResponse, buildPaginatedQueryString } from './types';
 
 const BASE_URL = '/api/v1/invoices';
 
@@ -22,6 +23,12 @@ export interface InvoiceFilters {
   date_to?: string;
   farm_id?: string;
   parcel_id?: string;
+}
+
+export interface PaginatedInvoiceQuery extends PaginatedQuery {
+  invoice_type?: 'sales' | 'purchase';
+  status?: 'draft' | 'submitted' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
+  party_id?: string;
 }
 
 export interface CreateInvoiceInput {

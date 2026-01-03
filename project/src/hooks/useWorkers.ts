@@ -8,7 +8,7 @@ export const useWorkers = (organizationId: string | null, farmId?: string | null
     queryKey: ['workers', organizationId, farmId],
     queryFn: async () => {
       if (!organizationId) return [];
-      return workersApi.getAll({ farm_id: farmId || undefined }, organizationId);
+      return workersApi.getAll({ farmId: farmId || undefined }, organizationId);
     },
     enabled: !!organizationId,
   });
@@ -20,7 +20,7 @@ export const useActiveWorkers = (organizationId: string | null) => {
     queryKey: ['active-workers', organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
-      return workersApi.getActive({ is_active: true }, organizationId);
+      return workersApi.getActive(organizationId);
     },
     enabled: !!organizationId,
   });
@@ -32,7 +32,7 @@ export const useWorker = (organizationId: string | null, workerId: string | null
     queryKey: ['worker', organizationId, workerId],
     queryFn: async () => {
       if (!organizationId || !workerId) return null;
-      return workersApi.getById(workerId, organizationId);
+      return workersApi.getById(organizationId, workerId);
     },
     enabled: !!organizationId && !!workerId,
   });

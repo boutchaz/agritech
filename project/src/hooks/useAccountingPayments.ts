@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase'; // Only for auth in Edge Function calls
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import type { Database } from '../types/database.types';
 import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
-import { paymentsApi } from '../lib/api/payments';
+import { paymentsApi, type PaginatedPaymentQuery, type PaginatedResponse } from '../lib/api/payments';
 
 type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
 
@@ -36,9 +36,6 @@ export interface CreatePaymentInput {
   exchange_rate?: number | null;
 }
 
-/**
- * Hook to fetch all payments for the current organization
- */
 export function useAccountingPayments() {
   const { currentOrganization } = useAuth();
 
@@ -53,6 +50,24 @@ export function useAccountingPayments() {
       return data as Payment[];
     },
     enabled: !!currentOrganization?.id,
+  });
+}
+
+export function usePaginatedPayments(query: PaginatedPaymentQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['accounting_payments', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<Payment>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return paymentsApi.getPaginated(query, currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

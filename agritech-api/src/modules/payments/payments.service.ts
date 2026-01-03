@@ -5,7 +5,10 @@ import {
     CreatePaymentDto,
     AllocatePaymentDto,
     UpdatePaymentStatusDto,
-    PaymentType
+    PaginatedPaymentQueryDto,
+    PaginatedResponse,
+    PaymentType,
+    SortDirection,
 } from './dto';
 import { buildPaymentLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
@@ -356,49 +359,111 @@ export class PaymentsService {
     }
 
     /**
-     * Get all payments with optional filters
+     * Get all payments with pagination, sorting, search, and filters
      */
-    async findAll(organizationId: string, filters?: any) {
+    async findAll(
+        organizationId: string,
+        query: PaginatedPaymentQueryDto,
+    ): Promise<PaginatedResponse<any>> {
         const supabaseClient = this.databaseService.getAdminClient();
 
         try {
-            let query = supabaseClient
+            const {
+                page = 1,
+                pageSize = 10,
+                sortBy = 'payment_date',
+                sortDir = SortDirection.DESC,
+                search,
+                payment_type,
+                status,
+                dateFrom,
+                dateTo,
+            } = query;
+
+            const offset = (page - 1) * pageSize;
+
+            // Build count query for total
+            let countQuery = supabaseClient
+                .from('accounting_payments')
+                .select('id', { count: 'exact', head: true })
+                .eq('organization_id', organizationId);
+
+            // Build data query
+            let dataQuery = supabaseClient
                 .from('accounting_payments')
                 .select(`
-          *,
-          allocations:payment_allocations(
-            *,
-            invoice:invoices(id, invoice_number, invoice_type)
-          )
-        `)
-                .eq('organization_id', organizationId)
-                .order('payment_date', { ascending: false });
+                    *,
+                    allocations:payment_allocations(
+                        *,
+                        invoice:invoices(id, invoice_number, invoice_type)
+                    )
+                `)
+                .eq('organization_id', organizationId);
 
-            // Apply filters
-            if (filters?.payment_type) {
-                query = query.eq('payment_type', filters.payment_type);
+            // Apply search filter (payment_number or party_name)
+            if (search) {
+                const searchFilter = `payment_number.ilike.%${search}%,party_name.ilike.%${search}%`;
+                countQuery = countQuery.or(searchFilter);
+                dataQuery = dataQuery.or(searchFilter);
             }
 
-            if (filters?.status) {
-                query = query.eq('status', filters.status);
+            // Apply payment_type filter
+            if (payment_type) {
+                countQuery = countQuery.eq('payment_type', payment_type);
+                dataQuery = dataQuery.eq('payment_type', payment_type);
             }
 
-            if (filters?.date_from) {
-                query = query.gte('payment_date', filters.date_from);
+            // Apply status filter
+            if (status) {
+                countQuery = countQuery.eq('status', status);
+                dataQuery = dataQuery.eq('status', status);
             }
 
-            if (filters?.date_to) {
-                query = query.lte('payment_date', filters.date_to);
+            // Apply date range filter
+            if (dateFrom) {
+                countQuery = countQuery.gte('payment_date', dateFrom);
+                dataQuery = dataQuery.gte('payment_date', dateFrom);
             }
 
-            const { data, error } = await query;
-
-            if (error) {
-                this.logger.error('Error fetching payments:', error);
-                throw new BadRequestException(`Failed to fetch payments: ${error.message}`);
+            if (dateTo) {
+                countQuery = countQuery.lte('payment_date', dateTo);
+                dataQuery = dataQuery.lte('payment_date', dateTo);
             }
 
-            return data || [];
+            // Apply sorting
+            const validSortFields = ['payment_number', 'payment_date', 'party_name', 'amount', 'status', 'payment_type', 'payment_method'];
+            const sortField = validSortFields.includes(sortBy) ? sortBy : 'payment_date';
+            dataQuery = dataQuery.order(sortField, { ascending: sortDir === SortDirection.ASC });
+
+            // Apply pagination
+            dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+
+            // Execute both queries in parallel
+            const [countResult, dataResult] = await Promise.all([
+                countQuery,
+                dataQuery,
+            ]);
+
+            if (countResult.error) {
+                this.logger.error('Error counting payments:', countResult.error);
+                throw new BadRequestException(`Failed to count payments: ${countResult.error.message}`);
+            }
+
+            if (dataResult.error) {
+                this.logger.error('Error fetching payments:', dataResult.error);
+                throw new BadRequestException(`Failed to fetch payments: ${dataResult.error.message}`);
+            }
+
+            const total = countResult.count || 0;
+            const totalPages = Math.ceil(total / pageSize);
+
+            return {
+                data: dataResult.data || [],
+                total,
+                page,
+                pageSize,
+                totalPages,
+            };
         } catch (error) {
             this.logger.error('Error in findAll payments:', error);
             throw error;
