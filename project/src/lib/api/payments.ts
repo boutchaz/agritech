@@ -61,10 +61,27 @@ export interface PaymentFilters {
   date_to?: string;
 }
 
+export interface PaginatedPaymentQuery {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+  payment_type?: 'receive' | 'pay';
+  status?: 'draft' | 'submitted' | 'reconciled' | 'cancelled';
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export const paymentsApi = {
-  /**
-   * Get all payments with optional filters
-   */
   async getAll(filters?: PaymentFilters, organizationId?: string): Promise<Payment[]> {
     const params = new URLSearchParams();
     if (filters?.payment_type) params.append('payment_type', filters.payment_type);
@@ -74,7 +91,29 @@ export const paymentsApi = {
 
     const queryString = params.toString();
     const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
-    return apiClient.get(url, {}, organizationId);
+    const response = await apiClient.get<PaginatedResponse<Payment>>(url, {}, organizationId);
+    return response.data;
+  },
+
+  async getPaginated(
+    query: PaginatedPaymentQuery,
+    organizationId?: string,
+  ): Promise<PaginatedResponse<Payment>> {
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.payment_type) params.append('payment_type', query.payment_type);
+    if (query.status) params.append('status', query.status);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    return apiClient.get<PaginatedResponse<Payment>>(url, {}, organizationId);
   },
 
   /**

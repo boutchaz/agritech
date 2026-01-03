@@ -9,8 +9,9 @@ import {
     IsArray,
     ValidateNested,
     Min,
+    IsInt,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export enum PaymentType {
     RECEIVE = 'receive',
@@ -135,4 +136,69 @@ export class UpdatePaymentStatusDto {
     @IsString()
     @IsOptional()
     notes?: string;
+}
+
+export enum SortDirection {
+    ASC = 'asc',
+    DESC = 'desc',
+}
+
+export class PaginatedPaymentQueryDto {
+    @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1, minimum: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    page?: number = 1;
+
+    @ApiPropertyOptional({ description: 'Items per page', default: 10, minimum: 1, maximum: 100 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    pageSize?: number = 10;
+
+    @ApiPropertyOptional({ description: 'Sort by field', example: 'payment_date' })
+    @IsOptional()
+    @IsString()
+    sortBy?: string = 'payment_date';
+
+    @ApiPropertyOptional({ description: 'Sort direction', enum: SortDirection, default: SortDirection.DESC })
+    @IsOptional()
+    @IsEnum(SortDirection)
+    sortDir?: SortDirection = SortDirection.DESC;
+
+    @ApiPropertyOptional({ description: 'Search term (payment number, party name)' })
+    @IsOptional()
+    @IsString()
+    @Transform(({ value }) => value?.trim())
+    search?: string;
+
+    @ApiPropertyOptional({ description: 'Filter by payment type', enum: PaymentType })
+    @IsOptional()
+    @IsEnum(PaymentType)
+    payment_type?: PaymentType;
+
+    @ApiPropertyOptional({ description: 'Filter by status', enum: PaymentStatus })
+    @IsOptional()
+    @IsEnum(PaymentStatus)
+    status?: PaymentStatus;
+
+    @ApiPropertyOptional({ description: 'Filter from date (inclusive)', example: '2024-01-01' })
+    @IsOptional()
+    @IsDateString()
+    dateFrom?: string;
+
+    @ApiPropertyOptional({ description: 'Filter to date (inclusive)', example: '2024-12-31' })
+    @IsOptional()
+    @IsDateString()
+    dateTo?: string;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
 }

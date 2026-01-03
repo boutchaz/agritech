@@ -5,8 +5,9 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
-import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
+import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +24,7 @@ import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
 import { authSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -33,8 +35,24 @@ const AppContent: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [statusFilter, _setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: orders = [], isLoading, error } = usePurchaseOrders(statusFilter);
+
+  const filteredBySearch = React.useMemo(() => {
+    if (!searchTerm) return orders;
+    return orders.filter(order =>
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
+
+  const tableState = useTableState({
+    data: filteredBySearch,
+    dateField: 'order_date',
+    defaultPageSize: 10,
+    defaultSort: { key: 'order_date', direction: 'desc' },
+  });
 
   const handleDownloadPDF = async (order: PurchaseOrder) => {
     try {
@@ -214,23 +232,37 @@ const AppContent: React.FC = () => {
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 md:space-y-6">
-          {/* Header Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {t('billingModule.purchaseOrders.trackOrders', 'Create and track purchase orders from suppliers')}
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {t('billingModule.purchaseOrders.trackOrders', 'Create and track purchase orders from suppliers')}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('billingModule.purchaseOrders.newOrder', 'New Purchase Order')}</span>
+                  <span className="sm:hidden">{t('billingModule.purchaseOrders.newOrderShort', 'New PO')}</span>
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <Button variant="outline" className="hidden sm:flex">
-                {t('app.filter', 'Filter')}
-              </Button>
-              <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('billingModule.purchaseOrders.newOrder', 'New Purchase Order')}</span>
-                <span className="sm:hidden">{t('billingModule.purchaseOrders.newOrderShort', 'New PO')}</span>
-              </Button>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder={t('billingModule.purchaseOrders.search', 'Search by PO number or supplier...')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <DateRangeFilter
+                value={tableState.datePreset}
+                onChange={tableState.setDatePreset}
+              />
             </div>
           </div>
 
@@ -329,39 +361,61 @@ const AppContent: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
-              {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.poNumber', 'PO #')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.supplier', 'Supplier')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.orderDate', 'Order Date')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.expectedDate', 'Expected Date')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.amount', 'Amount')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.billed', 'Billed')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.purchaseOrders.table.status', 'Status')}
-                      </th>
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.poNumber', 'PO #')}
+                        sortKey="order_number"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.supplier', 'Supplier')}
+                        sortKey="supplier_name"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.orderDate', 'Order Date')}
+                        sortKey="order_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.expectedDate', 'Expected Date')}
+                        sortKey="expected_delivery_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.amount', 'Amount')}
+                        sortKey="grand_total"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.billed', 'Billed')}
+                        sortKey="billed_amount"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('billingModule.purchaseOrders.table.status', 'Status')}
+                        sortKey="status"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('billingModule.purchaseOrders.table.actions', 'Actions')}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {tableState.paginatedData.map((order) => (
                       <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -469,25 +523,36 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {orders.length === 0 && (
+                    {tableState.paginatedData.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          {t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
+                          {searchTerm || tableState.datePreset !== 'all'
+                            ? t('billingModule.purchaseOrders.empty.filtered', 'No purchase orders match your filters.')
+                            : t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
 
-              {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
-                {orders.length === 0 ? (
+                {tableState.paginatedData.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    {t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
+                    {searchTerm || tableState.datePreset !== 'all'
+                      ? t('billingModule.purchaseOrders.empty.filtered', 'No purchase orders match your filters.')
+                      : t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                   </div>
                 ) : (
-                  orders.map((order) => (
+                  tableState.paginatedData.map((order) => (
                     <div
                       key={order.id}
                       className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3"

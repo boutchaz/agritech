@@ -4,13 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
-import { Building2, ShoppingCart, Filter, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
+import { Building2, ShoppingCart, Eye, CheckCircle2, Clock, XCircle, Truck, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import { useSalesOrders, type SalesOrder } from '../hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '../components/Billing/SalesOrderDetailDialog';
+import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -18,8 +20,24 @@ const AppContent: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [statusFilter, _setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: orders = [], isLoading, error } = useSalesOrders(statusFilter);
+
+  const filteredBySearch = React.useMemo(() => {
+    if (!searchTerm) return orders;
+    return orders.filter(order =>
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
+
+  const tableState = useTableState({
+    data: filteredBySearch,
+    dateField: 'order_date',
+    defaultPageSize: 10,
+    defaultSort: { key: 'order_date', direction: 'desc' },
+  });
 
   const getStatusColor = (status: SalesOrder['status']) => {
     switch (status) {
@@ -135,19 +153,30 @@ const AppContent: React.FC = () => {
       }
     >
       <div className="p-6 space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Filter className="mr-2 h-4 w-4" />
-                {t('app.filter', 'Filter')}
-              </Button>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder={t('billingModule.salesOrders.search', 'Search by order number or customer...')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <DateRangeFilter
+                value={tableState.datePreset}
+                onChange={tableState.setDatePreset}
+              />
             </div>
           </div>
 
@@ -240,34 +269,57 @@ const AppContent: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.orderNumber', 'Order #')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.customer', 'Customer')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.orderDate', 'Order Date')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.expectedDate', 'Expected Date')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.amount', 'Amount')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.invoiced', 'Invoiced')}
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('billingModule.salesOrders.table.status', 'Status')}
-                      </th>
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.orderNumber', 'Order #')}
+                        sortKey="order_number"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.customer', 'Customer')}
+                        sortKey="customer_name"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.orderDate', 'Order Date')}
+                        sortKey="order_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.expectedDate', 'Expected Date')}
+                        sortKey="expected_delivery_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.amount', 'Amount')}
+                        sortKey="grand_total"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.invoiced', 'Invoiced')}
+                        sortKey="invoiced_amount"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('billingModule.salesOrders.table.status', 'Status')}
+                        sortKey="status"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('billingModule.salesOrders.table.actions', 'Actions')}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => (
+                    {tableState.paginatedData.map((order) => (
                       <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -315,16 +367,26 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {orders.length === 0 && (
+                    {tableState.paginatedData.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          {t('billingModule.salesOrders.empty', 'No sales orders found. Orders are created from accepted quotes.')}
+                          {searchTerm || tableState.datePreset !== 'all'
+                            ? t('billingModule.salesOrders.empty.filtered', 'No sales orders match your filters.')
+                            : t('billingModule.salesOrders.empty', 'No sales orders found. Orders are created from accepted quotes.')}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
             </CardContent>
           </Card>
         </div>

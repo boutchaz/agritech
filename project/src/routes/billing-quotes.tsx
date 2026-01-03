@@ -6,8 +6,9 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
-import { Building2, FileText, Plus, Filter, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
+import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,6 +26,7 @@ import { QuoteDetailDialog } from '../components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -34,8 +36,24 @@ const AppContent: React.FC = () => {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [statusFilter, _setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
+
+  const filteredBySearch = React.useMemo(() => {
+    if (!searchTerm) return quotes;
+    return quotes.filter(quote =>
+      quote.quote_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quote.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [quotes, searchTerm]);
+
+  const tableState = useTableState({
+    data: filteredBySearch,
+    dateField: 'quote_date',
+    defaultPageSize: 10,
+    defaultSort: { key: 'quote_date', direction: 'desc' },
+  });
 
   const isRTL = i18n.language === 'ar';
 
@@ -233,24 +251,37 @@ const AppContent: React.FC = () => {
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
-          {/* Header Actions */}
-          <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
-            <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('quotes.allQuotes')}</h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                {t('quotes.description')}
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('quotes.allQuotes')}</h2>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                  {t('quotes.description')}
+                </p>
+              </div>
+              <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+                <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
+                  <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
+                  <span className="hidden sm:inline">{t('quotes.actions.newQuote')}</span>
+                  <span className="sm:hidden">New</span>
+                </Button>
+              </div>
             </div>
-            <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
-              <Button variant="outline" className="flex-1 sm:flex-none">
-                <Filter className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                <span className="hidden sm:inline">{t('quotes.actions.filter')}</span>
-              </Button>
-              <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
-                <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
-                <span className="hidden sm:inline">{t('quotes.actions.newQuote')}</span>
-                <span className="sm:hidden">New</span>
-              </Button>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
+                <Input
+                  placeholder={t('quotes.search', 'Search by quote number or customer...')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={isRTL ? "pr-10" : "pl-10"}
+                />
+              </div>
+              <DateRangeFilter
+                value={tableState.datePreset}
+                onChange={tableState.setDatePreset}
+              />
             </div>
           </div>
 
@@ -333,31 +364,50 @@ const AppContent: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('quotes.table.quoteNumber')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('quotes.table.customer')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('quotes.table.date')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('quotes.table.validUntil')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
-                        {t('quotes.table.amount')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('quotes.table.status')}
-                      </th>
+                      <SortableHeader
+                        label={t('quotes.table.quoteNumber')}
+                        sortKey="quote_number"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('quotes.table.customer')}
+                        sortKey="customer_name"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('quotes.table.date')}
+                        sortKey="quote_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('quotes.table.validUntil')}
+                        sortKey="valid_until"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('quotes.table.amount')}
+                        sortKey="grand_total"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('quotes.table.status')}
+                        sortKey="status"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.table.actions')}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {quotes.map((quote) => (
+                    {tableState.paginatedData.map((quote) => (
                       <tr key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
@@ -478,32 +528,43 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {quotes.length === 0 && (
+                    {tableState.paginatedData.length === 0 && (
                       <tr>
                         <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
-                          {t('quotes.empty.message')}
+                          {searchTerm || tableState.datePreset !== 'all'
+                            ? t('quotes.empty.filtered', 'No quotes match your filters.')
+                            : t('quotes.empty.message')}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
             </CardContent>
           </Card>
 
-          {/* Quote List - Mobile Card View */}
           <div className="md:hidden space-y-3">
-            {quotes.length === 0 ? (
+            {tableState.paginatedData.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {t('quotes.empty.message')}
+                    {searchTerm || tableState.datePreset !== 'all'
+                      ? t('quotes.empty.filtered', 'No quotes match your filters.')
+                      : t('quotes.empty.message')}
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              quotes.map((quote) => (
+              tableState.paginatedData.map((quote) => (
                 <Card key={quote.id} className="overflow-hidden">
                   <CardContent className="p-4 space-y-3">
                     {/* Header: Quote Number, Customer & Status */}
@@ -644,6 +705,16 @@ const AppContent: React.FC = () => {
                   </CardContent>
                 </Card>
               ))
+            )}
+            {tableState.paginatedData.length > 0 && (
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
             )}
           </div>
 

@@ -467,9 +467,6 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                           )}
                         </SelectContent>
                       </Select>
-                      {/* Hidden fields for form data */}
-                      <input type="hidden" {...register(`items.${index}.inventory_item_id`)} />
-                      <input type="hidden" {...register(`items.${index}.item_name`)} />
                       {errors.items?.[index]?.item_name && (
                         <p className="text-xs text-red-600 mt-1">
                           {errors.items[index]?.item_name?.message}

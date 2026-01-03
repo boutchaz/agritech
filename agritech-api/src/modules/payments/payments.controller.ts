@@ -18,6 +18,7 @@ import {
     CreatePaymentDto,
     AllocatePaymentDto,
     UpdatePaymentStatusDto,
+    PaginatedPaymentQueryDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
@@ -95,24 +96,20 @@ export class PaymentsController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all payments with optional filters' })
-    @ApiQuery({ name: 'payment_type', required: false, enum: ['receive', 'pay'] })
-    @ApiQuery({ name: 'status', required: false, enum: ['draft', 'submitted', 'reconciled', 'cancelled'] })
-    @ApiQuery({ name: 'date_from', required: false, type: String })
-    @ApiQuery({ name: 'date_to', required: false, type: String })
+    @ApiOperation({ summary: 'Get paginated payments with sorting, search, and filters' })
     @ApiResponse({
         status: 200,
-        description: 'List of payments retrieved successfully',
+        description: 'Paginated list of payments retrieved successfully',
     })
     async findAll(
-        @Query() filters: any,
+        @Query() query: PaginatedPaymentQueryDto,
         @Headers('x-organization-id') organizationId: string,
     ) {
         if (!organizationId) {
             throw new BadRequestException('Organization ID is required');
         }
 
-        return this.paymentsService.findAll(organizationId, filters);
+        return this.paymentsService.findAll(organizationId, query);
     }
 
     @Get(':id')

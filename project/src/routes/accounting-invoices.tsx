@@ -6,7 +6,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
-import { Building2, Receipt, Plus, Filter, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
+import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -59,8 +60,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Filtered invoices
-  const filteredInvoices = useMemo(() => {
+  const preFilteredInvoices = useMemo(() => {
     return invoices.filter(invoice => {
       const matchesSearch =
         invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,6 +71,15 @@ const AppContent: React.FC = () => {
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [invoices, searchTerm, filterType, filterStatus]);
+
+  const tableState = useTableState({
+    data: preFilteredInvoices,
+    dateField: 'invoice_date',
+    defaultPageSize: 10,
+    defaultSort: { key: 'invoice_date', direction: 'desc' },
+  });
+
+  const { paginatedData: filteredInvoices } = tableState;
 
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string, status: string) => {
     if (status !== 'draft') {
@@ -177,10 +186,6 @@ const AppContent: React.FC = () => {
                 </p>
               </div>
               <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
-                <Button variant="outline" className="flex-1 sm:flex-none">
-                  <Filter className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                  <span className="hidden sm:inline">{t('common.filter', 'Filter')}</span>
-                </Button>
                 <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
                   <span className="hidden sm:inline">{t('invoices.actions.create', 'Create Invoice')}</span>
@@ -189,7 +194,6 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
@@ -200,6 +204,10 @@ const AppContent: React.FC = () => {
                   className={isRTL ? "pr-10" : "pl-10"}
                 />
               </div>
+              <DateRangeFilter
+                value={tableState.datePreset}
+                onChange={tableState.setDatePreset}
+              />
               <Select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as 'all' | 'sales' | 'purchase')}
@@ -288,24 +296,43 @@ const AppContent: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('invoices.table.invoiceNumber', 'Invoice #')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('invoices.table.type', 'Type')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('invoices.table.party', 'Customer/Supplier')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('invoices.table.date', 'Date')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
-                        {t('invoices.table.amount', 'Amount')}
-                      </th>
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
-                        {t('invoices.table.status', 'Status')}
-                      </th>
+                      <SortableHeader
+                        label={t('invoices.table.invoiceNumber', 'Invoice #')}
+                        sortKey="invoice_number"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('invoices.table.type', 'Type')}
+                        sortKey="invoice_type"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('invoices.table.party', 'Customer/Supplier')}
+                        sortKey="party_name"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('invoices.table.date', 'Date')}
+                        sortKey="invoice_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label={t('invoices.table.amount', 'Amount')}
+                        sortKey="grand_total"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label={t('invoices.table.status', 'Status')}
+                        sortKey="status"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('invoices.table.actions', 'Actions')}
                       </th>
@@ -410,7 +437,7 @@ const AppContent: React.FC = () => {
                     {filteredInvoices.length === 0 && (
                       <tr>
                         <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
-                          {searchTerm || filterType !== 'all' || filterStatus !== 'all'
+                          {searchTerm || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                             ? t('invoices.empty.filtered', 'No invoices match your filters.')
                             : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
                         </td>
@@ -419,17 +446,24 @@ const AppContent: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
             </CardContent>
           </Card>
 
-          {/* Invoice List - Mobile Card View */}
           <div className="md:hidden space-y-3">
             {filteredInvoices.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Receipt className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {searchTerm || filterType !== 'all' || filterStatus !== 'all'
+                    {searchTerm || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                       ? t('invoices.empty.filtered', 'No invoices match your filters.')
                       : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
                   </p>
@@ -542,6 +576,17 @@ const AppContent: React.FC = () => {
                   </CardContent>
                 </Card>
               ))
+            )}
+            {tableState.totalItems > 0 && (
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={tableState.totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={tableState.totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+                pageSizeOptions={[5, 10, 20]}
+              />
             )}
           </div>
 

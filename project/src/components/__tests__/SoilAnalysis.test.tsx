@@ -11,16 +11,14 @@ describe('SoilAnalysis', () => {
 
     render(<SoilAnalysis onSave={onSave} onCancel={onCancel} />)
 
-    // Select texture
-    const texture = screen.getByLabelText('Texture du Sol') as HTMLSelectElement
+    const texture = screen.getByLabelText(/Texture du Sol/i) as HTMLSelectElement
     await user.selectOptions(texture, 'Limoneuse')
 
-    // Update pH
-    const ph = screen.getByLabelText('pH') as HTMLInputElement
+    // Target pH input by its unique ID to avoid matching "Phosphore (P)"
+    const ph = document.getElementById('soil_ph') as HTMLInputElement
     await user.clear(ph)
-    await user.type(ph, '6.5')
+    await user.type(ph, '6')
 
-    // Save
     await user.click(screen.getByRole('button', { name: /enregistrer/i }))
 
     expect(onSave).toHaveBeenCalledTimes(1)
@@ -28,7 +26,7 @@ describe('SoilAnalysis', () => {
     expect(payload).toMatchObject({
       physical: {
         texture: 'Limoneuse',
-        ph: 6.5,
+        ph: 6,
       },
     })
   })

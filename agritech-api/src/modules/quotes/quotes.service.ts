@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { CreateQuoteDto, UpdateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
+import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class QuotesService {
@@ -12,62 +13,89 @@ export class QuotesService {
     private readonly sequencesService: SequencesService,
   ) {}
 
-  /**
-   * Get all quotes with optional filters
-   */
   async findAll(
     organizationId: string,
     filters?: QuoteFiltersDto
-  ): Promise<any> {
+  ): Promise<PaginatedResponse<any>> {
     const supabaseClient = this.databaseService.getAdminClient();
 
-    let query = supabaseClient
+    const {
+      page = 1,
+      pageSize = 10,
+      sortBy = 'quote_date',
+      sortDir = SortDirection.DESC,
+      search,
+      dateFrom,
+      dateTo,
+      status,
+      customer_id,
+    } = filters || {};
+
+    const offset = (page - 1) * pageSize;
+
+    let countQuery = supabaseClient
+      .from('quotes')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
+    let dataQuery = supabaseClient
       .from('quotes')
       .select('*')
-      .eq('organization_id', organizationId)
-      .order('quote_date', { ascending: false });
+      .eq('organization_id', organizationId);
 
-    // Apply filters
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
+    if (search) {
+      const searchFilter = `quote_number.ilike.%${search}%,customer_name.ilike.%${search}%`;
+      countQuery = countQuery.or(searchFilter);
+      dataQuery = dataQuery.or(searchFilter);
     }
 
-    if (filters?.customer_id) {
-      query = query.eq('customer_id', filters.customer_id);
+    if (status) {
+      countQuery = countQuery.eq('status', status);
+      dataQuery = dataQuery.eq('status', status);
     }
 
-    if (filters?.customer_name) {
-      query = query.ilike('customer_name', `%${filters.customer_name}%`);
+    if (customer_id) {
+      countQuery = countQuery.eq('customer_id', customer_id);
+      dataQuery = dataQuery.eq('customer_id', customer_id);
     }
 
-    if (filters?.quote_number) {
-      query = query.ilike('quote_number', `%${filters.quote_number}%`);
+    if (dateFrom) {
+      countQuery = countQuery.gte('quote_date', dateFrom);
+      dataQuery = dataQuery.gte('quote_date', dateFrom);
     }
 
-    if (filters?.date_from) {
-      query = query.gte('quote_date', filters.date_from);
+    if (dateTo) {
+      countQuery = countQuery.lte('quote_date', dateTo);
+      dataQuery = dataQuery.lte('quote_date', dateTo);
     }
 
-    if (filters?.date_to) {
-      query = query.lte('quote_date', filters.date_to);
+    const validSortFields = ['quote_number', 'quote_date', 'customer_name', 'grand_total', 'status', 'valid_until'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'quote_date';
+    dataQuery = dataQuery.order(sortField, { ascending: sortDir === SortDirection.ASC });
+
+    dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+
+    const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+    if (countResult.error) {
+      this.logger.error(`Failed to count quotes: ${countResult.error.message}`);
+      throw new BadRequestException(`Failed to count quotes: ${countResult.error.message}`);
     }
 
-    // Apply pagination
-    if (filters?.page && filters?.limit) {
-      const offset = (filters.page - 1) * filters.limit;
-      query = query.range(offset, offset + filters.limit - 1);
-    } else if (filters?.limit) {
-      query = query.limit(filters.limit);
+    if (dataResult.error) {
+      this.logger.error(`Failed to fetch quotes: ${dataResult.error.message}`);
+      throw new BadRequestException(`Failed to fetch quotes: ${dataResult.error.message}`);
     }
 
-    const { data, error } = await query;
+    const total = countResult.count || 0;
 
-    if (error) {
-      this.logger.error(`Failed to fetch quotes: ${error.message}`);
-      throw new BadRequestException(`Failed to fetch quotes: ${error.message}`);
-    }
-
-    return data;
+    return {
+      data: dataResult.data || [],
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   /**

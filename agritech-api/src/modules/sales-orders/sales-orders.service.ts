@@ -14,6 +14,7 @@ import {
   StockEntryType,
   StockEntryStatus,
 } from '../stock-entries/dto/create-stock-entry.dto';
+import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class SalesOrdersService {
@@ -108,127 +109,97 @@ export class SalesOrdersService {
     }
   }
 
-  /**
-   * Find all sales orders with filters
-   */
-  async findAll(filters: SalesOrderFiltersDto, organizationId: string) {
-    // Validate organizationId
+  async findAll(filters: SalesOrderFiltersDto, organizationId: string): Promise<PaginatedResponse<any>> {
     if (!organizationId || organizationId === 'undefined' || organizationId === 'null') {
       throw new BadRequestException('Valid organization ID is required');
     }
 
-    this.logger.debug(`Fetching sales orders for organization: ${organizationId}`);
-
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
-      let query = supabaseClient
-        .from('sales_orders')
-        .select(
-          `
-          *,
-          sales_order_items (*)
-        `,
-        )
-        .eq('organization_id', organizationId)
-        .order('order_date', { ascending: false });
+      const {
+        page = 1,
+        pageSize = 10,
+        sortBy = 'order_date',
+        sortDir = SortDirection.DESC,
+        search,
+        dateFrom,
+        dateTo,
+        status,
+        customer_id,
+        stock_issued,
+      } = filters || {};
 
-      // Apply filters
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
+      const offset = (page - 1) * pageSize;
 
-      if (filters.customer_id) {
-        query = query.eq('customer_id', filters.customer_id);
-      }
-
-      if (filters.customer_name) {
-        query = query.ilike('customer_name', `%${filters.customer_name}%`);
-      }
-
-      if (filters.order_number) {
-        query = query.ilike('order_number', `%${filters.order_number}%`);
-      }
-
-      if (filters.date_from) {
-        query = query.gte('order_date', filters.date_from);
-      }
-
-      if (filters.date_to) {
-        query = query.lte('order_date', filters.date_to);
-      }
-
-      if (filters.stock_issued !== undefined) {
-        const stockIssued = filters.stock_issued === 'true';
-        query = query.eq('stock_issued', stockIssued);
-      }
-
-      // Pagination
-      const page = filters.page || 1;
-      const limit = filters.limit || 20;
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-
-      // Get count separately (Supabase doesn't return count with range queries automatically)
-      const countQuery = supabaseClient
+      let countQuery = supabaseClient
         .from('sales_orders')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', organizationId);
 
-      // Apply same filters to count query
-      if (filters.status) {
-        countQuery.eq('status', filters.status);
-      }
-      if (filters.customer_id) {
-        countQuery.eq('customer_id', filters.customer_id);
-      }
-      if (filters.customer_name) {
-        countQuery.ilike('customer_name', `%${filters.customer_name}%`);
-      }
-      if (filters.order_number) {
-        countQuery.ilike('order_number', `%${filters.order_number}%`);
-      }
-      if (filters.date_from) {
-        countQuery.gte('order_date', filters.date_from);
-      }
-      if (filters.date_to) {
-        countQuery.lte('order_date', filters.date_to);
-      }
-      if (filters.stock_issued !== undefined) {
-        const stockIssued = filters.stock_issued === 'true';
-        countQuery.eq('stock_issued', stockIssued);
+      let dataQuery = supabaseClient
+        .from('sales_orders')
+        .select(`*, sales_order_items (*)`)
+        .eq('organization_id', organizationId);
+
+      if (search) {
+        const searchFilter = `order_number.ilike.%${search}%,customer_name.ilike.%${search}%`;
+        countQuery = countQuery.or(searchFilter);
+        dataQuery = dataQuery.or(searchFilter);
       }
 
-      query = query.range(from, to);
-
-      // Execute both queries in parallel
-      const [dataResult, countResult] = await Promise.all([
-        query,
-        countQuery,
-      ]);
-
-      const { data, error } = dataResult;
-      const { count, error: countError } = countResult;
-
-      if (error) {
-        this.logger.error('Error fetching sales orders:', error);
-        throw new BadRequestException(`Failed to fetch sales orders: ${error.message}`);
+      if (status) {
+        countQuery = countQuery.eq('status', status);
+        dataQuery = dataQuery.eq('status', status);
       }
 
-      if (countError) {
-        this.logger.warn('Error fetching sales orders count:', countError);
+      if (customer_id) {
+        countQuery = countQuery.eq('customer_id', customer_id);
+        dataQuery = dataQuery.eq('customer_id', customer_id);
       }
 
-      this.logger.debug(`Found ${data?.length || 0} sales orders, total count: ${count || 0}`);
+      if (stock_issued !== undefined) {
+        const stockIssuedBool = stock_issued === 'true';
+        countQuery = countQuery.eq('stock_issued', stockIssuedBool);
+        dataQuery = dataQuery.eq('stock_issued', stockIssuedBool);
+      }
+
+      if (dateFrom) {
+        countQuery = countQuery.gte('order_date', dateFrom);
+        dataQuery = dataQuery.gte('order_date', dateFrom);
+      }
+
+      if (dateTo) {
+        countQuery = countQuery.lte('order_date', dateTo);
+        dataQuery = dataQuery.lte('order_date', dateTo);
+      }
+
+      const validSortFields = ['order_number', 'order_date', 'customer_name', 'total_amount', 'status'];
+      const sortField = validSortFields.includes(sortBy) ? sortBy : 'order_date';
+      dataQuery = dataQuery.order(sortField, { ascending: sortDir === SortDirection.ASC });
+
+      dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+
+      const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+      if (countResult.error) {
+        this.logger.error('Error counting sales orders:', countResult.error);
+        throw new BadRequestException(`Failed to count sales orders: ${countResult.error.message}`);
+      }
+
+      if (dataResult.error) {
+        this.logger.error('Error fetching sales orders:', dataResult.error);
+        throw new BadRequestException(`Failed to fetch sales orders: ${dataResult.error.message}`);
+      }
+
+      const total = countResult.count || 0;
 
       return {
-        data: data || [],
-        pagination: {
-          page,
-          limit,
-          total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit),
-        },
+        data: dataResult.data || [],
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
       };
     } catch (error) {
       this.logger.error('Error in findAll sales orders:', error);
