@@ -39,6 +39,8 @@ import {
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
+import { appConfig } from '../config/app';
+
 import { ProtectedNavItem } from './authorization/ProtectedNavItem';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
@@ -392,7 +394,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t('app.name')}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-start">AgriTech Platform</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-start">{appConfig.name} Platform</p>
               </div>
             </div>
             <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse", isCollapsed && "lg:hidden")}>

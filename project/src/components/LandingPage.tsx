@@ -40,7 +40,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
 import { cn } from '@/lib/utils';
+import { appConfig } from '@/config/app';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -55,7 +57,7 @@ const LandingPage: React.FC = () => {
 
   // Structured data for SEO - moved before useEffect
   const structuredData = useMemo(() => {
-    const name = t('app.name', { defaultValue: 'AgriTech' });
+    const name = t('app.name', { defaultValue: appConfig.name });
     return {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
@@ -64,7 +66,7 @@ const LandingPage: React.FC = () => {
       url: `${siteOrigin}/`,
       description: t('landing.seo.description', {
         defaultValue:
-          'AgriTech: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité.',
+          `${appConfig.name}: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité.`,
       }),
       image: `${siteOrigin}/og-image.png`,
       sameAs: ['https://marketplace.thebzlab.online'],
@@ -87,11 +89,11 @@ const LandingPage: React.FC = () => {
 
   useEffect(() => {
     const pageTitle = t('landing.seo.title', {
-      defaultValue: 'AgriTech - La Suite de Gestion Agricole Tout-en-Un | Maroc',
+      defaultValue: `${appConfig.name} - La Suite de Gestion Agricole Tout-en-Un | Maroc`,
     });
     const description = t('landing.seo.description', {
       defaultValue:
-        'AgriTech révolutionne l\'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d\'exploitation simplifiée.',
+        `${appConfig.name} révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.`,
     });
 
     document.title = pageTitle;
@@ -109,7 +111,7 @@ const LandingPage: React.FC = () => {
 
     // Primary meta tags
     ensureMeta('description', description);
-    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agritech');
+    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agriprofy, agritech');
 
     // Open Graph meta tags
     ensureMeta('og:type', 'website', true);
@@ -117,7 +119,7 @@ const LandingPage: React.FC = () => {
     ensureMeta('og:title', pageTitle, true);
     ensureMeta('og:description', description, true);
     ensureMeta('og:image', `${siteOrigin}/og-image.png`, true);
-    ensureMeta('og:site_name', 'AgriTech', true);
+    ensureMeta('og:site_name', appConfig.name, true);
 
     // Twitter meta tags
     ensureMeta('twitter:card', 'summary_large_image');

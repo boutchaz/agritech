@@ -438,8 +438,7 @@ export class WorkersService {
       .select(`
         *,
         workers!inner(first_name, last_name),
-        farms(name),
-        parcels(name)
+        farms(name)
       `)
       .eq('worker_id', workerId)
       .order('work_date', { ascending: false });
@@ -461,7 +460,6 @@ export class WorkersService {
       ...record,
       worker: record.workers,
       farm_name: record.farms?.name,
-      parcel_name: record.parcels?.name,
     }));
   }
 

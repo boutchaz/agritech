@@ -580,6 +580,19 @@ export interface AllReferenceData {
 }
 
 // =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+function buildUrl(base: string, params: Record<string, string | undefined>): string {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) searchParams.append(key, value);
+  });
+  const queryString = searchParams.toString();
+  return queryString ? `${base}?${queryString}` : base;
+}
+
+// =====================================================
 // API CLIENT
 // =====================================================
 
@@ -587,8 +600,9 @@ export const referenceDataApi = {
   /**
    * Get all reference data at once (useful for app initialization)
    */
-  async getAll(organizationId?: string): Promise<AllReferenceData> {
-    return apiClient.get<AllReferenceData>(`${BASE_URL}/all`, {}, organizationId);
+  async getAll(organizationId?: string, locale?: string): Promise<AllReferenceData> {
+    const url = buildUrl(`${BASE_URL}/all`, { locale });
+    return apiClient.get<AllReferenceData>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -598,23 +612,25 @@ export const referenceDataApi = {
   /**
    * Get all tree categories
    */
-  async getTreeCategories(organizationId?: string): Promise<TreeCategory[]> {
-    return apiClient.get<TreeCategory[]>(`${BASE_URL}/tree-categories`, {}, organizationId);
+  async getTreeCategories(organizationId?: string, locale?: string): Promise<TreeCategory[]> {
+    const url = buildUrl(`${BASE_URL}/tree-categories`, { locale });
+    return apiClient.get<TreeCategory[]>(url, {}, organizationId);
   },
 
   /**
    * Get a single tree category by ID
    */
-  async getTreeCategory(id: string, organizationId?: string): Promise<TreeCategory> {
-    return apiClient.get<TreeCategory>(`${BASE_URL}/tree-categories/${id}`, {}, organizationId);
+  async getTreeCategory(id: string, organizationId?: string, locale?: string): Promise<TreeCategory> {
+    const url = buildUrl(`${BASE_URL}/tree-categories/${id}`, { locale });
+    return apiClient.get<TreeCategory>(url, {}, organizationId);
   },
 
   /**
    * Get all trees (optionally filtered by category)
    */
-  async getTrees(categoryId?: string, organizationId?: string): Promise<Tree[]> {
-    const params = categoryId ? `?category_id=${categoryId}` : '';
-    return apiClient.get<Tree[]>(`${BASE_URL}/trees${params}`, {}, organizationId);
+  async getTrees(categoryId?: string, organizationId?: string, locale?: string): Promise<Tree[]> {
+    const url = buildUrl(`${BASE_URL}/trees`, { category_id: categoryId, locale });
+    return apiClient.get<Tree[]>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -624,15 +640,17 @@ export const referenceDataApi = {
   /**
    * Get all plantation types
    */
-  async getPlantationTypes(organizationId?: string): Promise<PlantationType[]> {
-    return apiClient.get<PlantationType[]>(`${BASE_URL}/plantation-types`, {}, organizationId);
+  async getPlantationTypes(organizationId?: string, locale?: string): Promise<PlantationType[]> {
+    const url = buildUrl(`${BASE_URL}/plantation-types`, { locale });
+    return apiClient.get<PlantationType[]>(url, {}, organizationId);
   },
 
   /**
    * Get a single plantation type by ID
    */
-  async getPlantationType(id: string, organizationId?: string): Promise<PlantationType> {
-    return apiClient.get<PlantationType>(`${BASE_URL}/plantation-types/${id}`, {}, organizationId);
+  async getPlantationType(id: string, organizationId?: string, locale?: string): Promise<PlantationType> {
+    const url = buildUrl(`${BASE_URL}/plantation-types/${id}`, { locale });
+    return apiClient.get<PlantationType>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -642,15 +660,17 @@ export const referenceDataApi = {
   /**
    * Get all test types (global reference data)
    */
-  async getTestTypes(organizationId?: string): Promise<TestType[]> {
-    return apiClient.get<TestType[]>(`${BASE_URL}/test-types`, {}, organizationId);
+  async getTestTypes(organizationId?: string, locale?: string): Promise<TestType[]> {
+    const url = buildUrl(`${BASE_URL}/test-types`, { locale });
+    return apiClient.get<TestType[]>(url, {}, organizationId);
   },
 
   /**
    * Get a single test type by ID
    */
-  async getTestType(id: string, organizationId?: string): Promise<TestType> {
-    return apiClient.get<TestType>(`${BASE_URL}/test-types/${id}`, {}, organizationId);
+  async getTestType(id: string, organizationId?: string, locale?: string): Promise<TestType> {
+    const url = buildUrl(`${BASE_URL}/test-types/${id}`, { locale });
+    return apiClient.get<TestType>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -660,23 +680,25 @@ export const referenceDataApi = {
   /**
    * Get all product categories with subcategories
    */
-  async getProductCategories(organizationId?: string): Promise<ProductCategory[]> {
-    return apiClient.get<ProductCategory[]>(`${BASE_URL}/product-categories`, {}, organizationId);
+  async getProductCategories(organizationId?: string, locale?: string): Promise<ProductCategory[]> {
+    const url = buildUrl(`${BASE_URL}/product-categories`, { locale });
+    return apiClient.get<ProductCategory[]>(url, {}, organizationId);
   },
 
   /**
    * Get a single product category by ID
    */
-  async getProductCategory(id: string, organizationId?: string): Promise<ProductCategory> {
-    return apiClient.get<ProductCategory>(`${BASE_URL}/product-categories/${id}`, {}, organizationId);
+  async getProductCategory(id: string, organizationId?: string, locale?: string): Promise<ProductCategory> {
+    const url = buildUrl(`${BASE_URL}/product-categories/${id}`, { locale });
+    return apiClient.get<ProductCategory>(url, {}, organizationId);
   },
 
   /**
    * Get all product subcategories (optionally filtered by category)
    */
-  async getProductSubcategories(categoryId?: string, organizationId?: string): Promise<ProductSubcategory[]> {
-    const params = categoryId ? `?category_id=${categoryId}` : '';
-    return apiClient.get<ProductSubcategory[]>(`${BASE_URL}/product-subcategories${params}`, {}, organizationId);
+  async getProductSubcategories(categoryId?: string, organizationId?: string, locale?: string): Promise<ProductSubcategory[]> {
+    const url = buildUrl(`${BASE_URL}/product-subcategories`, { category_id: categoryId, locale });
+    return apiClient.get<ProductSubcategory[]>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -686,8 +708,9 @@ export const referenceDataApi = {
   /**
    * Get all soil types (global reference data)
    */
-  async getSoilTypes(organizationId?: string): Promise<SoilType[]> {
-    return apiClient.get<SoilType[]>(`${BASE_URL}/soil-types`, {}, organizationId);
+  async getSoilTypes(organizationId?: string, locale?: string): Promise<SoilType[]> {
+    const url = buildUrl(`${BASE_URL}/soil-types`, { locale });
+    return apiClient.get<SoilType[]>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -697,8 +720,9 @@ export const referenceDataApi = {
   /**
    * Get all irrigation types (global reference data)
    */
-  async getIrrigationTypes(organizationId?: string): Promise<IrrigationType[]> {
-    return apiClient.get<IrrigationType[]>(`${BASE_URL}/irrigation-types`, {}, organizationId);
+  async getIrrigationTypes(organizationId?: string, locale?: string): Promise<IrrigationType[]> {
+    const url = buildUrl(`${BASE_URL}/irrigation-types`, { locale });
+    return apiClient.get<IrrigationType[]>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -708,15 +732,17 @@ export const referenceDataApi = {
   /**
    * Get all crop categories (global reference data)
    */
-  async getCropCategories(organizationId?: string): Promise<CropCategory[]> {
-    return apiClient.get<CropCategory[]>(`${BASE_URL}/crop-categories`, {}, organizationId);
+  async getCropCategories(organizationId?: string, locale?: string): Promise<CropCategory[]> {
+    const url = buildUrl(`${BASE_URL}/crop-categories`, { locale });
+    return apiClient.get<CropCategory[]>(url, {}, organizationId);
   },
 
   /**
    * Get a single crop category by ID
    */
-  async getCropCategory(id: string, organizationId?: string): Promise<CropCategory> {
-    return apiClient.get<CropCategory>(`${BASE_URL}/crop-categories/${id}`, {}, organizationId);
+  async getCropCategory(id: string, organizationId?: string, locale?: string): Promise<CropCategory> {
+    const url = buildUrl(`${BASE_URL}/crop-categories/${id}`, { locale });
+    return apiClient.get<CropCategory>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -726,117 +752,142 @@ export const referenceDataApi = {
   /**
    * Get all crop types (optionally filtered by category)
    */
-  async getCropTypes(categoryId?: string, organizationId?: string): Promise<CropType[]> {
-    const params = categoryId ? `?category_id=${categoryId}` : '';
-    return apiClient.get<CropType[]>(`${BASE_URL}/crop-types${params}`, {}, organizationId);
+  async getCropTypes(categoryId?: string, organizationId?: string, locale?: string): Promise<CropType[]> {
+    const url = buildUrl(`${BASE_URL}/crop-types`, { category_id: categoryId, locale });
+    return apiClient.get<CropType[]>(url, {}, organizationId);
   },
 
   // =====================================================
   // VARIETIES
   // =====================================================
 
-  async getVarieties(cropTypeId?: string, organizationId?: string): Promise<Variety[]> {
-    const params = cropTypeId ? `?crop_type_id=${cropTypeId}` : '';
-    return apiClient.get<Variety[]>(`${BASE_URL}/varieties${params}`, {}, organizationId);
+  async getVarieties(cropTypeId?: string, organizationId?: string, locale?: string): Promise<Variety[]> {
+    const url = buildUrl(`${BASE_URL}/varieties`, { crop_type_id: cropTypeId, locale });
+    return apiClient.get<Variety[]>(url, {}, organizationId);
   },
 
-  async getUnitsOfMeasure(organizationId?: string): Promise<UnitOfMeasure[]> {
-    return apiClient.get<UnitOfMeasure[]>(`${BASE_URL}/units-of-measure`, {}, organizationId);
+  async getUnitsOfMeasure(organizationId?: string, locale?: string): Promise<UnitOfMeasure[]> {
+    const url = buildUrl(`${BASE_URL}/units-of-measure`, { locale });
+    return apiClient.get<UnitOfMeasure[]>(url, {}, organizationId);
   },
 
-  async getQualityGrades(organizationId?: string): Promise<QualityGrade[]> {
-    return apiClient.get<QualityGrade[]>(`${BASE_URL}/quality-grades`, {}, organizationId);
+  async getQualityGrades(organizationId?: string, locale?: string): Promise<QualityGrade[]> {
+    const url = buildUrl(`${BASE_URL}/quality-grades`, { locale });
+    return apiClient.get<QualityGrade[]>(url, {}, organizationId);
   },
 
-  async getHarvestStatuses(organizationId?: string): Promise<HarvestStatus[]> {
-    return apiClient.get<HarvestStatus[]>(`${BASE_URL}/harvest-statuses`, {}, organizationId);
+  async getHarvestStatuses(organizationId?: string, locale?: string): Promise<HarvestStatus[]> {
+    const url = buildUrl(`${BASE_URL}/harvest-statuses`, { locale });
+    return apiClient.get<HarvestStatus[]>(url, {}, organizationId);
   },
 
-  async getIntendedUses(organizationId?: string): Promise<IntendedUse[]> {
-    return apiClient.get<IntendedUse[]>(`${BASE_URL}/intended-uses`, {}, organizationId);
+  async getIntendedUses(organizationId?: string, locale?: string): Promise<IntendedUse[]> {
+    const url = buildUrl(`${BASE_URL}/intended-uses`, { locale });
+    return apiClient.get<IntendedUse[]>(url, {}, organizationId);
   },
 
-  async getUtilityTypes(organizationId?: string): Promise<UtilityType[]> {
-    return apiClient.get<UtilityType[]>(`${BASE_URL}/utility-types`, {}, organizationId);
+  async getUtilityTypes(organizationId?: string, locale?: string): Promise<UtilityType[]> {
+    const url = buildUrl(`${BASE_URL}/utility-types`, { locale });
+    return apiClient.get<UtilityType[]>(url, {}, organizationId);
   },
 
-  async getInfrastructureTypes(organizationId?: string): Promise<InfrastructureType[]> {
-    return apiClient.get<InfrastructureType[]>(`${BASE_URL}/infrastructure-types`, {}, organizationId);
+  async getInfrastructureTypes(organizationId?: string, locale?: string): Promise<InfrastructureType[]> {
+    const url = buildUrl(`${BASE_URL}/infrastructure-types`, { locale });
+    return apiClient.get<InfrastructureType[]>(url, {}, organizationId);
   },
 
-  async getBasinShapes(organizationId?: string): Promise<BasinShape[]> {
-    return apiClient.get<BasinShape[]>(`${BASE_URL}/basin-shapes`, {}, organizationId);
+  async getBasinShapes(organizationId?: string, locale?: string): Promise<BasinShape[]> {
+    const url = buildUrl(`${BASE_URL}/basin-shapes`, { locale });
+    return apiClient.get<BasinShape[]>(url, {}, organizationId);
   },
 
-  async getPaymentMethods(organizationId?: string): Promise<PaymentMethod[]> {
-    return apiClient.get<PaymentMethod[]>(`${BASE_URL}/payment-methods`, {}, organizationId);
+  async getPaymentMethods(organizationId?: string, locale?: string): Promise<PaymentMethod[]> {
+    const url = buildUrl(`${BASE_URL}/payment-methods`, { locale });
+    return apiClient.get<PaymentMethod[]>(url, {}, organizationId);
   },
 
-  async getPaymentStatuses(organizationId?: string): Promise<PaymentStatus[]> {
-    return apiClient.get<PaymentStatus[]>(`${BASE_URL}/payment-statuses`, {}, organizationId);
+  async getPaymentStatuses(organizationId?: string, locale?: string): Promise<PaymentStatus[]> {
+    const url = buildUrl(`${BASE_URL}/payment-statuses`, { locale });
+    return apiClient.get<PaymentStatus[]>(url, {}, organizationId);
   },
 
-  async getTaskPriorities(organizationId?: string): Promise<TaskPriority[]> {
-    return apiClient.get<TaskPriority[]>(`${BASE_URL}/task-priorities`, {}, organizationId);
+  async getTaskPriorities(organizationId?: string, locale?: string): Promise<TaskPriority[]> {
+    const url = buildUrl(`${BASE_URL}/task-priorities`, { locale });
+    return apiClient.get<TaskPriority[]>(url, {}, organizationId);
   },
 
-  async getWorkerTypes(organizationId?: string): Promise<WorkerType[]> {
-    return apiClient.get<WorkerType[]>(`${BASE_URL}/worker-types`, {}, organizationId);
+  async getWorkerTypes(organizationId?: string, locale?: string): Promise<WorkerType[]> {
+    const url = buildUrl(`${BASE_URL}/worker-types`, { locale });
+    return apiClient.get<WorkerType[]>(url, {}, organizationId);
   },
 
-  async getMetayageTypes(organizationId?: string): Promise<MetayageType[]> {
-    return apiClient.get<MetayageType[]>(`${BASE_URL}/metayage-types`, {}, organizationId);
+  async getMetayageTypes(organizationId?: string, locale?: string): Promise<MetayageType[]> {
+    const url = buildUrl(`${BASE_URL}/metayage-types`, { locale });
+    return apiClient.get<MetayageType[]>(url, {}, organizationId);
   },
 
-  async getDocumentTypes(organizationId?: string): Promise<DocumentType[]> {
-    return apiClient.get<DocumentType[]>(`${BASE_URL}/document-types`, {}, organizationId);
+  async getDocumentTypes(organizationId?: string, locale?: string): Promise<DocumentType[]> {
+    const url = buildUrl(`${BASE_URL}/document-types`, { locale });
+    return apiClient.get<DocumentType[]>(url, {}, organizationId);
   },
 
-  async getCurrencies(organizationId?: string): Promise<Currency[]> {
-    return apiClient.get<Currency[]>(`${BASE_URL}/currencies`, {}, organizationId);
+  async getCurrencies(organizationId?: string, locale?: string): Promise<Currency[]> {
+    const url = buildUrl(`${BASE_URL}/currencies`, { locale });
+    return apiClient.get<Currency[]>(url, {}, organizationId);
   },
 
-  async getTimezones(organizationId?: string): Promise<Timezone[]> {
-    return apiClient.get<Timezone[]>(`${BASE_URL}/timezones`, {}, organizationId);
+  async getTimezones(organizationId?: string, locale?: string): Promise<Timezone[]> {
+    const url = buildUrl(`${BASE_URL}/timezones`, { locale });
+    return apiClient.get<Timezone[]>(url, {}, organizationId);
   },
 
-  async getLanguages(organizationId?: string): Promise<Language[]> {
-    return apiClient.get<Language[]>(`${BASE_URL}/languages`, {}, organizationId);
+  async getLanguages(organizationId?: string, locale?: string): Promise<Language[]> {
+    const url = buildUrl(`${BASE_URL}/languages`, { locale });
+    return apiClient.get<Language[]>(url, {}, organizationId);
   },
 
-  async getLabServiceCategories(organizationId?: string): Promise<LabServiceCategory[]> {
-    return apiClient.get<LabServiceCategory[]>(`${BASE_URL}/lab-service-categories`, {}, organizationId);
+  async getLabServiceCategories(organizationId?: string, locale?: string): Promise<LabServiceCategory[]> {
+    const url = buildUrl(`${BASE_URL}/lab-service-categories`, { locale });
+    return apiClient.get<LabServiceCategory[]>(url, {}, organizationId);
   },
 
-  async getSoilTextures(organizationId?: string): Promise<SoilTexture[]> {
-    return apiClient.get<SoilTexture[]>(`${BASE_URL}/soil-textures`, {}, organizationId);
+  async getSoilTextures(organizationId?: string, locale?: string): Promise<SoilTexture[]> {
+    const url = buildUrl(`${BASE_URL}/soil-textures`, { locale });
+    return apiClient.get<SoilTexture[]>(url, {}, organizationId);
   },
 
-  async getCostCategories(organizationId?: string): Promise<CostCategory[]> {
-    return apiClient.get<CostCategory[]>(`${BASE_URL}/cost-categories`, {}, organizationId);
+  async getCostCategories(organizationId?: string, locale?: string): Promise<CostCategory[]> {
+    const url = buildUrl(`${BASE_URL}/cost-categories`, { locale });
+    return apiClient.get<CostCategory[]>(url, {}, organizationId);
   },
 
-  async getRevenueCategories(organizationId?: string): Promise<RevenueCategory[]> {
-    return apiClient.get<RevenueCategory[]>(`${BASE_URL}/revenue-categories`, {}, organizationId);
+  async getRevenueCategories(organizationId?: string, locale?: string): Promise<RevenueCategory[]> {
+    const url = buildUrl(`${BASE_URL}/revenue-categories`, { locale });
+    return apiClient.get<RevenueCategory[]>(url, {}, organizationId);
   },
 
-  async getSaleTypes(organizationId?: string): Promise<SaleType[]> {
-    return apiClient.get<SaleType[]>(`${BASE_URL}/sale-types`, {}, organizationId);
+  async getSaleTypes(organizationId?: string, locale?: string): Promise<SaleType[]> {
+    const url = buildUrl(`${BASE_URL}/sale-types`, { locale });
+    return apiClient.get<SaleType[]>(url, {}, organizationId);
   },
 
-  async getExperienceLevels(organizationId?: string): Promise<ExperienceLevel[]> {
-    return apiClient.get<ExperienceLevel[]>(`${BASE_URL}/experience-levels`, {}, organizationId);
+  async getExperienceLevels(organizationId?: string, locale?: string): Promise<ExperienceLevel[]> {
+    const url = buildUrl(`${BASE_URL}/experience-levels`, { locale });
+    return apiClient.get<ExperienceLevel[]>(url, {}, organizationId);
   },
 
-  async getSeasonalities(organizationId?: string): Promise<Seasonality[]> {
-    return apiClient.get<Seasonality[]>(`${BASE_URL}/seasonalities`, {}, organizationId);
+  async getSeasonalities(organizationId?: string, locale?: string): Promise<Seasonality[]> {
+    const url = buildUrl(`${BASE_URL}/seasonalities`, { locale });
+    return apiClient.get<Seasonality[]>(url, {}, organizationId);
   },
 
-  async getDeliveryTypes(organizationId?: string): Promise<DeliveryType[]> {
-    return apiClient.get<DeliveryType[]>(`${BASE_URL}/delivery-types`, {}, organizationId);
+  async getDeliveryTypes(organizationId?: string, locale?: string): Promise<DeliveryType[]> {
+    const url = buildUrl(`${BASE_URL}/delivery-types`, { locale });
+    return apiClient.get<DeliveryType[]>(url, {}, organizationId);
   },
 
-  async getDeliveryStatuses(organizationId?: string): Promise<DeliveryStatus[]> {
-    return apiClient.get<DeliveryStatus[]>(`${BASE_URL}/delivery-statuses`, {}, organizationId);
+  async getDeliveryStatuses(organizationId?: string, locale?: string): Promise<DeliveryStatus[]> {
+    const url = buildUrl(`${BASE_URL}/delivery-statuses`, { locale });
+    return apiClient.get<DeliveryStatus[]>(url, {}, organizationId);
   },
 };
