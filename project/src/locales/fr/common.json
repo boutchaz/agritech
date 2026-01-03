@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "AgriTech",
+    "name": "AgriProfy",
     "loading": "Chargement...",
     "error": "Erreur",
     "success": "Succès",
@@ -3401,4 +3401,3 @@
     }
   }
 }
-

@@ -18,6 +18,13 @@ export class ReferenceDataService {
     return `${type}:${args.filter(Boolean).join(':')}`;
   }
 
+  private addLocaleToParams(params: any, locale?: string): any {
+    if (locale) {
+      params.locale = locale;
+    }
+    return params;
+  }
+
   private getFromCache<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
@@ -68,9 +75,9 @@ export class ReferenceDataService {
     }
   }
 
-  async getTreeCategories(organizationId?: string) {
-    const cacheKey = this.getCacheKey('tree-categories', organizationId);
-    
+  async getTreeCategories(organizationId?: string, locale?: string) {
+    const cacheKey = this.getCacheKey('tree-categories', organizationId, locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
@@ -79,6 +86,7 @@ export class ReferenceDataService {
           params['filters[$or][0][organization_id][$eq]'] = organizationId;
           params['filters[$or][1][is_global][$eq]'] = true;
         }
+        this.addLocaleToParams(params, locale);
         const response = await this.strapiService.get('/tree-categories', params);
         return this.strapiService.transformResponse(response);
       },
@@ -86,21 +94,23 @@ export class ReferenceDataService {
     );
   }
 
-  async getTreeCategory(id: string, organizationId?: string) {
+  async getTreeCategory(id: string, organizationId?: string, locale?: string) {
     const params: any = { populate: 'trees' };
     if (organizationId) params['filters[organization_id][$eq]'] = organizationId;
+    this.addLocaleToParams(params, locale);
     const response = await this.strapiService.get(`/tree-categories/${id}`, params);
     return this.strapiService.transformSingleResponse(response);
   }
 
-  async getTrees(categoryId?: string) {
-    const cacheKey = this.getCacheKey('trees', categoryId);
-    
+  async getTrees(categoryId?: string, locale?: string) {
+    const cacheKey = this.getCacheKey('trees', categoryId, locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
         const params: any = { populate: 'tree_category', sort: 'sort_order:asc,name:asc' };
         if (categoryId) params['filters[tree_category][id][$eq]'] = categoryId;
+        this.addLocaleToParams(params, locale);
         const response = await this.strapiService.get('/trees', params);
         return this.strapiService.transformResponse(response);
       },
@@ -108,14 +118,15 @@ export class ReferenceDataService {
     );
   }
 
-  async getPlantationTypes(organizationId?: string) {
-    const cacheKey = this.getCacheKey('plantation-types', organizationId);
-    
+  async getPlantationTypes(organizationId?: string, locale?: string) {
+    const cacheKey = this.getCacheKey('plantation-types', organizationId, locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
         const params: any = { sort: 'name:asc' };
         if (organizationId) params['filters[organization_id][$eq]'] = organizationId;
+        this.addLocaleToParams(params, locale);
         const response = await this.strapiService.get('/plantation-types', params);
         return this.strapiService.transformResponse(response);
       },
@@ -123,118 +134,137 @@ export class ReferenceDataService {
     );
   }
 
-  async getPlantationType(id: string, organizationId?: string) {
+  async getPlantationType(id: string, organizationId?: string, locale?: string) {
     const params: any = {};
     if (organizationId) params['filters[organization_id][$eq]'] = organizationId;
+    this.addLocaleToParams(params, locale);
     const response = await this.strapiService.get(`/plantation-types/${id}`, params);
     return this.strapiService.transformSingleResponse(response);
   }
 
-  async getTestTypes() {
-    const cacheKey = this.getCacheKey('test-types');
-    
+  async getTestTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('test-types', locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/test-types', { sort: 'name:asc' });
+        const params: any = { sort: 'name:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/test-types', params);
         return this.strapiService.transformResponse(response);
       },
       [],
     );
   }
 
-  async getTestType(id: string) {
-    const response = await this.strapiService.get(`/test-types/${id}`);
+  async getTestType(id: string, locale?: string) {
+    const params: any = {};
+    this.addLocaleToParams(params, locale);
+    const response = await this.strapiService.get(`/test-types/${id}`, params);
     return this.strapiService.transformSingleResponse(response);
   }
 
-  async getProductCategories() {
-    const cacheKey = this.getCacheKey('product-categories');
-    
+  async getProductCategories(locale?: string) {
+    const cacheKey = this.getCacheKey('product-categories', locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/product-categories', {
+        const params: any = {
           populate: 'product_subcategories',
           sort: 'name:asc',
-        });
+        };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/product-categories', params);
         return this.strapiService.transformResponse(response);
       },
       [],
     );
   }
 
-  async getProductCategory(id: string) {
-    const response = await this.strapiService.get(`/product-categories/${id}`, {
+  async getProductCategory(id: string, locale?: string) {
+    const params: any = {
       populate: 'product_subcategories',
-    });
+    };
+    this.addLocaleToParams(params, locale);
+    const response = await this.strapiService.get(`/product-categories/${id}`, params);
     return this.strapiService.transformSingleResponse(response);
   }
 
-  async getProductSubcategories(categoryId?: string) {
+  async getProductSubcategories(categoryId?: string, locale?: string) {
     const params: any = { populate: 'product_category', sort: 'name:asc' };
     if (categoryId) params['filters[product_category][id][$eq]'] = categoryId;
+    this.addLocaleToParams(params, locale);
     const response = await this.strapiService.get('/product-subcategories', params);
     return this.strapiService.transformResponse(response);
   }
 
-  async getSoilTypes() {
-    const cacheKey = this.getCacheKey('soil-types');
-    
+  async getSoilTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('soil-types', locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/soil-types', { sort: 'sort_order:asc,name:asc' });
+        const params: any = { sort: 'sort_order:asc,name:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/soil-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackSoilTypes(),
     );
   }
 
-  async getIrrigationTypes() {
-    const cacheKey = this.getCacheKey('irrigation-types');
-    
+  async getIrrigationTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('irrigation-types', locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/irrigation-types', { sort: 'sort_order:asc,name:asc' });
+        const params: any = { sort: 'sort_order:asc,name:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/irrigation-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackIrrigationTypes(),
     );
   }
 
-  async getCropCategories() {
-    const cacheKey = this.getCacheKey('crop-categories');
-    
+  async getCropCategories(locale?: string) {
+    const cacheKey = this.getCacheKey('crop-categories', locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/crop-categories', {
+        const params: any = {
           populate: 'crop_types',
           sort: 'sort_order:asc,name:asc',
-        });
+        };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/crop-categories', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackCropCategories(),
     );
   }
 
-  async getCropCategory(id: string) {
-    const response = await this.strapiService.get(`/crop-categories/${id}`, {
+  async getCropCategory(id: string, locale?: string) {
+    const params: any = {
       populate: 'crop_types',
-    });
+    };
+    this.addLocaleToParams(params, locale);
+    const response = await this.strapiService.get(`/crop-categories/${id}`, params);
     return this.strapiService.transformSingleResponse(response);
   }
 
-  async getCropTypes(categoryId?: string) {
-    const cacheKey = this.getCacheKey('crop-types', categoryId);
-    
+  async getCropTypes(categoryId?: string, locale?: string) {
+    const cacheKey = this.getCacheKey('crop-types', categoryId, locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
         const params: any = { populate: 'crop_category,varieties', sort: 'sort_order:asc,name:asc' };
         if (categoryId) params['filters[crop_category][id][$eq]'] = categoryId;
+        this.addLocaleToParams(params, locale);
         const response = await this.strapiService.get('/crop-types', params);
         return this.strapiService.transformResponse(response);
       },
@@ -242,14 +272,15 @@ export class ReferenceDataService {
     );
   }
 
-  async getVarieties(cropTypeId?: string) {
-    const cacheKey = this.getCacheKey('varieties', cropTypeId);
-    
+  async getVarieties(cropTypeId?: string, locale?: string) {
+    const cacheKey = this.getCacheKey('varieties', cropTypeId, locale);
+
     return this.fetchWithFallback(
       cacheKey,
       async () => {
         const params: any = { populate: 'crop_type', sort: 'sort_order:asc,name:asc' };
         if (cropTypeId) params['filters[crop_type][id][$eq]'] = cropTypeId;
+        this.addLocaleToParams(params, locale);
         const response = await this.strapiService.get('/varieties', params);
         return this.strapiService.transformResponse(response);
       },
@@ -257,7 +288,7 @@ export class ReferenceDataService {
     );
   }
 
-  async getAllReferenceData(organizationId: string) {
+  async getAllReferenceData(organizationId: string, locale?: string) {
     const [
       treeCategories,
       plantationTypes,
@@ -267,13 +298,13 @@ export class ReferenceDataService {
       irrigationTypes,
       cropCategories,
     ] = await Promise.all([
-      this.getTreeCategories(organizationId),
-      this.getPlantationTypes(organizationId),
-      this.getTestTypes(),
-      this.getProductCategories(),
-      this.getSoilTypes(),
-      this.getIrrigationTypes(),
-      this.getCropCategories(),
+      this.getTreeCategories(organizationId, locale),
+      this.getPlantationTypes(organizationId, locale),
+      this.getTestTypes(locale),
+      this.getProductCategories(locale),
+      this.getSoilTypes(locale),
+      this.getIrrigationTypes(locale),
+      this.getCropCategories(locale),
     ]);
 
     return {
@@ -296,300 +327,350 @@ export class ReferenceDataService {
   // NEW REFERENCE DATA TYPES
   // =====================================================
 
-  async getUnitsOfMeasure() {
-    const cacheKey = this.getCacheKey('units-of-measure');
+  async getUnitsOfMeasure(locale?: string) {
+    const cacheKey = this.getCacheKey('units-of-measure', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/units-of-measure', { sort: 'sort_order:asc,name:asc' });
+        const params: any = { sort: 'sort_order:asc,name:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/units-of-measure', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackUnitsOfMeasure(),
     );
   }
 
-  async getQualityGrades() {
-    const cacheKey = this.getCacheKey('quality-grades');
+  async getQualityGrades(locale?: string) {
+    const cacheKey = this.getCacheKey('quality-grades', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/quality-grades', { sort: 'rank:asc,sort_order:asc' });
+        const params: any = { sort: 'rank:asc,sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/quality-grades', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackQualityGrades(),
     );
   }
 
-  async getHarvestStatuses() {
-    const cacheKey = this.getCacheKey('harvest-statuses');
+  async getHarvestStatuses(locale?: string) {
+    const cacheKey = this.getCacheKey('harvest-statuses', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/harvest-statuses', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/harvest-statuses', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackHarvestStatuses(),
     );
   }
 
-  async getIntendedUses() {
-    const cacheKey = this.getCacheKey('intended-uses');
+  async getIntendedUses(locale?: string) {
+    const cacheKey = this.getCacheKey('intended-uses', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/intended-uses', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/intended-uses', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackIntendedUses(),
     );
   }
 
-  async getUtilityTypes() {
-    const cacheKey = this.getCacheKey('utility-types');
+  async getUtilityTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('utility-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/utility-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/utility-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackUtilityTypes(),
     );
   }
 
-  async getInfrastructureTypes() {
-    const cacheKey = this.getCacheKey('infrastructure-types');
+  async getInfrastructureTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('infrastructure-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/infrastructure-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/infrastructure-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackInfrastructureTypes(),
     );
   }
 
-  async getBasinShapes() {
-    const cacheKey = this.getCacheKey('basin-shapes');
+  async getBasinShapes(locale?: string) {
+    const cacheKey = this.getCacheKey('basin-shapes', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/basin-shapes', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/basin-shapes', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackBasinShapes(),
     );
   }
 
-  async getPaymentMethods() {
-    const cacheKey = this.getCacheKey('payment-methods');
+  async getPaymentMethods(locale?: string) {
+    const cacheKey = this.getCacheKey('payment-methods', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/payment-methods', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/payment-methods', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackPaymentMethods(),
     );
   }
 
-  async getPaymentStatuses() {
-    const cacheKey = this.getCacheKey('payment-statuses');
+  async getPaymentStatuses(locale?: string) {
+    const cacheKey = this.getCacheKey('payment-statuses', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/payment-statuses', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/payment-statuses', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackPaymentStatuses(),
     );
   }
 
-  async getTaskPriorities() {
-    const cacheKey = this.getCacheKey('task-priorities');
+  async getTaskPriorities(locale?: string) {
+    const cacheKey = this.getCacheKey('task-priorities', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/task-priorities', { sort: 'level:asc' });
+        const params: any = { sort: 'level:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/task-priorities', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackTaskPriorities(),
     );
   }
 
-  async getWorkerTypes() {
-    const cacheKey = this.getCacheKey('worker-types');
+  async getWorkerTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('worker-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/worker-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/worker-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackWorkerTypes(),
     );
   }
 
-  async getMetayageTypes() {
-    const cacheKey = this.getCacheKey('metayage-types');
+  async getMetayageTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('metayage-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/metayage-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/metayage-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackMetayageTypes(),
     );
   }
 
-  async getDocumentTypes() {
-    const cacheKey = this.getCacheKey('document-types');
+  async getDocumentTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('document-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/document-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/document-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackDocumentTypes(),
     );
   }
 
-  async getCurrencies() {
-    const cacheKey = this.getCacheKey('currencies');
+  async getCurrencies(locale?: string) {
+    const cacheKey = this.getCacheKey('currencies', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/currencies', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/currencies', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackCurrencies(),
     );
   }
 
-  async getTimezones() {
-    const cacheKey = this.getCacheKey('timezones');
+  async getTimezones(locale?: string) {
+    const cacheKey = this.getCacheKey('timezones', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/timezones', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/timezones', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackTimezones(),
     );
   }
 
-  async getLanguages() {
-    const cacheKey = this.getCacheKey('languages');
+  async getLanguages(locale?: string) {
+    const cacheKey = this.getCacheKey('languages', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/languages', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/languages', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackLanguages(),
     );
   }
 
-  async getLabServiceCategories() {
-    const cacheKey = this.getCacheKey('lab-service-categories');
+  async getLabServiceCategories(locale?: string) {
+    const cacheKey = this.getCacheKey('lab-service-categories', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/lab-service-categories', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/lab-service-categories', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackLabServiceCategories(),
     );
   }
 
-  async getSoilTextures() {
-    const cacheKey = this.getCacheKey('soil-textures');
+  async getSoilTextures(locale?: string) {
+    const cacheKey = this.getCacheKey('soil-textures', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/soil-textures', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/soil-textures', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackSoilTextures(),
     );
   }
 
-  async getCostCategories() {
-    const cacheKey = this.getCacheKey('cost-categories');
+  async getCostCategories(locale?: string) {
+    const cacheKey = this.getCacheKey('cost-categories', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/cost-categories', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/cost-categories', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackCostCategories(),
     );
   }
 
-  async getRevenueCategories() {
-    const cacheKey = this.getCacheKey('revenue-categories');
+  async getRevenueCategories(locale?: string) {
+    const cacheKey = this.getCacheKey('revenue-categories', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/revenue-categories', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/revenue-categories', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackRevenueCategories(),
     );
   }
 
-  async getSaleTypes() {
-    const cacheKey = this.getCacheKey('sale-types');
+  async getSaleTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('sale-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/sale-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/sale-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackSaleTypes(),
     );
   }
 
-  async getExperienceLevels() {
-    const cacheKey = this.getCacheKey('experience-levels');
+  async getExperienceLevels(locale?: string) {
+    const cacheKey = this.getCacheKey('experience-levels', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/experience-levels', { sort: 'level:asc' });
+        const params: any = { sort: 'level:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/experience-levels', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackExperienceLevels(),
     );
   }
 
-  async getSeasonalities() {
-    const cacheKey = this.getCacheKey('seasonalities');
+  async getSeasonalities(locale?: string) {
+    const cacheKey = this.getCacheKey('seasonalities', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/seasonalities', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/seasonalities', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackSeasonalities(),
     );
   }
 
-  async getDeliveryTypes() {
-    const cacheKey = this.getCacheKey('delivery-types');
+  async getDeliveryTypes(locale?: string) {
+    const cacheKey = this.getCacheKey('delivery-types', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/delivery-types', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/delivery-types', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackDeliveryTypes(),
     );
   }
 
-  async getDeliveryStatuses() {
-    const cacheKey = this.getCacheKey('delivery-statuses');
+  async getDeliveryStatuses(locale?: string) {
+    const cacheKey = this.getCacheKey('delivery-statuses', locale);
     return this.fetchWithFallback(
       cacheKey,
       async () => {
-        const response = await this.strapiService.get('/delivery-statuses', { sort: 'sort_order:asc' });
+        const params: any = { sort: 'sort_order:asc' };
+        this.addLocaleToParams(params, locale);
+        const response = await this.strapiService.get('/delivery-statuses', params);
         return this.strapiService.transformResponse(response);
       },
       this.getFallbackDeliveryStatuses(),

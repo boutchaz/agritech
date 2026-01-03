@@ -1,6 +1,8 @@
 import React from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
+import { appConfig } from '@/config/app'
+
 
 interface AuthLayoutProps {
   title: string
@@ -53,7 +55,7 @@ export function AuthLayout({
         <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-center">
           <div className="hidden rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl lg:flex lg:flex-col">
             <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.22em] text-emerald-200">
-              Powered by Agritech
+              Powered by {appConfig.name}
             </span>
             <h1 className="mt-6 text-4xl font-semibold leading-tight text-white">
               Manage your fields with confidence
