@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
@@ -11,6 +12,7 @@ export class InvoicesService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -581,5 +583,99 @@ export class InvoicesService {
     }
 
     return { message: 'Invoice deleted successfully' };
+  }
+
+  async sendInvoiceEmail(
+    invoiceId: string,
+    organizationId: string,
+    recipientEmail?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    const { data: invoice, error: invoiceError } = await supabaseClient
+      .from('invoices')
+      .select(`
+        *,
+        items:invoice_items(*)
+      `)
+      .eq('id', invoiceId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (invoiceError || !invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    const { data: organization, error: orgError } = await supabaseClient
+      .from('organizations')
+      .select('name')
+      .eq('id', organizationId)
+      .single();
+
+    if (orgError || !organization) {
+      throw new BadRequestException('Organization not found');
+    }
+
+    let partyEmail = recipientEmail;
+    
+    if (!partyEmail && invoice.party_id) {
+      if (invoice.party_type === 'customer') {
+        const { data: customer } = await supabaseClient
+          .from('customers')
+          .select('email')
+          .eq('id', invoice.party_id)
+          .single();
+        partyEmail = customer?.email;
+      } else if (invoice.party_type === 'supplier') {
+        const { data: supplier } = await supabaseClient
+          .from('suppliers')
+          .select('email')
+          .eq('id', invoice.party_id)
+          .single();
+        partyEmail = supplier?.email;
+      }
+    }
+
+    if (!partyEmail) {
+      throw new BadRequestException('No email address provided or found for the party');
+    }
+
+    const emailData: InvoiceEmailData = {
+      invoiceNumber: invoice.invoice_number,
+      invoiceType: invoice.invoice_type,
+      partyName: invoice.party_name,
+      partyEmail: partyEmail,
+      organizationName: organization.name,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      subtotal: Number(invoice.subtotal),
+      taxAmount: Number(invoice.tax_total || 0),
+      grandTotal: Number(invoice.grand_total),
+      currency: invoice.currency_code || 'MAD',
+      items: (invoice.items || []).map((item: any) => ({
+        description: item.item_name || item.description,
+        quantity: Number(item.quantity),
+        rate: Number(item.unit_price),
+        amount: Number(item.amount),
+      })),
+      notes: invoice.notes,
+    };
+
+    const sent = await this.notificationsService.sendInvoiceEmail(emailData);
+
+    if (!sent) {
+      this.logger.warn(`Failed to send invoice email for ${invoice.invoice_number}`);
+      return {
+        success: false,
+        message: 'Email could not be sent. Please check email configuration.',
+      };
+    }
+
+    this.logger.log(`Invoice email sent successfully for ${invoice.invoice_number} to ${partyEmail}`);
+    
+    return {
+      success: true,
+      message: `Invoice email sent successfully to ${partyEmail}`,
+    };
   }
 }
