@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsDateString, IsNumberString } from 'class-validator';
 
 export class TaskFiltersDto {
   @ApiPropertyOptional({ description: 'Filter by status (comma-separated)' })
@@ -46,4 +46,24 @@ export class TaskFiltersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1 })
+  @IsOptional()
+  @IsNumberString()
+  page?: string;
+
+  @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
+  @IsOptional()
+  @IsNumberString()
+  pageSize?: string;
+
+  @ApiPropertyOptional({ description: 'Field to sort by', default: 'scheduled_start' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Sort direction (asc or desc)', default: 'desc' })
+  @IsOptional()
+  @IsString()
+  sortDir?: string;
 }

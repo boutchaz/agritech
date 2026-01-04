@@ -13,6 +13,7 @@ import AnalysisWidget from './Dashboard/AnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
+import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
@@ -166,11 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
 
   return (
     <div className="space-y-6">
-      {!currentFarm && (
-        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">
-          {t('dashboard.widgets.noFarmSelected')}
-        </div>
-      )}
+      <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
 
       {/* Row 1: Key Performance Indicators */}
       <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
