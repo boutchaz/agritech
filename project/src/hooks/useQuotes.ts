@@ -79,7 +79,7 @@ export function useQuotes(status?: Quote['status']) {
         {
           status,
           page: 1,
-          limit: 1000,
+          pageSize: 100,
         },
         currentOrganization.id
       );

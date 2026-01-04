@@ -23,6 +23,16 @@ export class SalesOrderFiltersDto extends PaginatedQueryDto {
   @IsOptional()
   customer_id?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by customer name (partial match)' })
+  @IsString()
+  @IsOptional()
+  customer_name?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by order number' })
+  @IsString()
+  @IsOptional()
+  order_number?: string;
+
   @ApiPropertyOptional({ description: 'Filter by stock issued status' })
   @IsString()
   @IsOptional()

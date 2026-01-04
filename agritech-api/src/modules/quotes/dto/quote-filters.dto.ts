@@ -15,4 +15,14 @@ export class QuoteFiltersDto extends PaginatedQueryDto {
   @IsString()
   @IsOptional()
   customer_id?: string;
+
+  @ApiPropertyOptional({ description: 'Customer name filter (partial match)' })
+  @IsString()
+  @IsOptional()
+  customer_name?: string;
+
+  @ApiPropertyOptional({ description: 'Quote number filter' })
+  @IsString()
+  @IsOptional()
+  quote_number?: string;
 }

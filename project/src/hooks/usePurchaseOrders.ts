@@ -89,7 +89,7 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
       const response = await purchaseOrdersApi.getPurchaseOrders({
         status: status,
         page: 1,
-        limit: 1000,
+        pageSize: 100,
       }, currentOrganization.id);
 
       const purchaseOrders = Array.isArray(response) ? response : (response?.data || []);
