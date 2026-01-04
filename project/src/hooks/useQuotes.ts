@@ -75,7 +75,7 @@ export function useQuotes(status?: Quote['status']) {
         throw new Error('No organization selected');
       }
 
-      const data = await quotesApi.getAll(
+      const response = await quotesApi.getAll(
         {
           status,
           page: 1,
@@ -83,7 +83,11 @@ export function useQuotes(status?: Quote['status']) {
         },
         currentOrganization.id
       );
-      return data as Quote[];
+      // Handle both array and paginated response formats
+      if (Array.isArray(response)) {
+        return response as Quote[];
+      }
+      return ((response as any)?.data || []) as Quote[];
     },
     enabled: !!currentOrganization?.id,
   });

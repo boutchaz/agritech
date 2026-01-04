@@ -63,8 +63,11 @@ export function useInvoices() {
         throw new Error('No organization selected');
       }
 
-      const data = await invoicesApi.getAll({}, currentOrganization.id);
-      return data as Invoice[];
+      const response = await invoicesApi.getAll({}, currentOrganization.id);
+      if (Array.isArray(response)) {
+        return response as Invoice[];
+      }
+      return ((response as any)?.data || []) as Invoice[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -83,8 +86,11 @@ export function useInvoicesByType(type: 'sales' | 'purchase') {
         throw new Error('No organization selected');
       }
 
-      const data = await invoicesApi.getAll({ invoice_type: type }, currentOrganization.id);
-      return data as Invoice[];
+      const response = await invoicesApi.getAll({ invoice_type: type }, currentOrganization.id);
+      if (Array.isArray(response)) {
+        return response as Invoice[];
+      }
+      return ((response as any)?.data || []) as Invoice[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -126,8 +132,11 @@ export function useInvoicesByStatus(status: Invoice['status']) {
         throw new Error('No organization selected');
       }
 
-      const data = await invoicesApi.getAll({ status }, currentOrganization.id);
-      return data as Invoice[];
+      const response = await invoicesApi.getAll({ status }, currentOrganization.id);
+      if (Array.isArray(response)) {
+        return response as Invoice[];
+      }
+      return ((response as any)?.data || []) as Invoice[];
     },
     enabled: !!currentOrganization?.id,
   });
