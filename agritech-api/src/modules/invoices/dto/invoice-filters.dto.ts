@@ -17,4 +17,24 @@ export class InvoiceFiltersDto extends PaginatedQueryDto {
   @IsString()
   @IsOptional()
   party_id?: string;
+
+  @ApiPropertyOptional({ description: 'Party name filter (partial match)' })
+  @IsString()
+  @IsOptional()
+  party_name?: string;
+
+  @ApiPropertyOptional({ description: 'Invoice number filter' })
+  @IsString()
+  @IsOptional()
+  invoice_number?: string;
+
+  @ApiPropertyOptional({ description: 'Farm ID filter' })
+  @IsString()
+  @IsOptional()
+  farm_id?: string;
+
+  @ApiPropertyOptional({ description: 'Parcel ID filter' })
+  @IsString()
+  @IsOptional()
+  parcel_id?: string;
 }

@@ -158,7 +158,7 @@ export function useSalesOrders(status?: SalesOrder['status']) {
         const response = await salesOrdersApi.getSalesOrders({
           status: status,
           page: 1,
-          limit: 1000, // TODO: Add pagination support
+          pageSize: 100,
         }, currentOrganization.id);
 
         // Response structure: { data: SalesOrder[], pagination: {...} }

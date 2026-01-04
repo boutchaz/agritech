@@ -88,8 +88,8 @@ export const accountingApi = {
 
     if (filter?.invoice_type) apiFilters.invoice_type = filter.invoice_type;
     if (filter?.status) apiFilters.status = filter.status;
-    if (filter?.start_date) apiFilters.date_from = filter.start_date.toISOString().split('T')[0];
-    if (filter?.end_date) apiFilters.date_to = filter.end_date.toISOString().split('T')[0];
+    if (filter?.start_date) apiFilters.dateFrom = filter.start_date.toISOString().split('T')[0];
+    if (filter?.end_date) apiFilters.dateTo = filter.end_date.toISOString().split('T')[0];
     if (filter?.party_name) apiFilters.party_name = filter.party_name;
     if (filter?.farm_id) apiFilters.farm_id = filter.farm_id;
     if (filter?.parcel_id) apiFilters.parcel_id = filter.parcel_id;
