@@ -1,5 +1,4 @@
 import { apiClient } from '../api-client';
-import { requireOrganizationId } from './createCrudApi';
 
 export type UtilityType = 'electricity' | 'water' | 'diesel' | 'gas' | 'internet' | 'phone' | 'other';
 export type PaymentStatus = 'pending' | 'paid' | 'overdue';
@@ -56,45 +55,41 @@ export const utilitiesApi = {
   /**
    * Get all utilities for a farm
    */
-  async getAll(farmId: string, organizationId?: string): Promise<Utility[]> {
-    requireOrganizationId(organizationId, 'utilitiesApi.getAll');
-    return apiClient.get<Utility[]>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`);
+  async getAll(organizationId: string, farmId: string): Promise<Utility[]> {
+    return apiClient.get<Utility[]>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`, {}, organizationId);
   },
 
   /**
    * Get a single utility by ID
    */
-  async getOne(utilityId: string, farmId: string, organizationId?: string): Promise<Utility> {
-    requireOrganizationId(organizationId, 'utilitiesApi.getOne');
-    return apiClient.get<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`);
+  async getOne(organizationId: string, farmId: string, utilityId: string): Promise<Utility> {
+    return apiClient.get<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, {}, organizationId);
   },
 
   // Alias for backwards compatibility
   async getById(organizationId: string, farmId: string, utilityId: string): Promise<Utility> {
-    return this.getOne(utilityId, farmId, organizationId);
+    return this.getOne(organizationId, farmId, utilityId);
   },
 
   /**
    * Create a new utility
    */
-  async create(data: CreateUtilityInput, organizationId?: string): Promise<Utility> {
-    requireOrganizationId(organizationId, 'utilitiesApi.create');
-    return apiClient.post<Utility>(`/api/v1/organizations/${organizationId}/farms/${data.farm_id}/utilities`, data);
+  async create(organizationId: string, data: CreateUtilityInput): Promise<Utility> {
+    return apiClient.post<Utility>(`/api/v1/organizations/${organizationId}/farms/${data.farm_id}/utilities`, data, {}, organizationId);
   },
 
   /**
    * Update a utility
    */
-  async update(utilityId: string, data: UpdateUtilityInput, farmId: string, organizationId?: string): Promise<Utility> {
-    requireOrganizationId(organizationId, 'utilitiesApi.update');
-    return apiClient.patch<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, data);
+  async update(organizationId: string, farmId: string, utilityId: string, data: UpdateUtilityInput): Promise<Utility> {
+    return apiClient.patch<Utility>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, data, {}, organizationId);
   },
 
   /**
    * Delete a utility
    */
   async delete(organizationId: string, farmId: string, utilityId: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`);
+    return apiClient.delete<{ message: string }>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/${utilityId}`, {}, organizationId);
   },
 
   /**
@@ -109,7 +104,9 @@ export const utilitiesApi = {
     const params = new URLSearchParams({ accountType });
     if (accountSubtype) params.append('accountSubtype', accountSubtype);
     return apiClient.get<Account>(
-      `/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/accounts/by-type?${params.toString()}`
+      `/api/v1/organizations/${organizationId}/farms/${farmId}/utilities/accounts/by-type?${params.toString()}`,
+      {},
+      organizationId
     );
   },
 };

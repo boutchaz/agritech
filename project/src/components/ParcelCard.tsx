@@ -11,10 +11,10 @@ import AnalysisCard from './Analysis/AnalysisCard';
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
 
 // Lazy load heavy chart components (ECharts + Recharts ~1.6MB)
-const IndicesCalculator = lazy(() => import('./SatelliteAnalysis/IndicesCalculator'));
-const TimeSeriesChart = lazy(() => import('./SatelliteAnalysis/TimeSeriesChart'));
-const StatisticsCalculator = lazy(() => import('./SatelliteAnalysis/StatisticsCalculator'));
-const IndexImageViewer = lazy(() => import('./SatelliteAnalysis/IndexImageViewer'));
+const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
+const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
+const StatisticsCalculator = lazy(() => import('./SatelliteAnalysisView/StatisticsCalculator'));
+const IndexImageViewer = lazy(() => import('./SatelliteAnalysisView/IndexImageViewer'));
 const ParcelReportGenerator = lazy(() => import('./ParcelReportGenerator'));
 const ParcelProfitability = lazy(() => import('./ParcelProfitability'));
 const WeatherAnalyticsView = lazy(() => import('./WeatherAnalytics/WeatherAnalyticsView'));

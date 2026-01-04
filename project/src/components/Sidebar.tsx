@@ -111,13 +111,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     getInitialSectionState(['/campaigns', '/crop-cycles', '/harvests', '/reception-batches', '/quality-control'])
   );
   const [showSalesPurchasing, setShowSalesPurchasing] = useState(() =>
-    getInitialSectionState(['/billing-quotes', '/billing-sales-orders', '/billing-purchase-orders'])
+    getInitialSectionState(['/accounting/quotes', '/accounting/sales-orders', '/accounting/purchase-orders'])
   );
   const [showAccounting, setShowAccounting] = useState(() =>
-    getInitialSectionState(['/accounting', '/accounting-accounts', '/accounting-invoices', '/accounting-payments', '/accounting-journal', '/utilities'])
+    getInitialSectionState(['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities'])
   );
   const [showConfiguration, setShowConfiguration] = useState(() =>
-    getInitialSectionState(['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'])
+    getInitialSectionState(['/accounting/customers', '/stock/suppliers', '/stock/warehouses', '/settings'])
   );
   const [showMarketplace, setShowMarketplace] = useState(() =>
     getInitialSectionState(['/marketplace/quote-requests'])
@@ -136,15 +136,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       setShowProduction(true);
     }
     // Sales & Purchasing section
-    if (['/billing-quotes', '/billing-sales-orders', '/billing-purchase-orders'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+    if (['/accounting/quotes', '/accounting/sales-orders', '/accounting/purchase-orders'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowSalesPurchasing(true);
     }
     // Accounting section
-    if (['/accounting', '/accounting-accounts', '/accounting-invoices', '/accounting-payments', '/accounting-journal', '/utilities'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+    if (['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowAccounting(true);
     }
     // Configuration section
-    if (['/accounting-customers', '/stock/suppliers', '/stock/warehouses', '/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+    if (['/accounting/customers', '/stock/suppliers', '/stock/warehouses', '/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowConfiguration(true);
     }
     // Marketplace section
@@ -648,13 +648,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="hidden lg:block">
                   <CollapsedSectionPopover icon={ShoppingCart} title={t('nav.salesPurchasing')}>
                     <ProtectedNavItem action="read" subject="Invoice">
-                      <PopoverNavItem path="/billing-quotes" label={t('nav.quotes')} isActive={currentPath === '/billing-quotes'} />
+                      <PopoverNavItem path="/accounting/quotes" label={t('nav.quotes')} isActive={currentPath === '/accounting/quotes'} />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Invoice">
-                      <PopoverNavItem path="/billing-sales-orders" label={t('nav.salesOrders')} isActive={currentPath === '/billing-sales-orders'} />
+                      <PopoverNavItem path="/accounting/sales-orders" label={t('nav.salesOrders')} isActive={currentPath === '/accounting/sales-orders'} />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Invoice">
-                      <PopoverNavItem path="/billing-purchase-orders" label={t('nav.purchaseOrders')} isActive={currentPath === '/billing-purchase-orders'} />
+                      <PopoverNavItem path="/accounting/purchase-orders" label={t('nav.purchaseOrders')} isActive={currentPath === '/accounting/purchase-orders'} />
                     </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
@@ -676,8 +676,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/billing-quotes')}
-                          onClick={(e) => handleNavigation('/billing-quotes', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/quotes')}
+                          onClick={(e) => handleNavigation('/accounting/quotes', e)}
                         >
                           {renderText(t('nav.quotes'))}
                         </Button>
@@ -685,8 +685,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/billing-sales-orders')}
-                          onClick={(e) => handleNavigation('/billing-sales-orders', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/sales-orders')}
+                          onClick={(e) => handleNavigation('/accounting/sales-orders', e)}
                         >
                           {renderText(t('nav.salesOrders'))}
                         </Button>
@@ -694,8 +694,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/billing-purchase-orders')}
-                          onClick={(e) => handleNavigation('/billing-purchase-orders', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/purchase-orders')}
+                          onClick={(e) => handleNavigation('/accounting/purchase-orders', e)}
                         >
                           {renderText(t('nav.purchaseOrders'))}
                         </Button>
@@ -714,10 +714,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div className="hidden lg:block">
                     <CollapsedSectionPopover icon={BookOpen} title={t('nav.accounting')}>
                       <PopoverNavItem path="/accounting" label={t('nav.overview')} isActive={currentPath === '/accounting'} />
-                      <PopoverNavItem path="/accounting-accounts" label={t('nav.chartOfAccounts')} isActive={currentPath === '/accounting-accounts'} />
-                      <PopoverNavItem path="/accounting-invoices" label={t('nav.invoices')} isActive={currentPath === '/accounting-invoices'} />
-                      <PopoverNavItem path="/accounting-payments" label={t('nav.payments')} isActive={currentPath === '/accounting-payments'} />
-                      <PopoverNavItem path="/accounting-journal" label={t('nav.journal')} isActive={currentPath === '/accounting-journal'} />
+                      <PopoverNavItem path="/accounting/accounts" label={t('nav.chartOfAccounts')} isActive={currentPath === '/accounting/accounts'} />
+                      <PopoverNavItem path="/accounting/invoices" label={t('nav.invoices')} isActive={currentPath === '/accounting/invoices'} />
+                      <PopoverNavItem path="/accounting/payments" label={t('nav.payments')} isActive={currentPath === '/accounting/payments'} />
+                      <PopoverNavItem path="/accounting/journal" label={t('nav.journal')} isActive={currentPath === '/accounting/journal'} />
                       <ProtectedNavItem action="read" subject="Utility">
                         <PopoverNavItem path="/utilities" label={t('nav.expenses')} isActive={currentPath === '/utilities'} />
                       </ProtectedNavItem>
@@ -747,29 +747,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </Button>
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/accounting-accounts')}
-                          onClick={(e) => handleNavigation('/accounting-accounts', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/accounts')}
+                          onClick={(e) => handleNavigation('/accounting/accounts', e)}
                         >
                           {renderText(t('nav.chartOfAccounts'))}
                         </Button>
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/accounting-invoices')}
-                          onClick={(e) => handleNavigation('/accounting-invoices', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/invoices')}
+                          onClick={(e) => handleNavigation('/accounting/invoices', e)}
                         >
                           {renderText(t('nav.invoices'))}
                         </Button>
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/accounting-payments')}
-                          onClick={(e) => handleNavigation('/accounting-payments', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/payments')}
+                          onClick={(e) => handleNavigation('/accounting/payments', e)}
                         >
                           {renderText(t('nav.payments'))}
                         </Button>
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/accounting-journal')}
-                          onClick={(e) => handleNavigation('/accounting-journal', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/journal')}
+                          onClick={(e) => handleNavigation('/accounting/journal', e)}
                         >
                           {renderText(t('nav.journal'))}
                         </Button>
@@ -796,7 +796,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="hidden lg:block">
                   <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
                     <ProtectedNavItem action="read" subject="Invoice">
-                      <PopoverNavItem path="/accounting-customers" label={t('nav.customers')} isActive={currentPath === '/accounting-customers'} />
+                      <PopoverNavItem path="/accounting/customers" label={t('nav.customers')} isActive={currentPath === '/accounting/customers'} />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Stock">
                       <PopoverNavItem path="/stock/suppliers" label={t('nav.suppliers')} isActive={currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers')} />
@@ -827,8 +827,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
-                          className={getSubItemClassName(currentPath === '/accounting-customers')}
-                          onClick={(e) => handleNavigation('/accounting-customers', e)}
+                          className={getSubItemClassName(currentPath === '/accounting/customers')}
+                          onClick={(e) => handleNavigation('/accounting/customers', e)}
                         >
                           {renderText(t('nav.customers'))}
                         </Button>
@@ -1064,8 +1064,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Button
               variant="ghost"
               data-tour="nav-reports"
-              className={getButtonClassName(currentPath === '/reports' || currentPath === '/accounting-reports')}
-              onClick={(e) => handleNavigation('/accounting-reports', e)}
+              className={getButtonClassName(currentPath === '/reports' || currentPath === '/accounting/reports')}
+              onClick={(e) => handleNavigation('/accounting/reports', e)}
               title={isCollapsed ? t('nav.reports') : undefined}
             >
               {renderIcon(BarChart3)}

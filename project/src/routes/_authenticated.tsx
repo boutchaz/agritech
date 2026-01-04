@@ -107,7 +107,7 @@ function AuthenticatedLayout() {
         >
           <LegacyUserBanner />
           <SubscriptionBanner />
-          <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          {/* <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <OrganizationSwitcher />
@@ -123,8 +123,8 @@ function AuthenticatedLayout() {
                 </button>
               </div>
             </div>
-          </header>
-          <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
+          </header> */}
+          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
             <Outlet />
           </main>
         </div>
