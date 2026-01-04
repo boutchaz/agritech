@@ -1,10 +1,9 @@
-import { Controller, Delete, Get, Post, Query, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { FarmsService } from './farms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -43,11 +42,6 @@ export class FarmsController {
     summary: 'List farms for an organization',
     description: 'Get all farms for an organization with parcel counts',
   })
-  @ApiQuery({
-    name: 'organization_id',
-    required: true,
-    description: 'Organization ID to fetch farms for',
-  })
   @ApiResponse({
     status: 200,
     description: 'Farms retrieved successfully',
@@ -59,13 +53,12 @@ export class FarmsController {
   // This allows new users to list farms during trial setup flow
   async listFarms(
     @Request() req,
-    @Query('organization_id') organizationId: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     console.log('========== [FarmsController] GET /farms ENTERED ==========');
     console.log('[FarmsController] GET /farms called', {
       userId: req.user?.id,
       organizationId,
-      query: req.query,
     });
     return this.farmsService.listFarms(req.user.id, organizationId);
   }
