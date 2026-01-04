@@ -94,12 +94,49 @@ export class TasksService {
     }));
   }
 
-  /**
-   * Get all tasks for an organization with filters
-   */
   async findAll(userId: string, organizationId: string, filters?: TaskFiltersDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    const page = filters?.page ? parseInt(filters.page, 10) : 1;
+    const pageSize = filters?.pageSize ? parseInt(filters.pageSize, 10) : 10;
+    const sortBy = filters?.sortBy || 'scheduled_start';
+    const sortDir = filters?.sortDir || 'desc';
+    const hasPagination = filters?.page !== undefined || filters?.pageSize !== undefined;
+
+    const applyFilters = (q: any) => {
+      if (filters?.status) {
+        const statuses = filters.status.split(',');
+        q = q.in('status', statuses);
+      }
+      if (filters?.priority) {
+        const priorities = filters.priority.split(',');
+        q = q.in('priority', priorities);
+      }
+      if (filters?.task_type) {
+        const types = filters.task_type.split(',');
+        q = q.in('task_type', types);
+      }
+      if (filters?.assigned_to) {
+        q = q.eq('assigned_to', filters.assigned_to);
+      }
+      if (filters?.farm_id) {
+        q = q.eq('farm_id', filters.farm_id);
+      }
+      if (filters?.parcel_id) {
+        q = q.eq('parcel_id', filters.parcel_id);
+      }
+      if (filters?.date_from) {
+        q = q.gte('scheduled_start', filters.date_from);
+      }
+      if (filters?.date_to) {
+        q = q.lte('scheduled_start', filters.date_to);
+      }
+      if (filters?.search) {
+        q = q.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      }
+      return q;
+    };
 
     let query = client
       .from('tasks')
@@ -111,47 +148,45 @@ export class TasksService {
       `)
       .eq('organization_id', organizationId);
 
-    // Apply filters
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
+    query = applyFilters(query);
+    query = query.order(sortBy, { ascending: sortDir === 'asc', nullsFirst: false });
 
-    if (filters?.priority) {
-      const priorities = filters.priority.split(',');
-      query = query.in('priority', priorities);
-    }
+    if (hasPagination) {
+      let countQuery = client
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+      countQuery = applyFilters(countQuery);
 
-    if (filters?.task_type) {
-      const types = filters.task_type.split(',');
-      query = query.in('task_type', types);
-    }
+      const { count } = await countQuery;
 
-    if (filters?.assigned_to) {
-      query = query.eq('assigned_to', filters.assigned_to);
-    }
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
 
-    if (filters?.farm_id) {
-      query = query.eq('farm_id', filters.farm_id);
-    }
+      const { data: tasks, error } = await query;
 
-    if (filters?.parcel_id) {
-      query = query.eq('parcel_id', filters.parcel_id);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch tasks: ${error.message}`);
+      }
 
-    if (filters?.date_from) {
-      query = query.gte('scheduled_start', filters.date_from);
-    }
+      const mappedTasks = (tasks || []).map(task => ({
+        ...task,
+        worker_name: task.worker
+          ? `${task.worker.first_name} ${task.worker.last_name}`
+          : undefined,
+        farm_name: Array.isArray(task.farm) ? task.farm[0]?.name : task.farm?.name,
+        parcel_name: Array.isArray(task.parcel) ? task.parcel[0]?.name : task.parcel?.name,
+      }));
 
-    if (filters?.date_to) {
-      query = query.lte('scheduled_start', filters.date_to);
+      return {
+        data: mappedTasks,
+        total: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize),
+      };
     }
-
-    if (filters?.search) {
-      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-    }
-
-    query = query.order('scheduled_start', { ascending: false, nullsFirst: false });
 
     const { data: tasks, error } = await query;
 

@@ -30,7 +30,14 @@ export class JournalEntriesCrudController {
   constructor(private readonly journalEntriesService: JournalEntriesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all journal entries with optional filters' })
+  @ApiOperation({ summary: 'Get all journal entries with optional filters and pagination' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)' })
+  @ApiQuery({ name: 'pageSize', required: false, description: 'Items per page' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field' })
+  @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'], description: 'Sort direction' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term' })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'Filter from date' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'Filter to date' })
   @ApiQuery({ name: 'status', enum: ['draft', 'posted', 'cancelled'], required: false })
   @ApiQuery({ name: 'entry_type', enum: ['expense', 'revenue', 'transfer', 'adjustment'], required: false })
   @ApiQuery({ name: 'date_from', required: false })
@@ -42,10 +49,17 @@ export class JournalEntriesCrudController {
   @ApiResponse({ status: 200, description: 'Journal entries retrieved successfully' })
   async findAll(
     @Req() req: any,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
+    @Query('search') search?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
     @Query('status') status?: string,
     @Query('entry_type') entryType?: string,
-    @Query('date_from') dateFrom?: string,
-    @Query('date_to') dateTo?: string,
+    @Query('date_from') legacyDateFrom?: string,
+    @Query('date_to') legacyDateTo?: string,
     @Query('account_id') accountId?: string,
     @Query('cost_center_id') costCenterId?: string,
     @Query('farm_id') farmId?: string,
@@ -53,10 +67,15 @@ export class JournalEntriesCrudController {
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.journalEntriesService.findAll(organizationId, {
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      sortBy,
+      sortDir: sortDir as 'asc' | 'desc' | undefined,
+      search,
+      dateFrom: dateFrom || legacyDateFrom,
+      dateTo: dateTo || legacyDateTo,
       status,
       entry_type: entryType,
-      date_from: dateFrom,
-      date_to: dateTo,
       account_id: accountId,
       cost_center_id: costCenterId,
       farm_id: farmId,

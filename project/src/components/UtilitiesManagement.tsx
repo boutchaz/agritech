@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useAuth } from './MultiTenantAuthProvider';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
+import InlineFarmSelector from './InlineFarmSelector';
 
 interface Utility {
   id: string;
@@ -980,11 +981,7 @@ const UtilitiesManagement: React.FC = () => {
         </div>
       )}
 
-      {!currentFarm?.id && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
-          Sélectionnez une ferme pour gérer les charges fixes.
-        </div>
-      )}
+      <InlineFarmSelector message="Sélectionnez une ferme pour gérer les charges fixes." />
 
       {error && (
         <div className={`p-4 rounded-lg border ${

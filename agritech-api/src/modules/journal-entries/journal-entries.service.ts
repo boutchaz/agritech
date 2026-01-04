@@ -45,13 +45,25 @@ export class JournalEntriesService {
     private readonly sequencesService: SequencesService,
   ) {}
 
-  /**
-   * Get all journal entries with optional filters
-   */
   async findAll(organizationId: string, filters?: any) {
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
+      const page = filters?.page || 1;
+      const pageSize = filters?.pageSize || 10;
+      const sortBy = filters?.sortBy || 'entry_date';
+      const sortDir = filters?.sortDir || 'desc';
+      const search = filters?.search;
+      const dateFrom = filters?.dateFrom;
+      const dateTo = filters?.dateTo;
+
+      const hasPagination = filters?.page !== undefined || filters?.pageSize !== undefined;
+
+      let countQuery = supabaseClient
+        .from('journal_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
       let query = supabaseClient
         .from('journal_entries')
         .select(`
@@ -61,27 +73,37 @@ export class JournalEntriesService {
             accounts(code, name)
           )
         `)
-        .eq('organization_id', organizationId)
-        .order('entry_date', { ascending: false });
+        .eq('organization_id', organizationId);
 
       if (filters?.status) {
         query = query.eq('status', filters.status);
+        countQuery = countQuery.eq('status', filters.status);
       }
 
       if (filters?.entry_type) {
         query = query.eq('entry_type', filters.entry_type);
+        countQuery = countQuery.eq('entry_type', filters.entry_type);
       }
 
-      if (filters?.date_from) {
-        query = query.gte('entry_date', filters.date_from);
+      if (dateFrom || filters?.date_from) {
+        const fromDate = dateFrom || filters.date_from;
+        query = query.gte('entry_date', fromDate);
+        countQuery = countQuery.gte('entry_date', fromDate);
       }
 
-      if (filters?.date_to) {
-        query = query.lte('entry_date', filters.date_to);
+      if (dateTo || filters?.date_to) {
+        const toDate = dateTo || filters.date_to;
+        query = query.lte('entry_date', toDate);
+        countQuery = countQuery.lte('entry_date', toDate);
+      }
+
+      if (search) {
+        const searchPattern = `%${search}%`;
+        query = query.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+        countQuery = countQuery.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
       }
 
       if (filters?.account_id) {
-        // Filter by account in journal items
         query = query.filter('journal_items.account_id', 'eq', filters.account_id);
       }
 
@@ -95,6 +117,33 @@ export class JournalEntriesService {
 
       if (filters?.parcel_id) {
         query = query.filter('journal_items.parcel_id', 'eq', filters.parcel_id);
+      }
+
+      query = query.order(sortBy, { ascending: sortDir === 'asc' });
+
+      if (hasPagination) {
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+
+        const { count: totalCount } = await countQuery;
+        const { data, error } = await query;
+
+        if (error) {
+          this.logger.error('Error fetching journal entries:', error);
+          throw new BadRequestException(`Failed to fetch journal entries: ${error.message}`);
+        }
+
+        const total = totalCount || 0;
+        const totalPages = Math.ceil(total / pageSize);
+
+        return {
+          data: data || [],
+          total,
+          page,
+          pageSize,
+          totalPages,
+        };
       }
 
       const { data, error } = await query;
