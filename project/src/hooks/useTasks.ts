@@ -1,8 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tasksApi } from '../lib/api/tasks';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { tasksApi, type PaginatedTaskQuery } from '../lib/api/tasks';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import type { PaginatedResponse } from '../lib/api/types';
 import type {
   TaskFilters,
+  TaskSummary,
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskCategory,
@@ -11,6 +13,8 @@ import type {
   ClockOutRequest,
   WorkerAvailability,
 } from '../types/tasks';
+
+export type { PaginatedTaskQuery };
 
 // =====================================================
 // TASK QUERIES
@@ -24,6 +28,21 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
       return tasksApi.getAll(organizationId, filters);
     },
     enabled: !!organizationId,
+  });
+}
+
+export function usePaginatedTasks(organizationId: string, query: PaginatedTaskQuery) {
+  return useQuery({
+    queryKey: ['tasks', 'paginated', organizationId, query],
+    queryFn: async (): Promise<PaginatedResponse<TaskSummary>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+      return tasksApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 
