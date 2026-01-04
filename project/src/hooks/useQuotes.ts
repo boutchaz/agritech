@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
-import { quotesApi } from '../lib/api/quotes';
+import { quotesApi, type PaginatedQuoteQuery, type PaginatedResponse } from '../lib/api/quotes';
 
 export interface Quote {
   id: string;
@@ -62,9 +62,6 @@ export interface QuoteWithItems extends Quote {
   items?: QuoteItem[];
 }
 
-/**
- * Hook to fetch all quotes
- */
 export function useQuotes(status?: Quote['status']) {
   const { currentOrganization } = useAuth();
 
@@ -90,6 +87,24 @@ export function useQuotes(status?: Quote['status']) {
       return ((response as any)?.data || []) as Quote[];
     },
     enabled: !!currentOrganization?.id,
+  });
+}
+
+export function usePaginatedQuotes(query: PaginatedQuoteQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['quotes', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<Quote>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return quotesApi.getPaginated(query, currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

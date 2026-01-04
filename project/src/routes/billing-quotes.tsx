@@ -20,13 +20,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useQuotes, type Quote } from '../hooks/useQuotes';
+import { useQuotes, usePaginatedQuotes, type Quote } from '../hooks/useQuotes';
 import { QuoteForm } from '../components/Billing/QuoteForm';
 import { QuoteDetailDialog } from '../components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -35,25 +36,18 @@ const AppContent: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [statusFilter, _setStatusFilter] = useState<Quote['status'] | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: quotes = [], isLoading, error } = useQuotes(statusFilter);
-
-  const filteredBySearch = React.useMemo(() => {
-    if (!searchTerm) return quotes;
-    return quotes.filter(quote =>
-      quote.quote_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [quotes, searchTerm]);
-
-  const tableState = useTableState({
-    data: filteredBySearch,
-    dateField: 'quote_date',
+  const tableState = useServerTableState({
     defaultPageSize: 10,
     defaultSort: { key: 'quote_date', direction: 'desc' },
   });
+
+  const { data: paginatedData, isLoading, isFetching, error } = usePaginatedQuotes(tableState.queryParams);
+  const { data: allQuotesForStats = [] } = useQuotes();
+
+  const quotes = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const isRTL = i18n.language === 'ar';
 
@@ -171,12 +165,12 @@ const AppContent: React.FC = () => {
   };
 
   const stats = {
-    total: quotes.length,
-    draft: quotes.filter(q => q.status === 'draft').length,
-    sent: quotes.filter(q => q.status === 'sent').length,
-    accepted: quotes.filter(q => q.status === 'accepted').length,
-    converted: quotes.filter(q => q.status === 'converted').length,
-    totalValue: quotes.reduce((sum, q) => sum + Number(q.grand_total), 0),
+    total: allQuotesForStats.length,
+    draft: allQuotesForStats.filter(q => q.status === 'draft').length,
+    sent: allQuotesForStats.filter(q => q.status === 'sent').length,
+    accepted: allQuotesForStats.filter(q => q.status === 'accepted').length,
+    converted: allQuotesForStats.filter(q => q.status === 'converted').length,
+    totalValue: allQuotesForStats.reduce((sum, q) => sum + Number(q.grand_total), 0),
   };
 
   if (!currentOrganization) {
@@ -273,10 +267,13 @@ const AppContent: React.FC = () => {
                 <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
                 <Input
                   placeholder={t('quotes.search', 'Search by quote number or customer...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={tableState.search}
+                  onChange={(e) => tableState.setSearch(e.target.value)}
                   className={isRTL ? "pr-10" : "pl-10"}
                 />
+                {isFetching && (
+                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
+                )}
               </div>
               <DateRangeFilter
                 value={tableState.datePreset}
@@ -407,7 +404,7 @@ const AppContent: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableState.paginatedData.map((quote) => (
+                    {quotes.map((quote) => (
                       <tr key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
@@ -528,10 +525,10 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {tableState.paginatedData.length === 0 && (
+                    {quotes.length === 0 && (
                       <tr>
                         <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
-                          {searchTerm || tableState.datePreset !== 'all'
+                          {tableState.search || tableState.datePreset !== 'all'
                             ? t('quotes.empty.filtered', 'No quotes match your filters.')
                             : t('quotes.empty.message')}
                         </td>
@@ -542,9 +539,9 @@ const AppContent: React.FC = () => {
               </div>
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />
@@ -552,19 +549,19 @@ const AppContent: React.FC = () => {
           </Card>
 
           <div className="md:hidden space-y-3">
-            {tableState.paginatedData.length === 0 ? (
+            {quotes.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {searchTerm || tableState.datePreset !== 'all'
+                    {tableState.search || tableState.datePreset !== 'all'
                       ? t('quotes.empty.filtered', 'No quotes match your filters.')
                       : t('quotes.empty.message')}
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              tableState.paginatedData.map((quote) => (
+              quotes.map((quote) => (
                 <Card key={quote.id} className="overflow-hidden">
                   <CardContent className="p-4 space-y-3">
                     {/* Header: Quote Number, Customer & Status */}
@@ -706,12 +703,12 @@ const AppContent: React.FC = () => {
                 </Card>
               ))
             )}
-            {tableState.paginatedData.length > 0 && (
+            {quotes.length > 0 && (
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />

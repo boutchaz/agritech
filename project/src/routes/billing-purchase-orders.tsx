@@ -19,12 +19,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { usePurchaseOrders, type PurchaseOrder, type PurchaseOrderWithItems } from '../hooks/usePurchaseOrders';
+import { usePurchaseOrders, usePaginatedPurchaseOrders, type PurchaseOrder, type PurchaseOrderWithItems } from '../hooks/usePurchaseOrders';
 import { PurchaseOrderForm } from '../components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '../components/Billing/PurchaseOrderDetailDialog';
 import { authSupabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -34,25 +35,18 @@ const AppContent: React.FC = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<PurchaseOrderWithItems | null>(null);
-  const [statusFilter, _setStatusFilter] = useState<PurchaseOrder['status'] | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: orders = [], isLoading, error } = usePurchaseOrders(statusFilter);
-
-  const filteredBySearch = React.useMemo(() => {
-    if (!searchTerm) return orders;
-    return orders.filter(order =>
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [orders, searchTerm]);
-
-  const tableState = useTableState({
-    data: filteredBySearch,
-    dateField: 'order_date',
+  const tableState = useServerTableState({
     defaultPageSize: 10,
     defaultSort: { key: 'order_date', direction: 'desc' },
   });
+
+  const { data: paginatedData, isLoading, isFetching, error } = usePaginatedPurchaseOrders(tableState.queryParams);
+  const { data: allOrdersForStats = [] } = usePurchaseOrders();
+
+  const orders = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const handleDownloadPDF = async (order: PurchaseOrder) => {
     try {
@@ -152,14 +146,14 @@ const AppContent: React.FC = () => {
   };
 
   const stats = {
-    total: orders.length,
-    draft: orders.filter(o => o.status === 'draft').length,
-    submitted: orders.filter(o => o.status === 'submitted').length,
-    approved: orders.filter(o => o.status === 'approved').length,
-    inTransit: orders.filter(o => o.status === 'in_transit').length,
-    received: orders.filter(o => o.status === 'received').length,
-    completed: orders.filter(o => o.status === 'completed').length,
-    totalValue: orders.reduce((sum, o) => sum + Number(o.grand_total), 0),
+    total: allOrdersForStats.length,
+    draft: allOrdersForStats.filter(o => o.status === 'draft').length,
+    submitted: allOrdersForStats.filter(o => o.status === 'submitted').length,
+    approved: allOrdersForStats.filter(o => o.status === 'approved').length,
+    inTransit: allOrdersForStats.filter(o => o.status === 'in_transit').length,
+    received: allOrdersForStats.filter(o => o.status === 'received').length,
+    completed: allOrdersForStats.filter(o => o.status === 'completed').length,
+    totalValue: allOrdersForStats.reduce((sum, o) => sum + Number(o.grand_total), 0),
   };
 
   if (!currentOrganization) {
@@ -254,10 +248,13 @@ const AppContent: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder={t('billingModule.purchaseOrders.search', 'Search by PO number or supplier...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={tableState.search}
+                  onChange={(e) => tableState.setSearch(e.target.value)}
                   className="pl-10"
                 />
+                {isFetching && (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+                )}
               </div>
               <DateRangeFilter
                 value={tableState.datePreset}
@@ -415,7 +412,7 @@ const AppContent: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableState.paginatedData.map((order) => (
+                    {orders.map((order) => (
                       <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -523,10 +520,10 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {tableState.paginatedData.length === 0 && (
+                    {orders.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          {searchTerm || tableState.datePreset !== 'all'
+                          {tableState.search || tableState.datePreset !== 'all'
                             ? t('billingModule.purchaseOrders.empty.filtered', 'No purchase orders match your filters.')
                             : t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                         </td>
@@ -537,22 +534,22 @@ const AppContent: React.FC = () => {
               </div>
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />
 
               <div className="md:hidden space-y-3">
-                {tableState.paginatedData.length === 0 ? (
+                {orders.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    {searchTerm || tableState.datePreset !== 'all'
+                    {tableState.search || tableState.datePreset !== 'all'
                       ? t('billingModule.purchaseOrders.empty.filtered', 'No purchase orders match your filters.')
                       : t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
                   </div>
                 ) : (
-                  tableState.paginatedData.map((order) => (
+                  orders.map((order) => (
                     <div
                       key={order.id}
                       className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 space-y-3"

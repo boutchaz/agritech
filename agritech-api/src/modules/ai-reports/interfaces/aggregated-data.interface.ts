@@ -81,10 +81,21 @@ export interface AggregatedParcelData {
     drySpellsCount: number;
     frostDays: number;
   };
+
+  tasks?: Array<{
+    date: string;
+    type: string;
+    description?: string;
+  }>;
 }
 
 export interface AIReportSections {
   executiveSummary: string;
+  phenologicalStage?: string;
+  dataConfidence?: {
+    satelliteDataStatus: string;
+    comment: string;
+  };
   healthAssessment: {
     overallScore: number;
     soilHealth: string;
@@ -92,14 +103,18 @@ export interface AIReportSections {
     waterStatus: string;
   };
   detailedAnalysis: {
-    soilAnalysis: string;
-    vegetationAnalysis: string;
-    waterAnalysis: string;
+    taskImpactAnalysis?: string;
+    satelliteInterpretation?: string;
+    soilAndNutrition?: string;
+    irrigationAndWaterStress?: string;
+    soilAnalysis?: string;
+    vegetationAnalysis?: string;
+    waterAnalysis?: string;
     climateImpact: string;
   };
   recommendations: Array<{
     priority: 'high' | 'medium' | 'low';
-    category: 'fertilization' | 'irrigation' | 'pest-control' | 'soil-amendment' | 'general';
+    category: 'fertilization' | 'irrigation' | 'pest-control' | 'soil-amendment' | 'pruning' | 'plant-health' | 'soil' | 'general';
     title: string;
     description: string;
     timing?: string;

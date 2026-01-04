@@ -31,6 +31,11 @@ export interface PaginatedInvoiceQuery extends PaginatedQuery {
   invoice_type?: 'sales' | 'purchase';
   status?: 'draft' | 'submitted' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
   party_id?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface CreateInvoiceInput {
@@ -86,6 +91,27 @@ export const invoicesApi = {
   getOne: baseCrud.getOne,
   create: baseCrud.create,
   delete: baseCrud.delete,
+
+  async getPaginated(
+    query: PaginatedInvoiceQuery,
+    organizationId?: string,
+  ): Promise<PaginatedResponse<InvoiceWithItems>> {
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.invoice_type) params.append('invoice_type', query.invoice_type);
+    if (query.status) params.append('status', query.status);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    return apiClient.get<PaginatedResponse<InvoiceWithItems>>(url, {}, organizationId);
+  },
 
   /**
    * Update a draft invoice

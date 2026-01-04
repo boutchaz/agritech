@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { salesOrdersApi } from '../lib/api/sales-orders';
+import { salesOrdersApi, type PaginatedSalesOrderQuery, type PaginatedResponse } from '../lib/api/sales-orders';
 
 // Raw sales order from database
 interface SalesOrderRaw {
@@ -187,9 +187,29 @@ export function useSalesOrders(status?: SalesOrder['status']) {
   });
 }
 
-/**
- * Hook to fetch a single sales order with items
- */
+export function usePaginatedSalesOrders(query: PaginatedSalesOrderQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['sales_orders', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<SalesOrder>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const response = await salesOrdersApi.getPaginated(query, currentOrganization.id);
+      const rawData = Array.isArray(response.data) ? response.data : [];
+      return {
+        ...response,
+        data: (rawData as SalesOrderRaw[]).map(normalizeSalesOrder),
+      };
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useSalesOrder(orderId: string | null) {
   const { currentOrganization } = useAuth();
 

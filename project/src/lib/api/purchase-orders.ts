@@ -63,6 +63,25 @@ export interface PurchaseOrderFilters {
   pageSize?: number;
 }
 
+export interface PaginatedPurchaseOrderQuery {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface UpdateStatusInput {
   status: string;
   notes?: string;
@@ -92,6 +111,26 @@ export const purchaseOrdersApi = {
   // Alias for backwards compatibility
   async getPurchaseOrders(filters?: PurchaseOrderFilters, organizationId?: string) {
     return this.getAll(filters, organizationId);
+  },
+
+  async getPaginated(
+    query: PaginatedPurchaseOrderQuery,
+    organizationId?: string,
+  ): Promise<PaginatedResponse<unknown>> {
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.status) params.append('status', query.status);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    return apiClient.get<PaginatedResponse<unknown>>(url, {}, organizationId);
   },
 
   /**

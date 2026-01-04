@@ -35,6 +35,25 @@ export interface QuoteFilters {
   pageSize?: number;
 }
 
+export interface PaginatedQuoteQuery {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+  status?: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface UpdateQuoteStatusInput {
   status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
   remarks?: string;
@@ -91,6 +110,29 @@ export const quotesApi = {
   getAll: baseCrud.getAll,
   getOne: baseCrud.getOne,
   delete: baseCrud.delete,
+
+  /**
+   * Get paginated quotes with server-side sorting, filtering, and search
+   */
+  async getPaginated(
+    query: PaginatedQuoteQuery,
+    organizationId?: string,
+  ): Promise<PaginatedResponse<Quote>> {
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.status) params.append('status', query.status);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    return apiClient.get<PaginatedResponse<Quote>>(url, {}, organizationId);
+  },
 
   /**
    * Create a new quote (with transformation)
