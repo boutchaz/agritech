@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { purchaseOrdersApi } from '../lib/api/purchase-orders';
+import { purchaseOrdersApi, type PaginatedPurchaseOrderQuery, type PaginatedResponse } from '../lib/api/purchase-orders';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
 
 export interface PurchaseOrder {
@@ -99,9 +99,29 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
   });
 }
 
-/**
- * Hook to fetch a single purchase order with items
- */
+export function usePaginatedPurchaseOrders(query: PaginatedPurchaseOrderQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['purchase_orders', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<PurchaseOrder>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      const response = await purchaseOrdersApi.getPaginated(query, currentOrganization.id);
+      const rawData = Array.isArray(response.data) ? response.data : [];
+      return {
+        ...response,
+        data: rawData.map((po: unknown) => normalizePurchaseOrder(po)) as PurchaseOrder[],
+      };
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function usePurchaseOrder(poId: string | null) {
   const { currentOrganization } = useAuth();
 

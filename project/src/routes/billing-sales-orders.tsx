@@ -10,34 +10,28 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useSalesOrders, type SalesOrder } from '../hooks/useSalesOrders';
+import { useSalesOrders, usePaginatedSalesOrders, type SalesOrder } from '../hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '../components/Billing/SalesOrderDetailDialog';
-import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [statusFilter, _setStatusFilter] = useState<SalesOrder['status'] | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: orders = [], isLoading, error } = useSalesOrders(statusFilter);
-
-  const filteredBySearch = React.useMemo(() => {
-    if (!searchTerm) return orders;
-    return orders.filter(order =>
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [orders, searchTerm]);
-
-  const tableState = useTableState({
-    data: filteredBySearch,
-    dateField: 'order_date',
+  const tableState = useServerTableState({
     defaultPageSize: 10,
     defaultSort: { key: 'order_date', direction: 'desc' },
   });
+
+  const { data: paginatedData, isLoading, isFetching, error } = usePaginatedSalesOrders(tableState.queryParams);
+  const { data: allOrdersForStats = [] } = useSalesOrders();
+
+  const orders = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const getStatusColor = (status: SalesOrder['status']) => {
     switch (status) {
@@ -82,13 +76,13 @@ const AppContent: React.FC = () => {
   };
 
   const stats = {
-    total: orders.length,
-    draft: orders.filter(o => o.status === 'draft').length,
-    confirmed: orders.filter(o => o.status === 'confirmed').length,
-    inProgress: orders.filter(o => o.status === 'in_progress').length,
-    shipped: orders.filter(o => o.status === 'shipped').length,
-    completed: orders.filter(o => o.status === 'completed').length,
-    totalValue: orders.reduce((sum, o) => sum + Number(o.grand_total), 0),
+    total: allOrdersForStats.length,
+    draft: allOrdersForStats.filter(o => o.status === 'draft').length,
+    confirmed: allOrdersForStats.filter(o => o.status === 'confirmed').length,
+    inProgress: allOrdersForStats.filter(o => o.status === 'in_progress').length,
+    shipped: allOrdersForStats.filter(o => o.status === 'shipped').length,
+    completed: allOrdersForStats.filter(o => o.status === 'completed').length,
+    totalValue: allOrdersForStats.reduce((sum, o) => sum + Number(o.grand_total), 0),
   };
 
   if (!currentOrganization) {
@@ -168,10 +162,13 @@ const AppContent: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder={t('billingModule.salesOrders.search', 'Search by order number or customer...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={tableState.search}
+                  onChange={(e) => tableState.setSearch(e.target.value)}
                   className="pl-10"
                 />
+                {isFetching && (
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+                )}
               </div>
               <DateRangeFilter
                 value={tableState.datePreset}
@@ -319,7 +316,7 @@ const AppContent: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableState.paginatedData.map((order) => (
+                    {orders.map((order) => (
                       <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -367,10 +364,10 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {tableState.paginatedData.length === 0 && (
+                    {orders.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          {searchTerm || tableState.datePreset !== 'all'
+                          {tableState.search || tableState.datePreset !== 'all'
                             ? t('billingModule.salesOrders.empty.filtered', 'No sales orders match your filters.')
                             : t('billingModule.salesOrders.empty', 'No sales orders found. Orders are created from accepted quotes.')}
                         </td>
@@ -381,9 +378,9 @@ const AppContent: React.FC = () => {
               </div>
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />

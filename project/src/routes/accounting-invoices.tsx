@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -6,7 +6,7 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
-import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
+import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -21,14 +21,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
-import { useInvoices, useInvoiceStats, useDeleteInvoice } from '../hooks/useInvoices';
+import { useInvoices, usePaginatedInvoices, useInvoiceStats, useDeleteInvoice } from '../hooks/useInvoices';
 import { InvoiceForm } from '../components/Accounting/InvoiceForm';
 import { InvoiceDetailDialog } from '../components/Accounting/InvoiceDetailDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -37,15 +37,26 @@ const AppContent: React.FC = () => {
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
 
-  // Filter state
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'sales' | 'purchase'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  // Real data from database
-  const { data: invoices = [], isLoading, error } = useInvoices();
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'invoice_date', direction: 'desc' },
+  });
+
+  const { data: paginatedData, isLoading, isFetching, error } = usePaginatedInvoices({
+    ...tableState.queryParams,
+    invoice_type: filterType !== 'all' ? filterType : undefined,
+    status: filterStatus !== 'all' ? (filterStatus as 'draft' | 'submitted' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled') : undefined,
+  });
+
   const stats = useInvoiceStats();
   const deleteMutation = useDeleteInvoice();
+
+  const invoices = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const isRTL = i18n.language === 'ar';
 
@@ -59,27 +70,6 @@ const AppContent: React.FC = () => {
         return enUS;
     }
   };
-
-  const preFilteredInvoices = useMemo(() => {
-    return invoices.filter(invoice => {
-      const matchesSearch =
-        invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.party_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = filterType === 'all' || invoice.invoice_type === filterType;
-      const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
-
-      return matchesSearch && matchesType && matchesStatus;
-    });
-  }, [invoices, searchTerm, filterType, filterStatus]);
-
-  const tableState = useTableState({
-    data: preFilteredInvoices,
-    dateField: 'invoice_date',
-    defaultPageSize: 10,
-    defaultSort: { key: 'invoice_date', direction: 'desc' },
-  });
-
-  const { paginatedData: filteredInvoices } = tableState;
 
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string, status: string) => {
     if (status !== 'draft') {
@@ -199,10 +189,13 @@ const AppContent: React.FC = () => {
                 <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
                 <Input
                   placeholder={t('invoices.search.placeholder', 'Search invoices by number or customer...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={tableState.search}
+                  onChange={(e) => tableState.setSearch(e.target.value)}
                   className={isRTL ? "pr-10" : "pl-10"}
                 />
+                {isFetching && (
+                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
+                )}
               </div>
               <DateRangeFilter
                 value={tableState.datePreset}
@@ -339,7 +332,7 @@ const AppContent: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredInvoices.map((invoice) => (
+                    {invoices.map((invoice) => (
                       <tr key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
@@ -434,10 +427,10 @@ const AppContent: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                    {filteredInvoices.length === 0 && (
+                    {invoices.length === 0 && (
                       <tr>
                         <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
-                          {searchTerm || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
+                          {tableState.search || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                             ? t('invoices.empty.filtered', 'No invoices match your filters.')
                             : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
                         </td>
@@ -448,9 +441,9 @@ const AppContent: React.FC = () => {
               </div>
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />
@@ -458,19 +451,19 @@ const AppContent: React.FC = () => {
           </Card>
 
           <div className="md:hidden space-y-3">
-            {filteredInvoices.length === 0 ? (
+            {invoices.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Receipt className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {searchTerm || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
+                    {tableState.search || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                       ? t('invoices.empty.filtered', 'No invoices match your filters.')
                       : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              filteredInvoices.map((invoice) => (
+              invoices.map((invoice) => (
                 <Card key={invoice.id} className="overflow-hidden">
                   <CardContent className="p-4 space-y-3">
                     {/* Header: Invoice Number & Status */}
@@ -577,12 +570,12 @@ const AppContent: React.FC = () => {
                 </Card>
               ))
             )}
-            {tableState.totalItems > 0 && (
+            {totalItems > 0 && (
               <DataTablePagination
                 page={tableState.page}
-                totalPages={tableState.totalPages}
+                totalPages={totalPages}
                 pageSize={tableState.pageSize}
-                totalItems={tableState.totalItems}
+                totalItems={totalItems}
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
                 pageSizeOptions={[5, 10, 20]}

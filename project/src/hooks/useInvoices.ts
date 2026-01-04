@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
-import { invoicesApi } from '../lib/api/invoices';
+import { invoicesApi, type PaginatedInvoiceQuery } from '../lib/api/invoices';
+import type { PaginatedResponse } from '../lib/api/types';
 
 export interface Invoice {
   id: string;
@@ -73,9 +74,24 @@ export function useInvoices() {
   });
 }
 
-/**
- * Hook to fetch invoices filtered by type
- */
+export function usePaginatedInvoices(query: PaginatedInvoiceQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['invoices', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<Invoice>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return invoicesApi.getPaginated(query, currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useInvoicesByType(type: 'sales' | 'purchase') {
   const { currentOrganization } = useAuth();
 
