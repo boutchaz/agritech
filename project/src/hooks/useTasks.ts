@@ -21,7 +21,7 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
     queryKey: ['tasks', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      return tasksApi.getAll(filters, organizationId);
+      return tasksApi.getAll(organizationId, filters);
     },
     enabled: !!organizationId,
   });

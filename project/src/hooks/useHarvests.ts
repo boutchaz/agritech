@@ -35,7 +35,7 @@ export function useHarvest(organizationId: string, harvestId: string | null) {
       if (!harvestId || !organizationId) {
         return null;
       }
-      return harvestsApi.getById(harvestId, organizationId);
+      return harvestsApi.getById(organizationId, harvestId);
     },
     enabled: !!harvestId && !!organizationId,
   });
@@ -93,7 +93,7 @@ export function useDelivery(organizationId: string, deliveryId: string | null) {
     queryKey: ['delivery', deliveryId],
     queryFn: async () => {
       if (!deliveryId || !organizationId) return null;
-      return deliveriesApi.getById(deliveryId, organizationId);
+      return deliveriesApi.getById(organizationId, deliveryId);
     },
     enabled: !!deliveryId && !!organizationId,
   });
@@ -104,7 +104,7 @@ export function useDeliveryItems(organizationId: string, deliveryId: string | nu
     queryKey: ['delivery-items', deliveryId],
     queryFn: async () => {
       if (!deliveryId || !organizationId) return [];
-      return deliveriesApi.getItems(organizationId, deliveryId);
+      return deliveriesApi.getItems(deliveryId, organizationId);
     },
     enabled: !!deliveryId && !!organizationId,
   });
@@ -115,7 +115,7 @@ export function useDeliveryTracking(organizationId: string, deliveryId: string |
     queryKey: ['delivery-tracking', deliveryId],
     queryFn: async () => {
       if (!deliveryId || !organizationId) return [];
-      return deliveriesApi.getTracking(organizationId, deliveryId);
+      return deliveriesApi.getTracking(deliveryId, organizationId);
     },
     enabled: !!deliveryId && !!organizationId,
   });
