@@ -5,12 +5,12 @@ import { useAuth } from '../components/MultiTenantAuthProvider';
 import { PageLayout } from '../components/PageLayout';
 import ModernPageHeader from '../components/ModernPageHeader';
 import { MobileNavBar } from '../components/MobileNavBar';
-import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, XCircle, Loader2, Trash2, Send, MoreHorizontal, X, AlertCircle } from 'lucide-react';
+import { Building2, BookOpen, Plus, Filter, CheckCircle2, Clock, XCircle, Loader2, Trash2, Send, MoreHorizontal, X, AlertCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { withRouteProtection } from '../components/authorization/withRouteProtection';
 import {
-  useJournalEntries,
+  usePaginatedJournalEntries,
   useJournalStats,
   useJournalEntry,
   useCreateJournalEntry,
@@ -18,7 +18,6 @@ import {
   useCancelJournalEntry,
   useDeleteJournalEntry,
   type CreateJournalEntryInput,
-  type JournalEntryFilters,
 } from '../hooks/useJournalEntries';
 import { useAccounts } from '../hooks/useAccounts';
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -28,6 +27,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 interface JournalLineInput {
   account_id: string;
@@ -46,18 +46,28 @@ const emptyLine: JournalLineInput = {
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
 
-  // Filters state
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<JournalEntryFilters>({});
+  const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'posted' | 'cancelled'>('all');
 
-  // Real data from database
-  const { data: journalEntries = [], isLoading, error, refetch } = useJournalEntries(filters);
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'entry_date', direction: 'desc' },
+  });
+
+  const { data: paginatedData, isLoading, isFetching, error, refetch } = usePaginatedJournalEntries({
+    ...tableState.queryParams,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+  });
+
+  const journalEntries = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
+
   const stats = useJournalStats();
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const { data: selectedEntry, isLoading: isEntryLoading } = useJournalEntry(selectedEntryId);
   const isDrawerOpen = !!selectedEntryId;
 
-  // Accounts for dropdown
   const { data: accounts = [] } = useAccounts();
   const activeAccounts = useMemo(() =>
     accounts.filter((a: any) => a.is_active && !a.is_group),
@@ -234,7 +244,8 @@ const AppContent: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({});
+    setFilterStatus('all');
+    tableState.resetFilters();
   };
 
   if (!currentOrganization || isLoading) {
@@ -288,113 +299,71 @@ const AppContent: React.FC = () => {
       >
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
             {/* Header Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="hidden sm:block">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Écritures Comptables</h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Consultez et gérez vos écritures du grand livre
-                </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="hidden sm:block">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Écritures Comptables</h2>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Consultez et gérez vos écritures du grand livre
+                  </p>
+                </div>
+
+                {/* Mobile: Add button at top */}
+                <div className="sm:hidden">
+                  <Button onClick={() => setShowCreateModal(true)} className="w-full shadow-md">
+                    <Plus className="mr-2 h-5 w-5" />
+                    <span className="font-medium">Nouvelle Écriture</span>
+                  </Button>
+                </div>
+
+                {/* Desktop controls */}
+                <div className="hidden sm:flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filtres
+                  </Button>
+                  <Button onClick={() => setShowCreateModal(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouvelle Écriture
+                  </Button>
+                </div>
               </div>
 
-              {/* Mobile: Add button at top */}
-              <div className="sm:hidden">
-                <Button onClick={() => setShowCreateModal(true)} className="w-full shadow-md">
-                  <Plus className="mr-2 h-5 w-5" />
-                  <span className="font-medium">Nouvelle Écriture</span>
-                </Button>
-              </div>
-
-              {/* Desktop controls */}
-              <div className="hidden sm:flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtres
-                  {Object.keys(filters).length > 0 && (
-                    <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
-                      {Object.keys(filters).length}
-                    </span>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Rechercher par numéro ou référence..."
+                    value={tableState.search}
+                    onChange={(e) => tableState.setSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                  {isFetching && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
                   )}
-                </Button>
-                <Button onClick={() => setShowCreateModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouvelle Écriture
-                </Button>
-              </div>
-
-              {/* Mobile: Filter button */}
-              <div className="sm:hidden">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`w-full ${showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
+                </div>
+                <DateRangeFilter
+                  value={tableState.datePreset}
+                  onChange={tableState.setDatePreset}
+                />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm w-full sm:w-40"
                 >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtres
-                  {Object.keys(filters).length > 0 && (
-                    <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
-                      {Object.keys(filters).length}
-                    </span>
-                  )}
-                </Button>
+                  <option value="all">Tous statuts</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="posted">Comptabilisé</option>
+                  <option value="cancelled">Annulé</option>
+                </select>
               </div>
             </div>
 
-            {/* Filters Panel */}
-            {showFilters && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Statut
-                      </label>
-                      <select
-                        value={filters.status || ''}
-                        onChange={(e) => setFilters({ ...filters, status: e.target.value as any || undefined })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      >
-                        <option value="">Tous</option>
-                        <option value="draft">Brouillon</option>
-                        <option value="posted">Comptabilisé</option>
-                        <option value="cancelled">Annulé</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Date début
-                      </label>
-                      <input
-                        type="date"
-                        value={filters.date_from || ''}
-                        onChange={(e) => setFilters({ ...filters, date_from: e.target.value || undefined })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Date fin
-                      </label>
-                      <input
-                        type="date"
-                        value={filters.date_to || ''}
-                        onChange={(e) => setFilters({ ...filters, date_to: e.target.value || undefined })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button variant="outline" onClick={clearFilters} className="w-full">
-                        <X className="mr-2 h-4 w-4" />
-                        Effacer
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -459,27 +428,47 @@ const AppContent: React.FC = () => {
                 <table className="w-full min-w-[800px]">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        N° Écriture
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Date
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Comptabilisé le
-                      </th>
+                      <SortableHeader
+                        label="N° Écriture"
+                        sortKey="entry_number"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label="Date"
+                        sortKey="entry_date"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
+                      <SortableHeader
+                        label="Comptabilisé le"
+                        sortKey="posted_at"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         Référence
                       </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Débit
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Crédit
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Statut
-                      </th>
+                      <SortableHeader
+                        label="Débit"
+                        sortKey="total_debit"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label="Crédit"
+                        sortKey="total_credit"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label="Statut"
+                        sortKey="status"
+                        currentSort={tableState.sortConfig}
+                        onSort={tableState.handleSort}
+                      />
                       <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         Actions
                       </th>
@@ -560,13 +549,23 @@ const AppContent: React.FC = () => {
                     {journalEntries.length === 0 && (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          Aucune écriture comptable trouvée. Les écritures sont créées automatiquement lors de la comptabilisation des factures et paiements, ou manuellement via le bouton "Nouvelle Écriture".
+                          {tableState.search || filterStatus !== 'all' || tableState.datePreset !== 'all'
+                            ? 'Aucune écriture ne correspond à vos filtres.'
+                            : 'Aucune écriture comptable trouvée. Les écritures sont créées automatiquement lors de la comptabilisation des factures et paiements, ou manuellement via le bouton "Nouvelle Écriture".'}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
+              />
             </CardContent>
           </Card>
 

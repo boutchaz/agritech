@@ -1,9 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { harvestsApi } from '../lib/api/harvests';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { harvestsApi, type PaginatedHarvestQuery } from '../lib/api/harvests';
 import { deliveriesApi } from '../lib/api/deliveries';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import type { PaginatedResponse } from '../lib/api/types';
 import type {
   HarvestRecord,
+  HarvestSummary,
   HarvestFilters,
   CreateHarvestRequest,
   DeliveryFilters,
@@ -12,6 +14,8 @@ import type {
   CompleteDeliveryRequest,
   HarvestStatistics,
 } from '../types/harvests';
+
+export type { PaginatedHarvestQuery };
 
 // =====================================================
 // HARVEST QUERIES
@@ -25,6 +29,21 @@ export function useHarvests(organizationId: string, filters?: HarvestFilters) {
       return harvestsApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
+  });
+}
+
+export function usePaginatedHarvests(organizationId: string, query: PaginatedHarvestQuery) {
+  return useQuery({
+    queryKey: ['harvests', 'paginated', organizationId, query],
+    queryFn: async (): Promise<PaginatedResponse<HarvestSummary>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+      return harvestsApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

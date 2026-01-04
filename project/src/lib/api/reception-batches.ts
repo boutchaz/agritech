@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   ReceptionBatch,
   CreateReceptionBatchDto,
@@ -8,7 +9,20 @@ import type {
   ProcessReceptionPaymentDto,
   ProcessPaymentResponse,
   ReceptionBatchFilters,
+  ReceptionBatchStatus,
+  ReceptionDecision,
+  QualityGrade,
 } from '../../types/reception';
+
+export interface PaginatedReceptionBatchQuery extends PaginatedQuery {
+  warehouse_id?: string;
+  parcel_id?: string;
+  status?: ReceptionBatchStatus;
+  decision?: ReceptionDecision;
+  quality_grade?: QualityGrade;
+  crop_id?: string;
+  harvest_id?: string;
+}
 
 export const receptionBatchesApi = {
   /**
@@ -56,6 +70,28 @@ export const receptionBatchesApi = {
 
     const queryString = params.toString();
     return apiClient.get<ReceptionBatch[]>(
+      `/api/v1/organizations/${organizationId}/reception-batches${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  async getPaginated(organizationId: string, query: PaginatedReceptionBatchQuery): Promise<PaginatedResponse<ReceptionBatch>> {
+    const params = new URLSearchParams();
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+    if (query.warehouse_id) params.append('warehouse_id', query.warehouse_id);
+    if (query.parcel_id) params.append('parcel_id', query.parcel_id);
+    if (query.status) params.append('status', query.status);
+    if (query.decision) params.append('decision', query.decision);
+    if (query.quality_grade) params.append('quality_grade', query.quality_grade);
+    if (query.crop_id) params.append('crop_id', query.crop_id);
+    if (query.harvest_id) params.append('harvest_id', query.harvest_id);
+    const queryString = params.toString();
+    return apiClient.get<PaginatedResponse<ReceptionBatch>>(
       `/api/v1/organizations/${organizationId}/reception-batches${queryString ? `?${queryString}` : ''}`
     );
   },

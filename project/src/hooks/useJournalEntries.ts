@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { journalEntriesApi, type CreateJournalEntryInput, type UpdateJournalEntryInput, type JournalEntryFilters, type JournalEntryWithItems } from '../lib/api/journal-entries';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { journalEntriesApi, type CreateJournalEntryInput, type UpdateJournalEntryInput, type JournalEntryFilters, type JournalEntryWithItems, type PaginatedJournalEntryQuery } from '../lib/api/journal-entries';
 import { useAuth } from '../components/MultiTenantAuthProvider';
+import type { PaginatedResponse } from '../lib/api/types';
 
-// Re-export types from API for convenience
-export type { CreateJournalEntryInput, UpdateJournalEntryInput, JournalEntryFilters, JournalEntryWithItems };
+export type { CreateJournalEntryInput, UpdateJournalEntryInput, JournalEntryFilters, JournalEntryWithItems, PaginatedJournalEntryQuery };
 
 // Normalized types for UI use
 export interface JournalEntry {
@@ -112,6 +112,27 @@ export function useJournalEntries(filters?: JournalEntryFilters) {
       return (data || []).map(normalizeEntry);
     },
     enabled: !!currentOrganization?.id,
+  });
+}
+
+export function usePaginatedJournalEntries(query: PaginatedJournalEntryQuery) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['journal_entries', 'paginated', currentOrganization?.id, query],
+    queryFn: async (): Promise<PaginatedResponse<JournalEntry>> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      const response = await journalEntriesApi.getPaginated(query);
+      return {
+        ...response,
+        data: (response.data || []).map(normalizeEntry),
+      };
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

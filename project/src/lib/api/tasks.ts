@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   Task,
   TaskSummary,
@@ -23,6 +24,15 @@ export interface TaskApiFilters {
   search?: string;
 }
 
+export interface PaginatedTaskQuery extends PaginatedQuery {
+  status?: string;
+  priority?: string;
+  task_type?: string;
+  assigned_to?: string;
+  farm_id?: string;
+  parcel_id?: string;
+}
+
 export const tasksApi = {
   /**
    * Get all tasks assigned to the current user across all organizations
@@ -37,6 +47,25 @@ export const tasksApi = {
   async getAll(organizationId: string, filters?: TaskFilters): Promise<TaskSummary[]> {
     const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/tasks`, filters as Record<string, unknown>);
     return apiClient.get<TaskSummary[]>(url);
+  },
+
+  async getPaginated(organizationId: string, query: PaginatedTaskQuery): Promise<PaginatedResponse<TaskSummary>> {
+    const params = new URLSearchParams();
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+    if (query.status) params.append('status', query.status);
+    if (query.priority) params.append('priority', query.priority);
+    if (query.task_type) params.append('task_type', query.task_type);
+    if (query.assigned_to) params.append('assigned_to', query.assigned_to);
+    if (query.farm_id) params.append('farm_id', query.farm_id);
+    if (query.parcel_id) params.append('parcel_id', query.parcel_id);
+    const queryString = params.toString();
+    return apiClient.get<PaginatedResponse<TaskSummary>>(`/api/v1/organizations/${organizationId}/tasks${queryString ? `?${queryString}` : ''}`);
   },
 
   /**

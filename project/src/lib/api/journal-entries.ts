@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 import type { Database } from '@/types/database.types';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 
 const BASE_URL = '/api/v1/journal-entries';
 
@@ -24,6 +25,11 @@ export interface JournalEntryFilters {
   cost_center_id?: string;
   farm_id?: string;
   parcel_id?: string;
+}
+
+export interface PaginatedJournalEntryQuery extends PaginatedQuery {
+  status?: 'draft' | 'posted' | 'cancelled';
+  entry_type?: 'expense' | 'revenue' | 'transfer' | 'adjustment';
 }
 
 export interface CreateJournalEntryInput {
@@ -73,6 +79,21 @@ export const journalEntriesApi = {
     if (filters?.parcel_id) params.append('parcel_id', filters.parcel_id);
     const queryString = params.toString();
     return apiClient.get<JournalEntryWithItems[]>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
+  },
+
+  async getPaginated(query: PaginatedJournalEntryQuery): Promise<PaginatedResponse<JournalEntryWithItems>> {
+    const params = new URLSearchParams();
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+    if (query.dateTo) params.append('dateTo', query.dateTo);
+    if (query.status) params.append('status', query.status);
+    if (query.entry_type) params.append('entry_type', query.entry_type);
+    const queryString = params.toString();
+    return apiClient.get<PaginatedResponse<JournalEntryWithItems>>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
   },
 
   async getOne(id: string): Promise<JournalEntryWithItems> {

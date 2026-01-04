@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
-  useReceptionBatches,
+  usePaginatedReceptionBatches,
   useReceptionBatchStats,
   useCancelReceptionBatch,
   useDeleteReceptionBatch,
 } from '@/hooks/useReceptionBatches';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
 import {
   Table,
   TableBody,
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/Input';
 import {
   Select,
   SelectContent,
@@ -41,6 +41,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  useServerTableState,
+  DateRangeFilter,
+  DataTablePagination,
+} from '@/components/ui/data-table';
+import {
   Package,
   Plus,
   MoreVertical,
@@ -56,7 +61,6 @@ import {
 } from 'lucide-react';
 import type {
   ReceptionBatch,
-  ReceptionBatchFilters,
   ReceptionBatchStatus,
   ReceptionDecision,
   QualityGrade,
@@ -101,25 +105,34 @@ export default function ReceptionBatchList({
   onViewClick,
   onEditClick,
 }: ReceptionBatchListProps) {
-  const [filters, setFilters] = useState<ReceptionBatchFilters>({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const { currentOrganization } = useAuth();
+  const [filterStatus, setFilterStatus] = useState<ReceptionBatchStatus | 'all'>('all');
+  const [filterDecision, setFilterDecision] = useState<ReceptionDecision | 'all'>('all');
   const [confirmAction, setConfirmAction] = useState<{
     batch: ReceptionBatch;
     action: 'cancel' | 'delete';
   } | null>(null);
 
-  const { data: batches = [], isLoading } = useReceptionBatches(filters);
-  const { data: stats } = useReceptionBatchStats(filters);
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'reception_date', direction: 'desc' },
+  });
+
+  const { data: paginatedData, isLoading, isFetching } = usePaginatedReceptionBatches(
+    currentOrganization?.id || '',
+    {
+      ...tableState.queryParams,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      decision: filterDecision !== 'all' ? filterDecision : undefined,
+    }
+  );
+  const { data: stats } = useReceptionBatchStats({});
   const cancelBatch = useCancelReceptionBatch();
   const deleteBatch = useDeleteReceptionBatch();
 
-  // Filter batches by search term
-  const filteredBatches = batches.filter(
-    (batch) =>
-      batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.producer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.quality_notes?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const batches = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const handleCancel = async (batchId: string) => {
     try {
@@ -152,11 +165,12 @@ export default function ReceptionBatchList({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Reception Batches</h2>
-          <p className="text-gray-600">Track harvest reception and quality control</p>
+          <p className="text-gray-600">
+            {totalItems > 0 ? `${totalItems} batches found` : 'Track harvest reception and quality control'}
+          </p>
         </div>
         <Button onClick={onCreateClick} className="w-full sm:w-auto justify-center">
           <Plus className="w-4 h-4 mr-2" />
@@ -225,71 +239,62 @@ export default function ReceptionBatchList({
         </div>
       )}
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="md:col-span-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
+              <input
+                type="text"
                 placeholder="Search by batch code, producer, or notes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                value={tableState.search}
+                onChange={(e) => tableState.setSearch(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
               />
+              {isFetching && (
+                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+              )}
             </div>
           </div>
 
-          {/* Status Filter */}
-          <div>
-            <Select
-              value={filters.status || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  status: value === 'all' ? undefined : (value as ReceptionBatchStatus),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="received">Received</SelectItem>
-                <SelectItem value="quality_checked">Quality Checked</SelectItem>
-                <SelectItem value="decision_made">Decision Made</SelectItem>
-                <SelectItem value="processed">Processed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <DateRangeFilter
+            value={tableState.datePreset}
+            onChange={tableState.setDatePreset}
+          />
 
-          {/* Decision Filter */}
-          <div>
-            <Select
-              value={filters.decision || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  decision: value === 'all' ? undefined : (value as ReceptionDecision),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All Decisions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Decisions</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="storage">Storage</SelectItem>
-                <SelectItem value="direct_sale">Direct Sale</SelectItem>
-                <SelectItem value="transformation">Transformation</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={filterStatus}
+            onValueChange={(value) => setFilterStatus(value as ReceptionBatchStatus | 'all')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="received">Received</SelectItem>
+              <SelectItem value="quality_checked">Quality Checked</SelectItem>
+              <SelectItem value="decision_made">Decision Made</SelectItem>
+              <SelectItem value="processed">Processed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filterDecision}
+            onValueChange={(value) => setFilterDecision(value as ReceptionDecision | 'all')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Decisions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Decisions</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="storage">Storage</SelectItem>
+              <SelectItem value="direct_sale">Direct Sale</SelectItem>
+              <SelectItem value="transformation">Transformation</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -310,18 +315,18 @@ export default function ReceptionBatchList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBatches.length === 0 ? (
+              {batches.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                     <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>No reception batches found</p>
+                    <p>{tableState.search ? 'No matching reception batches found' : 'No reception batches found'}</p>
                     <p className="text-sm mt-1">
-                      Create your first reception batch to track harvest quality control
+                      {tableState.search ? 'Try adjusting your search criteria' : 'Create your first reception batch to track harvest quality control'}
                     </p>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBatches.map((batch) => (
+                batches.map((batch) => (
                   <TableRow key={batch.id}>
                     <TableCell className="font-medium">{batch.batch_code}</TableCell>
                     <TableCell>
@@ -433,15 +438,14 @@ export default function ReceptionBatchList({
           </Table>
         </div>
 
-        {/* Mobile Cards */}
         <div className="md:hidden space-y-3 p-3">
-          {filteredBatches.length === 0 ? (
+          {batches.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-              <p>No reception batches found</p>
+              <p>{tableState.search ? 'No matching batches found' : 'No reception batches found'}</p>
             </div>
           ) : (
-            filteredBatches.map((batch) => (
+            batches.map((batch) => (
               <div key={batch.id} className="border rounded-lg p-3 bg-white shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -531,7 +535,17 @@ export default function ReceptionBatchList({
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {totalPages > 1 && (
+        <DataTablePagination
+          page={tableState.page}
+          pageSize={tableState.pageSize}
+          totalItems={totalItems}
+          totalPages={totalPages}
+          onPageChange={tableState.setPage}
+          onPageSizeChange={tableState.setPageSize}
+        />
+      )}
+
       {confirmAction && (
         <AlertDialog
           open={!!confirmAction}

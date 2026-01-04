@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import { receptionBatchesApi } from '@/lib/api/reception-batches';
+import { receptionBatchesApi, type PaginatedReceptionBatchQuery } from '@/lib/api/reception-batches';
 import { warehousesApi } from '@/lib/api/warehouses';
+import type { PaginatedResponse } from '@/lib/api/types';
 import type {
   ReceptionBatch,
   CreateReceptionBatchDto,
@@ -11,9 +12,6 @@ import type {
   ReceptionBatchStats,
 } from '@/types/reception';
 
-/**
- * Fetch all reception batches with optional filters (optimized for list view)
- */
 export function useReceptionBatches(filters: ReceptionBatchFilters = {}) {
   const { currentOrganization } = useAuth();
 
@@ -27,7 +25,22 @@ export function useReceptionBatches(filters: ReceptionBatchFilters = {}) {
       return receptionBatchesApi.getAll(currentOrganization.id, filters);
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
+  });
+}
+
+export function usePaginatedReceptionBatches(organizationId: string, query: PaginatedReceptionBatchQuery) {
+  return useQuery({
+    queryKey: ['reception-batches', 'paginated', organizationId, query],
+    queryFn: async (): Promise<PaginatedResponse<ReceptionBatch>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+      return receptionBatchesApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 
