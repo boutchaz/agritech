@@ -34,11 +34,6 @@ export class ParcelsController {
     description: 'Get all parcels for an organization, optionally filtered by farm_id',
   })
   @ApiQuery({
-    name: 'organization_id',
-    required: true,
-    description: 'Organization ID to fetch parcels for',
-  })
-  @ApiQuery({
     name: 'farm_id',
     required: false,
     description: 'Optional farm ID to filter parcels',
@@ -53,9 +48,9 @@ export class ParcelsController {
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Parcel'))
   async listParcels(
     @Request() req,
-    @Query('organization_id') organizationId: string,
     @Query('farm_id') farmId?: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.parcelsService.listParcels(req.user.id, organizationId, farmId);
   }
 

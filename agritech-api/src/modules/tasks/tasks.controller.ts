@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -42,15 +42,14 @@ export class TasksController {
 
   @Get()
   @ApiOperation({ summary: 'Get all tasks for an organization' })
-  @ApiQuery({ name: 'organization_id', required: true, description: 'Organization ID' })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async getTasks(
     @Request() req,
-    @Query('organization_id') organizationId: string,
     @Query() filters: TaskFiltersDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.findAll(req.user.id, organizationId, filters);
   }
 

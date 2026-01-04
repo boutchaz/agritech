@@ -2,6 +2,11 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, IsDateString, IsNumberString } from 'class-validator';
 
 export class TaskFiltersDto {
+  @ApiPropertyOptional({ description: 'Organization ID (handled separately by controller)' })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
+
   @ApiPropertyOptional({ description: 'Filter by status (comma-separated)' })
   @IsOptional()
   @IsString()

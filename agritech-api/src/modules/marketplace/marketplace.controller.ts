@@ -56,7 +56,7 @@ export class MarketplaceController {
     }
 
     @Get('dashboard/stats')
-    async getDashboardStats(@Req() request: Request, @Query('organizationId') organizationId?: string) {
+    async getDashboardStats(@Req() request: Request) {
         // Extract token from header
         const authHeader = request.headers.authorization;
         if (!authHeader) {
@@ -64,6 +64,7 @@ export class MarketplaceController {
         }
 
         const token = authHeader.split(' ')[1];
+        const organizationId = request.headers['x-organization-id'] as string;
 
         // We can rely on the service to use this token to query Supabase securely
         return this.marketplaceService.getDashboardStats(token, organizationId);

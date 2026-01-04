@@ -18,12 +18,10 @@ export interface DashboardSettings {
 
 export const dashboardSettingsApi = {
   async getSettings(organizationId: string): Promise<DashboardSettings | null> {
-    const url = `/api/v1/dashboard/settings?organization_id=${organizationId}`;
-    return apiClient.get<DashboardSettings | null>(url, {}, organizationId);
+    return apiClient.get<DashboardSettings | null>('/api/v1/dashboard/settings', {}, organizationId);
   },
 
   async upsertSettings(organizationId: string, settings: Partial<DashboardSettings>): Promise<DashboardSettings> {
-    const url = `/api/v1/dashboard/settings?organization_id=${organizationId}`;
-    return apiClient.put<DashboardSettings>(url, settings, organizationId);
+    return apiClient.put<DashboardSettings>('/api/v1/dashboard/settings', settings, {}, organizationId);
   },
 };

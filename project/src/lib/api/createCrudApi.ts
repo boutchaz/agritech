@@ -13,6 +13,7 @@ export function requireOrganizationId(organizationId?: string, methodName?: stri
 
 /**
  * Utility to build URL query string from filters object
+ * Note: organization_id is excluded as it's sent via X-Organization-Id header
  */
 export function buildQueryUrl(baseUrl: string, filters?: Record<string, unknown>): string {
   if (!filters || Object.keys(filters).length === 0) {
@@ -22,6 +23,10 @@ export function buildQueryUrl(baseUrl: string, filters?: Record<string, unknown>
   const params = new URLSearchParams();
 
   for (const [key, value] of Object.entries(filters)) {
+    // Skip organization_id as it's sent via header, not query param
+    if (key === 'organization_id') {
+      continue;
+    }
     if (value !== undefined && value !== null && value !== '') {
       // Handle arrays by joining with comma
       if (Array.isArray(value)) {
