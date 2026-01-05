@@ -20,57 +20,58 @@ import { SellHarvestDto } from './dto/sell-harvest.dto';
 
 @ApiTags('Production - Harvests')
 @ApiBearerAuth('JWT-auth')
+@ApiHeader({
+  name: 'x-organization-id',
+  description: 'Organization ID for multi-tenant context',
+  required: true,
+})
 @UseGuards(JwtAuthGuard)
-@Controller('organizations/:organizationId/harvests')
+@Controller('harvests')
 export class HarvestsController {
   constructor(private readonly harvestsService: HarvestsService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all harvests for an organization' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 200, description: 'Harvests retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async getHarvests(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Query() filters: HarvestFiltersDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.findAll(req.user.id, organizationId, filters);
   }
 
   @Get(':harvestId')
   @ApiOperation({ summary: 'Get a harvest by ID' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'harvestId', description: 'Harvest ID' })
   @ApiResponse({ status: 200, description: 'Harvest retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Harvest not found' })
   async getHarvest(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('harvestId') harvestId: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.findOne(req.user.id, organizationId, harvestId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a new harvest' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 201, description: 'Harvest created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createHarvest(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Body() createHarvestDto: CreateHarvestDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.create(req.user.id, organizationId, createHarvestDto);
   }
 
   @Patch(':harvestId')
   @ApiOperation({ summary: 'Update a harvest' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'harvestId', description: 'Harvest ID' })
   @ApiResponse({ status: 200, description: 'Harvest updated successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
@@ -78,10 +79,10 @@ export class HarvestsController {
   @ApiResponse({ status: 404, description: 'Harvest not found' })
   async updateHarvest(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('harvestId') harvestId: string,
     @Body() updateHarvestDto: UpdateHarvestDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.update(req.user.id, organizationId, harvestId, updateHarvestDto);
   }
 
@@ -90,7 +91,6 @@ export class HarvestsController {
     summary: 'Sell a harvest and create journal entry',
     description: 'Marks harvest as sold and creates a double-entry journal entry for the revenue. Payment terms determine if Cash (debit) or Accounts Receivable (debit) is used.',
   })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'harvestId', description: 'Harvest ID to sell' })
   @ApiResponse({ status: 200, description: 'Harvest sold successfully with journal entry created' })
   @ApiResponse({ status: 400, description: 'Bad request - harvest already sold or invalid data' })
@@ -98,16 +98,15 @@ export class HarvestsController {
   @ApiResponse({ status: 404, description: 'Harvest not found' })
   async sellHarvest(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('harvestId') harvestId: string,
     @Body() sellHarvestDto: SellHarvestDto,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.sellHarvest(req.user.id, organizationId, harvestId, sellHarvestDto);
   }
 
   @Delete(':harvestId')
   @ApiOperation({ summary: 'Delete a harvest' })
-  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'harvestId', description: 'Harvest ID' })
   @ApiResponse({ status: 200, description: 'Harvest deleted successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - harvest has linked records' })
@@ -115,9 +114,9 @@ export class HarvestsController {
   @ApiResponse({ status: 404, description: 'Harvest not found' })
   async deleteHarvest(
     @Request() req,
-    @Param('organizationId') organizationId: string,
     @Param('harvestId') harvestId: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     return this.harvestsService.remove(req.user.id, organizationId, harvestId);
   }
 }

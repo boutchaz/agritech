@@ -47,8 +47,11 @@ export class HarvestsService {
     if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
     if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
     if (filters?.crop_id) query = query.eq('crop_id', filters.crop_id);
-    if (filters?.date_from) query = query.gte('harvest_date', filters.date_from);
-    if (filters?.date_to) query = query.lte('harvest_date', filters.date_to);
+    // Handle both snake_case and camelCase date parameters
+    const dateFrom = filters?.date_from || filters?.dateFrom;
+    const dateTo = filters?.date_to || filters?.dateTo;
+    if (dateFrom) query = query.gte('harvest_date', dateFrom);
+    if (dateTo) query = query.lte('harvest_date', dateTo);
     if (filters?.intended_for) query = query.eq('intended_for', filters.intended_for);
 
     if (filters?.quality_grade) {

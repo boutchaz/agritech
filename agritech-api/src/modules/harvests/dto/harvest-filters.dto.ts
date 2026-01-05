@@ -27,11 +27,13 @@ export class HarvestFiltersDto {
   @IsOptional()
   @IsDateString()
   date_from?: string;
+  dateFrom?: string; // Alias for camelCase compatibility
  
   @ApiPropertyOptional({ description: 'Filter by end date (ISO format)' })
   @IsOptional()
   @IsDateString()
   date_to?: string;
+  dateTo?: string; // Alias for camelCase compatibility
  
   @ApiPropertyOptional({ description: 'Filter by quality grade (comma-separated)' })
   @IsOptional()
