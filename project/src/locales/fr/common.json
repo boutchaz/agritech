@@ -1265,8 +1265,13 @@
       "saveError": "Erreur lors de la sauvegarde du profil",
       "passwordMismatch": "Les nouveaux mots de passe ne correspondent pas",
       "passwordTooShort": "Le nouveau mot de passe doit contenir au moins 6 caractères",
-      "passwordChangeError": "Erreur lors du changement de mot de passe"
-    }
+      "passwordChangeError": "Erreur lors du changement de mot de passe",
+      "invalidFileType": "Type de fichier invalide. Seuls JPG et PNG sont acceptés.",
+      "fileTooLarge": "La taille du fichier dépasse la limite de 2MB.",
+      "uploadError": "Erreur lors du téléversement de la photo. Veuillez réessayer.",
+      "removeError": "Erreur lors de la suppression de la photo. Veuillez réessayer."
+    },
+    "removePhoto": "Supprimer la photo"
   },
   "preferences": {
     "title": "Préférences",

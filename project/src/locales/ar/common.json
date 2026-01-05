@@ -1207,6 +1207,7 @@
     "cancel": "إلغاء",
     "changePhoto": "تغيير الصورة",
     "photoFormats": "الصيغ المقبولة: JPG، PNG (حد أقصى 2MB)",
+    "removePhoto": "حذف الصورة",
     "sections": {
       "personalInfo": "المعلومات الشخصية",
       "preferences": "التفضيلات",
@@ -1265,7 +1266,11 @@
       "saveError": "خطأ في حفظ الملف الشخصي",
       "passwordMismatch": "كلمات المرور الجديدة غير متطابقة",
       "passwordTooShort": "يجب أن تحتوي كلمة المرور الجديدة على 6 أحرف على الأقل",
-      "passwordChangeError": "خطأ في تغيير كلمة المرور"
+      "passwordChangeError": "خطأ في تغيير كلمة المرور",
+      "invalidFileType": "نوع الملف غير صالح. يُقبل فقط JPG و PNG.",
+      "fileTooLarge": "حجم الملف يتجاوز حد 2 ميغابايت.",
+      "uploadError": "خطأ في رفع الصورة. يرجى المحاولة مرة أخرى.",
+      "removeError": "خطأ في حذف الصورة. يرجى المحاولة مرة أخرى."
     }
   },
   "preferences": {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff, Shield, X } from 'lucide-react';
 import { useAuth } from './MultiTenantAuthProvider';
 import { supabase } from '../lib/supabase';
 import { usersApi } from '../lib/api/users';
+import { storageApi } from '../lib/api/storage';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -46,6 +47,9 @@ const ProfileSettings: React.FC = () => {
     confirm: false
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const timezones = [
     { value: 'UTC', label: t('profile.timezones.utc') },
@@ -163,6 +167,86 @@ const ProfileSettings: React.FC = () => {
   const handleInputChange = (field: keyof UserProfile, value: string) => {
     if (!profile) return;
     setProfile({ ...profile, [field]: value });
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setAvatarError(t('profile.errors.invalidFileType'));
+      return;
+    }
+
+    // Validate file size (2MB)
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAvatarError(t('profile.errors.fileTooLarge'));
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setAvatarError(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // Upload to avatars bucket
+      const { publicUrl } = await storageApi.upload('avatars', filePath, file, {
+        upsert: true,
+      });
+
+      // Update user profile with new avatar URL
+      const updatedProfile = await usersApi.updateMe({
+        avatar_url: publicUrl,
+      });
+
+      setProfile(updatedProfile);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+      setAvatarError(t('profile.errors.uploadError'));
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!profile?.avatar_url || !user) return;
+
+    setUploadingAvatar(true);
+    setAvatarError(null);
+
+    try {
+      // Extract file path from URL
+      const urlParts = profile.avatar_url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const filePath = `${user.id}/${fileName}`;
+
+      // Delete from storage
+      await storageApi.remove('avatars', [filePath]);
+
+      // Update user profile to remove avatar URL
+      const updatedProfile = await usersApi.updateMe({
+        avatar_url: null,
+      });
+
+      setProfile(updatedProfile);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error removing avatar:', err);
+      setAvatarError(t('profile.errors.removeError'));
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   if (loading) {
@@ -349,23 +433,65 @@ const ProfileSettings: React.FC = () => {
               </Select>
             </FormField>
 
-            {/* Avatar placeholder for future implementation */}
+            {/* Avatar Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('profile.fields.profilePhoto')}
               </label>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="h-8 w-8 text-gray-400" />
+                <div className="relative w-20 h-20 flex-shrink-0">
+                  {profile?.avatar_url ? (
+                    <>
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="w-20 h-20 rounded-full object-cover"
+                      />
+                      <button
+                        onClick={handleRemoveAvatar}
+                        disabled={uploadingAvatar}
+                        className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('profile.removePhoto')}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                      <User className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col items-center sm:items-start gap-2 w-full sm:w-auto">
-                  <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Camera className="h-4 w-4" />
                     <span>{t('profile.changePhoto')}</span>
                   </button>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
                     {t('profile.photoFormats')}
                   </p>
+                  {avatarError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 text-center sm:text-left">
+                      {avatarError}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

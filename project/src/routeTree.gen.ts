@@ -150,9 +150,9 @@ const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => publicOnboardingRoute,
+  id: '/(public)/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const publicBlogIndexRoute = publicBlogIndexRouteImport.update({
   id: '/(public)/blog/',
@@ -281,9 +281,9 @@ const AuthenticatedaccountingAccountingRoute =
   } as any)
 const publicOnboardingSelectTrialRoute =
   publicOnboardingSelectTrialRouteImport.update({
-    id: '/select-trial',
-    path: '/select-trial',
-    getParentRoute: () => publicOnboardingRoute,
+    id: '/(public)/onboarding/select-trial',
+    path: '/onboarding/select-trial',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const publicBlogSlugRoute = publicBlogSlugRouteImport.update({
   id: '/(public)/blog/$slug',
@@ -730,7 +730,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRoute
   '/blog': typeof publicBlogIndexRoute
-  '/onboarding/': typeof publicOnboardingIndexRoute
+  '/onboarding': typeof publicOnboardingIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
@@ -1032,7 +1032,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/workers'
     | '/blog'
-    | '/onboarding/'
+    | '/onboarding'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
@@ -1311,7 +1311,9 @@ export interface RootRouteChildren {
   publicPitchDeckRoute: typeof publicPitchDeckRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
   publicBlogSlugRoute: typeof publicBlogSlugRoute
+  publicOnboardingSelectTrialRoute: typeof publicOnboardingSelectTrialRoute
   publicBlogIndexRoute: typeof publicBlogIndexRoute
+  publicOnboardingIndexRoute: typeof publicOnboardingIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1374,10 +1376,10 @@ declare module '@tanstack/react-router' {
     }
     '/(public)/onboarding/': {
       id: '/(public)/onboarding/'
-      path: '/'
-      fullPath: '/onboarding/'
+      path: '/onboarding'
+      fullPath: '/onboarding'
       preLoaderRoute: typeof publicOnboardingIndexRouteImport
-      parentRoute: typeof publicOnboardingRoute
+      parentRoute: typeof rootRouteImport
     }
     '/(public)/blog/': {
       id: '/(public)/blog/'
@@ -1528,10 +1530,10 @@ declare module '@tanstack/react-router' {
     }
     '/(public)/onboarding/select-trial': {
       id: '/(public)/onboarding/select-trial'
-      path: '/select-trial'
+      path: '/onboarding/select-trial'
       fullPath: '/onboarding/select-trial'
       preLoaderRoute: typeof publicOnboardingSelectTrialRouteImport
-      parentRoute: typeof publicOnboardingRoute
+      parentRoute: typeof rootRouteImport
     }
     '/(public)/blog/$slug': {
       id: '/(public)/blog/$slug'
@@ -2388,7 +2390,9 @@ const rootRouteChildren: RootRouteChildren = {
   publicPitchDeckRoute: publicPitchDeckRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
   publicBlogSlugRoute: publicBlogSlugRoute,
+  publicOnboardingSelectTrialRoute: publicOnboardingSelectTrialRoute,
   publicBlogIndexRoute: publicBlogIndexRoute,
+  publicOnboardingIndexRoute: publicOnboardingIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
