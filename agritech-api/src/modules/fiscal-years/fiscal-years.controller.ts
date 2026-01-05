@@ -18,8 +18,8 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OrganizationGuard } from '../common/guards/organization.guard';
-import { RequireRole } from '../common/decorators/require-role.decorator';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { FiscalYearsService } from './fiscal-years.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
 import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';

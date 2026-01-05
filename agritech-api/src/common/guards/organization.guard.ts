@@ -81,17 +81,16 @@ export class OrganizationGuard implements CanActivate {
       );
     }
 
-    // Get required role level from metadata (if any)
-    const requiredRoleLevel = this.reflector.get<number>(
-      'requiredRoleLevel',
+    const requiredRoles = this.reflector.get<string[]>(
+      'requiredRoles',
       context.getHandler(),
     );
 
-    if (requiredRoleLevel) {
-      const hasRequiredRole = await this.checkRoleLevel(
+    if (requiredRoles && requiredRoles.length > 0) {
+      const hasRequiredRole = await this.checkUserRoles(
         user.id,
         organizationId,
-        requiredRoleLevel,
+        requiredRoles,
       );
 
       if (!hasRequiredRole) {
@@ -141,21 +140,16 @@ export class OrganizationGuard implements CanActivate {
     return true;
   }
 
-  /**
-   * Check if user has required role level
-   * Role levels: 1=system_admin, 2=organization_admin, 3=farm_manager, 4=farm_worker, 5=day_laborer, 6=viewer
-   * Lower number = higher permission
-   */
-  private async checkRoleLevel(
+  private async checkUserRoles(
     userId: string,
     organizationId: string,
-    requiredLevel: number,
+    requiredRoles: string[],
   ): Promise<boolean> {
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('organization_users')
-      .select('role_id, roles(level)')
+      .select('role_id, roles(name)')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
       .eq('is_active', true)
@@ -165,7 +159,7 @@ export class OrganizationGuard implements CanActivate {
       return false;
     }
 
-    const userRoleLevel = (data.roles as any)?.level || 999;
-    return userRoleLevel <= requiredLevel;
+    const userRole = (data.roles as any)?.name;
+    return requiredRoles.includes(userRole);
   }
 }
