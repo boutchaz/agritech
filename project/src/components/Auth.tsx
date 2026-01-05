@@ -40,7 +40,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           }));
         }
 
-        window.location.href = '/select-trial';
+        window.location.href = '/onboarding/select-trial';
       } else {
         const response = await loginViaApi(email, password);
 

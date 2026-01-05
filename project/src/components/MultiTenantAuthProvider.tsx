@@ -117,7 +117,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/select-trial', '/set-password', '/auth/callback', '/blog'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/onboarding/select-trial', '/set-password', '/auth/callback', '/blog'];
 
   // Routes that don't require password to be set (accessible with temporary password)
   const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
@@ -469,7 +469,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Check if current route is public or trial selection
   const isPublicRoute = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/blog');
-  const isOnSelectTrialPage = location.pathname.startsWith('/select-trial');
+  const isOnSelectTrialPage = location.pathname.startsWith('/onboarding/select-trial');
   const isOnSetPasswordPage = location.pathname.startsWith('/set-password');
 
   // Redirect to set-password if user hasn't set their password
@@ -538,8 +538,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     if (!loading && !isSubscriptionQueryLoading && !hasSubscriptionError && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
       // User has an organization but no subscription - redirect to trial selection
       // Only redirect if subscription query has completed without errors
-      console.log('[AuthProvider] Redirecting to /select-trial - no subscription found');
-      window.location.href = '/select-trial';
+      console.log('[AuthProvider] Redirecting to /onboarding/select-trial - no subscription found');
+      window.location.href = '/onboarding/select-trial';
     }
   }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage, queryClient, location.pathname]);
 
