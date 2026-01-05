@@ -67,6 +67,11 @@ import { LabServicesModule } from './modules/lab-services/lab-services.module';
 import { TreeManagementModule } from './modules/tree-management/tree-management.module';
 import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
 import { OrganizationAISettingsModule } from './modules/organization-ai-settings/organization-ai-settings.module';
+import { FiscalYearsModule } from './modules/fiscal-years/fiscal-years.module';
+import { BiologicalAssetsModule } from './modules/biological-assets/biological-assets.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
+import { QualityControlModule } from './modules/quality-control/quality-control.module';
 
 @Module({
   imports: [
@@ -137,6 +142,11 @@ import { OrganizationAISettingsModule } from './modules/organization-ai-settings
     ProfitabilityModule,
     ProductApplicationsModule,
     AccountMappingsModule,
+    FiscalYearsModule,
+    BiologicalAssetsModule,
+    CampaignsModule,
+    CropCyclesModule,
+    QualityControlModule,
 
     DocumentTemplatesModule,
     LabServicesModule,

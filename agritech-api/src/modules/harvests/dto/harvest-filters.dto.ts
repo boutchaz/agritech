@@ -58,8 +58,8 @@ export class HarvestFiltersDto {
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ description: 'Sort direction', enum: SortDirection, default: SortDirection.DESC })
+  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
   @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc';
+  sortDir?: 'asc' | 'desc' = 'desc';
 }
