@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, IsDateString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaginatedQueryDto } from '../../common/dto/paginated-query.dto';
  
-export class HarvestFiltersDto {
+export class HarvestFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by status (comma-separated)' })
   @IsOptional()
   @IsString()
@@ -27,12 +28,20 @@ export class HarvestFiltersDto {
   @IsOptional()
   @IsDateString()
   date_from?: string;
+  
+  @ApiPropertyOptional({ description: 'Filter by start date (ISO format) - camelCase alias' })
+  @IsOptional()
+  @IsDateString()
   dateFrom?: string; // Alias for camelCase compatibility
- 
+  
   @ApiPropertyOptional({ description: 'Filter by end date (ISO format)' })
   @IsOptional()
   @IsDateString()
   date_to?: string;
+  
+  @ApiPropertyOptional({ description: 'Filter by end date (ISO format) - camelCase alias' })
+  @IsOptional()
+  @IsDateString()
   dateTo?: string; // Alias for camelCase compatibility
  
   @ApiPropertyOptional({ description: 'Filter by quality grade (comma-separated)' })
@@ -45,23 +54,4 @@ export class HarvestFiltersDto {
   @IsString()
   intended_for?: string;
 
-  @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ description: 'Items per page', default: 12 })
-  @IsOptional()
-  @Type(() => Number)
-  pageSize?: number = 12;
-
-  @ApiPropertyOptional({ description: 'Sort by field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: string;
-
-  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'], default: 'desc' })
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc' = 'desc';
 }
