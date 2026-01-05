@@ -164,9 +164,9 @@ function SelectTrialPage() {
   // Show loading state while auth data is being fetched or setting up
   if (loading || isSettingUp) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4" data-testid="trial-loading">
       <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+        <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" data-testid="loading-spinner" />
         <p className="text-gray-600 dark:text-gray-400">
           {isSettingUp ? 'Setting up your account...' : 'Loading your account...'}
         </p>
@@ -387,10 +387,10 @@ function SelectTrialPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4" data-testid="trial-selection-page">
       <div className="max-w-6xl w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="trial-page-title">
             Start Your Free Trial
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -413,6 +413,8 @@ function SelectTrialPage() {
             return (
               <div
                 key={planType}
+                data-testid={`plan-card-${planType}`}
+                data-selected={isSelected}
                 className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 cursor-pointer transition-all ${
                   isSelected
                     ? 'ring-2 ring-green-500 shadow-green-500/20'
@@ -492,10 +494,11 @@ function SelectTrialPage() {
           <button
             onClick={handleStartTrial}
             disabled={isCreating || selectedPlan === 'enterprise'}
+            data-testid="start-trial-button"
             className="px-8 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/30 hover:from-green-700 hover:to-lime-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {isCreating ? (
-              <span className="flex items-center space-x-2">
+              <span className="flex items-center space-x-2" data-testid="trial-creating">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Starting your trial...</span>
               </span>

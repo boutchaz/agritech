@@ -67,7 +67,7 @@ function RegisterPage() {
         }))
       }
 
-      window.location.href = '/select-trial'
+      window.location.href = '/onboarding/select-trial'
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred during registration'
       if (message.includes('already exists') || message.includes('already registered')) {

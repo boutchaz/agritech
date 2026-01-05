@@ -30,7 +30,7 @@
     "polar:setup": "npx tsx scripts/setup-polar-products.ts",
     "deploy:fresh:local": "./scripts/deploy-fresh.sh local",
     "deploy:fresh:remote": "./scripts/deploy-fresh.sh remote",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
