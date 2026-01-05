@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import EnhancedOnboardingFlow from '@/components/EnhancedOnboardingFlow';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { authSupabase } from '@/lib/auth-supabase';
 
 export const Route = createFileRoute('/(public)/onboarding/')({
   component: OnboardingPage,
@@ -11,6 +12,24 @@ function OnboardingPage() {
   const { user, isLoading, refreshUserData } = useAuth();
 
   const handleOnboardingComplete = async () => {
+    // Mark onboarding as completed in user profile
+    try {
+      if (user?.id) {
+        const { error: updateError } = await authSupabase
+          .from('user_profiles')
+          .update({ onboarding_completed: true })
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.warn('⚠️ Failed to mark onboarding as completed:', updateError);
+        } else {
+          console.log('✅ Onboarding marked as completed');
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Error updating onboarding status:', err);
+    }
+
     // Refresh auth data to get updated onboarding_completed flag
     await refreshUserData();
 

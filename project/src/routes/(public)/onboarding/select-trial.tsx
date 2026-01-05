@@ -335,6 +335,22 @@ function SelectTrialPage() {
 
       console.log('✅ Trial subscription created:', data.subscription)
 
+      // Mark onboarding as completed in user profile
+      try {
+        const { error: updateError } = await authSupabase
+          .from('user_profiles')
+          .update({ onboarding_completed: true })
+          .eq('user_id', user.id)
+
+        if (updateError) {
+          console.warn('⚠️ Failed to mark onboarding as completed:', updateError)
+        } else {
+          console.log('✅ Onboarding marked as completed')
+        }
+      } catch (err) {
+        console.warn('⚠️ Error updating onboarding status:', err)
+      }
+
       // Ensure organization is saved to BOTH localStorage AND Zustand store
       // This is critical for API client to find the organization ID after page reload
       localStorage.setItem('currentOrganization', JSON.stringify(orgToUse))
