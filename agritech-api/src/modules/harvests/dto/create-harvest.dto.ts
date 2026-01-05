@@ -80,14 +80,15 @@ export class CreateHarvestDto {
   @IsString()
   quality_notes?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Workers involved in harvest',
     type: [HarvestWorkerDto]
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => HarvestWorkerDto)
-  workers: HarvestWorkerDto[];
+  workers?: HarvestWorkerDto[];
 
   @ApiPropertyOptional({ description: 'Supervisor worker ID' })
   @IsOptional()

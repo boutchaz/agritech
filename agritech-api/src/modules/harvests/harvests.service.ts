@@ -34,37 +34,78 @@ export class HarvestsService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
+    
+    // Get total count first
+    let countQuery = client
+      .from('harvest_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
+    // Apply filters to count query
+    if (filters?.status) {
+      const statuses = filters.status.split(',');
+      countQuery = countQuery.in('status', statuses);
+    }
+    if (filters?.farm_id) countQuery = countQuery.eq('farm_id', filters.farm_id);
+    if (filters?.parcel_id) countQuery = countQuery.eq('parcel_id', filters.parcel_id);
+    if (filters?.crop_id) countQuery = countQuery.eq('crop_id', filters.crop_id);
+    const dateFrom = filters?.date_from || filters?.dateFrom;
+    const dateTo = filters?.date_to || filters?.dateTo;
+    if (dateFrom) countQuery = countQuery.gte('harvest_date', dateFrom);
+    if (dateTo) countQuery = countQuery.lte('harvest_date', dateTo);
+    if (filters?.intended_for) countQuery = countQuery.eq('intended_for', filters.intended_for);
+    if (filters?.quality_grade) {
+      const grades = filters.quality_grade.split(',');
+      countQuery = countQuery.in('quality_grade', grades);
+    }
+
+    const { count: totalCount, error: countError } = await countQuery;
+    if (countError) throw new Error(`Failed to count harvests: ${countError.message}`);
+
+    // Build main query
     let query = client
       .from('harvest_records')
       .select('*')
       .eq('organization_id', organizationId);
 
+    // Apply filters
     if (filters?.status) {
       const statuses = filters.status.split(',');
       query = query.in('status', statuses);
     }
-
     if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
     if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
     if (filters?.crop_id) query = query.eq('crop_id', filters.crop_id);
-    // Handle both snake_case and camelCase date parameters
-    const dateFrom = filters?.date_from || filters?.dateFrom;
-    const dateTo = filters?.date_to || filters?.dateTo;
     if (dateFrom) query = query.gte('harvest_date', dateFrom);
     if (dateTo) query = query.lte('harvest_date', dateTo);
     if (filters?.intended_for) query = query.eq('intended_for', filters.intended_for);
-
     if (filters?.quality_grade) {
       const grades = filters.quality_grade.split(',');
       query = query.in('quality_grade', grades);
     }
 
-    query = query.order('harvest_date', { ascending: false });
+    // Apply sorting
+    const sortBy = filters?.sortBy || 'harvest_date';
+    const sortDir = filters?.sortDir || 'desc';
+    query = query.order(sortBy, { ascending: sortDir === 'asc' });
+
+    // Apply pagination
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 10;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
 
     const { data, error } = await query;
     if (error) throw new Error(`Failed to fetch harvests: ${error.message}`);
 
-    return data || [];
+    return {
+      data: data || [],
+      total: totalCount || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((totalCount || 0) / pageSize),
+    };
   }
 
   async findOne(userId: string, organizationId: string, harvestId: string) {
