@@ -1265,8 +1265,13 @@
       "saveError": "Error saving profile",
       "passwordMismatch": "New passwords do not match",
       "passwordTooShort": "New password must contain at least 6 characters",
-      "passwordChangeError": "Error changing password"
-    }
+      "passwordChangeError": "Error changing password",
+      "invalidFileType": "Invalid file type. Only JPG and PNG are accepted.",
+      "fileTooLarge": "File size exceeds the 2MB limit.",
+      "uploadError": "Error uploading photo. Please try again.",
+      "removeError": "Error removing photo. Please try again."
+    },
+    "removePhoto": "Remove photo"
   },
   "preferences": {
     "title": "Preferences",

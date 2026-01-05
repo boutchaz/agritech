@@ -46,8 +46,8 @@ const OrganizationSwitcher: React.FC = () => {
       const dropdownWidth = 320; // w-80 = 20rem = 320px
 
       // Check available space on both sides
-      const spaceOnRight = windowWidth - buttonRect.left;
-      const spaceOnLeft = buttonRect.right;
+      // const spaceOnRight = windowWidth - buttonRect.left;
+      // const spaceOnLeft = buttonRect.right;
 
       // If button is on the right half of the screen, align dropdown to right edge
       // Otherwise align to left edge, but only if it fits
@@ -78,6 +78,12 @@ const OrganizationSwitcher: React.FC = () => {
     setIsOpen(false);
     setShowFarms(false);
     navigate({ to: '/settings/organization' });
+  };
+
+  const handleUserProfile = () => {
+    setIsOpen(false);
+    setShowFarms(false);
+    navigate({ to: '/settings/profile' });
   };
 
   const handleTeamManagement = () => {
@@ -140,7 +146,10 @@ const OrganizationSwitcher: React.FC = () => {
           dropdownPosition === 'right' ? 'right-0' : 'left-0'
         }`}>
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleUserProfile}
+            className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
@@ -159,7 +168,7 @@ const OrganizationSwitcher: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </button>
 
           {!showFarms ? (
             // Organization List

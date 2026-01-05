@@ -1,0 +1,259 @@
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
+import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
+import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';
+
+@Injectable()
+export class FiscalYearsService {
+  private readonly logger = new Logger(FiscalYearsService.name);
+
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async findAll(organizationId: string) {
+    const client = this.databaseService.getClient();
+    const { data, error } = await client
+      .from('fiscal_years')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('start_date', { ascending: false });
+
+    if (error) {
+      this.logger.error(`Failed to fetch fiscal years: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async findOne(id: string, organizationId: string) {
+    const client = this.databaseService.getClient();
+    const { data, error } = await client
+      .from('fiscal_years')
+      .select('*')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to fetch fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async create(organizationId: string, userId: string, createDto: CreateFiscalYearDto) {
+    const client = this.databaseService.getClient();
+
+    // Check if fiscal year with same name exists
+    const { data: existing } = await client
+      .from('fiscal_years')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('name', createDto.name)
+      .maybeSingle();
+
+    if (existing) {
+      throw new ConflictException('Fiscal year with this name already exists');
+    }
+
+    // If this is set as active, deactivate other fiscal years
+    if (createDto.is_active) {
+      await client
+        .from('fiscal_years')
+        .update({ is_active: false })
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+    }
+
+    const { data, error } = await client
+      .from('fiscal_years')
+      .insert({
+        organization_id: organizationId,
+        created_by: userId,
+        ...createDto,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async update(id: string, organizationId: string, userId: string, updateDto: UpdateFiscalYearDto) {
+    const client = this.databaseService.getClient();
+
+    // Check if fiscal year exists
+    const { data: existing } = await this.findOne(id, organizationId);
+    if (!existing) {
+      throw new NotFoundException('Fiscal year not found');
+    }
+
+    // If updating name, check for duplicates
+    if (updateDto.name && updateDto.name !== existing.name) {
+      const { data: duplicate } = await client
+        .from('fiscal_years')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('name', updateDto.name)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (duplicate) {
+        throw new ConflictException('Fiscal year with this name already exists');
+      }
+    }
+
+    // If setting as active, deactivate other fiscal years
+    if (updateDto.is_active && !existing.is_active) {
+      await client
+        .from('fiscal_years')
+        .update({ is_active: false })
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+    }
+
+    const { data, error } = await client
+      .from('fiscal_years')
+      .update({
+        ...updateDto,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to update fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async remove(id: string, organizationId: string) {
+    const client = this.databaseService.getClient();
+
+    // Check if fiscal year exists
+    const { data: existing } = await this.findOne(id, organizationId);
+    if (!existing) {
+      throw new NotFoundException('Fiscal year not found');
+    }
+
+    // Prevent deletion of active fiscal year
+    if (existing.is_active) {
+      throw new ConflictException('Cannot delete active fiscal year');
+    }
+
+    // Prevent deletion of closed fiscal year
+    if (existing.is_closed) {
+      throw new ConflictException('Cannot delete closed fiscal year');
+    }
+
+    const { error } = await client
+      .from('fiscal_years')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      this.logger.error(`Failed to delete fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return { id };
+  }
+
+  async close(id: string, organizationId: string, userId: string) {
+    const client = this.databaseService.getClient();
+
+    // Check if fiscal year exists
+    const { data: existing } = await this.findOne(id, organizationId);
+    if (!existing) {
+      throw new NotFoundException('Fiscal year not found');
+    }
+
+    // Prevent closing already closed fiscal year
+    if (existing.is_closed) {
+      throw new ConflictException('Fiscal year is already closed');
+    }
+
+    const { data, error } = await client
+      .from('fiscal_years')
+      .update({
+        is_closed: true,
+        is_active: false,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to close fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async reopen(id: string, organizationId: string, userId: string) {
+    const client = this.databaseService.getClient();
+
+    // Check if fiscal year exists
+    const { data: existing } = await this.findOne(id, organizationId);
+    if (!existing) {
+      throw new NotFoundException('Fiscal year not found');
+    }
+
+    // Prevent reopening already open fiscal year
+    if (!existing.is_closed) {
+      throw new ConflictException('Fiscal year is not closed');
+    }
+
+    const { data, error } = await client
+      .from('fiscal_years')
+      .update({
+        is_closed: false,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to reopen fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  async getActive(organizationId: string) {
+    const client = this.databaseService.getClient();
+    const { data, error } = await client
+      .from('fiscal_years')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 is "not found" which is ok
+      this.logger.error(`Failed to fetch active fiscal year: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+}
