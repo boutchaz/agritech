@@ -386,6 +386,18 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
             console.error('Error marking onboarding complete:', updateError);
           }
         }
+
+        // Also mark user profile onboarding as completed
+        const { error: userUpdateError } = await supabase
+          .from('user_profiles')
+          .update({ onboarding_completed: true })
+          .eq('user_id', user.id);
+
+        if (userUpdateError) {
+          console.warn('⚠️ Failed to mark user onboarding as completed:', userUpdateError);
+        } else {
+          console.log('✅ User onboarding marked as completed');
+        }
       }
 
       onComplete();
