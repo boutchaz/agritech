@@ -49,10 +49,8 @@ export class HarvestsService {
     if (filters?.farm_id) countQuery = countQuery.eq('farm_id', filters.farm_id);
     if (filters?.parcel_id) countQuery = countQuery.eq('parcel_id', filters.parcel_id);
     if (filters?.crop_id) countQuery = countQuery.eq('crop_id', filters.crop_id);
-    const dateFrom = filters?.date_from || filters?.dateFrom;
-    const dateTo = filters?.date_to || filters?.dateTo;
-    if (dateFrom) countQuery = countQuery.gte('harvest_date', dateFrom);
-    if (dateTo) countQuery = countQuery.lte('harvest_date', dateTo);
+    if (filters?.dateFrom) countQuery = countQuery.gte('harvest_date', filters.dateFrom);
+    if (filters?.dateTo) countQuery = countQuery.lte('harvest_date', filters.dateTo);
     if (filters?.intended_for) countQuery = countQuery.eq('intended_for', filters.intended_for);
     if (filters?.quality_grade) {
       const grades = filters.quality_grade.split(',');
@@ -76,8 +74,8 @@ export class HarvestsService {
     if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
     if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
     if (filters?.crop_id) query = query.eq('crop_id', filters.crop_id);
-    if (dateFrom) query = query.gte('harvest_date', dateFrom);
-    if (dateTo) query = query.lte('harvest_date', dateTo);
+    if (filters?.dateFrom) query = query.gte('harvest_date', filters.dateFrom);
+    if (filters?.dateTo) query = query.lte('harvest_date', filters.dateTo);
     if (filters?.intended_for) query = query.eq('intended_for', filters.intended_for);
     if (filters?.quality_grade) {
       const grades = filters.quality_grade.split(',');
