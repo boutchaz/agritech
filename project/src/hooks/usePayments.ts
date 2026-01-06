@@ -112,10 +112,23 @@ export function useCreatePaymentRecord() {
       }
       return paymentRecordsApi.create(currentOrganization.id, request);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['payments', currentOrganization?.id] });
-      queryClient.invalidateQueries({ queryKey: ['worker-payments', data.worker_id] });
-      queryClient.invalidateQueries({ queryKey: ['payment-statistics', currentOrganization?.id] });
+    onSuccess: (data, variables) => {
+      const workerId = data?.worker_id || variables.worker_id;
+      const orgId = currentOrganization?.id;
+      
+      // Invalidate all payment-related queries
+      queryClient.invalidateQueries({ queryKey: ['payments', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['payment-statistics', orgId] });
+      
+      // Invalidate worker-specific queries
+      if (workerId) {
+        queryClient.invalidateQueries({ queryKey: ['worker-payments', workerId] });
+        queryClient.invalidateQueries({ queryKey: ['worker-payment-history', workerId] });
+        queryClient.invalidateQueries({ queryKey: ['worker-stats', orgId, workerId] });
+      }
+      
+      // Invalidate all worker-payments queries (in case workerId is not in response)
+      queryClient.invalidateQueries({ queryKey: ['worker-payments'] });
     },
   });
 }

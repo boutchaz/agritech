@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Plus,
@@ -32,6 +33,7 @@ interface WorkersListProps {
 const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<WorkerType | 'all'>('all');
   const [filterActive, setFilterActive] = useState<boolean | 'all'>('all');
@@ -625,6 +627,13 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             setWorkerToPay(null);
           }}
           onSuccess={() => {
+            // Invalidate payment queries to refresh the list
+            queryClient.invalidateQueries({ queryKey: ['worker-payments'] });
+            queryClient.invalidateQueries({ queryKey: ['payments', organizationId] });
+            queryClient.invalidateQueries({ queryKey: ['payment-statistics', organizationId] });
+            if (workerToPay?.id) {
+              queryClient.invalidateQueries({ queryKey: ['worker-stats', organizationId, workerToPay.id] });
+            }
             setShowPaymentDialog(false);
             setWorkerToPay(null);
           }}

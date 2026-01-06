@@ -28,7 +28,7 @@ export function useTrialBalance(asOfDate?: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getTrialBalance(asOfDate);
+      return financialReportsApi.getTrialBalance(asOfDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -46,7 +46,7 @@ export function useBalanceSheet(asOfDate?: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getBalanceSheet(asOfDate);
+      return financialReportsApi.getBalanceSheet(asOfDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -67,7 +67,7 @@ export function useProfitLoss(startDate: string | undefined, endDate?: string) {
       if (!startDate) {
         throw new Error('Start date is required');
       }
-      return financialReportsApi.getProfitLoss(startDate, endDate);
+      return financialReportsApi.getProfitLoss(startDate, endDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!startDate,
   });
@@ -92,7 +92,7 @@ export function useGeneralLedger(
       if (!accountId || !startDate) {
         throw new Error('Account ID and start date are required');
       }
-      return financialReportsApi.getGeneralLedger(accountId, startDate, endDate);
+      return financialReportsApi.getGeneralLedger(accountId, startDate, endDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!accountId && !!startDate,
   });
@@ -110,7 +110,7 @@ export function useAccountSummary(asOfDate?: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getAccountSummary(asOfDate);
+      return financialReportsApi.getAccountSummary(asOfDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -131,7 +131,7 @@ export function useAccountBalance(accountId: string | undefined, asOfDate?: stri
       if (!accountId) {
         throw new Error('Account ID is required');
       }
-      return financialReportsApi.getAccountBalance(accountId, asOfDate);
+      return financialReportsApi.getAccountBalance(accountId, asOfDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!accountId,
   });

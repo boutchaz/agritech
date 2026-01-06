@@ -108,8 +108,20 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
         // Use NestJS API instead of direct Supabase call
         const data = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
         // API returns { success: true, farms: [...], total: ... }
-        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: Farm[] }).farms)) {
-          return (data as { farms: Farm[] }).farms;
+        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
+          const farmsData = (data as { farms: any[] }).farms;
+          // Map farm_id and farm_name to id and name for compatibility
+          return farmsData.map((farm: any) => ({
+            id: farm.farm_id || farm.id,
+            name: farm.farm_name || farm.name,
+            location: farm.farm_location || farm.location,
+            size: farm.farm_size || farm.size,
+            size_unit: farm.size_unit,
+            manager_name: farm.manager_name,
+            organization_id: organizationId,
+            created_at: farm.created_at,
+            updated_at: farm.updated_at,
+          })) as Farm[];
         }
         // Fallback for direct array response
         return Array.isArray(data) ? data : [];

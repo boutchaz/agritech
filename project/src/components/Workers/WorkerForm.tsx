@@ -99,6 +99,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   onSuccess,
 }) => {
   const isEditing = !!worker;
+  
+  // Ensure farms is always an array
+  const farmsArray = Array.isArray(farms) ? farms : [];
   const createWorker = useCreateWorker();
   const updateWorker = useUpdateWorker();
   const { symbol: currencySymbol } = useCurrency();
@@ -532,12 +535,17 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">-- Aucune ferme --</option>
-                  {farms.map(farm => (
+                  {farmsArray.map(farm => (
                     <option key={farm.id} value={farm.id}>
                       {farm.name}
                     </option>
                   ))}
                 </select>
+                {farmsArray.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Aucune ferme disponible. Veuillez créer une ferme d'abord.
+                  </p>
+                )}
               </div>
 
               <div>

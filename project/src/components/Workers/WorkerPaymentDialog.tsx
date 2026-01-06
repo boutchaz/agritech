@@ -110,8 +110,9 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     try {
       await createPayment.mutateAsync({
         worker_id: worker.id,
-        farm_id: worker.farm_id || '',
+        farm_id: worker.farm_id || undefined, // Let backend handle fallback if no farm
         payment_type: paymentType,
+        payment_method: paymentMethod,
         period_start: periodStart,
         period_end: periodEnd,
         base_amount: calculatedPayment.base_amount,
@@ -133,6 +134,10 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
         gross_revenue: calculatedPayment.gross_revenue,
         metayage_percentage: calculatedPayment.metayage_percentage,
       });
+      
+      // Wait a bit to ensure the mutation completes and queries are invalidated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       onSuccess();
       onClose();
     } catch (err) {

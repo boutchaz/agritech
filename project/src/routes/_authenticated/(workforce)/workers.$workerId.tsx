@@ -64,9 +64,10 @@ function WorkerDetailPage() {
     workerId
   );
 
+  // Load settlements for metayage workers, but also allow viewing for other workers if they have settlements
   const { data: settlements = [], isLoading: settlementsLoading } = useMetayageSettlements(
     currentOrganization?.id || null,
-    worker?.worker_type === 'metayage' ? workerId : null
+    workerId // Always load settlements if they exist, regardless of worker type
   );
 
   const processPaymentMutation = useProcessPayment();
@@ -266,7 +267,8 @@ function WorkerDetailPage() {
           <TabsTrigger value="info">{t('workers.detail.tabs.info')}</TabsTrigger>
           <TabsTrigger value="payments">{t('workers.detail.tabs.payments')}</TabsTrigger>
           <TabsTrigger value="workRecords">{t('workers.detail.tabs.workRecords')}</TabsTrigger>
-          {worker.worker_type === 'metayage' && (
+          {/* Show settlements tab if worker is metayage OR if there are settlements to display */}
+          {(worker.worker_type === 'metayage' || (settlements && settlements.length > 0)) && (
             <TabsTrigger value="settlements">{t('workers.detail.tabs.settlements')}</TabsTrigger>
           )}
         </TabsList>
@@ -555,7 +557,8 @@ function WorkerDetailPage() {
           </Card>
         </TabsContent>
 
-        {worker.worker_type === 'metayage' && (
+        {/* Show settlements tab if worker is metayage OR if there are settlements to display */}
+        {(worker.worker_type === 'metayage' || (settlements && settlements.length > 0)) && (
           <TabsContent value="settlements" className="mt-4">
             <Card>
               <CardHeader>
@@ -570,6 +573,11 @@ function WorkerDetailPage() {
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>{t('workers.detail.noSettlements')}</p>
+                    {worker.worker_type !== 'metayage' && (
+                      <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">
+                        {t('workers.detail.settlementsOnlyForMetayage', 'Les règlements sont uniquement disponibles pour les travailleurs en métayage')}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -608,7 +616,7 @@ function WorkerDetailPage() {
                               {formatCurrency(settlement.total_charges || 0)}
                             </td>
                             <td className="py-3 px-4 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(settlement.worker_share || 0)}
+                              {formatCurrency(settlement.worker_share || settlement.worker_share_amount || 0)}
                             </td>
                             <td className="py-3 px-4">
                               <Badge className={getPaymentStatusColor(settlement.payment_status)}>

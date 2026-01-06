@@ -158,35 +158,41 @@ export const financialReportsApi = {
   /**
    * Get trial balance report
    */
-  async getTrialBalance(asOfDate?: string): Promise<TrialBalanceReport> {
+  async getTrialBalance(asOfDate?: string, organizationId?: string): Promise<TrialBalanceReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<TrialBalanceReport>(
-      `/api/v1/financial-reports/trial-balance${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/trial-balance${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 
   /**
    * Get balance sheet report
    */
-  async getBalanceSheet(asOfDate?: string): Promise<BalanceSheetReport> {
+  async getBalanceSheet(asOfDate?: string, organizationId?: string): Promise<BalanceSheetReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<BalanceSheetReport>(
-      `/api/v1/financial-reports/balance-sheet${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/balance-sheet${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 
   /**
    * Get profit and loss statement
    */
-  async getProfitLoss(startDate: string, endDate?: string): Promise<ProfitLossReport> {
+  async getProfitLoss(startDate: string, endDate?: string, organizationId?: string): Promise<ProfitLossReport> {
     const params = new URLSearchParams({ start_date: startDate });
     if (endDate) params.append('end_date', endDate);
     return apiClient.get<ProfitLossReport>(
-      `/api/v1/financial-reports/profit-loss?${params.toString()}`
+      `/api/v1/financial-reports/profit-loss?${params.toString()}`,
+      {},
+      organizationId
     );
   },
 
@@ -196,54 +202,65 @@ export const financialReportsApi = {
   async getGeneralLedger(
     accountId: string,
     startDate: string,
-    endDate?: string
+    endDate?: string,
+    organizationId?: string
   ): Promise<GeneralLedgerReport> {
     const params = new URLSearchParams({ start_date: startDate });
     if (endDate) params.append('end_date', endDate);
     return apiClient.get<GeneralLedgerReport>(
-      `/api/v1/financial-reports/general-ledger/${accountId}?${params.toString()}`
+      `/api/v1/financial-reports/general-ledger/${accountId}?${params.toString()}`,
+      {},
+      organizationId
     );
   },
 
   /**
    * Get account summary by type
    */
-  async getAccountSummary(asOfDate?: string): Promise<AccountSummaryRow[]> {
+  async getAccountSummary(asOfDate?: string, organizationId?: string): Promise<AccountSummaryRow[]> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<AccountSummaryRow[]>(
-      `/api/v1/financial-reports/account-summary${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/account-summary${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 
   /**
    * Get balance for a specific account
    */
-  async getAccountBalance(accountId: string, asOfDate?: string): Promise<AccountBalance | null> {
+  async getAccountBalance(accountId: string, asOfDate?: string, organizationId?: string): Promise<AccountBalance | null> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<AccountBalance | null>(
-      `/api/v1/financial-reports/account-balance/${accountId}${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/account-balance/${accountId}${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 
-  async getAgedReceivables(asOfDate?: string): Promise<AgedReport> {
+  async getAgedReceivables(asOfDate?: string, organizationId?: string): Promise<AgedReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<AgedReport>(
-      `/api/v1/financial-reports/aged-receivables${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/aged-receivables${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 
-  async getAgedPayables(asOfDate?: string): Promise<AgedReport> {
+  async getAgedPayables(asOfDate?: string, organizationId?: string): Promise<AgedReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
     const query = params.toString();
     return apiClient.get<AgedReport>(
-      `/api/v1/financial-reports/aged-payables${query ? `?${query}` : ''}`
+      `/api/v1/financial-reports/aged-payables${query ? `?${query}` : ''}`,
+      {},
+      organizationId
     );
   },
 };

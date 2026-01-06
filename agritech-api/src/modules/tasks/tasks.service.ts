@@ -7,6 +7,7 @@ import { CompleteTaskDto } from './dto/complete-task.dto';
 import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
 
 @Injectable()
 export class TasksService {
@@ -15,6 +16,7 @@ export class TasksService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly accountingAutomationService: AccountingAutomationService,
+    private readonly receptionBatchesService: ReceptionBatchesService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -530,6 +532,51 @@ export class TasksService {
     const now = new Date().toISOString();
     const isPartial = completeDto.is_partial === true;
 
+    // Generate lot number if not provided
+    let lotNumber = completeDto.lot_number;
+    if (!lotNumber) {
+      const year = new Date().getFullYear();
+      const prefix = `LOT-${year}-`;
+
+      // If this is a partial harvest, check if there's a previous partial harvest for this task
+      if (isPartial) {
+        const { data: previousHarvests } = await client
+          .from('harvest_records')
+          .select('lot_number')
+          .eq('harvest_task_id', taskId)
+          .eq('is_partial', true)
+          .eq('organization_id', organizationId)
+          .not('lot_number', 'is', null)
+          .order('created_at', { ascending: false });
+
+        if (previousHarvests && previousHarvests.length > 0) {
+          // Extract the sequence number from the last partial harvest
+          const lastLot = previousHarvests[0].lot_number;
+          if (lastLot && lastLot.includes('-P')) {
+            const match = lastLot.match(/-(\d+)-P$/);
+            if (match) {
+              const lastNumber = parseInt(match[1], 10);
+              lotNumber = `${prefix}${String(lastNumber + 1).padStart(4, '0')}-P`;
+            }
+          }
+        }
+      }
+
+      // If still no lot number, generate a new one
+      if (!lotNumber) {
+        // Count existing harvests for this organization in this year
+        const { count } = await client
+          .from('harvest_records')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .like('lot_number', `${prefix}%`);
+
+        const lotNumberSeq = (count || 0) + 1;
+        const suffix = isPartial ? '-P' : '';
+        lotNumber = `${prefix}${String(lotNumberSeq).padStart(4, '0')}${suffix}`;
+      }
+    }
+
     // Update the task - for partial harvest, keep it in_progress
     const taskUpdateData = isPartial
       ? {
@@ -591,7 +638,7 @@ export class TasksService {
         expected_price_per_unit: completeDto.expected_price_per_unit,
         status: 'stored',
         notes: completeDto.harvest_notes,
-        lot_number: completeDto.lot_number,
+        lot_number: lotNumber,
         is_partial: isPartial,
         created_by: userId,
       })
@@ -600,6 +647,42 @@ export class TasksService {
 
     if (harvestError) {
       throw new Error(`Failed to create harvest record: ${harvestError.message}`);
+    }
+
+    // Automatically create a reception batch for this harvest
+    try {
+      // Get default warehouse (reception center) for the organization
+      const { data: warehouse } = await client
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('is_reception_center', true)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (warehouse) {
+        await this.receptionBatchesService.create(userId, organizationId, {
+          warehouse_id: warehouse.id,
+          harvest_id: harvest.id,
+          parcel_id: harvest.parcel_id,
+          crop_id: harvest.crop_id || undefined,
+          reception_date: harvest.harvest_date,
+          weight: Number(harvest.quantity),
+          weight_unit: harvest.unit,
+          quantity: Number(harvest.quantity),
+          quantity_unit: harvest.unit,
+          lot_code: lotNumber,
+          notes: `Lot de réception généré automatiquement pour la récolte ${lotNumber}${isPartial ? ' (partielle)' : ''}`,
+        });
+
+        this.logger.log(`Reception batch created automatically for harvest ${harvest.id} with lot number ${lotNumber}`);
+      } else {
+        this.logger.warn(`No reception center warehouse found for organization ${organizationId}. Reception batch not created.`);
+      }
+    } catch (receptionError) {
+      // Log error but don't fail the harvest creation
+      this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${receptionError.message}`, receptionError.stack);
     }
 
     return {

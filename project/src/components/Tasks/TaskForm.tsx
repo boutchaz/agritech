@@ -65,8 +65,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const updateTask = useUpdateTask();
   const bulkCreateAssignments = useBulkCreateTaskAssignments();
 
-  // Filter workers by selected farm - workers are linked to specific farms
-  const { data: workers = [] } = useWorkers(organizationId, formData.farm_id || null);
+  // Fetch workers - include all workers if no farm is selected, or filter by farm
+  // Pass undefined (not null) when no farm is selected to get all workers
+  const { data: workers = [] } = useWorkers(organizationId, formData.farm_id || undefined);
 
   // Fetch work units for piece-work selection - now uses NestJS API
   const { data: workUnits = [] } = useQuery({
@@ -85,12 +86,43 @@ const TaskForm: React.FC<TaskFormProps> = ({
     queryKey: ['parcels', organizationId, formData.farm_id],
     queryFn: async () => {
       if (!organizationId || !formData.farm_id) return [];
-      const result = await parcelsApi.getAll({ farm_id: formData.farm_id }, organizationId);
-      return result || [];
+      const data = await parcelsApi.getAll({ farm_id: formData.farm_id }, organizationId);
+      // Handle paginated response: { success: true, parcels: [...], total: ... }
+      if (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels)) {
+        return (data as { parcels: any[] }).parcels;
+      }
+      // Fallback for direct array response
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!organizationId && !!formData.farm_id,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Get selected parcel details to auto-fill crop info
+  const selectedParcel = parcels.find((p: Parcel) => p.id === formData.parcel_id);
+
+  // Auto-update title and crop_id when parcel is selected (only for new tasks without a custom title)
+  React.useEffect(() => {
+    if (selectedParcel && !task) {
+      const updates: Partial<CreateTaskRequest> = {};
+      
+      // Auto-fill crop_id from parcel
+      if (selectedParcel.crop_id) {
+        updates.crop_id = selectedParcel.crop_id;
+      }
+      
+      // Auto-update title with crop type if no custom title
+      if (selectedParcel.crop_type && !formData.title) {
+        const cropType = selectedParcel.crop_type;
+        const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type]?.fr || 'tâche';
+        updates.title = `${taskTypeLabel} - ${cropType} (${selectedParcel.name})`;
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+    }
+  }, [selectedParcel, formData.task_type, task, formData.title]);
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -292,7 +324,23 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </Label>
               <Select
                 value={formData.parcel_id || '__none__'}
-                onValueChange={(value) => setFormData({ ...formData, parcel_id: value === '__none__' ? undefined : value })}
+                onValueChange={(value) => {
+                  const newParcelId = value === '__none__' ? undefined : value;
+                  setFormData({ ...formData, parcel_id: newParcelId });
+                  // Auto-update title with crop type when parcel is selected (only for new tasks)
+                  if (newParcelId && !task) {
+                    const parcel = parcels.find((p: Parcel) => p.id === newParcelId);
+                    if (parcel?.crop_type && !formData.title) {
+                      const cropType = parcel.crop_type;
+                      const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type]?.fr || 'tâche';
+                      setFormData(prev => ({
+                        ...prev,
+                        parcel_id: newParcelId,
+                        title: `${taskTypeLabel} - ${cropType} (${parcel.name})`
+                      }));
+                    }
+                  }
+                }}
                 disabled={!formData.farm_id}
               >
                 <SelectTrigger id="parcel_id">
@@ -302,11 +350,31 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <SelectItem value="__none__">Aucune</SelectItem>
                   {parcels.map((parcel: Parcel) => (
                     <SelectItem key={parcel.id} value={parcel.id}>
-                      {parcel.name} {parcel.crop_type ? `(${parcel.crop_type})` : ''}
+                      <div className="flex items-center gap-2">
+                        <span>{parcel.name}</span>
+                        {parcel.crop_type && (
+                          <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                            {parcel.crop_type}
+                          </span>
+                        )}
+                        {parcel.variety && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                            {parcel.variety}
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {/* Show selected parcel crop info */}
+              {selectedParcel && (
+                <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
+                  🌱 Culture: {selectedParcel.crop_type || 'Non définie'}
+                  {selectedParcel.variety && ` | Variété: ${selectedParcel.variety}`}
+                  {selectedParcel.tree_count && ` | ${selectedParcel.tree_count} arbres`}
+                </div>
+              )}
               {formData.task_type === 'harvesting' && !formData.parcel_id && (
                 <p className="text-xs text-amber-600">
                   Sélectionnez une parcelle pour les tâches de récolte
@@ -326,13 +394,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 </span>
               )}
             </Label>
-            {!formData.farm_id ? (
+            {workers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
-                Sélectionnez d'abord une ferme pour voir les travailleurs disponibles
-              </p>
-            ) : workers.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
-                Aucun travailleur trouvé pour cette ferme
+                {!formData.farm_id 
+                  ? 'Aucun travailleur disponible. Sélectionnez une ferme pour filtrer les travailleurs.'
+                  : 'Aucun travailleur trouvé pour cette ferme'}
               </p>
             ) : (
               <div className="border rounded-lg max-h-40 overflow-y-auto">
