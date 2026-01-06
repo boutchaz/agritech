@@ -63,7 +63,7 @@ const receptionBatchSchema = z.object({
 
   // Weight & Quantity
   weight: z.number().min(0.001, 'Le poids doit être positif'),
-  weight_unit: z.string().min(1).default('kg'),
+  weight_unit: z.string().min(1, 'L\'unité de poids est requise'),
   quantity: z.number().optional(),
   quantity_unit: z.string().optional(),
 

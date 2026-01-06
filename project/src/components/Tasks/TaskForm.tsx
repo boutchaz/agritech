@@ -105,24 +105,30 @@ const TaskForm: React.FC<TaskFormProps> = ({
   React.useEffect(() => {
     if (selectedParcel && !task) {
       const updates: Partial<CreateTaskRequest> = {};
-      
+
       // Auto-fill crop_id from parcel
       if (selectedParcel.crop_id) {
         updates.crop_id = selectedParcel.crop_id;
       }
-      
-      // Auto-update title with crop type if no custom title
-      if (selectedParcel.crop_type && !formData.title) {
+
+      // Auto-update title with crop type ONLY if title is currently empty
+      // Don't include formData.title in dependencies to prevent infinite loop
+      if (selectedParcel.crop_type) {
         const cropType = selectedParcel.crop_type;
         const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type]?.fr || 'tâche';
-        updates.title = `${taskTypeLabel} - ${cropType} (${selectedParcel.name})`;
+        const newTitle = `${taskTypeLabel} - ${cropType} (${selectedParcel.name})`;
+
+        // Only update if title is different to prevent infinite loop
+        if (formData.title !== newTitle) {
+          updates.title = newTitle;
+        }
       }
-      
+
       if (Object.keys(updates).length > 0) {
         setFormData(prev => ({ ...prev, ...updates }));
       }
     }
-  }, [selectedParcel, formData.task_type, task, formData.title]);
+  }, [selectedParcel, formData.task_type, task]);
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -326,20 +332,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 value={formData.parcel_id || '__none__'}
                 onValueChange={(value) => {
                   const newParcelId = value === '__none__' ? undefined : value;
-                  setFormData({ ...formData, parcel_id: newParcelId });
-                  // Auto-update title with crop type when parcel is selected (only for new tasks)
-                  if (newParcelId && !task) {
-                    const parcel = parcels.find((p: Parcel) => p.id === newParcelId);
-                    if (parcel?.crop_type && !formData.title) {
-                      const cropType = parcel.crop_type;
-                      const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type]?.fr || 'tâche';
-                      setFormData(prev => ({
-                        ...prev,
-                        parcel_id: newParcelId,
-                        title: `${taskTypeLabel} - ${cropType} (${parcel.name})`
-                      }));
-                    }
-                  }
+                  setFormData(prev => ({ ...prev, parcel_id: newParcelId }));
                 }}
                 disabled={!formData.farm_id}
               >
