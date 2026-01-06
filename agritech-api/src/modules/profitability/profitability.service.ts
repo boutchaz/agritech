@@ -209,6 +209,33 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to create cost');
     }
 
+    // Create journal entry automatically for the cost
+    if (data && data.amount > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromCost(
+          organizationId,
+          data.id,
+          createCostDto.cost_type,
+          Number(data.amount),
+          new Date(createCostDto.date),
+          createCostDto.description || `Cost: ${createCostDto.cost_type}`,
+          userId,
+        );
+        this.logger.log(`Journal entry created automatically for cost ${data.id}`);
+      } catch (journalError) {
+        // Log error but don't fail cost creation if journal entry fails
+        // This allows costs to be recorded even if account mappings are not configured
+        this.logger.error(
+          `Failed to create journal entry for cost ${data.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
+          journalError instanceof Error ? journalError.stack : undefined,
+        );
+        this.logger.warn(
+          `Cost ${data.id} created but journal entry not created. ` +
+          `Please configure account mappings for cost_type: ${createCostDto.cost_type} or create manual journal entry.`
+        );
+      }
+    }
+
     return data;
   }
 
@@ -235,6 +262,33 @@ export class ProfitabilityService {
     if (error) {
       this.logger.error('Error creating revenue', error);
       throw new InternalServerErrorException('Failed to create revenue');
+    }
+
+    // Create journal entry automatically for the revenue
+    if (data && data.amount > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          data.id,
+          createRevenueDto.revenue_type,
+          Number(data.amount),
+          new Date(createRevenueDto.date),
+          createRevenueDto.description || `Revenue: ${createRevenueDto.revenue_type}`,
+          userId,
+        );
+        this.logger.log(`Journal entry created automatically for revenue ${data.id}`);
+      } catch (journalError) {
+        // Log error but don't fail revenue creation if journal entry fails
+        // This allows revenues to be recorded even if account mappings are not configured
+        this.logger.error(
+          `Failed to create journal entry for revenue ${data.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
+          journalError instanceof Error ? journalError.stack : undefined,
+        );
+        this.logger.warn(
+          `Revenue ${data.id} created but journal entry not created. ` +
+          `Please configure account mappings for revenue_type: ${createRevenueDto.revenue_type} or create manual journal entry.`
+        );
+      }
     }
 
     return data;

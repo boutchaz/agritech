@@ -8,8 +8,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useInvoice, useUpdateInvoiceStatus } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign } from 'lucide-react';
+import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2 } from 'lucide-react';
+import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useFarms } from '@/hooks/useParcelsQuery';
+import { useParcelById } from '@/hooks/useParcelsQuery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
@@ -30,9 +33,16 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
+  const postInvoice = usePostInvoice();
+  
+  // Fetch farm and parcel details
+  const { data: farms = [] } = useFarms(currentOrganization?.id);
+  const farm = invoice?.farm_id ? farms.find(f => f.id === invoice.farm_id) : null;
+  const { data: parcel } = useParcelById(invoice?.parcel_id || null);
 
   const handleSendEmail = async () => {
     if (!invoiceId) return;
@@ -75,6 +85,29 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   };
 
   const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
+  const canSubmit = invoice && invoice.status === 'draft';
+
+  const handleSubmitInvoice = async () => {
+    if (!invoiceId || !invoice) return;
+    
+    if (!confirm(t('invoices.submit.confirm', 'Are you sure you want to submit this invoice? This will create a journal entry and update stock.'))) {
+      return;
+    }
+
+    try {
+      await postInvoice.mutateAsync({
+        invoice_id: invoiceId,
+        posting_date: invoice.invoice_date,
+      });
+      toast.success(t('invoices.submit.success', 'Invoice submitted successfully'));
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+    } catch (err) {
+      console.error('Error submitting invoice:', err);
+      toast.error(err instanceof Error ? err.message : t('invoices.submit.error', 'Failed to submit invoice'));
+    }
+  };
 
   if (!invoiceId) return null;
 
@@ -195,6 +228,34 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   </div>
                 </CardContent>
               </Card>
+
+              {invoice.farm_id && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.farm', 'Farm')}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{farm?.name || invoice.farm_id}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {invoice.parcel_id && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('dialogs.invoiceDetail.parcel', 'Parcel')}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{parcel?.name || invoice.parcel_id}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Line Items */}
@@ -220,7 +281,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900">
                     {invoice.items?.map((item, index) => (
-                      <tr key={item.id} className={index !== invoice.items!.length - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
+                      <tr key={item.id} className={index !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
                         <td className="py-3 px-4">
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">{item.item_name}</p>
@@ -288,6 +349,21 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
             {/* Actions */}
             <DialogFooter className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex gap-2">
+                {canSubmit && (
+                  <Button
+                    variant="default"
+                    onClick={handleSubmitInvoice}
+                    disabled={postInvoice.isPending}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {postInvoice.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {t('invoices.submit.button', 'Submit Invoice')}
+                  </Button>
+                )}
                 {canMarkAsPaid && (
                   <Button
                     variant="default"
