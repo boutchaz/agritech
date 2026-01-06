@@ -177,12 +177,12 @@ async function globalSetup(config: FullConfig) {
       console.log('Step 6: On trial selection page...');
 
       // Wait for the page to fully load and organization setup to complete
-      await page.waitForSelector('[data-testid="start-trial-button"], button:has-text("Start Free 14-Day Trial")', { timeout: 60000 });
+      await page.waitForSelector('[data-testid="start-trial-button"], button:has-text("Start Free 14-Day Trial"), button:has-text("Démarrer")', { timeout: 60000 });
       await page.waitForTimeout(3000);
 
       // Click the trial button
       console.log('Step 7: Clicking Start Free Trial button...');
-      const trialButton = page.locator('[data-testid="start-trial-button"], button:has-text("Start Free 14-Day Trial")').first();
+      const trialButton = page.locator('[data-testid="start-trial-button"], button:has-text("Start Free 14-Day Trial"), button:has-text("Démarrer")').first();
       await trialButton.click();
 
       // Wait for redirect to onboarding or dashboard
@@ -198,6 +198,17 @@ async function globalSetup(config: FullConfig) {
       console.log('Step 9: On onboarding page, completing 5-step flow...');
       await completeOnboarding(page);
       newUrl = page.url();
+      console.log(`URL after onboarding completion: ${newUrl}`);
+    } else if (newUrl.includes('select-trial')) {
+      console.log('Still on select-trial page, waiting longer...');
+      await page.waitForTimeout(3000);
+      newUrl = page.url();
+      if (newUrl.includes('/onboarding') && !newUrl.includes('select-trial')) {
+        console.log('Now on onboarding page, completing 5-step flow...');
+        await completeOnboarding(page);
+        newUrl = page.url();
+        console.log(`URL after onboarding completion: ${newUrl}`);
+      }
     }
 
     // Check if we ended up on dashboard

@@ -217,6 +217,17 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const handleSetCurrentFarm = (farm: Farm) => {
     setCurrentFarm(farm);
     localStorage.setItem('currentFarm', JSON.stringify(farm));
+    
+    // Invalidate all farm-related queries to refresh dashboard and widgets
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['parcels'] });
+    queryClient.invalidateQueries({ queryKey: ['analyses'] });
+    queryClient.invalidateQueries({ queryKey: ['harvests'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['workers'] });
+    queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
   };
 
   // Sign out handler
