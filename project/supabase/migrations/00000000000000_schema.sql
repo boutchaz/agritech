@@ -3236,8 +3236,8 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   stock_entry_item_id UUID REFERENCES stock_entry_items(id),
   batch_number TEXT,
   serial_number TEXT,
-  marketplace_listing_id UUID REFERENCES marketplace_listings(id) ON DELETE SET NULL, -- For marketplace traceability
-  marketplace_order_item_id UUID REFERENCES marketplace_order_items(id) ON DELETE SET NULL, -- For order traceability
+  marketplace_listing_id UUID, -- For marketplace traceability (FK added later)
+  marketplace_order_item_id UUID, -- For order traceability (FK added later)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
@@ -10317,6 +10317,40 @@ CREATE TRIGGER trg_marketplace_cart_items_updated_at
 GRANT ALL ON marketplace_carts TO authenticated;
 GRANT ALL ON marketplace_cart_items TO authenticated;
 GRANT SELECT ON marketplace_carts TO anon;
+
+-- =====================================================
+-- ADD FOREIGN KEY CONSTRAINTS FOR MARKETPLACE REFERENCES
+-- =====================================================
+-- These FK constraints were deferred because stock_movements is created
+-- before marketplace_listings and marketplace_order_items
+
+-- Add foreign key constraint for marketplace_listing_id in stock_movements
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'stock_movements_marketplace_listing_id_fkey'
+    ) THEN
+        ALTER TABLE stock_movements
+        ADD CONSTRAINT stock_movements_marketplace_listing_id_fkey
+        FOREIGN KEY (marketplace_listing_id) 
+        REFERENCES marketplace_listings(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Add foreign key constraint for marketplace_order_item_id in stock_movements
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'stock_movements_marketplace_order_item_id_fkey'
+    ) THEN
+        ALTER TABLE stock_movements
+        ADD CONSTRAINT stock_movements_marketplace_order_item_id_fkey
+        FOREIGN KEY (marketplace_order_item_id) 
+        REFERENCES marketplace_order_items(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 GRANT SELECT ON marketplace_cart_items TO anon;
 
 COMMENT ON TABLE marketplace_carts IS 'Shopping carts for marketplace buyers';
@@ -10432,6 +10466,67 @@ CREATE POLICY "Users can delete own product images"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'products' AND auth.role() = 'authenticated');
 
+-- =====================================================
+-- AVATARS STORAGE BUCKET
+-- =====================================================
+
+-- Create avatars storage bucket for user profile images
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  true,
+  2097152,  -- 2MB limit
+  ARRAY['image/jpeg', 'image/png']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 2097152,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/png'];
+
+-- Drop existing policies if they exist (cleanup for idempotency)
+DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+
+-- Policy: Public read access for avatars bucket
+CREATE POLICY "Public read access for avatars"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'avatars');
+
+-- Policy: Authenticated users can upload to avatars bucket
+CREATE POLICY "Authenticated upload for avatars"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Policy: Users can update their own avatars
+CREATE POLICY "Users can update own avatars"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+)
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Policy: Users can delete their own avatars
+CREATE POLICY "Users can delete own avatars"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
 -- Grant necessary permissions for storage
 GRANT ALL ON storage.objects TO authenticated;
 GRANT SELECT ON storage.objects TO anon;
@@ -10518,6 +10613,12 @@ CREATE POLICY "Organizations can delete own files" ON file_registry
 GRANT ALL ON file_registry TO authenticated;
 
 COMMENT ON TABLE file_registry IS 'Tracks all uploaded files across storage buckets with orphan detection';
+
+-- Note: Existing files in storage.objects should be registered in file_registry
+-- by application code when files are accessed or through a migration script
+-- that can properly map files to organizations. This cannot be done here because:
+-- 1. Migrations don't have auth context
+-- 2. We cannot determine organization_id from storage.objects alone
 
 -- =====================================================
 -- File Usage Statistics View
@@ -11257,7 +11358,228 @@ CREATE TABLE IF NOT EXISTS crop_cycle_allocations (
 CREATE INDEX IF NOT EXISTS idx_cycle_alloc_source ON crop_cycle_allocations(source_type, source_id);
 CREATE INDEX IF NOT EXISTS idx_cycle_alloc_cycle ON crop_cycle_allocations(crop_cycle_id);
 
--- 8. ALTER EXISTING TABLES - Add Time Dimension FKs
+-- 8.1. CAMPAIGNS TABLE
+CREATE TABLE IF NOT EXISTS campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('planting', 'harvest', 'maintenance', 'fertilization', 'irrigation', 'pest_control', 'marketing', 'other')),
+  description TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  budget DECIMAL(12, 2) CHECK (budget >= 0),
+  currency VARCHAR(3) DEFAULT 'USD',
+  farm_ids UUID[] DEFAULT '{}',
+  parcel_ids UUID[] DEFAULT '{}',
+  status VARCHAR(50) DEFAULT 'planned' CHECK (status IN ('planned', 'active', 'paused', 'completed', 'cancelled')),
+  priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_campaigns_organization_id ON campaigns(organization_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_type ON campaigns(type);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_campaigns_start_date ON campaigns(start_date);
+CREATE INDEX IF NOT EXISTS idx_campaigns_end_date ON campaigns(end_date);
+CREATE INDEX IF NOT EXISTS idx_campaigns_priority ON campaigns(priority);
+CREATE INDEX IF NOT EXISTS idx_campaigns_farm_ids ON campaigns USING GIN(farm_ids);
+CREATE INDEX IF NOT EXISTS idx_campaigns_parcel_ids ON campaigns USING GIN(parcel_ids);
+
+-- Add RLS (Row Level Security)
+ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+-- Organization members can view campaigns
+DROP POLICY IF EXISTS "Organization members can view campaigns" ON campaigns;
+CREATE POLICY "Organization members can view campaigns"
+  ON campaigns FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    )
+  );
+
+-- Organization admins and farm managers can insert campaigns
+DROP POLICY IF EXISTS "Organization admins and farm managers can insert campaigns" ON campaigns;
+CREATE POLICY "Organization admins and farm managers can insert campaigns"
+  ON campaigns FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Organization admins and farm managers can update campaigns
+DROP POLICY IF EXISTS "Organization admins and farm managers can update campaigns" ON campaigns;
+CREATE POLICY "Organization admins and farm managers can update campaigns"
+  ON campaigns FOR UPDATE
+  USING (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Organization admins and farm managers can delete campaigns
+DROP POLICY IF EXISTS "Organization admins and farm managers can delete campaigns" ON campaigns;
+CREATE POLICY "Organization admins and farm managers can delete campaigns"
+  ON campaigns FOR DELETE
+  USING (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Create trigger to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_campaigns_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_campaigns_updated_at ON campaigns;
+CREATE TRIGGER trigger_update_campaigns_updated_at
+  BEFORE UPDATE ON campaigns
+  FOR EACH ROW
+  EXECUTE FUNCTION update_campaigns_updated_at();
+
+-- Add comment
+COMMENT ON TABLE campaigns IS 'Stores agricultural campaigns and projects';
+COMMENT ON COLUMN campaigns.type IS 'Type of campaign';
+COMMENT ON COLUMN campaigns.status IS 'Current status of campaign';
+COMMENT ON COLUMN campaigns.priority IS 'Priority level of campaign';
+COMMENT ON COLUMN campaigns.farm_ids IS 'Array of farm IDs associated with campaign';
+COMMENT ON COLUMN campaigns.parcel_ids IS 'Array of parcel IDs associated with campaign';
+
+-- 8.2. QUALITY INSPECTIONS TABLE
+CREATE TABLE IF NOT EXISTS quality_inspections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('pre_harvest', 'post_harvest', 'storage', 'transport', 'processing')),
+  inspection_date DATE NOT NULL,
+  inspector_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  results JSONB NOT NULL DEFAULT '{}',
+  status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'failed', 'cancelled')),
+  overall_score INTEGER CHECK (overall_score >= 0 AND overall_score <= 100),
+  notes TEXT,
+  attachments TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_organization_id ON quality_inspections(organization_id);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_farm_id ON quality_inspections(farm_id);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_parcel_id ON quality_inspections(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_crop_cycle_id ON quality_inspections(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_type ON quality_inspections(type);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_status ON quality_inspections(status);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_inspection_date ON quality_inspections(inspection_date);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_overall_score ON quality_inspections(overall_score);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_results ON quality_inspections USING GIN(results);
+
+-- Add RLS (Row Level Security)
+ALTER TABLE quality_inspections ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+-- Organization members can view quality inspections
+DROP POLICY IF EXISTS "Organization members can view quality inspections" ON quality_inspections;
+CREATE POLICY "Organization members can view quality inspections"
+  ON quality_inspections FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    )
+  );
+
+-- Organization admins and farm managers can insert quality inspections
+DROP POLICY IF EXISTS "Organization admins and farm managers can insert quality inspections" ON quality_inspections;
+CREATE POLICY "Organization admins and farm managers can insert quality inspections"
+  ON quality_inspections FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Organization admins and farm managers can update quality inspections
+DROP POLICY IF EXISTS "Organization admins and farm managers can update quality inspections" ON quality_inspections;
+CREATE POLICY "Organization admins and farm managers can update quality inspections"
+  ON quality_inspections FOR UPDATE
+  USING (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Organization admins and farm managers can delete quality inspections
+DROP POLICY IF EXISTS "Organization admins and farm managers can delete quality inspections" ON quality_inspections;
+CREATE POLICY "Organization admins and farm managers can delete quality inspections"
+  ON quality_inspections FOR DELETE
+  USING (
+    organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+      AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+      AND ou.is_active = true
+    )
+  );
+
+-- Create trigger to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_quality_inspections_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_quality_inspections_updated_at ON quality_inspections;
+CREATE TRIGGER trigger_update_quality_inspections_updated_at
+  BEFORE UPDATE ON quality_inspections
+  FOR EACH ROW
+  EXECUTE FUNCTION update_quality_inspections_updated_at();
+
+-- Add comment
+COMMENT ON TABLE quality_inspections IS 'Stores quality inspection records for crops, harvests, and products';
+COMMENT ON COLUMN quality_inspections.type IS 'Type of quality inspection';
+COMMENT ON COLUMN quality_inspections.results IS 'JSONB object containing inspection results and measurements';
+COMMENT ON COLUMN quality_inspections.overall_score IS 'Overall quality score from 0 to 100';
+COMMENT ON COLUMN quality_inspections.attachments IS 'Array of attachment URLs (photos, documents, etc.)';
+
+-- 9. ALTER EXISTING TABLES - Add Time Dimension FKs
 ALTER TABLE costs
   ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES agricultural_campaigns(id) ON DELETE SET NULL,

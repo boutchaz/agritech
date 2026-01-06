@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X, ChevronRight, Command } from 'lucide-react';
+import { Search, X, ChevronRight } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
 import { useAuth } from './MultiTenantAuthProvider';
@@ -53,7 +53,16 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
   // Get the current page info from breadcrumbs
   const currentPage = breadcrumbs[breadcrumbs.length - 1];
   const CurrentIcon = currentPage.icon;
-  const currentFarmId = useAuth().currentFarm?.id;
+  const { currentFarm, farms, setCurrentFarm } = useAuth();
+  const currentFarmId = currentFarm?.id;
+
+  // Handle farm change
+  const handleFarmChange = (farmId: string) => {
+    const selectedFarm = farms.find(farm => farm.id === farmId);
+    if (selectedFarm) {
+      setCurrentFarm(selectedFarm);
+    }
+  };
 
   return (
     <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
@@ -92,7 +101,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
 
           {/* Organization Switcher */}
           <div className="flex-shrink-0 flex items-center gap-2">
-            <FarmSwitcher currentFarmId={currentFarmId || ''} onFarmChange={() => {}} />
+            <FarmSwitcher currentFarmId={currentFarmId || ''} onFarmChange={handleFarmChange} />
             <OrganizationSwitcher />
           </div>
         </div>
