@@ -122,6 +122,14 @@ export class CreateParcelDto {
   planting_year?: number;
 
   @ApiPropertyOptional({
+    description: 'Planting type',
+    example: 'traditional',
+  })
+  @IsOptional()
+  @IsString()
+  planting_type?: string;
+
+  @ApiPropertyOptional({
     description: 'Rootstock (for trees)',
     example: 'GF677',
   })

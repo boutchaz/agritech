@@ -9,6 +9,7 @@ import {
   ValidateNested,
   Min,
   Max,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -49,9 +50,11 @@ export class CompleteHarvestTaskDto {
   notes?: string;
 
   // Harvest-specific fields
-  @ApiProperty({ description: 'Crop ID harvested' })
+  @ApiPropertyOptional({ description: 'Crop ID harvested. If not provided, will use crop_type from parcel' })
+  @IsOptional()
+  @ValidateIf((o) => o.crop_id !== undefined && o.crop_id !== null && o.crop_id !== '')
   @IsUUID()
-  crop_id: string;
+  crop_id?: string;
 
   @ApiProperty({ description: 'Harvest date (YYYY-MM-DD)' })
   @IsString()

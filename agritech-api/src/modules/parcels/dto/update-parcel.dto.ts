@@ -96,6 +96,13 @@ export class UpdateParcelDto {
   planting_year?: number;
 
   @ApiPropertyOptional({
+    description: 'Planting type',
+  })
+  @IsOptional()
+  @IsString()
+  planting_type?: string;
+
+  @ApiPropertyOptional({
     description: 'Rootstock (for trees)',
   })
   @IsOptional()

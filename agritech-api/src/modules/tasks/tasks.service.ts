@@ -612,6 +612,16 @@ export class TasksService {
       throw new Error(`Failed to update task: ${taskError.message}`);
     }
 
+    // Get parcel crop_type if crop_id is not provided (virtual crop from parcel)
+    let cropId = completeDto.crop_id;
+    if (!cropId && existingTask.parcel_id) {
+      // If crop_id is not provided but starts with "parcel-", it's a virtual crop
+      // In this case, we set crop_id to null and rely on parcel_id
+      if (cropId && cropId.startsWith('parcel-')) {
+        cropId = null;
+      }
+    }
+
     // Create harvest record
     // Note: estimated_revenue is a generated column (quantity * expected_price_per_unit)
     // and will be calculated automatically by the database
@@ -621,7 +631,7 @@ export class TasksService {
         organization_id: organizationId,
         farm_id: existingTask.farm_id,
         parcel_id: existingTask.parcel_id,
-        crop_id: completeDto.crop_id,
+        crop_id: cropId || null, // Allow null if using parcel crop_type
         harvest_date: completeDto.harvest_date,
         quantity: completeDto.quantity,
         unit: completeDto.unit,

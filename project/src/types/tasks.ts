@@ -369,7 +369,7 @@ export interface CompleteHarvestTaskRequest {
   notes?: string;
 
   // Harvest-specific fields
-  crop_id: string;
+  crop_id?: string; // Optional: if not provided, backend will use parcel crop_type
   harvest_date: string;
   quantity: number;
   unit: 'kg' | 'tons' | 'units' | 'boxes' | 'crates' | 'liters';
