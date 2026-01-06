@@ -22,11 +22,7 @@ import { MapPin, Ruler, Trees as Tree, Droplets, Satellite, Download, BarChart3,
 import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/parcelAutomation';
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
 import {
-  getPlantingSystemsByCategory,
-  getCropTypesByCategory,
-  getVarietiesByCropType,
   calculatePlantCount,
-  type CropCategory as CropCategoryStatic,
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
 import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
@@ -202,44 +198,18 @@ const MapComponent: React.FC<MapProps> = ({
     ? varietiesFromCropType 
     : (varietiesFromStrapi as unknown as Variety[]);
 
-  // Fallback soil types when API returns empty
-  const defaultSoilTypes = [
-    { id: 'clay', name: 'Argileux', value: 'clay' },
-    { id: 'sandy', name: 'Sableux', value: 'sandy' },
-    { id: 'loam', name: 'Limoneux', value: 'loam' },
-    { id: 'silt', name: 'Limon', value: 'silt' },
-    { id: 'peat', name: 'Tourbeux', value: 'peat' },
-    { id: 'chalk', name: 'Calcaire', value: 'chalk' },
-  ];
+  // Use CMS data only - no static fallbacks
+  const soilTypes = soilTypesFromApi;
+  const irrigationTypes = irrigationTypesFromApi;
 
-  // Fallback irrigation types when API returns empty
-  const defaultIrrigationTypes = [
-    { id: 'drip', name: 'Goutte à goutte', value: 'drip' },
-    { id: 'sprinkler', name: 'Aspersion', value: 'sprinkler' },
-    { id: 'flood', name: 'Submersion', value: 'flood' },
-    { id: 'furrow', name: 'Rigole', value: 'furrow' },
-    { id: 'none', name: 'Aucune (Bour)', value: 'none' },
-  ];
-
-  const soilTypes = soilTypesFromApi.length > 0 ? soilTypesFromApi : defaultSoilTypes;
-  const irrigationTypes = irrigationTypesFromApi.length > 0 ? irrigationTypesFromApi : defaultIrrigationTypes;
-
-  // Fallback crop categories if CMS doesn't return data
-  const defaultCropCategories = [
-    { id: 'trees', name: 'Arbres fruitiers', name_fr: 'Arbres fruitiers', value: 'trees' },
-    { id: 'cereals', name: 'Céréales', name_fr: 'Céréales', value: 'cereals' },
-    { id: 'vegetables', name: 'Légumes', name_fr: 'Légumes', value: 'vegetables' },
-    { id: 'other', name: 'Autre', name_fr: 'Autre', value: 'other' },
-  ];
-
-  // Use CMS categories if available, otherwise use defaults
-  // Deduplicate by value to avoid duplicates (e.g., multiple "Arbres fruitiers" with value "trees")
-  const allCategories = cropCategories.length > 0 ? cropCategories : defaultCropCategories;
+  // Use CMS categories only - deduplicate by value to avoid duplicates
+  // Note: Deduplication is also done in useCropCategories hook, but we do it here as well for safety
   // Use a plain object for deduplication to avoid conflict with OpenLayers Map
-  const categoryDeduplicationMap: Record<string, typeof allCategories[0]> = {};
-  allCategories.forEach(cat => {
-    const catValue = (cat as { value?: string }).value || (cat as { id?: string }).id || '';
-    // Only add if we haven't seen this value before
+  const categoryDeduplicationMap: Record<string, typeof cropCategories[0]> = {};
+  cropCategories.forEach(cat => {
+    const catValue = (cat as { value?: string }).value || '';
+    // Only add if we haven't seen this value before (value is the unique identifier)
+    // This ensures that even if there are duplicate entries in CMS with different IDs, we only show one
     if (catValue && !categoryDeduplicationMap[catValue]) {
       categoryDeduplicationMap[catValue] = cat;
     }
@@ -247,31 +217,18 @@ const MapComponent: React.FC<MapProps> = ({
   const availableCropCategories = Object.values(categoryDeduplicationMap);
 
   // Get available options based on selected crop category
-  // Priority: CMS data > Static data
-  // This preserves the nested behavior: category -> crop type -> variety
-  const availableCropTypes = parcelDetails.crop_category
-    ? (allCropTypesFromStrapi.length > 0
-        ? allCropTypesFromStrapi
-        : getCropTypesByCategory(parcelDetails.crop_category as CropCategoryStatic).map(name => ({ 
-            id: name, 
-            name, 
-            value: name 
-          })))
+  // Use CMS data only - nested behavior: category -> crop type -> variety
+  const availableCropTypes = parcelDetails.crop_category && allCropTypesFromStrapi.length > 0
+    ? allCropTypesFromStrapi
     : [];
 
-  const availableVarieties = parcelDetails.crop_type
-    ? (allVarietiesFromStrapi.length > 0
-        ? allVarietiesFromStrapi
-        : getVarietiesByCropType(parcelDetails.crop_type).map(name => ({ 
-            id: name, 
-            name, 
-            value: name 
-          })))
+  const availableVarieties = parcelDetails.crop_type && allVarietiesFromStrapi.length > 0
+    ? allVarietiesFromStrapi
     : [];
 
-  const availablePlantingSystems = parcelDetails.crop_category
-    ? getPlantingSystemsByCategory(parcelDetails.crop_category as CropCategoryStatic)
-    : [];
+  // Planting systems - TODO: Add to CMS when available
+  // For now, empty array - will be populated from CMS in the future
+  const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = [];
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
@@ -349,7 +306,7 @@ const MapComponent: React.FC<MapProps> = ({
 
   // Auto-update density when planting system changes
   useEffect(() => {
-    if (parcelDetails.planting_system) {
+    if (parcelDetails.planting_system && availablePlantingSystems.length > 0) {
       const system = availablePlantingSystems.find(
         s => s.type === parcelDetails.planting_system ||
           `${s.type} (${s.spacing})` === parcelDetails.planting_system
@@ -360,8 +317,8 @@ const MapComponent: React.FC<MapProps> = ({
             'seedsPerHectare' in system ? system.seedsPerHectare : 0;
         setParcelDetails(prev => ({
           ...prev,
-          density_per_hectare: density,
-          spacing: system.spacing
+          density_per_hectare: density || prev.density_per_hectare,
+          spacing: system.spacing || prev.spacing
         }));
       }
     }
