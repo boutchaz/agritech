@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './MultiTenantAuthProvider';
-import { profitabilityApi } from '../lib/api/profitability';
-import type { Cost, Revenue, CreateCostDto, CreateRevenueDto } from '../lib/api/profitability';
+import { profitabilityApi, CostType, RevenueType } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCropCycles } from '../hooks/useAgriculturalAccounting';
 import { Button } from './ui/button';
@@ -38,8 +37,6 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 import { useTranslation } from 'react-i18next';
-import { accountingApi } from '../lib/accounting-api';
-import { Checkbox } from './ui/checkbox';
 
 interface ParcelProfitabilityProps {
   parcelId: string;
@@ -60,11 +57,10 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddCost, setShowAddCost] = useState(false);
   const [showAddRevenue, setShowAddRevenue] = useState(false);
-  const [createJournalEntry, setCreateJournalEntry] = useState(true);
   const [expandedJournalEntry, setExpandedJournalEntry] = useState<string | null>(null);
 
   const [newCost, setNewCost] = useState({
-    cost_type: 'materials' as const,
+    cost_type: CostType.MATERIALS,
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -73,7 +69,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   });
 
   const [newRevenue, setNewRevenue] = useState({
-    revenue_type: 'harvest' as const,
+    revenue_type: RevenueType.HARVEST,
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     crop_type: '',
@@ -125,17 +121,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   const costs = profitabilityData?.costs || [];
   const revenues = profitabilityData?.revenues || [];
 
-  // Fetch account mappings for journal entry creation
-  const { data: accountMappings } = useQuery({
-    queryKey: ['account-mappings', currentOrganization?.id],
-    queryFn: async () => {
-      if (!currentOrganization) return null;
-      return profitabilityApi.getAccountMappings(currentOrganization.id);
-    },
-    enabled: !!currentOrganization,
-    staleTime: 5 * 60 * 1000,
-  });
-
   // Fetch active crop cycles for this parcel
   const { data: cropCycles = [] } = useCropCycles({ parcel_id: parcelId });
   const activeCropCycles = cropCycles.filter(c => ['land_prep', 'growing', 'harvesting'].includes(c.status));
@@ -146,6 +131,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       if (!currentOrganization || !user) throw new Error('No organization or user');
 
       // Create cost via API
+      // Note: Backend automatically creates journal entry if account mappings are configured
       const cost = await profitabilityApi.createCost(
         {
           parcel_id: parcelId,
@@ -154,68 +140,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
         },
         currentOrganization.id
       );
-
-      // Create journal entry if enabled
-      if (createJournalEntry && accountMappings) {
-        try {
-          // Use account mappings from API (no hardcoded account codes)
-          const expenseAccount =
-            accountMappings.expense[costData.cost_type] ||
-            accountMappings.defaultExpense;
-          const cashAccount = accountMappings.cash;
-
-          if (expenseAccount && cashAccount) {
-            console.log('Creating journal entry with accounts:', {
-              expense: expenseAccount,
-              cash: cashAccount,
-              amount: costData.amount
-            });
-            const journalEntry = await accountingApi.createJournalEntry(
-              {
-                entry_date: new Date(costData.date),
-                entry_type: 'expense',
-                remarks: costData.description || `${costData.cost_type} cost`,
-                reference_type: 'cost',
-                reference_number: cost.id,
-                items: [
-                  {
-                    account_id: expenseAccount.id,
-                    debit: costData.amount,
-                    credit: 0,
-                    description: costData.description || `${costData.cost_type} cost`,
-                    parcel_id: parcelId,
-                  },
-                  {
-                    account_id: cashAccount.id,
-                    debit: 0,
-                    credit: costData.amount,
-                    description: `Payment for ${costData.description || costData.cost_type}`,
-                    parcel_id: parcelId,
-                  }
-                ]
-              },
-              currentOrganization.id,
-              user.id
-            );
-            console.log('Journal entry created:', journalEntry);
-
-            // Post the journal entry so it appears in profitability reports
-            if (journalEntry?.id) {
-              await accountingApi.postJournalEntry(journalEntry.id, user.id);
-              console.log('Journal entry posted successfully');
-            }
-          } else {
-            console.warn('Could not find expense or cash account for journal entry. Please configure account mappings.', {
-              expenseAccount,
-              cashAccount,
-              costType: costData.cost_type
-            });
-          }
-        } catch (journalError) {
-          console.error('Failed to create journal entry:', journalError);
-          // Don't throw - cost was still created successfully
-        }
-      }
 
       return cost;
     },
@@ -226,7 +150,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       queryClient.invalidateQueries({ queryKey: ['journal-entries-parcel', parcelId] });
       setShowAddCost(false);
       setNewCost({
-        cost_type: 'materials',
+        cost_type: CostType.MATERIALS,
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         description: '',
@@ -242,6 +166,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       if (!currentOrganization || !user) throw new Error('No organization or user');
 
       // Create revenue via API
+      // Note: Backend automatically creates journal entry if account mappings are configured
       const revenue = await profitabilityApi.createRevenue(
         {
           parcel_id: parcelId,
@@ -250,68 +175,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
         },
         currentOrganization.id
       );
-
-      // Create journal entry if enabled
-      if (createJournalEntry && accountMappings) {
-        try {
-          // Use account mappings from API (no hardcoded account codes)
-          const revenueAccount =
-            accountMappings.revenue[revenueData.revenue_type] ||
-            accountMappings.defaultRevenue;
-          const cashAccount = accountMappings.cash;
-
-          if (revenueAccount && cashAccount) {
-            console.log('Creating revenue journal entry with accounts:', {
-              revenue: revenueAccount,
-              cash: cashAccount,
-              amount: revenueData.amount
-            });
-            const journalEntry = await accountingApi.createJournalEntry(
-              {
-                entry_date: new Date(revenueData.date),
-                entry_type: 'revenue',
-                remarks: revenueData.description || `${revenueData.revenue_type} revenue`,
-                reference_type: 'revenue',
-                reference_number: revenue.id,
-                items: [
-                  {
-                    account_id: cashAccount.id,
-                    debit: revenueData.amount,
-                    credit: 0,
-                    description: `Receipt from ${revenueData.description || revenueData.revenue_type}`,
-                    parcel_id: parcelId,
-                  },
-                  {
-                    account_id: revenueAccount.id,
-                    debit: 0,
-                    credit: revenueData.amount,
-                    description: revenueData.description || `${revenueData.revenue_type} revenue`,
-                    parcel_id: parcelId,
-                  }
-                ]
-              },
-              currentOrganization.id,
-              user.id
-            );
-            console.log('Revenue journal entry created:', journalEntry);
-
-            // Post the journal entry so it appears in profitability reports
-            if (journalEntry?.id) {
-              await accountingApi.postJournalEntry(journalEntry.id, user.id);
-              console.log('Revenue journal entry posted successfully');
-            }
-          } else {
-            console.warn('Could not find revenue or cash account for journal entry. Please configure account mappings.', {
-              revenueAccount,
-              cashAccount,
-              revenueType: revenueData.revenue_type
-            });
-          }
-        } catch (journalError) {
-          console.error('Failed to create journal entry:', journalError);
-          // Don't throw - revenue was still created successfully
-        }
-      }
 
       return revenue;
     },
@@ -322,7 +185,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       queryClient.invalidateQueries({ queryKey: ['journal-entries-parcel', parcelId] });
       setShowAddRevenue(false);
       setNewRevenue({
-        revenue_type: 'harvest',
+        revenue_type: RevenueType.HARVEST,
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         crop_type: '',
@@ -1017,13 +880,13 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
               <Label>{t('profitability.addCost.type')}</Label>
               <NativeSelect
                 value={newCost.cost_type}
-                onChange={(e) => setNewCost({ ...newCost, cost_type: e.target.value as any })}
+                onChange={(e) => setNewCost({ ...newCost, cost_type: e.target.value as CostType })}
               >
-                <option value="materials">{t('profitability.addCost.types.materials')}</option>
-                <option value="labor">{t('profitability.addCost.types.labor')}</option>
-                <option value="utilities">{t('profitability.addCost.types.utilities')}</option>
-                <option value="equipment">{t('profitability.addCost.types.equipment')}</option>
-                <option value="other">{t('profitability.addCost.types.other')}</option>
+                <option value={CostType.MATERIALS}>{t('profitability.addCost.types.materials')}</option>
+                <option value={CostType.LABOR}>{t('profitability.addCost.types.labor')}</option>
+                <option value={CostType.UTILITIES}>{t('profitability.addCost.types.utilities')}</option>
+                <option value={CostType.EQUIPMENT}>{t('profitability.addCost.types.equipment')}</option>
+                <option value={CostType.OTHER}>{t('profitability.addCost.types.other')}</option>
               </NativeSelect>
             </div>
             <div>
@@ -1075,24 +938,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 placeholder={t('profitability.addCost.placeholder')}
               />
             </div>
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="create-journal-entry-cost"
-                checked={createJournalEntry}
-                onCheckedChange={(checked) => setCreateJournalEntry(checked as boolean)}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="create-journal-entry-cost"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {t('profitability.addCost.createJournalEntry')}
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  {t('profitability.addCost.journalEntryHelp')}
-                </p>
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1123,11 +968,11 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
               <Label>{t('profitability.addRevenue.type')}</Label>
               <NativeSelect
                 value={newRevenue.revenue_type}
-                onChange={(e) => setNewRevenue({ ...newRevenue, revenue_type: e.target.value as any })}
+                onChange={(e) => setNewRevenue({ ...newRevenue, revenue_type: e.target.value as RevenueType })}
               >
-                <option value="harvest">{t('profitability.addRevenue.types.harvest')}</option>
-                <option value="subsidy">{t('profitability.addRevenue.types.subsidy')}</option>
-                <option value="other">{t('profitability.addRevenue.types.other')}</option>
+                <option value={RevenueType.HARVEST}>{t('profitability.addRevenue.types.harvest')}</option>
+                <option value={RevenueType.SUBSIDY}>{t('profitability.addRevenue.types.subsidy')}</option>
+                <option value={RevenueType.OTHER}>{t('profitability.addRevenue.types.other')}</option>
               </NativeSelect>
             </div>
             <div>
@@ -1198,24 +1043,6 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                 onChange={(e) => setNewRevenue({ ...newRevenue, description: e.target.value })}
                 placeholder={t('profitability.addRevenue.placeholder')}
               />
-            </div>
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="create-journal-entry-revenue"
-                checked={createJournalEntry}
-                onCheckedChange={(checked) => setCreateJournalEntry(checked as boolean)}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="create-journal-entry-revenue"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {t('profitability.addRevenue.createJournalEntry')}
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  {t('profitability.addRevenue.journalEntryHelp')}
-                </p>
-              </div>
             </div>
           </div>
           <DialogFooter>

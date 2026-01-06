@@ -49,6 +49,7 @@ import type {
   QualityGrade,
 } from '@/types/reception';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 // Zod schema for reception batch form
 const receptionBatchSchema = z.object({
@@ -406,13 +407,21 @@ export default function ReceptionBatchForm({
               <div>
                 <Label htmlFor="parcel_id" className="text-sm font-medium">
                   Parcelle d'origine *
+                  {selectedHarvestId && (
+                    <span className="ml-2 text-xs text-gray-500 font-normal">
+                      (auto-rempli depuis la récolte)
+                    </span>
+                  )}
                 </Label>
                 <Select
                   value={form.watch('parcel_id') || ''}
                   onValueChange={(value) => form.setValue('parcel_id', value)}
-                  disabled={parcelsLoading}
+                  disabled={parcelsLoading || !!selectedHarvestId}
                 >
-                  <SelectTrigger className="mt-1 bg-white">
+                  <SelectTrigger className={cn(
+                    "mt-1",
+                    selectedHarvestId ? "bg-gray-100" : "bg-white"
+                  )}>
                     <SelectValue placeholder={parcelsLoading ? "Chargement..." : "Sélectionner une parcelle"} />
                   </SelectTrigger>
                   <SelectContent>
