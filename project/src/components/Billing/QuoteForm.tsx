@@ -531,11 +531,11 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                     <tr>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-24", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.account')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
-                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-32", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
+                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-36", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
                       <th className="w-12"></th>
                     </tr>
                   </thead>

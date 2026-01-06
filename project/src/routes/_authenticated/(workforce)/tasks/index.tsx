@@ -30,11 +30,18 @@ function TasksListPage() {
     queryKey: ['farms', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-      const farmsList = await farmsApi.getAll(
+      const data = await farmsApi.getAll(
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      return farmsList.map(f => ({ id: f.id, name: f.name }));
+      // Handle paginated response: { success: true, farms: [...], total: ... }
+      let farmsList: any[] = [];
+      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
+        farmsList = (data as { farms: any[] }).farms;
+      } else if (Array.isArray(data)) {
+        farmsList = data;
+      }
+      return farmsList.map((f: any) => ({ id: f.farm_id || f.id, name: f.farm_name || f.name }));
     },
     enabled: !!currentOrganization?.id,
   });

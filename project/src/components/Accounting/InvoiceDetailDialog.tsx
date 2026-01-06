@@ -8,13 +8,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react';
+import { useInvoice, useUpdateInvoiceStatus } from '@/hooks/useInvoices';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
 import { invoicesApi } from '@/lib/api/invoices';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -28,8 +29,10 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   invoiceId,
 }) => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
 
   const handleSendEmail = async () => {
     if (!invoiceId) return;
@@ -49,6 +52,29 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
       setIsSendingEmail(false);
     }
   };
+
+  const handleMarkAsPaid = async () => {
+    if (!invoiceId || !invoice) return;
+    
+    if (!confirm(t('invoices.markAsPaid.confirm', 'Are you sure you want to mark this invoice as paid?'))) {
+      return;
+    }
+
+    try {
+      await updateInvoiceStatus.mutateAsync({
+        invoice_id: invoiceId,
+        status: 'paid',
+        remarks: invoice.remarks || undefined,
+      });
+      toast.success(t('invoices.markAsPaid.success', 'Invoice marked as paid successfully'));
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    } catch (err) {
+      console.error('Error marking invoice as paid:', err);
+      toast.error(err instanceof Error ? err.message : t('invoices.markAsPaid.error', 'Failed to mark invoice as paid'));
+    }
+  };
+
+  const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
 
   if (!invoiceId) return null;
 
@@ -261,18 +287,35 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
 
             {/* Actions */}
             <DialogFooter className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                variant="outline"
-                onClick={handleSendEmail}
-                disabled={isSendingEmail}
-              >
-                {isSendingEmail ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Mail className="h-4 w-4 mr-2" />
+              <div className="flex gap-2">
+                {canMarkAsPaid && (
+                  <Button
+                    variant="default"
+                    onClick={handleMarkAsPaid}
+                    disabled={updateInvoiceStatus.isPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {updateInvoiceStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <DollarSign className="h-4 w-4 mr-2" />
+                    )}
+                    {t('invoices.markAsPaid.button', 'Mark as Paid')}
+                  </Button>
                 )}
-                {t('invoices.actions.sendEmail', 'Send Email')}
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSendEmail}
+                  disabled={isSendingEmail}
+                >
+                  {isSendingEmail ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-2" />
+                  )}
+                  {t('invoices.actions.sendEmail', 'Send Email')}
+                </Button>
+              </div>
             </DialogFooter>
           </div>
         )}

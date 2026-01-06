@@ -44,9 +44,9 @@ function AppContent() {
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
 
   const { data: report, isLoading, error } = useQuery<AgedReport>({
-    queryKey: ['aged-receivables', asOfDate],
-    queryFn: () => financialReportsApi.getAgedReceivables(asOfDate),
-    enabled: !!currentOrganization,
+    queryKey: ['aged-receivables', currentOrganization?.id, asOfDate],
+    queryFn: () => financialReportsApi.getAgedReceivables(asOfDate, currentOrganization?.id),
+    enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
   });
 

@@ -408,6 +408,27 @@ export class PaymentRecordsService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
+    // Validate and handle farm_id - it's required (NOT NULL) in the database
+    let farmId = paymentData.farm_id;
+    if (!farmId || (typeof farmId === 'string' && farmId.trim() === '')) {
+      // If worker has no farm, get the first farm from the organization as fallback
+      const { data: farms, error: farmsError } = await client
+        .from('farms')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (farmsError || !farms) {
+        throw new BadRequestException(
+          'Cannot create payment record: worker has no farm assigned and no active farms found in organization'
+        );
+      }
+
+      farmId = farms.id;
+    }
+
     // Extract bonuses and deductions arrays (they go to separate tables)
     const bonusesArray = paymentData.bonuses || [];
     const deductionsArray = paymentData.deductions || [];
@@ -420,6 +441,7 @@ export class PaymentRecordsService {
     const { bonuses: _, deductions: __, ...restData } = paymentData;
     const insertData = {
       ...restData,
+      farm_id: farmId, // Ensure farm_id is always set
       bonuses: bonusesTotal, // NUMERIC field - total amount
       deductions: deductionsTotal, // NUMERIC field - total amount
       organization_id: organizationId,

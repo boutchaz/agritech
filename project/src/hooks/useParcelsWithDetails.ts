@@ -42,10 +42,18 @@ export function useParcelsWithDetails() {
         console.warn('Fetching parcels for organization:', currentOrganization.id);
 
         // Step 1: Get all farms for this organization using API
-        const farms = await farmsApi.getAll(
+        const data = await farmsApi.getAll(
           { organization_id: currentOrganization.id },
           currentOrganization.id
         );
+
+        // Handle paginated response: { success: true, farms: [...], total: ... }
+        let farms: any[] = [];
+        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
+          farms = (data as { farms: any[] }).farms;
+        } else if (Array.isArray(data)) {
+          farms = data;
+        }
 
         console.warn('Found farms:', farms?.length || 0);
 
@@ -54,7 +62,7 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        const farmIds = farms.map(f => f.id);
+        const farmIds = farms.map((f: any) => f.farm_id || f.id);
         console.warn('Farm IDs:', farmIds);
 
         // Step 2: Get all parcels for these farms using API

@@ -112,13 +112,41 @@ const InfrastructureManagement: React.FC = () => {
     value: string | number,
     structureToUpdate: Partial<Structure> = newStructure
   ) => {
-    const updatedDetails = { ...structureToUpdate.structure_details, [field]: value };
+    // Helper function to update nested object paths
+    const updateNestedObject = (
+      obj: Record<string, unknown>,
+      path: string,
+      val: string | number
+    ): Record<string, unknown> => {
+      const keys = path.split('.');
+      const result = { ...obj };
+      let current: Record<string, unknown> = result;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        const currentValue = current[key];
+        if (!currentValue || typeof currentValue !== 'object' || Array.isArray(currentValue) || currentValue === null) {
+          current[key] = {};
+        } else {
+          current[key] = { ...(currentValue as Record<string, unknown>) };
+        }
+        current = current[key] as Record<string, unknown>;
+      }
+      
+      current[keys[keys.length - 1]] = val;
+      return result;
+    };
+
+    const updatedDetails = field.includes('.')
+      ? updateNestedObject(structureToUpdate.structure_details || {}, field, value)
+      : { ...structureToUpdate.structure_details, [field]: value };
 
     // Auto-calculate basin volume
     if (structureToUpdate.type === 'basin' && field.startsWith('dimensions.')) {
-      const dimensions = updatedDetails.dimensions || {};
-      if (updatedDetails.shape && Object.keys(dimensions).length > 0) {
-        updatedDetails.volume = calculateBasinVolume(updatedDetails.shape, dimensions);
+      const dimensions = (updatedDetails.dimensions as Record<string, number>) || {};
+      const shape = updatedDetails.shape as string;
+      if (shape && Object.keys(dimensions).length > 0) {
+        updatedDetails.volume = calculateBasinVolume(shape, dimensions);
       }
     }
 
@@ -138,6 +166,20 @@ const InfrastructureManagement: React.FC = () => {
   const renderStructureFields = () => {
     const structure = editingStructure || newStructure;
     const details = structure.structure_details || {};
+    
+    // Helper to safely get nested values
+    const getNestedValue = (obj: Record<string, unknown>, path: string): string | number => {
+      const keys = path.split('.');
+      let current: unknown = obj;
+      for (const key of keys) {
+        if (current && typeof current === 'object' && !Array.isArray(current) && key in current) {
+          current = (current as Record<string, unknown>)[key];
+        } else {
+          return '';
+        }
+      }
+      return (current as string | number) || '';
+    };
 
     switch (structure.type) {
       case 'stable':
@@ -218,9 +260,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_radius"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.radius || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.radius', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.radius')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.radius', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -228,9 +270,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_height"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.height || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.height')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -243,9 +285,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_top_width"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.top_width || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.top_width', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.top_width')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.top_width', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -253,9 +295,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_bottom_width"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.bottom_width || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.bottom_width', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.bottom_width')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.bottom_width', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -265,9 +307,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_length"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.length || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.length')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -275,9 +317,9 @@ const InfrastructureManagement: React.FC = () => {
                         <Input
                           id="basin_height2"
                           type="number"
-                          step="1"
-                          value={details.dimensions?.height || ''}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
+                          step="0.01"
+                          value={getNestedValue(details, 'dimensions.height')}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
                           required
                         />
                       </FormField>
@@ -290,9 +332,9 @@ const InfrastructureManagement: React.FC = () => {
                       <Input
                         id="rect_width"
                         type="number"
-                        step="1"
-                        value={details.dimensions?.width || ''}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.width', Number(e.target.value))}
+                        step="0.01"
+                        value={getNestedValue(details, 'dimensions.width')}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.width', Number(e.target.value) || 0)}
                         required
                       />
                     </FormField>
@@ -300,9 +342,9 @@ const InfrastructureManagement: React.FC = () => {
                       <Input
                         id="rect_length"
                         type="number"
-                        step="1"
-                        value={details.dimensions?.length || ''}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value))}
+                        step="0.01"
+                        value={getNestedValue(details, 'dimensions.length')}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value) || 0)}
                         required
                       />
                     </FormField>
@@ -310,9 +352,9 @@ const InfrastructureManagement: React.FC = () => {
                       <Input
                         id="rect_height"
                         type="number"
-                        step="1"
-                        value={details.dimensions?.height || ''}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value))}
+                        step="0.01"
+                        value={getNestedValue(details, 'dimensions.height')}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
                         required
                       />
                     </FormField>
@@ -324,7 +366,7 @@ const InfrastructureManagement: React.FC = () => {
                     {t('infrastructure.fields.calculatedVolume')}
                   </label>
                   <div className="mt-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-                    {details.volume?.toFixed(2) || 0} {t('infrastructure.units.cubicMeters')}
+                    {typeof details.volume === 'number' ? details.volume.toFixed(2) : '0.00'} {t('infrastructure.units.cubicMeters')}
                   </div>
                 </div>
               </div>

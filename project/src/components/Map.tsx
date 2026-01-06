@@ -1629,6 +1629,26 @@ const MapComponent: React.FC<MapProps> = ({
                     </div>
                   )}
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Type de plantation
+                    </label>
+                    <select
+                      value={parcelDetails.planting_type}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_type: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="traditional">{t('parcels.plantingTypes.traditional')}</option>
+                      <option value="intensive">{t('parcels.plantingTypes.intensive')}</option>
+                      <option value="super_intensive">{t('parcels.plantingTypes.super_intensive')}</option>
+                      <option value="organic">{t('parcels.plantingTypes.organic')}</option>
+                    </select>
+                  </div>
+
                   {parcelDetails.crop_category === 'trees' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

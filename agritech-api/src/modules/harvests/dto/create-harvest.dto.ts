@@ -131,6 +131,15 @@ export class CreateHarvestDto {
   @IsUUID()
   harvest_task_id?: string;
 
+  @ApiPropertyOptional({ description: 'Lot number for traceability' })
+  @IsOptional()
+  @IsString()
+  lot_number?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this is a partial harvest' })
+  @IsOptional()
+  is_partial?: boolean;
+
   @ApiPropertyOptional({ description: 'Additional notes' })
   @IsOptional()
   @IsString()

@@ -1,257 +1,157 @@
 {
+  "_comment": "Complete seed data for AgriTech Strapi CMS - Auto-deployment ready",
+  "last_updated": "2026-01-06",
+  "version": "2.0",
+
+  "soil_types": [
+    {"value": "clay", "name": "Argileux", "name_en": "Clay", "name_fr": "Argileux", "name_ar": "طيني", "description": "Sol lourd et fertile"},
+    {"value": "sandy", "name": "Sableux", "name_en": "Sandy", "name_fr": "Sableux", "name_ar": "رملي", "description": "Sol léger et drainant"},
+    {"value": "loam", "name": "Limoneux", "name_en": "Loam", "name_fr": "Limoneux", "name_ar": "طمي", "description": "Sol équilibré"},
+    {"value": "silt", "name": "Limon", "name_en": "Silt", "name_fr": "Limon", "name_ar": "غرين", "description": "Sol fertile et retient l'eau"},
+    {"value": "peat", "name": "Tourbeux", "name_en": "Peat", "name_fr": "Tourbeux", "name_ar": "تربي", "description": "Sol organique"},
+    {"value": "chalk", "name": "Calcaire", "name_en": "Chalk", "name_fr": "Calcaire", "name_ar": "جيري", "description": "Sol alcalin"}
+  ],
+
+  "irrigation_types": [
+    {"value": "drip", "name": "Goutte à goutte", "name_en": "Drip", "name_fr": "Goutte à goutte", "name_ar": "الري بالتنقيط", "description": "Irrigation localisée précise"},
+    {"value": "sprinkler", "name": "Aspersion", "name_en": "Sprinkler", "name_fr": "Aspersion", "name_ar": "الري بالرش", "description": "Irrigation par pulvérisation"},
+    {"value": "flood", "name": "Submersion", "name_en": "Flood", "name_fr": "Submersion", "name_ar": "الري بالغمر", "description": "Irrigation par inondation"},
+    {"value": "furrow", "name": "Rigole", "name_en": "Furrow", "name_fr": "Rigole", "name_ar": "الري بالممرات", "description": "Irrigation dans des sillons"},
+    {"value": "none", "name": "Aucune (Bour)", "name_en": "None (Rainfed)", "name_fr": "Aucune (Bour)", "name_ar": "بد ري (بور)", "description": "Culture pluviale"}
+  ],
+
+  "crop_categories": [
+    {"value": "trees", "name": "Arbres", "name_en": "Trees", "name_fr": "Arbres", "name_ar": "أشجار", "description": "Arbres fruitiers et forestiers"},
+    {"value": "cereals", "name": "Céréales", "name_en": "Cereals", "name_fr": "Céréales", "name_ar": "الحبوب", "description": "Blé, orge, maïs, riz"},
+    {"value": "vegetables", "name": "Légumes", "name_en": "Vegetables", "name_fr": "Légumes", "name_ar": "خضروات", "description": "Culture maraîchère"},
+    {"value": "other", "name": "Autres", "name_en": "Other", "name_fr": "Autres", "name_ar": "أخرى", "description": "Autres types de cultures"}
+  ],
+
+  "crop_types": [
+    {"value": "olivier", "name": "Olivier", "name_en": "Olive Tree", "name_fr": "Olivier", "name_ar": "شجرة الزيتون", "category": "trees", "description": "Arbre à olives"},
+    {"value": "pêcher", "name": "Pêcher", "name_en": "Peach Tree", "name_fr": "Pêcher", "name_ar": "شجرة الخوخ", "category": "trees"},
+    {"value": "abricotier", "name": "Abricotier", "name_en": "Apricot Tree", "name_fr": "Abricotier", "name_ar": "شجرة المشمش", "category": "trees"},
+    {"value": "prunier", "name": "Prunier", "name_en": "Plum Tree", "name_fr": "Prunier", "name_ar": "شجرة البرقوق", "category": "trees"},
+    {"value": "cerisier", "name": "Cerisier", "name_en": "Cherry Tree", "name_fr": "Cerisier", "name_ar": "شجرة الكرز", "category": "trees"},
+    {"value": "amandier", "name": "Amandier", "name_en": "Almond Tree", "name_fr": "Amandier", "name_ar": "شجرة اللوز", "category": "trees"},
+    {"value": "pommier", "name": "Pommier", "name_en": "Apple Tree", "name_fr": "Pommier", "name_ar": "شجرة التفاح", "category": "trees"},
+    {"value": "poirier", "name": "Poirier", "name_en": "Pear Tree", "name_fr": "Poirier", "name_ar": "شجرة الكمثرى", "category": "trees"},
+    {"value": "oranger", "name": "Oranger", "name_en": "Orange Tree", "name_fr": "Oranger", "name_ar": "شجرة البرتقال", "category": "trees"},
+    {"value": "mandariner", "name": "Mandariner", "name_en": "Mandarin Tree", "name_fr": "Mandariner", "name_ar": "شجرة المندرين", "category": "trees"},
+    {"value": "citronnier", "name": "Citronnier", "name_en": "Lemon Tree", "name_fr": "Citronnier", "name_ar": "شجرة الليمون", "category": "trees"},
+    {"value": "avocatier", "name": "Avocatier", "name_en": "Avocado Tree", "name_fr": "Avocatier", "name_ar": "شجرة الأفوكادو", "category": "trees"},
+    {"value": "manguier", "name": "Manguier", "name_en": "Mango Tree", "name_fr": "Manguier", "name_ar": "شجرة المانجو", "category": "trees"},
+    {"value": "vigne", "name": "Vigne", "name_en": "Vine", "name_fr": "Vigne", "name_ar": "كرمة", "category": "trees"},
+    {"value": "figuier", "name": "Figuier", "name_en": "Fig Tree", "name_fr": "Figuier", "name_ar": "شجرة التين", "category": "trees"},
+    {"value": "blé_tendre", "name": "Blé tendre", "name_en": "Common Wheat", "name_fr": "Blé tendre", "name_ar": "القمح اللين", "category": "cereals"},
+    {"value": "blé_dur", "name": "Blé dur", "name_en": "Durum Wheat", "name_fr": "Blé dur", "name_ar": "القمح القاسي", "category": "cereals"},
+    {"value": "orge", "name": "Orge", "name_en": "Barley", "name_fr": "Orge", "name_ar": "الشعير", "category": "cereals"},
+    {"value": "maïs", "name": "Maïs", "name_en": "Corn", "name_fr": "Maïs", "name_ar": "الذرة", "category": "cereals"},
+    {"value": "riz", "name": "Riz", "name_en": "Rice", "name_fr": "Riz", "name_ar": "الأرز", "category": "cereals"},
+    {"value": "tomate", "name": "Tomate", "name_en": "Tomato", "name_fr": "Tomate", "name_ar": "طماطم", "category": "vegetables"},
+    {"value": "pomme_de_terre", "name": "Pomme de terre", "name_en": "Potato", "name_fr": "Pomme de terre", "name_ar": "البطاطس", "category": "vegetables"},
+    {"value": "oignon", "name": "Oignon", "name_en": "Onion", "name_fr": "Oignon", "name_ar": "البصل", "category": "vegetables"},
+    {"value": "carotte", "name": "Carotte", "name_en": "Carrot", "name_fr": "Carotte", "name_ar": "الجزر", "category": "vegetables"}
+  ],
+
+  "varieties": [
+    {"value": "arbequine", "name": "Arbequine", "name_en": "Arbequina", "name_fr": "Arbequine", "name_ar": "أربيكين", "crop_type": "olivier", "origin": "Espagne", "main_use": "Huile"},
+    {"value": "arbosana", "name": "Arbosana", "name_en": "Arbosana", "name_fr": "Arbosana", "name_ar": "أربوسانا", "crop_type": "olivier", "origin": "Espagne", "main_use": "Huile"},
+    {"value": "menara", "name": "Menara/Haouzia", "name_en": "Menara/Haouzia", "name_fr": "Menara/Haouzia", "name_ar": "منارة/هاوية", "crop_type": "olivier", "origin": "Maroc", "main_use": "Huile et fruit"},
+    {"value": "picholine_marocaine", "name": "Picholine marocaine", "name_en": "Moroccan Picholine", "name_fr": "Picholine marocaine", "name_ar": "بيشولين مغربية", "crop_type": "olivier", "origin": "Maroc", "main_use": "Huile et fruit"},
+    {"value": "picholine_languedoc", "name": "Picholine languedoc", "name_en": "Picholine Languedoc", "name_fr": "Picholine languedoc", "name_ar": "بيشولين لانغدوك", "crop_type": "olivier", "origin": "France", "main_use": "Huile et fruit"},
+    {"value": "koroneiki", "name": "Koroneiki", "name_en": "Koroneiki", "name_fr": "Koroneiki", "name_ar": "كورونيكي", "crop_type": "olivier", "origin": "Grèce", "main_use": "Huile et fruit"},
+    {"value": "meslala", "name": "Meslala", "name_en": "Meslala", "name_fr": "Meslala", "name_ar": "مسلالة", "crop_type": "olivier", "origin": "Maroc", "main_use": "Fruit"},
+    {"value": "roma", "name": "Roma", "name_en": "Roma", "name_fr": "Roma", "name_ar": "روما", "crop_type": "tomate", "origin": "Italie", "main_use": "Sauces"},
+    {"value": "beefsteak", "name": "Beefsteak", "name_en": "Beefsteak", "name_fr": "Beefsteak", "name_ar": "بيفستيك", "crop_type": "tomate", "origin": "USA", "main_use": "Fresh consumption"},
+    {"value": "cherry", "name": "Cherry", "name_en": "Cherry", "name_fr": "Cherry", "name_ar": "كري", "crop_type": "tomate", "origin": "International", "main_use": "Salads"}
+  ],
+
+  "planting_systems": [
+    {"type": "Super intensif", "spacing": "4x1,5", "trees_per_hectare": 1666, "category": "trees"},
+    {"type": "Super intensif", "spacing": "3x1,5", "trees_per_hectare": 2222, "category": "trees"},
+    {"type": "Intensif", "spacing": "4x2", "trees_per_hectare": 1250, "category": "trees"},
+    {"type": "Intensif", "spacing": "3x2", "trees_per_hectare": 1666, "category": "trees"},
+    {"type": "Semi-intensif", "spacing": "6x3", "trees_per_hectare": 555, "category": "trees"},
+    {"type": "Traditionnel amélioré", "spacing": "6x6", "trees_per_hectare": 277, "category": "trees"},
+    {"type": "Traditionnel", "spacing": "8x8", "trees_per_hectare": 156, "category": "trees"},
+    {"type": "Traditionnel", "spacing": "8x7", "trees_per_hectare": 179, "category": "trees"},
+    {"type": "Traditionnel très espacé", "spacing": "10x10", "trees_per_hectare": 100, "category": "trees"}
+  ],
+
+  "planting_types": [
+    {"value": "traditional", "name": "Traditionnelle", "name_en": "Traditional", "name_fr": "Traditionnelle", "name_ar": "تقليدية"},
+    {"value": "intensive", "name": "Intensive", "name_en": "Intensive", "name_fr": "Intensive", "name_ar": "مكثفة"},
+    {"value": "super_intensive", "name": "Super-intensive", "name_en": "Super-intensive", "name_fr": "Super-intensive", "name_ar": "مكثفة جداً"},
+    {"value": "organic", "name": "Biologique", "name_en": "Organic", "name_fr": "Biologique", "name_ar": "عضوية"}
+  ],
+
+  "worker_types": [
+    {"value": "permanent", "name": "Salarié fixe", "name_en": "Permanent Employee", "name_fr": "Salarié fixe", "name_ar": "موظف دائم"},
+    {"value": "seasonal", "name": "Salarié saisonnier", "name_en": "Seasonal Worker", "name_fr": "Salarié saisonnier", "name_ar": "عامل موسمي"},
+    {"value": "temporary", "name": "Salarié temporaire", "name_en": "Temporary Worker", "name_fr": "Salarié temporaire", "name_ar": "عامل مؤقت"},
+    {"value": "contractor", "name": "Sous-traitant", "name_en": "Contractor", "name_fr": "Sous-traitant", "name_ar": "مقاول من الباطن"}
+  ],
+
+  "task_priorities": [
+    {"value": "low", "name": "Faible", "name_en": "Low", "name_fr": "Faible", "name_ar": "منخفض"},
+    {"value": "medium", "name": "Moyen", "name_en": "Medium", "name_fr": "Moyen", "name_ar": "متوسط"},
+    {"value": "high", "name": "Élevé", "name_en": "High", "name_fr": "Élevé", "name_ar": "عالي"},
+    {"value": "urgent", "name": "Urgent", "name_en": "Urgent", "name_fr": "Urgent", "name_ar": "عاجل"}
+  ],
+
+  "harvest_statuses": [
+    {"value": "planned", "name": "Planifié", "name_en": "Planned", "name_fr": "Planifié", "name_ar": "مخطط"},
+    {"value": "in_progress", "name": "En cours", "name_en": "In Progress", "name_fr": "En cours", "name_ar": "قيد التنفيذ"},
+    {"value": "completed", "name": "Terminé", "name_en": "Completed", "name_fr": "Terminé", "name_ar": "مكتمل"},
+    {"value": "cancelled", "name": "Annulé", "name_en": "Cancelled", "name_fr": "Annulé", "name_ar": "ملغي"}
+  ],
+
+  "quality_grades": [
+    {"value": "premium", "name": "Premium", "name_en": "Premium", "name_fr": "Premium", "name_ar": "ممتاز"},
+    {"value": "grade_a", "name": "Calibre A", "name_en": "Grade A", "name_fr": "Calibre A", "name_ar": "درجة أ"},
+    {"value": "grade_b", "name": "Calibre B", "name_en": "Grade B", "name_fr": "Calibre B", "name_ar": "درجة ب"},
+    {"value": "grade_c", "name": "Calibre C", "name_en": "Grade C", "name_fr": "Calibre C", "name_ar": "درجة ج"}
+  ],
+
+  "payment_methods": [
+    {"value": "cash", "name": "Espèces", "name_en": "Cash", "name_fr": "Espèces", "name_ar": "نقداً"},
+    {"value": "transfer", "name": "Virement bancaire", "name_en": "Bank Transfer", "name_fr": "Virement bancaire", "name_ar": "تحويل بنكي"},
+    {"value": "check", "name": "Chèque", "name_en": "Check", "name_fr": "Chèque", "name_ar": "شيك"},
+    {"value": "card", "name": "Carte bancaire", "name_en": "Credit Card", "name_fr": "Carte bancaire", "name_ar": "بطاقة بنكية"}
+  ],
+
+  "payment_statuses": [
+    {"value": "pending", "name": "En attente", "name_en": "Pending", "name_fr": "En attente", "name_ar": "قيد الانتظار"},
+    {"value": "completed", "name": "Payé", "name_en": "Completed", "name_fr": "Payé", "name_ar": "مدفوع"},
+    {"value": "failed", "name": "Échoué", "name_en": "Failed", "name_fr": "Échoué", "name_ar": "فشل"},
+    {"value": "refunded", "name": "Remboursé", "name_en": "Refunded", "name_fr": "Remboursé", "name_ar": "مسترد"}
+  ],
+
+  "cost_categories": [
+    {"value": "fertilizers", "name": "Engrais", "name_en": "Fertilizers", "name_fr": "Engrais", "name_ar": "أسمدة"},
+    {"value": "pesticides", "name": "Pesticides", "name_en": "Pesticides", "name_fr": "Pesticides", "name_ar": "مبيدات"},
+    {"value": "seeds", "name": "Semences", "name_en": "Seeds", "name_fr": "Semences", "name_ar": "بذور"},
+    {"value": "labor", "name": "Main d'œuvre", "name_en": "Labor", "name_fr": "Main d'œuvre", "name_ar": "عمالة"},
+    {"value": "irrigation", "name": "Irrigation", "name_en": "Irrigation", "name_fr": "Irrigation", "name_ar": "ري"},
+    {"value": "equipment", "name": "Équipement", "name_en": "Equipment", "name_fr": "Équipement", "name_ar": "معدات"},
+    {"value": "fuel", "name": "Carburant", "name_en": "Fuel", "name_fr": "Carburant", "name_ar": "وقود"}
+  ],
+
+  "revenue_categories": [
+    {"value": "fruit_sales", "name": "Vente de fruits", "name_en": "Fruit Sales", "name_fr": "Vente de fruits", "name_ar": "بيع الفاكهة"},
+    {"value": "oil_sales", "name": "Vente d'huile", "name_en": "Oil Sales", "name_fr": "Vente d'huile", "name_ar": "بيع الزيت"},
+    {"value": "seed_sales", "name": "Vente de semences", "name_en": "Seed Sales", "name_fr": "Vente de semences", "name_ar": "بيع البذور"},
+    {"value": "subsidies", "name": "Subventions", "name_en": "Subsidies", "name_fr": "Subventions", "name_ar": "دعم حكومي"}
+  ],
+
   "test_types": [
-    {
-      "name": "Soil pH Test",
-      "description": "Measures soil acidity/alkalinity level",
-      "parameters": {
-        "unit": "pH",
-        "range": "0-14",
-        "optimal": "6.0-7.0"
-      }
-    },
-    {
-      "name": "Soil Nitrogen Test",
-      "description": "Measures nitrogen content in soil",
-      "parameters": {
-        "unit": "ppm",
-        "range": "0-100",
-        "optimal": "20-40"
-      }
-    },
-    {
-      "name": "Soil Phosphorus Test",
-      "description": "Measures phosphorus content in soil",
-      "parameters": {
-        "unit": "ppm",
-        "range": "0-100",
-        "optimal": "25-50"
-      }
-    },
-    {
-      "name": "Soil Potassium Test",
-      "description": "Measures potassium content in soil",
-      "parameters": {
-        "unit": "ppm",
-        "range": "0-500",
-        "optimal": "150-250"
-      }
-    },
-    {
-      "name": "Soil Organic Matter Test",
-      "description": "Measures organic matter percentage in soil",
-      "parameters": {
-        "unit": "%",
-        "range": "0-10",
-        "optimal": "3-5"
-      }
-    },
-    {
-      "name": "Water Quality Test",
-      "description": "Tests irrigation water quality and safety",
-      "parameters": {
-        "tests": ["pH", "EC", "TDS", "Heavy Metals"]
-      }
-    },
-    {
-      "name": "Plant Tissue Analysis",
-      "description": "Analyzes nutrient levels in plant tissues",
-      "parameters": {
-        "nutrients": ["N", "P", "K", "Ca", "Mg", "Fe"]
-      }
-    }
-  ],
-  "product_categories": [
-    {
-      "name": "Fruits",
-      "description": "Fresh fruits and fruit products"
-    },
-    {
-      "name": "Vegetables",
-      "description": "Fresh vegetables and vegetable products"
-    },
-    {
-      "name": "Cereals",
-      "description": "Grains and cereal crops"
-    },
-    {
-      "name": "Legumes",
-      "description": "Beans, peas, and other leguminous crops"
-    },
-    {
-      "name": "Nuts",
-      "description": "Tree nuts and nut products"
-    },
-    {
-      "name": "Herbs & Spices",
-      "description": "Culinary and medicinal herbs and spices"
-    },
-    {
-      "name": "Oil Crops",
-      "description": "Crops grown for oil extraction"
-    },
-    {
-      "name": "Fodder Crops",
-      "description": "Crops grown for animal feed"
-    }
-  ],
-  "product_subcategories": {
-    "Fruits": [
-      {"name": "Citrus Fruits", "description": "Oranges, lemons, limes, grapefruits"},
-      {"name": "Stone Fruits", "description": "Peaches, plums, cherries, apricots"},
-      {"name": "Berries", "description": "Strawberries, blueberries, raspberries"},
-      {"name": "Tropical Fruits", "description": "Bananas, mangoes, pineapples, papayas"},
-      {"name": "Pome Fruits", "description": "Apples, pears, quinces"}
-    ],
-    "Vegetables": [
-      {"name": "Leafy Greens", "description": "Lettuce, spinach, kale, cabbage"},
-      {"name": "Root Vegetables", "description": "Carrots, beets, radishes, turnips"},
-      {"name": "Tubers", "description": "Potatoes, sweet potatoes, yams"},
-      {"name": "Solanaceous", "description": "Tomatoes, peppers, eggplants"},
-      {"name": "Cucurbits", "description": "Cucumbers, squash, melons, pumpkins"},
-      {"name": "Alliums", "description": "Onions, garlic, leeks, shallots"}
-    ],
-    "Cereals": [
-      {"name": "Wheat", "description": "Common wheat and durum wheat"},
-      {"name": "Rice", "description": "Paddy rice and processed rice"},
-      {"name": "Corn/Maize", "description": "Sweet corn and field corn"},
-      {"name": "Barley", "description": "Malting and feed barley"},
-      {"name": "Oats", "description": "Common oats for food and feed"}
-    ],
-    "Legumes": [
-      {"name": "Beans", "description": "Kidney beans, black beans, navy beans"},
-      {"name": "Peas", "description": "Garden peas, chickpeas"},
-      {"name": "Lentils", "description": "Red, green, and brown lentils"},
-      {"name": "Soybeans", "description": "Soybeans for oil and protein"}
-    ],
-    "Nuts": [
-      {"name": "Almonds", "description": "Sweet almonds"},
-      {"name": "Walnuts", "description": "English and black walnuts"},
-      {"name": "Pecans", "description": "Pecan nuts"},
-      {"name": "Cashews", "description": "Cashew nuts"},
-      {"name": "Hazelnuts", "description": "Filberts"}
-    ],
-    "Herbs & Spices": [
-      {"name": "Culinary Herbs", "description": "Basil, parsley, cilantro, thyme"},
-      {"name": "Medicinal Herbs", "description": "Chamomile, mint, lavender"},
-      {"name": "Spices", "description": "Pepper, cinnamon, cumin, turmeric"}
-    ],
-    "Oil Crops": [
-      {"name": "Sunflower", "description": "Sunflower seeds for oil"},
-      {"name": "Canola/Rapeseed", "description": "Canola oil crops"},
-      {"name": "Olive", "description": "Olives for oil extraction"},
-      {"name": "Palm Oil", "description": "Oil palm fruits"}
-    ],
-    "Fodder Crops": [
-      {"name": "Alfalfa", "description": "Alfalfa hay and silage"},
-      {"name": "Clover", "description": "Red and white clover"},
-      {"name": "Grass Hay", "description": "Timothy, bermuda grass"}
-    ]
-  },
-  "tree_categories_with_trees": [
-    {
-      "category": "Citrus Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Orange Tree",
-        "Lemon Tree",
-        "Lime Tree",
-        "Grapefruit Tree",
-        "Mandarin Tree",
-        "Tangerine Tree"
-      ]
-    },
-    {
-      "category": "Stone Fruit Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Peach Tree",
-        "Plum Tree",
-        "Cherry Tree",
-        "Apricot Tree",
-        "Nectarine Tree"
-      ]
-    },
-    {
-      "category": "Pome Fruit Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Apple Tree",
-        "Pear Tree",
-        "Quince Tree"
-      ]
-    },
-    {
-      "category": "Nut Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Almond Tree",
-        "Walnut Tree",
-        "Pecan Tree",
-        "Hazelnut Tree",
-        "Cashew Tree",
-        "Pistachio Tree"
-      ]
-    },
-    {
-      "category": "Tropical Fruit Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Mango Tree",
-        "Banana Plant",
-        "Coconut Palm",
-        "Date Palm",
-        "Papaya Tree",
-        "Avocado Tree",
-        "Guava Tree"
-      ]
-    },
-    {
-      "category": "Olive Trees",
-      "organization_note": "Will be populated per organization",
-      "trees": [
-        "Arbequina Olive",
-        "Picual Olive",
-        "Koroneiki Olive",
-        "Frantoio Olive"
-      ]
-    }
-  ],
-  "plantation_types": [
-    {
-      "type": "High Density",
-      "spacing": "4m x 4m",
-      "trees_per_ha": 625,
-      "organization_note": "Will be populated per organization"
-    },
-    {
-      "type": "Medium Density",
-      "spacing": "5m x 5m",
-      "trees_per_ha": 400,
-      "organization_note": "Will be populated per organization"
-    },
-    {
-      "type": "Standard Density",
-      "spacing": "6m x 6m",
-      "trees_per_ha": 278,
-      "organization_note": "Will be populated per organization"
-    },
-    {
-      "type": "Low Density",
-      "spacing": "8m x 8m",
-      "trees_per_ha": 156,
-      "organization_note": "Will be populated per organization"
-    },
-    {
-      "type": "Super High Density",
-      "spacing": "3m x 3m",
-      "trees_per_ha": 1111,
-      "organization_note": "Will be populated per organization"
-    },
-    {
-      "type": "Intensive Orchard",
-      "spacing": "4m x 2m",
-      "trees_per_ha": 1250,
-      "organization_note": "Will be populated per organization"
-    }
+    {"name": "Soil pH Test", "description": "Measures soil acidity/alkalinity level", "parameters": {"unit": "pH", "range": "0-14", "optimal": "6.0-7.0"}},
+    {"name": "Soil Nitrogen Test", "description": "Measures nitrogen content in soil", "parameters": {"unit": "ppm", "range": "0-100", "optimal": "20-40"}},
+    {"name": "Soil Phosphorus Test", "description": "Measures phosphorus content in soil", "parameters": {"unit": "ppm", "range": "0-100", "optimal": "25-50"}},
+    {"name": "Soil Potassium Test", "description": "Measures potassium content in soil", "parameters": {"unit": "ppm", "range": "0-500", "optimal": "150-250"}},
+    {"name": "Soil Organic Matter Test", "description": "Measures organic matter percentage in soil", "parameters": {"unit": "%", "range": "0-10", "optimal": "3-5"}},
+    {"name": "Water Quality Test", "description": "Tests irrigation water quality and safety", "parameters": {"tests": ["pH", "EC", "TDS", "Heavy Metals"]}},
+    {"name": "Plant Tissue Analysis", "description": "Analyzes nutrient levels in plant tissues", "parameters": {"nutrients": ["N", "P", "K", "Ca", "Mg", "Fe"]}}
   ]
 }
