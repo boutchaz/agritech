@@ -363,7 +363,7 @@ async function seedCropTypes(strapi: Core.Strapi) {
       publicationState: 'preview',
     });
 
-    const categoryMap = new Map<string, number>();
+    const categoryMap = new Map<string, any>();
     for (const cat of categories || []) {
       categoryMap.set(cat.value, cat.id);
     }
@@ -435,7 +435,7 @@ async function seedVarieties(strapi: Core.Strapi) {
       publicationState: 'preview',
     });
 
-    const cropTypeMap = new Map<string, number>();
+    const cropTypeMap = new Map<string, any>();
     for (const ct of cropTypes || []) {
       // Map by value (e.g., 'olivier') or name
       cropTypeMap.set(ct.value, ct.id);

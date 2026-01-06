@@ -24,6 +24,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
+import { useParcelsByFarm } from '@/hooks/useParcelsQuery';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, ExternalLink, PackagePlus } from 'lucide-react';
@@ -159,6 +160,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
   const watchItems = watch('items');
   const watchInvoiceType = watch('invoice_type');
+  const selectedFarmId = watch('farm_id');
 
   // Get items based on invoice type
   const availableItems = watchInvoiceType === 'sales' ? salesItems : purchaseItems;
@@ -166,6 +168,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
   // Get taxes based on invoice type
   const { data: allTaxes = [] } = useTaxes(watchInvoiceType);
+  
+  // Fetch parcels for the selected farm
+  const { data: parcels = [] } = useParcelsByFarm(selectedFarmId || undefined);
 
   // Calculate totals with tax
   const calculateItemTotal = (quantity: number, rate: number) => {
@@ -399,7 +404,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                     size="sm"
                     onClick={() => {
                       onClose();
-                      navigate({ to: '/accounting-customers' });
+                      navigate({ to: '/accounting/customers' });
                     }}
                     className="w-full"
                   >
@@ -417,7 +422,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                     size="sm"
                     onClick={() => {
                       onClose();
-                      navigate({ to: '/stock' });
+                      navigate({ to: '/stock/suppliers' });
                     }}
                     className="w-full"
                   >
@@ -483,10 +488,18 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 disabled={!watch('farm_id')}
               >
                 <option value="">No parcel selected</option>
-                {/* TODO: Add parcels dropdown filtered by selected farm */}
+                {parcels.map(parcel => (
+                  <option key={parcel.id} value={parcel.id}>
+                    {parcel.name}
+                  </option>
+                ))}
               </Select>
               <p className="text-xs text-gray-500 mt-1">
-                {!watch('farm_id') ? 'Select a farm first' : 'Link to a specific parcel'}
+                {!watch('farm_id') 
+                  ? 'Select a farm first' 
+                  : parcels.length === 0 
+                    ? 'No parcels available for this farm'
+                    : 'Link to a specific parcel'}
               </p>
             </div>
           </div>
