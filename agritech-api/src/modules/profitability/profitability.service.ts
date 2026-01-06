@@ -6,13 +6,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { CreateCostDto, CreateRevenueDto, ProfitabilityFiltersDto } from './dto';
 
 @Injectable()
 export class ProfitabilityService {
   private readonly logger = new Logger(ProfitabilityService.name);
 
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private accountingAutomationService: AccountingAutomationService,
+  ) {}
 
   /**
    * Get parcels for an organization

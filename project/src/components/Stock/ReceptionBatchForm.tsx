@@ -197,6 +197,31 @@ export default function ReceptionBatchForm({
   // Watch harvest selection to auto-populate parcel, weight, etc.
   const selectedHarvestId = form.watch('harvest_id');
 
+  // Auto-populate from defaultHarvestId when form opens
+  useEffect(() => {
+    if (open && defaultHarvestId && harvests.length > 0 && !batchToEdit) {
+      const defaultHarvest = harvests.find(h => h.id === defaultHarvestId);
+      if (defaultHarvest) {
+        if (defaultHarvest.parcel_id) {
+          form.setValue('parcel_id', defaultHarvest.parcel_id);
+        }
+        if (defaultHarvest.quantity) {
+          form.setValue('weight', defaultHarvest.quantity);
+        }
+        if (defaultHarvest.unit) {
+          form.setValue('weight_unit', defaultHarvest.unit);
+        }
+        if (defaultHarvest.crop_type) {
+          form.setValue('culture_type', defaultHarvest.crop_type);
+        }
+        if (defaultHarvest.harvest_date) {
+          form.setValue('reception_date', defaultHarvest.harvest_date);
+        }
+      }
+    }
+  }, [open, defaultHarvestId, harvests, form, batchToEdit]);
+
+  // Watch harvest selection to auto-populate parcel, weight, etc.
   useEffect(() => {
     if (selectedHarvestId && harvests.length > 0) {
       const selectedHarvest = harvests.find(h => h.id === selectedHarvestId);
@@ -209,6 +234,12 @@ export default function ReceptionBatchForm({
         }
         if (selectedHarvest.unit) {
           form.setValue('weight_unit', selectedHarvest.unit);
+        }
+        if (selectedHarvest.crop_type) {
+          form.setValue('culture_type', selectedHarvest.crop_type);
+        }
+        if (selectedHarvest.harvest_date) {
+          form.setValue('reception_date', selectedHarvest.harvest_date);
         }
       }
     }

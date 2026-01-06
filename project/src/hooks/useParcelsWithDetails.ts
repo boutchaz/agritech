@@ -67,9 +67,16 @@ export function useParcelsWithDetails() {
 
         // Step 2: Get all parcels for these farms using API
         // Fetch parcels for each farm and combine
-        const parcelPromises = farmIds.map(farmId =>
-          parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id)
-        );
+        const parcelPromises = farmIds.map(async (farmId) => {
+          const data = await parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id);
+          // Handle paginated response: { success: true, parcels: [...] } or direct array
+          if (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels)) {
+            return (data as { parcels: any[] }).parcels;
+          } else if (Array.isArray(data)) {
+            return data;
+          }
+          return [];
+        });
 
         const parcelResults = await Promise.all(parcelPromises);
         const parcels = parcelResults.flat().sort((a, b) => a.name.localeCompare(b.name));
@@ -126,10 +133,16 @@ export function useFarmParcelsWithDetails(farmId: string | undefined) {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
       // Get parcels from API
-      const parcels = await parcelsApi.getAll(
+      const data = await parcelsApi.getAll(
         { farm_id: farmId, organization_id: currentOrganization.id },
         currentOrganization.id
       );
+      // Handle paginated response: { success: true, parcels: [...] } or direct array
+      const parcels = (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels))
+        ? (data as { parcels: any[] }).parcels
+        : Array.isArray(data)
+          ? data
+          : [];
 
       // Get farm details using API
       const farm = await farmsApi.getOne(farmId, currentOrganization.id);
