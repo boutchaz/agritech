@@ -613,6 +613,58 @@ export class PaymentRecordsService {
       throw new BadRequestException(`Failed to process payment: ${error.message}`);
     }
 
+    // Create journal entry for the payment if it doesn't already exist
+    try {
+      // Check if journal entry already exists for this payment
+      const { data: existingJournal } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('reference_id', paymentId)
+        .eq('reference_type', 'worker_payment')
+        .maybeSingle();
+
+      if (!existingJournal) {
+        // Get worker name for journal entry description
+        const { data: worker } = await client
+          .from('workers')
+          .select('first_name, last_name')
+          .eq('id', data.worker_id)
+          .maybeSingle();
+
+        const workerName = worker
+          ? `${worker.first_name} ${worker.last_name}`
+          : 'Worker';
+
+        const paymentDate = data.payment_date
+          ? new Date(data.payment_date)
+          : new Date();
+
+        const journalEntry = await this.accountingAutomationService.createJournalEntryFromWorkerPayment(
+          organizationId,
+          data.id,
+          data.net_amount || 0,
+          paymentDate,
+          workerName,
+          data.payment_type || 'salary',
+          userId,
+          data.farm_id || undefined,
+        );
+
+        if (journalEntry?.id) {
+          // Journal entry is already linked via reference_id and reference_type
+          this.logger.log(`Journal entry ${journalEntry.id} created for payment ${data.id}`);
+        }
+      } else {
+        this.logger.log(`Journal entry ${existingJournal.id} already exists for payment ${paymentId}`);
+      }
+    } catch (journalError) {
+      // Log error but don't fail payment processing if journal entry fails
+      this.logger.error(
+        `Failed to create journal entry for payment ${paymentId}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
+      );
+      // Payment is still processed, just without journal entry
+    }
+
     return data;
   }
 

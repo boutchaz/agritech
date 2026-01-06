@@ -52,9 +52,22 @@ export function useCropCategories() {
   return useQuery({
     queryKey: ['crop-categories', currentOrganization?.id, locale],
     queryFn: () => referenceDataApi.getCropCategories(currentOrganization?.id),
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes (reduced to allow faster updates after CMS changes)
     enabled: !!currentOrganization,
-    select: (data) => localizeItems(data, locale),
+    select: (data) => {
+      const localized = localizeItems(data as unknown as Record<string, unknown>[], locale);
+      // Deduplicate by value to prevent duplicates even if they exist in CMS
+      // This ensures that even if CMS has duplicate entries with same value but different IDs,
+      // we only show one in the frontend
+      const deduplicationMap: Record<string, typeof localized[0]> = {};
+      localized.forEach(cat => {
+        const catValue = (cat as { value?: string }).value || '';
+        if (catValue && !deduplicationMap[catValue]) {
+          deduplicationMap[catValue] = cat;
+        }
+      });
+      return Object.values(deduplicationMap) as unknown as typeof data;
+    },
   });
 }
 

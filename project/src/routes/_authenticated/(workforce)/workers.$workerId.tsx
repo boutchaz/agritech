@@ -438,7 +438,7 @@ function WorkerDetailPage() {
                           {t('workers.payments.method')}
                         </th>
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                          {t('common.actions', 'Actions')}
+                          Actions
                         </th>
                       </tr>
                     </thead>
