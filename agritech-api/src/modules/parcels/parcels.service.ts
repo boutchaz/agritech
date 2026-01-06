@@ -437,6 +437,7 @@ export class ParcelsService {
       plant_count: dto.plant_count || null,
       planting_date: dto.planting_date || null,
       planting_year: dto.planting_year || null,
+      planting_type: dto.planting_type || null,
       rootstock: dto.rootstock || null,
       soil_type: dto.soil_type || null,
       irrigation_type: dto.irrigation_type || null,
@@ -518,6 +519,7 @@ export class ParcelsService {
     if (dto.plant_count !== undefined) updateData.plant_count = dto.plant_count;
     if (dto.planting_date !== undefined) updateData.planting_date = dto.planting_date;
     if (dto.planting_year !== undefined) updateData.planting_year = dto.planting_year;
+    if (dto.planting_type !== undefined) updateData.planting_type = dto.planting_type;
     if (dto.rootstock !== undefined) updateData.rootstock = dto.rootstock;
     if (dto.soil_type !== undefined) updateData.soil_type = dto.soil_type;
     if (dto.irrigation_type !== undefined) updateData.irrigation_type = dto.irrigation_type;

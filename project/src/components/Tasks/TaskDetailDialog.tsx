@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   X,
@@ -20,6 +20,7 @@ import { tasksApi } from '../../lib/api/tasks';
 import { useCropsForTask, type Crop } from '../../hooks/useCrops';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
+import { useParcelById } from '../../hooks/useParcelsQuery';
 import {
   getTaskStatusLabel,
   getTaskPriorityLabel,
@@ -82,15 +83,51 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     enabled: !!task.farm_id,
   });
 
+  // Fetch parcel details to get crop_type if no crops are found
+  const { data: parcel } = useParcelById(task.parcel_id);
+
+  // Create a virtual crop from parcel if parcel has crop_type but no crops exist
+  const availableCrops: Crop[] = useMemo(() => {
+    if (crops.length > 0) {
+      return crops;
+    }
+    
+    // If no crops found but parcel has crop_type, create a virtual crop
+    if (parcel && parcel.crop_type && task.parcel_id) {
+      return [{
+        id: `parcel-${parcel.id}`, // Virtual ID based on parcel - backend will handle this
+        name: parcel.crop_type,
+        parcel_id: parcel.id,
+        parcel_name: parcel.name,
+        farm_id: parcel.farm_id || task.farm_id || '',
+        variety_id: '', // Required field but not available from parcel - backend will handle
+        variety_name: parcel.variety || undefined,
+        created_at: parcel.created_at || new Date().toISOString(),
+        updated_at: parcel.updated_at || new Date().toISOString(),
+      } as Crop];
+    }
+    
+    return crops;
+  }, [crops, parcel, task.parcel_id, task.farm_id]);
+
   // Harvest completion form data
+  // Auto-initialize crop_id with virtual crop from parcel if available and no crop_id in task
+  const initialCropId = task.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
   const [harvestData, setHarvestData] = useState<Partial<CompleteHarvestTaskRequest>>({
-    crop_id: task.crop_id || '',
+    crop_id: initialCropId,
     harvest_date: new Date().toISOString().split('T')[0],
     quantity: 0,
     unit: 'kg',
     quality_grade: 'A',
     workers: [],
   });
+
+  // Update crop_id when availableCrops changes (e.g., when parcel loads)
+  useEffect(() => {
+    if (!harvestData.crop_id && availableCrops.length > 0) {
+      setHarvestData(prev => ({ ...prev, crop_id: availableCrops[0].id }));
+    }
+  }, [availableCrops.length]); // Only depend on length to avoid infinite loops
 
   const isHarvestingTask = task.task_type === 'harvesting';
   const canStart = task.status === 'pending' || task.status === 'assigned';
@@ -190,17 +227,43 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       setError(null);
 
       // Call the complete with harvest endpoint
-      await tasksApi.completeWithHarvest(organizationId, task.id, {
-        ...harvestData,
-        crop_id: harvestData.crop_id,
+      // If crop_id is a virtual ID (starts with "parcel-") or undefined, don't include it in the request
+      // Backend will use parcel crop_type when crop_id is not provided
+      const cropIdToSend = harvestData.crop_id && 
+                           !harvestData.crop_id.startsWith('parcel-') && 
+                           harvestData.crop_id.trim() !== ''
+        ? harvestData.crop_id
+        : undefined;
+      
+      // Build request payload, excluding crop_id if it's undefined
+      const requestPayload: CompleteHarvestTaskRequest & { lot_number: string; is_partial: boolean } = {
         harvest_date: harvestData.harvest_date || new Date().toISOString().split('T')[0],
         quantity: harvestData.quantity || 0,
         unit: harvestData.unit || 'kg',
         workers: harvestData.workers || [],
-        // Add lot number and completion type
         lot_number: lotNumber,
         is_partial: completionType === 'partial',
-      } as CompleteHarvestTaskRequest & { lot_number: string; is_partial: boolean });
+        quality_grade: harvestData.quality_grade,
+        quality_score: harvestData.quality_score,
+        quality_notes: harvestData.quality_notes,
+        supervisor_id: harvestData.supervisor_id,
+        storage_location: harvestData.storage_location,
+        temperature: harvestData.temperature,
+        humidity: harvestData.humidity,
+        intended_for: harvestData.intended_for,
+        expected_price_per_unit: harvestData.expected_price_per_unit,
+        harvest_notes: harvestData.harvest_notes,
+        notes: harvestData.notes,
+        quality_rating: harvestData.quality_rating,
+        actual_cost: harvestData.actual_cost,
+      };
+      
+      // Only include crop_id if it's a valid UUID
+      if (cropIdToSend) {
+        requestPayload.crop_id = cropIdToSend;
+      }
+      
+      await tasksApi.completeWithHarvest(organizationId, task.id, requestPayload);
 
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['harvests'] });
@@ -480,17 +543,19 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {crops.map((crop: Crop) => (
+                      {availableCrops.map((crop: Crop) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {crops.length === 0 && (
+                  {availableCrops.length === 0 && (
                     <p className="text-sm text-amber-600">
                       {task.parcel_id
-                        ? "Aucune culture trouvée pour cette parcelle. Veuillez d'abord créer une culture dans Agriculture > Cultures."
+                        ? parcel && !parcel.crop_type
+                          ? "Cette parcelle n'a pas de type de culture défini. Veuillez modifier la parcelle pour ajouter un type de culture."
+                          : "Aucune culture trouvée pour cette parcelle. Veuillez d'abord créer une culture dans Agriculture > Cultures."
                         : "Aucune parcelle assignée à cette tâche. Modifiez la tâche pour ajouter une parcelle, ou créez une culture dans Agriculture > Cultures."}
                     </p>
                   )}
