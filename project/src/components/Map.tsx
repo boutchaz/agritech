@@ -233,9 +233,18 @@ const MapComponent: React.FC<MapProps> = ({
   ];
 
   // Use CMS categories if available, otherwise use defaults
-  const availableCropCategories = cropCategories.length > 0 
-    ? cropCategories 
-    : defaultCropCategories;
+  // Deduplicate by value to avoid duplicates (e.g., multiple "Arbres fruitiers" with value "trees")
+  const allCategories = cropCategories.length > 0 ? cropCategories : defaultCropCategories;
+  // Use a plain object for deduplication to avoid conflict with OpenLayers Map
+  const categoryDeduplicationMap: Record<string, typeof allCategories[0]> = {};
+  allCategories.forEach(cat => {
+    const catValue = (cat as { value?: string }).value || (cat as { id?: string }).id || '';
+    // Only add if we haven't seen this value before
+    if (catValue && !categoryDeduplicationMap[catValue]) {
+      categoryDeduplicationMap[catValue] = cat;
+    }
+  });
+  const availableCropCategories = Object.values(categoryDeduplicationMap);
 
   // Get available options based on selected crop category
   // Priority: CMS data > Static data
