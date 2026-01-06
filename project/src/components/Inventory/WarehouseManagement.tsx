@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWarehouses, type Warehouse } from '@/hooks/useWarehouses';
-import { useFarms } from '@/hooks/useMultiTenantData';
+import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -61,7 +61,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
-  const { data: farms = [] } = useFarms();
+  const { data: farms = [] } = useFarms(currentOrganization?.id);
 
   const [formData, setFormData] = useState<WarehouseFormData>({
     organization_id: currentOrganization?.id || '',

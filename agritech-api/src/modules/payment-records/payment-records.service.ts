@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 
 @Injectable()
 export class PaymentRecordsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(PaymentRecordsService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly accountingAutomationService: AccountingAutomationService,
+  ) {}
 
   /**
    * Verify user has access to organization
@@ -494,6 +500,46 @@ export class PaymentRecordsService {
       if (deductionError) {
         throw new BadRequestException(`Failed to create payment deductions: ${deductionError.message}`);
       }
+    }
+
+    // Create journal entry for the payment
+    try {
+      // Get worker name for journal entry description
+      const { data: worker } = await client
+        .from('workers')
+        .select('first_name, last_name')
+        .eq('id', payment.worker_id)
+        .maybeSingle();
+
+      const workerName = worker
+        ? `${worker.first_name} ${worker.last_name}`
+        : 'Worker';
+
+      const paymentDate = payment.period_end
+        ? new Date(payment.period_end)
+        : new Date();
+
+      const journalEntry = await this.accountingAutomationService.createJournalEntryFromWorkerPayment(
+        organizationId,
+        payment.id,
+        payment.net_amount || 0,
+        paymentDate,
+        workerName,
+        payment.payment_type || 'salary',
+        payment.farm_id || undefined,
+        userId,
+      );
+
+      if (journalEntry?.id) {
+        // Journal entry is already linked via reference_id and reference_type
+        this.logger.log(`Journal entry ${journalEntry.id} created for payment ${payment.id}`);
+      }
+    } catch (journalError) {
+      // Log error but don't fail payment creation if journal entry fails
+      this.logger.error(
+        `Failed to create journal entry for payment ${payment.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
+      );
+      // Payment is still created, just without journal entry
     }
 
     return payment;

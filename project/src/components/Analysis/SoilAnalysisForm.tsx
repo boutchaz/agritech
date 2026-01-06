@@ -111,7 +111,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               <Input
                 id="ph_level"
                 type="number"
-                step="0.1"
+                step="0.01"
                 min="0"
                 max="14"
                 value={formData.ph_level || ''}
