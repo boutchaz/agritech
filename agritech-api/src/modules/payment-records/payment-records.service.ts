@@ -526,8 +526,8 @@ export class PaymentRecordsService {
         paymentDate,
         workerName,
         payment.payment_type || 'salary',
-        payment.farm_id || undefined,
         userId,
+        payment.farm_id || undefined,
       );
 
       if (journalEntry?.id) {

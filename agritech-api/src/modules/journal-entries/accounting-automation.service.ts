@@ -323,8 +323,8 @@ export class AccountingAutomationService {
     date: Date,
     workerName: string,
     paymentType: string,
-    farmId?: string,
     createdBy: string,
+    farmId?: string,
   ): Promise<any> {
     const supabase = this.databaseService.getClient();
 

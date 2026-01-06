@@ -4,6 +4,27 @@
  *
  * Provides structured data for crop categories, tree types, varieties,
  * planting systems, and density calculations.
+ * 
+ * IMPORTANT: These static data are preserved as fallback when CMS (Strapi) data
+ * is not available. The system uses CMS data first, then falls back to these
+ * static data to ensure functionality even when CMS is unavailable.
+ * 
+ * All data structures are exported and can be used directly:
+ * - TREE_CATEGORIES: Categorized tree types
+ * - OLIVE_VARIETIES: Detailed olive variety data with yield information
+ * - PLANTING_SYSTEMS: Tree planting systems with spacing and density
+ * - VEGETABLE_PLANTING_SYSTEMS: Vegetable planting systems
+ * - CEREAL_PLANTING_SYSTEMS: Cereal planting systems
+ * - WORKER_TASKS: Worker task definitions
+ * - AGRICULTURAL_PRODUCTS: Product list
+ * 
+ * Utility functions:
+ * - getCropTypesByCategory(): Get crop types for a category
+ * - getVarietiesByCropType(): Get varieties for a crop type
+ * - getVarietyDetails(): Get detailed variety information (yield, origin, etc.)
+ * - getPlantingSystemsByCategory(): Get planting systems for a category
+ * - calculatePlantCount(): Calculate plant count from area and density
+ * - getDensityFromSpacing(): Calculate density from spacing string
  */
 
 export type CropCategory = 'trees' | 'cereals' | 'vegetables' | 'other';
@@ -475,6 +496,26 @@ export function getVarietiesByCropType(cropType: string): string[] {
   }
   // Can be extended for other crops
   return [];
+}
+
+/**
+ * Get detailed variety information by crop type and variety name
+ * Currently supports olive varieties with yield data
+ */
+export function getVarietyDetails(cropType: string, varietyName: string): OliveVariety | null {
+  if (cropType.toLowerCase() === 'olivier') {
+    return OLIVE_VARIETIES.find(v => 
+      v.variety.toLowerCase() === varietyName.toLowerCase()
+    ) || null;
+  }
+  return null;
+}
+
+/**
+ * Get all olive varieties with their full details (yield data, origin, etc.)
+ */
+export function getOliveVarieties(): OliveVariety[] {
+  return OLIVE_VARIETIES;
 }
 
 /**
