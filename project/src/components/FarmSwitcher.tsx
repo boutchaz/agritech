@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Plus, X } from 'lucide-react';
+import { ChevronDown, Plus, Check } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { authSupabase } from '../lib/auth-supabase';
 import { useAuth } from './MultiTenantAuthProvider';
 
@@ -18,17 +19,12 @@ interface FarmSwitcherProps {
 }
 
 const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
-  const { currentOrganization } = useAuth();
+  const navigate = useNavigate();
+  const { currentOrganization, currentFarm } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
   const [_error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newFarm, setNewFarm] = useState({
-    name: '',
-    location: '',
-    size: 0
-  });
 
   useEffect(() => {
     fetchFarms();
@@ -56,7 +52,17 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
       if (!response.ok) throw new Error('Failed to fetch farms');
 
       const data = await response.json();
-      setFarms(data.farms || data || []);
+      const farmsData = data.farms || data || [];
+      
+      // Map API response to Farm interface (handle both farm_id/farm_name and id/name formats)
+      const mappedFarms = farmsData.map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string; location?: string; address?: string; farm_size?: number; size?: number }) => ({
+        id: farm.farm_id || farm.id || '',
+        name: farm.farm_name || farm.name || '',
+        location: farm.location || farm.address || '',
+        size: farm.farm_size || farm.size || 0,
+      }));
+      
+      setFarms(mappedFarms);
     } catch (error) {
       console.error('Error fetching farms:', error);
       setError('Failed to fetch farms');
@@ -65,43 +71,15 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
     }
   };
 
-  const handleAddFarm = async () => {
-    if (!currentOrganization?.id) return;
-
-    try {
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) return;
-
-      const response = await fetch(`${apiUrl}/api/v1/farms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'x-organization-id': currentOrganization.id,
-        },
-        body: JSON.stringify({
-          ...newFarm,
-          organization_id: currentOrganization.id,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to add farm');
-
-      const data = await response.json();
-      setFarms([...farms, data]);
-      setShowAddModal(false);
-      setNewFarm({
-        name: '',
-        location: '',
-        size: 0
-      });
-    } catch (error) {
-      console.error('Error adding farm:', error);
-      setError('Failed to add farm');
-    }
+  const handleAddFarm = () => {
+    setIsOpen(false);
+    navigate({ to: '/farm-hierarchy' });
   };
 
-  const currentFarm = farms.find(farm => farm.id === currentFarmId);
+  // Use currentFarm from context if available, otherwise find it in local farms list
+  const displayFarm = currentFarm 
+    ? { id: currentFarm.id, name: currentFarm.name, location: currentFarm.location || '', size: currentFarm.size || 0 }
+    : farms.find(farm => farm.id === currentFarmId);
 
   if (loading) {
     return (
@@ -116,118 +94,51 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
         className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
       >
         <span className="text-sm font-medium truncate max-w-[150px]">
-          {currentFarm?.name || 'Sélectionner une ferme'}
+          {displayFarm?.name || 'Sélectionner une ferme'}
         </span>
         <ChevronDown className="h-4 w-4 text-gray-500" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700">
           <div className="py-1">
-            {farms.map(farm => (
-              <button
-                key={farm.id}
-                onClick={() => {
-                  onFarmChange(farm.id);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm ${
-                  farm.id === currentFarmId
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                <div className="font-medium">{farm.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {farm.location} • {farm.size} ha
-                </div>
-              </button>
-            ))}
+            {farms.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                Aucune ferme disponible
+              </div>
+            ) : (
+              farms.map(farm => (
+                <button
+                  key={farm.id}
+                  onClick={() => {
+                    onFarmChange(farm.id);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                    farm.id === currentFarmId
+                      ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{farm.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {farm.location} • {farm.size} ha
+                    </div>
+                  </div>
+                  {farm.id === currentFarmId && (
+                    <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2" />
+                  )}
+                </button>
+              ))
+            )}
             <div className="border-t border-gray-200 dark:border-gray-700 mt-1">
               <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setShowAddModal(true);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center space-x-2"
+                onClick={handleAddFarm}
+                className="w-full text-left px-4 py-2.5 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center space-x-2 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 <span>Ajouter une ferme</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvelle Ferme
-              </h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nom de la ferme
-                </label>
-                <input
-                  type="text"
-                  value={newFarm.name}
-                  onChange={(e) => setNewFarm({ ...newFarm, name: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Localisation
-                </label>
-                <input
-                  type="text"
-                  value={newFarm.location}
-                  onChange={(e) => setNewFarm({ ...newFarm, location: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Surface (ha)
-                </label>
-                <input
-                  type="number"
-                  step="1"
-                  value={newFarm.size}
-                  onChange={(e) => setNewFarm({ ...newFarm, size: Number(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAddFarm}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
-                Ajouter
               </button>
             </div>
           </div>

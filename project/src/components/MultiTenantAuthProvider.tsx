@@ -219,15 +219,76 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     localStorage.setItem('currentFarm', JSON.stringify(farm));
     
     // Invalidate all farm-related queries to refresh dashboard and widgets
+    // Use predicate to match any query that might be farm-related
+    queryClient.invalidateQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey;
+        // Check if query key contains farm-related terms
+        const keyString = JSON.stringify(queryKey).toLowerCase();
+        return (
+          keyString.includes('farm') ||
+          keyString.includes('parcel') ||
+          keyString.includes('dashboard') ||
+          keyString.includes('analys') ||
+          keyString.includes('harvest') ||
+          keyString.includes('task') ||
+          keyString.includes('worker') ||
+          keyString.includes('inventory') ||
+          keyString.includes('stock') ||
+          keyString.includes('sales-order') ||
+          keyString.includes('invoice') ||
+          keyString.includes('crop') ||
+          keyString.includes('satellite') ||
+          keyString.includes('intelligence') ||
+          keyString.includes('lab-service') ||
+          keyString.includes('piece-work') ||
+          keyString.includes('metayage') ||
+          keyString.includes('item-farm-usage') ||
+          keyString.includes('farm-stock-levels')
+        );
+      },
+    });
+    
+    // Also explicitly invalidate common query key patterns
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     queryClient.invalidateQueries({ queryKey: ['parcels'] });
+    queryClient.invalidateQueries({ queryKey: ['parcels-with-details'] });
     queryClient.invalidateQueries({ queryKey: ['analyses'] });
     queryClient.invalidateQueries({ queryKey: ['harvests'] });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['workers'] });
+    queryClient.invalidateQueries({ queryKey: ['worker-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['worker-payment-history'] });
+    queryClient.invalidateQueries({ queryKey: ['worker-payments'] });
     queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    queryClient.invalidateQueries({ queryKey: ['stock'] });
     queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
     queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['crops'] });
+    queryClient.invalidateQueries({ queryKey: ['satellite'] });
+    queryClient.invalidateQueries({ queryKey: ['production-intelligence'] });
+    queryClient.invalidateQueries({ queryKey: ['lab-services'] });
+    queryClient.invalidateQueries({ queryKey: ['piece-work'] });
+    queryClient.invalidateQueries({ queryKey: ['farms'] });
+    
+    // Force refetch active queries immediately
+    queryClient.refetchQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey;
+        const keyString = JSON.stringify(queryKey).toLowerCase();
+        return (
+          keyString.includes('farm') ||
+          keyString.includes('parcel') ||
+          keyString.includes('dashboard') ||
+          keyString.includes('analys') ||
+          keyString.includes('harvest') ||
+          keyString.includes('task') ||
+          keyString.includes('worker') ||
+          keyString.includes('inventory') ||
+          keyString.includes('stock')
+        );
+      },
+    });
   };
 
   // Sign out handler
