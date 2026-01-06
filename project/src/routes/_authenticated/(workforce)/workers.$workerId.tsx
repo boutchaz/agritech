@@ -630,6 +630,6 @@ function WorkerDetailPage() {
   );
 }
 
-export const Route = createFileRoute('/_authenticated/(workforce)/workforce/workers/$workerId')({
+export const Route = createFileRoute('/_authenticated/(workforce)/workers/$workerId')({
   component: withRouteProtection(WorkerDetailPage, 'read', 'Worker'),
 });

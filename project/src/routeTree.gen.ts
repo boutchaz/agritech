@@ -48,6 +48,7 @@ import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
+import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
 import { Route as AuthenticatedsettingsSettingsUsersRouteImport } from './routes/_authenticated/(settings)/settings.users'
@@ -99,7 +100,6 @@ import { Route as AuthenticatedaccountingAccountingAccountsRouteImport } from '.
 import { Route as AuthenticatedworkforceWorkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.index'
 import { Route as AuthenticatedproductionParcelsParcelIdIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.index'
 import { Route as AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport } from './routes/_authenticated/(workforce)/workforce/workers.piece-work'
-import { Route as AuthenticatedworkforceWorkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workforce/workers.$workerId'
 import { Route as AuthenticatedworkforceWorkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.calendar'
 import { Route as AuthenticatedproductionParcelsParcelIdWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.weather'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite'
@@ -330,6 +330,12 @@ const AuthenticatedworkforceWorkforceDayLaborersRoute =
     id: '/(workforce)/workforce/day-laborers',
     path: '/workforce/day-laborers',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkersWorkerIdRoute =
+  AuthenticatedworkforceWorkersWorkerIdRouteImport.update({
+    id: '/$workerId',
+    path: '/$workerId',
+    getParentRoute: () => AuthenticatedworkforceWorkersRoute,
   } as any)
 const AuthenticatedworkforceTasksCalendarRoute =
   AuthenticatedworkforceTasksCalendarRouteImport.update({
@@ -637,12 +643,6 @@ const AuthenticatedworkforceWorkforceWorkersPieceWorkRoute =
     path: '/workforce/workers/piece-work',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedworkforceWorkforceWorkersWorkerIdRoute =
-  AuthenticatedworkforceWorkforceWorkersWorkerIdRouteImport.update({
-    id: '/(workforce)/workforce/workers/$workerId',
-    path: '/workforce/workers/$workerId',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedworkforceWorkforceTasksCalendarRoute =
   AuthenticatedworkforceWorkforceTasksCalendarRouteImport.update({
     id: '/(workforce)/workforce/tasks/calendar',
@@ -728,7 +728,7 @@ export interface FileRoutesByFullPath {
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
-  '/workers': typeof AuthenticatedworkforceWorkersRoute
+  '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
@@ -779,6 +779,7 @@ export interface FileRoutesByFullPath {
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -794,7 +795,6 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
-  '/workforce/workers/$workerId': typeof AuthenticatedworkforceWorkforceWorkersWorkerIdRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
@@ -825,7 +825,7 @@ export interface FileRoutesByTo {
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
-  '/workers': typeof AuthenticatedworkforceWorkersRoute
+  '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
@@ -875,6 +875,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -890,7 +891,6 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
-  '/workforce/workers/$workerId': typeof AuthenticatedworkforceWorkforceWorkersWorkerIdRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
@@ -927,7 +927,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
-  '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRoute
+  '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
@@ -978,6 +978,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -993,7 +994,6 @@ export interface FileRoutesById {
   '/_authenticated/(production)/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
   '/_authenticated/(production)/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/_authenticated/(workforce)/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
-  '/_authenticated/(workforce)/workforce/workers/$workerId': typeof AuthenticatedworkforceWorkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
@@ -1081,6 +1081,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/tasks/calendar'
+    | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/accounting/'
@@ -1096,7 +1097,6 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/satellite'
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
-    | '/workforce/workers/$workerId'
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId/'
     | '/workforce/tasks'
@@ -1177,6 +1177,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/settings/work-units'
     | '/tasks/calendar'
+    | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/accounting'
@@ -1192,7 +1193,6 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/satellite'
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
-    | '/workforce/workers/$workerId'
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
@@ -1279,6 +1279,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/users'
     | '/_authenticated/(settings)/settings/work-units'
     | '/_authenticated/(workforce)/tasks/calendar'
+    | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
     | '/_authenticated/(accounting)/accounting/'
@@ -1294,7 +1295,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/parcels/$parcelId/satellite'
     | '/_authenticated/(production)/parcels/$parcelId/weather'
     | '/_authenticated/(workforce)/workforce/tasks/calendar'
-    | '/_authenticated/(workforce)/workforce/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
@@ -1590,6 +1590,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workforce/day-laborers'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workers/$workerId': {
+      id: '/_authenticated/(workforce)/workers/$workerId'
+      path: '/$workerId'
+      fullPath: '/workers/$workerId'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkersWorkerIdRouteImport
+      parentRoute: typeof AuthenticatedworkforceWorkersRoute
     }
     '/_authenticated/(workforce)/tasks/calendar': {
       id: '/_authenticated/(workforce)/tasks/calendar'
@@ -1948,13 +1955,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/(workforce)/workforce/workers/$workerId': {
-      id: '/_authenticated/(workforce)/workforce/workers/$workerId'
-      path: '/workforce/workers/$workerId'
-      fullPath: '/workforce/workers/$workerId'
-      preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkersWorkerIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/(workforce)/workforce/tasks/calendar': {
       id: '/_authenticated/(workforce)/workforce/tasks/calendar'
       path: '/workforce/tasks/calendar'
@@ -2279,6 +2279,21 @@ const AuthenticatedworkforceTasksRouteWithChildren =
     AuthenticatedworkforceTasksRouteChildren,
   )
 
+interface AuthenticatedworkforceWorkersRouteChildren {
+  AuthenticatedworkforceWorkersWorkerIdRoute: typeof AuthenticatedworkforceWorkersWorkerIdRoute
+}
+
+const AuthenticatedworkforceWorkersRouteChildren: AuthenticatedworkforceWorkersRouteChildren =
+  {
+    AuthenticatedworkforceWorkersWorkerIdRoute:
+      AuthenticatedworkforceWorkersWorkerIdRoute,
+  }
+
+const AuthenticatedworkforceWorkersRouteWithChildren =
+  AuthenticatedworkforceWorkersRoute._addFileChildren(
+    AuthenticatedworkforceWorkersRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
@@ -2299,7 +2314,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionQualityControlRoute: typeof AuthenticatedproductionQualityControlRoute
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
-  AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRoute
+  AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRouteWithChildren
   AuthenticatedproductionProductionCropCyclesRoute: typeof AuthenticatedproductionProductionCropCyclesRoute
   AuthenticatedproductionProductionHarvestsRoute: typeof AuthenticatedproductionProductionHarvestsRoute
   AuthenticatedproductionProductionIntelligenceRoute: typeof AuthenticatedproductionProductionIntelligenceRoute
@@ -2310,7 +2325,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
   AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
-  AuthenticatedworkforceWorkforceWorkersWorkerIdRoute: typeof AuthenticatedworkforceWorkforceWorkersWorkerIdRoute
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
 }
@@ -2346,7 +2360,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedsettingsSettingsRouteWithChildren,
   AuthenticatedworkforceTasksRoute:
     AuthenticatedworkforceTasksRouteWithChildren,
-  AuthenticatedworkforceWorkersRoute: AuthenticatedworkforceWorkersRoute,
+  AuthenticatedworkforceWorkersRoute:
+    AuthenticatedworkforceWorkersRouteWithChildren,
   AuthenticatedproductionProductionCropCyclesRoute:
     AuthenticatedproductionProductionCropCyclesRoute,
   AuthenticatedproductionProductionHarvestsRoute:
@@ -2367,8 +2382,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceEmployeesRoute,
   AuthenticatedworkforceWorkforceTasksCalendarRoute:
     AuthenticatedworkforceWorkforceTasksCalendarRoute,
-  AuthenticatedworkforceWorkforceWorkersWorkerIdRoute:
-    AuthenticatedworkforceWorkforceWorkersWorkerIdRoute,
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute:
     AuthenticatedworkforceWorkforceWorkersPieceWorkRoute,
   AuthenticatedworkforceWorkforceTasksIndexRoute:
