@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
-import { parcelsApi, Parcel } from '@/lib/api/parcels';
+import { parcelsApi } from '@/lib/api/parcels';
 import { farmsApi } from '@/lib/api/farms';
 
 export interface ParcelWithDetails {

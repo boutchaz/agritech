@@ -63,7 +63,7 @@ const receptionBatchSchema = z.object({
 
   // Weight & Quantity
   weight: z.number().min(0.001, 'Le poids doit être positif'),
-  weight_unit: z.string().default('kg'),
+  weight_unit: z.string().min(1).default('kg'),
   quantity: z.number().optional(),
   quantity_unit: z.string().optional(),
 
@@ -143,7 +143,7 @@ export default function ReceptionBatchForm({
       weight_unit: 'kg',
       weight: 0,
       received_by: user?.id || '',
-    } as any,
+    },
   });
 
   useEffect(() => {
@@ -204,6 +204,15 @@ export default function ReceptionBatchForm({
       if (defaultHarvest) {
         if (defaultHarvest.parcel_id) {
           form.setValue('parcel_id', defaultHarvest.parcel_id);
+          // Auto-populate culture_type from parcel if harvest doesn't have it
+          if (parcels.length > 0) {
+            const parcel = parcels.find(p => p.id === defaultHarvest.parcel_id);
+            if (parcel?.crop_type) {
+              form.setValue('culture_type', parcel.crop_type);
+            } else if (parcel?.variety) {
+              form.setValue('culture_type', parcel.variety);
+            }
+          }
         }
         if (defaultHarvest.quantity) {
           form.setValue('weight', defaultHarvest.quantity);
@@ -211,15 +220,12 @@ export default function ReceptionBatchForm({
         if (defaultHarvest.unit) {
           form.setValue('weight_unit', defaultHarvest.unit);
         }
-        if (defaultHarvest.crop_type) {
-          form.setValue('culture_type', defaultHarvest.crop_type);
-        }
         if (defaultHarvest.harvest_date) {
           form.setValue('reception_date', defaultHarvest.harvest_date);
         }
       }
     }
-  }, [open, defaultHarvestId, harvests, form, batchToEdit]);
+  }, [open, defaultHarvestId, harvests, parcels, form, batchToEdit]);
 
   // Watch harvest selection to auto-populate parcel, weight, etc.
   useEffect(() => {
@@ -228,6 +234,15 @@ export default function ReceptionBatchForm({
       if (selectedHarvest) {
         if (selectedHarvest.parcel_id) {
           form.setValue('parcel_id', selectedHarvest.parcel_id);
+          // Auto-populate culture_type from parcel if harvest doesn't have it
+          if (parcels.length > 0) {
+            const parcel = parcels.find(p => p.id === selectedHarvest.parcel_id);
+            if (parcel?.crop_type) {
+              form.setValue('culture_type', parcel.crop_type);
+            } else if (parcel?.variety) {
+              form.setValue('culture_type', parcel.variety);
+            }
+          }
         }
         if (selectedHarvest.quantity) {
           form.setValue('weight', selectedHarvest.quantity);
@@ -235,15 +250,12 @@ export default function ReceptionBatchForm({
         if (selectedHarvest.unit) {
           form.setValue('weight_unit', selectedHarvest.unit);
         }
-        if (selectedHarvest.crop_type) {
-          form.setValue('culture_type', selectedHarvest.crop_type);
-        }
         if (selectedHarvest.harvest_date) {
           form.setValue('reception_date', selectedHarvest.harvest_date);
         }
       }
     }
-  }, [selectedHarvestId, harvests, form]);
+  }, [selectedHarvestId, harvests, parcels, form]);
 
   const onSubmit = async (data: ReceptionBatchFormData) => {
     if (!currentOrganization?.id) {
