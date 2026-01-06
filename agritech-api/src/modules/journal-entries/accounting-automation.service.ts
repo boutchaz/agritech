@@ -266,8 +266,49 @@ export class AccountingAutomationService {
   /**
    * Get account ID by mapping type and key
    * Replaces function: get_account_id_by_mapping()
+   * Also supports multiple mapping keys (for fallback)
    */
-  private async getAccountIdByMapping(
+  async getAccountIdByMapping(
+    organizationId: string,
+    mappingKeys: string[],
+    accountType: 'expense' | 'asset' | 'revenue' | 'liability',
+  ): Promise<string | null> {
+    const supabase = this.databaseService.getClient();
+    
+    // For cash/bank accounts, use 'cash' mapping type
+    if (accountType === 'asset' && mappingKeys.includes('cash') || mappingKeys.includes('bank')) {
+      for (const key of mappingKeys) {
+        const accountId = await this.getAccountIdByMappingInternal(supabase, organizationId, 'cash', key);
+        if (accountId) return accountId;
+      }
+      return null;
+    }
+    
+    // For expense accounts, use 'cost_type' mapping type
+    if (accountType === 'expense') {
+      for (const key of mappingKeys) {
+        const accountId = await this.getAccountIdByMappingInternal(supabase, organizationId, 'cost_type', key);
+        if (accountId) return accountId;
+      }
+      return null;
+    }
+    
+    // For revenue accounts, use 'revenue_type' mapping type
+    if (accountType === 'revenue') {
+      for (const key of mappingKeys) {
+        const accountId = await this.getAccountIdByMappingInternal(supabase, organizationId, 'revenue_type', key);
+        if (accountId) return accountId;
+      }
+      return null;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Internal method to get account ID by mapping type and key
+   */
+  private async getAccountIdByMappingInternal(
     supabase: SupabaseClient,
     organizationId: string,
     mappingType: string,

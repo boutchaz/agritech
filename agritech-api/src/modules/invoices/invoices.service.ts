@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
+import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
 import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
@@ -14,6 +16,7 @@ export class InvoicesService {
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly notificationsService: NotificationsService,
+    private readonly stockEntriesService: StockEntriesService,
   ) {}
 
   async findAll(
@@ -329,7 +332,29 @@ export class InvoicesService {
   }
 
   /**
-   * Update invoice status
+   * Validate invoice status transition
+   */
+  private validateInvoiceStatusTransition(currentStatus: string, newStatus: string): void {
+    const validTransitions: Record<string, string[]> = {
+      draft: ['submitted', 'cancelled'],
+      submitted: ['paid', 'partially_paid', 'overdue', 'cancelled'],
+      partially_paid: ['paid', 'overdue', 'cancelled'],
+      overdue: ['paid', 'partially_paid', 'cancelled'],
+      paid: [], // Terminal state - cannot transition from paid
+      cancelled: [], // Terminal state - cannot transition from cancelled
+    };
+
+    const allowed = validTransitions[currentStatus] || [];
+
+    if (!allowed.includes(newStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from '${currentStatus}' to '${newStatus}'. Allowed transitions: ${allowed.join(', ') || 'none'}`
+      );
+    }
+  }
+
+  /**
+   * Update invoice status with validation
    */
   async updateStatus(
     id: string,
@@ -338,6 +363,38 @@ export class InvoicesService {
     dto: UpdateInvoiceStatusDto
   ): Promise<any> {
     const supabaseClient = this.databaseService.getAdminClient();
+
+    // Fetch current invoice to validate transition
+    const { data: currentInvoice, error: fetchError } = await supabaseClient
+      .from('invoices')
+      .select('status, journal_entry_id')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchError || !currentInvoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    // Validate status transition
+    if (currentInvoice.status !== dto.status) {
+      this.validateInvoiceStatusTransition(currentInvoice.status, dto.status);
+    }
+
+    // Additional business rules
+    // Cannot cancel invoice that has been posted to journal
+    if (dto.status === 'cancelled' && currentInvoice.journal_entry_id) {
+      throw new BadRequestException(
+        'Cannot cancel invoice that has been posted to journal. Please create a reversing entry instead.'
+      );
+    }
+
+    // Cannot manually set to 'submitted' - must use postInvoice endpoint
+    if (dto.status === 'submitted' && currentInvoice.status === 'draft') {
+      throw new BadRequestException(
+        'Cannot manually set invoice to submitted. Please use the post invoice endpoint to submit and create journal entry.'
+      );
+    }
 
     const updateData: any = {
       status: dto.status,
@@ -389,8 +446,11 @@ export class InvoicesService {
         *,
         items:invoice_items(
           id,
+          item_id,
           item_name,
           description,
+          quantity,
+          unit,
           amount,
           tax_amount
         )
@@ -540,6 +600,69 @@ export class InvoicesService {
       }
 
       this.logger.log(`Invoice ${invoice.invoice_number} posted with journal entry ${entryNumber}`);
+
+      // Update stock if invoice items have item_id
+      // Only process stockable items (items with item_id)
+      const stockableItems = (invoice.items || []).filter((item: any) => item.item_id);
+      
+      if (stockableItems.length > 0) {
+        try {
+          // For sales invoices: Material Issue (OUT) - deduct stock
+          // For purchase invoices: Material Receipt (IN) - add stock
+          const entryType = invoice.invoice_type === 'sales' 
+            ? StockEntryType.MATERIAL_ISSUE 
+            : StockEntryType.MATERIAL_RECEIPT;
+
+          // Get default warehouse for the organization
+          // Note: In a real scenario, you might want to get warehouse from invoice or organization settings
+          const { data: warehouses } = await supabaseClient
+            .from('warehouses')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('is_active', true)
+            .limit(1);
+
+          const warehouseId = warehouses && warehouses.length > 0 ? warehouses[0].id : null;
+
+          if (!warehouseId) {
+            this.logger.warn(`No active warehouse found for organization ${organizationId}. Skipping stock update.`);
+          } else {
+            // Prepare stock entry items
+            const stockEntryItems = stockableItems.map((item: any) => ({
+              item_id: item.item_id,
+              item_name: item.item_name,
+              quantity: Number(item.quantity) || 0,
+              unit: item.unit || 'unit',
+              ...(entryType === StockEntryType.MATERIAL_ISSUE 
+                ? { source_warehouse_id: warehouseId }
+                : { target_warehouse_id: warehouseId }),
+            }));
+
+            // Create stock entry
+            const stockEntry = await this.stockEntriesService.createStockEntry({
+              organization_id: organizationId,
+              entry_type: entryType,
+              entry_date: new Date(postingDate),
+              ...(entryType === StockEntryType.MATERIAL_ISSUE 
+                ? { from_warehouse_id: warehouseId }
+                : { to_warehouse_id: warehouseId }),
+              reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
+              reference_id: invoiceId,
+              reference_number: invoice.invoice_number,
+              purpose: `Stock ${entryType === StockEntryType.MATERIAL_ISSUE ? 'issue' : 'receipt'} for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
+              notes: `Auto-generated from invoice ${invoice.invoice_number}`,
+              status: StockEntryStatus.POSTED, // Post immediately
+              items: stockEntryItems,
+              created_by: userId,
+            });
+
+            this.logger.log(`Stock entry ${stockEntry.id} created for invoice ${invoice.invoice_number}`);
+          }
+        } catch (stockError) {
+          // Log error but don't fail the invoice posting
+          this.logger.error(`Failed to create stock entry for invoice ${invoice.invoice_number}: ${stockError.message}`, stockError.stack);
+        }
+      }
 
       return {
         success: true,
