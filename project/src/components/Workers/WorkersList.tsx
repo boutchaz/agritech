@@ -279,7 +279,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
               <div
                 key={worker.id}
                 className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate({ to: '/workforce/workers/$workerId', params: { workerId: worker.id } })}
+                onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -458,7 +458,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                     <tr
                       key={worker.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                      onClick={() => navigate({ to: '/workforce/workers/$workerId', params: { workerId: worker.id } })}
+                      onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
                     >
                       <td className="px-4 xl:px-6 py-4">
                         <div>
