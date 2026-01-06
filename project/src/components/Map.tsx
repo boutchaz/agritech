@@ -26,9 +26,10 @@ import {
   getCropTypesByCategory,
   getVarietiesByCropType,
   calculatePlantCount,
-  type CropCategory,
+  type CropCategory as CropCategoryStatic,
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
+import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
 import {
   Dialog,
   DialogContent,
@@ -147,8 +148,59 @@ const MapComponent: React.FC<MapProps> = ({
   const { data: soilTypesFromApi = [] } = useSoilTypes();
   const { data: irrigationTypesFromApi = [] } = useIrrigationTypes();
   const { data: cropCategories = [] } = useCropCategories();
-  const { data: cropTypesFromStrapi = [] } = useCropTypes(parcelDetails.crop_category);
-  const { data: varietiesFromStrapi = [] } = useVarieties(parcelDetails.crop_type);
+  
+  // Find the selected category by value (e.g., "trees", "cereals", "vegetables", "other")
+  // This matches the values used in the static data
+  const selectedCategory = parcelDetails.crop_category
+    ? (cropCategories as unknown as CropCategoryApi[]).find(cat => {
+        // Match by value first (most reliable), then by name or id
+        const catValue = cat.value?.toLowerCase();
+        const parcelValue = parcelDetails.crop_category?.toLowerCase();
+        return catValue === parcelValue || 
+               cat.id === parcelDetails.crop_category ||
+               cat.name?.toLowerCase() === parcelValue ||
+               cat.name_fr?.toLowerCase() === parcelValue;
+      })
+    : undefined;
+  
+  // Get crop types from the selected category (already populated from Strapi controller)
+  const cropTypesFromCategory: CropType[] = selectedCategory?.crop_types || [];
+  
+  // Fallback: fetch crop types by category ID if not populated in category
+  const selectedCategoryId = selectedCategory?.id;
+  const { data: cropTypesFromStrapi = [] } = useCropTypes(selectedCategoryId);
+  
+  // Use crop types from category if available, otherwise from hook
+  const allCropTypesFromStrapi: CropType[] = cropTypesFromCategory.length > 0 
+    ? cropTypesFromCategory 
+    : (cropTypesFromStrapi as unknown as CropType[]);
+  
+  // Find the selected crop type by value or name (e.g., "Olivier", "Pommier")
+  const selectedCropType = parcelDetails.crop_type && allCropTypesFromStrapi.length > 0
+    ? allCropTypesFromStrapi.find(ct => {
+        // Match by value, name, or name_fr
+        const ctValue = ct.value?.toLowerCase();
+        const ctName = ct.name?.toLowerCase();
+        const ctNameFr = ct.name_fr?.toLowerCase();
+        const parcelValue = parcelDetails.crop_type?.toLowerCase();
+        return ctValue === parcelValue || 
+               ct.id === parcelDetails.crop_type ||
+               ctName === parcelValue ||
+               ctNameFr === parcelValue;
+      })
+    : undefined;
+  
+  // Get varieties from the selected crop type (already populated from Strapi controller)
+  const varietiesFromCropType: Variety[] = selectedCropType?.varieties || [];
+  
+  // Fallback: fetch varieties by crop type ID if not populated in crop type
+  const selectedCropTypeId = selectedCropType?.id;
+  const { data: varietiesFromStrapi = [] } = useVarieties(selectedCropTypeId);
+  
+  // Use varieties from crop type if available, otherwise from hook
+  const allVarietiesFromStrapi: Variety[] = varietiesFromCropType.length > 0 
+    ? varietiesFromCropType 
+    : (varietiesFromStrapi as unknown as Variety[]);
 
   // Fallback soil types when API returns empty
   const defaultSoilTypes = [
@@ -172,22 +224,44 @@ const MapComponent: React.FC<MapProps> = ({
   const soilTypes = soilTypesFromApi.length > 0 ? soilTypesFromApi : defaultSoilTypes;
   const irrigationTypes = irrigationTypesFromApi.length > 0 ? irrigationTypesFromApi : defaultIrrigationTypes;
 
-  // Get available options based on selected crop category
-  // Fallback to hardcoded data if Strapi data is not available yet
-  const availableCropTypes = cropTypesFromStrapi.length > 0
-    ? cropTypesFromStrapi
-    : parcelDetails.crop_category
-      ? getCropTypesByCategory(parcelDetails.crop_category as CropCategory).map(name => ({ id: name, name, value: name }))
-      : [];
+  // Fallback crop categories if CMS doesn't return data
+  const defaultCropCategories = [
+    { id: 'trees', name: 'Arbres fruitiers', name_fr: 'Arbres fruitiers', value: 'trees' },
+    { id: 'cereals', name: 'Céréales', name_fr: 'Céréales', value: 'cereals' },
+    { id: 'vegetables', name: 'Légumes', name_fr: 'Légumes', value: 'vegetables' },
+    { id: 'other', name: 'Autre', name_fr: 'Autre', value: 'other' },
+  ];
 
-  const availableVarieties = varietiesFromStrapi.length > 0
-    ? varietiesFromStrapi
-    : parcelDetails.crop_type
-      ? getVarietiesByCropType(parcelDetails.crop_type).map(name => ({ id: name, name, value: name }))
-      : [];
+  // Use CMS categories if available, otherwise use defaults
+  const availableCropCategories = cropCategories.length > 0 
+    ? cropCategories 
+    : defaultCropCategories;
+
+  // Get available options based on selected crop category
+  // Priority: CMS data > Static data
+  // This preserves the nested behavior: category -> crop type -> variety
+  const availableCropTypes = parcelDetails.crop_category
+    ? (allCropTypesFromStrapi.length > 0
+        ? allCropTypesFromStrapi
+        : getCropTypesByCategory(parcelDetails.crop_category as CropCategoryStatic).map(name => ({ 
+            id: name, 
+            name, 
+            value: name 
+          })))
+    : [];
+
+  const availableVarieties = parcelDetails.crop_type
+    ? (allVarietiesFromStrapi.length > 0
+        ? allVarietiesFromStrapi
+        : getVarietiesByCropType(parcelDetails.crop_type).map(name => ({ 
+            id: name, 
+            name, 
+            value: name 
+          })))
+    : [];
 
   const availablePlantingSystems = parcelDetails.crop_category
-    ? getPlantingSystemsByCategory(parcelDetails.crop_category as CropCategory)
+    ? getPlantingSystemsByCategory(parcelDetails.crop_category as CropCategoryStatic)
     : [];
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
@@ -714,16 +788,6 @@ const MapComponent: React.FC<MapProps> = ({
     }
   };
 
-  // Get standard planting density based on planting type (trees per hectare)
-  const getStandardDensity = (plantingType: string): number => {
-    const densityMap: Record<string, number> = {
-      'traditional': 100,        // Traditionnelle: 100 arbres/ha (12m x 8m spacing)
-      'intensive': 200,          // Intensive: 200 arbres/ha (7m x 7m spacing)
-      'super_intensive': 400,    // Super-intensive: 400 arbres/ha (5m x 5m spacing)
-      'organic': 80              // Biologique: 80 arbres/ha (larger spacing for organic practices)
-    };
-    return densityMap[plantingType] || 0;
-  };
 
   // Normalize irrigation type to DB-allowed tokens
   const normalizeIrrigationType = (value: string): 'drip' | 'sprinkler' | 'flood' | 'none' | undefined => {
@@ -1504,9 +1568,15 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      {soilTypes.map(type => (
-                        <option key={type.id} value={type.value}>{type.name || type.name_fr || type.value}</option>
-                      ))}
+                      {soilTypes.map(type => {
+                        const s = type as { id?: string; value?: string; name?: string; name_fr?: string };
+                        const key = s.id || s.value || '';
+                        const value = s.value || '';
+                        const label = s.name_fr || s.name || s.value || '';
+                        return (
+                          <option key={key} value={value}>{label}</option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -1523,9 +1593,15 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      {irrigationTypes.map(type => (
-                        <option key={type.id} value={type.value}>{type.name || type.name_fr || type.value}</option>
-                      ))}
+                      {irrigationTypes.map(type => {
+                        const irr = type as { id?: string; value?: string; name?: string; name_fr?: string };
+                        const key = irr.id || irr.value || '';
+                        const value = irr.value || '';
+                        const label = irr.name_fr || irr.name || irr.value || '';
+                        return (
+                          <option key={key} value={value}>{label}</option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>
@@ -1553,9 +1629,15 @@ const MapComponent: React.FC<MapProps> = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">Sélectionner...</option>
-                      {cropCategories.map(category => (
-                        <option key={category.id} value={category.value}>{category.name || category.name_fr || category.value}</option>
-                      ))}
+                      {availableCropCategories.map(category => {
+                        const cat = category as { id?: string; value?: string; name?: string; name_fr?: string };
+                        const key = cat.id || cat.value || '';
+                        const value = cat.value || '';
+                        const label = cat.name_fr || cat.name || cat.value || '';
+                        return (
+                          <option key={key} value={value}>{label}</option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -1576,9 +1658,17 @@ const MapComponent: React.FC<MapProps> = ({
                         >
                           <option value="">Sélectionner...</option>
                           {availableCropTypes.map(crop => {
-                            const key = typeof crop === 'string' ? crop : crop.id;
-                            const value = typeof crop === 'string' ? crop : crop.value;
-                            const label = typeof crop === 'string' ? crop : (crop.name || (crop as any).name_fr || crop.value);
+                            if (typeof crop === 'string') {
+                              return (
+                                <option key={crop} value={crop}>
+                                  {crop}
+                                </option>
+                              );
+                            }
+                            const cropType = crop as CropType;
+                            const key = cropType.id;
+                            const value = cropType.value;
+                            const label = cropType.name || cropType.name_fr || cropType.value;
                             return (
                               <option key={key} value={value}>
                                 {label}
@@ -1616,9 +1706,17 @@ const MapComponent: React.FC<MapProps> = ({
                       >
                         <option value="">Sélectionner...</option>
                         {availableVarieties.map(variety => {
-                          const key = typeof variety === 'string' ? variety : variety.id;
-                          const value = typeof variety === 'string' ? variety : variety.value;
-                          const label = typeof variety === 'string' ? variety : variety.name;
+                          if (typeof variety === 'string') {
+                            return (
+                              <option key={variety} value={variety}>
+                                {variety}
+                              </option>
+                            );
+                          }
+                          const varietyObj = variety as Variety;
+                          const key = varietyObj.id;
+                          const value = varietyObj.value;
+                          const label = varietyObj.name || varietyObj.name_fr || varietyObj.value;
                           return (
                             <option key={key} value={value}>
                               {label}

@@ -311,6 +311,162 @@ export class AccountingAutomationService {
   }
 
   /**
+   * Create journal entry from a worker payment record
+   * Journal Entry:
+   * Dr. Salary/Wages Expense Account    XXX.XX
+   *    Cr. Cash / Bank Account                 XXX.XX
+   */
+  async createJournalEntryFromWorkerPayment(
+    organizationId: string,
+    paymentId: string,
+    amount: number,
+    date: Date,
+    workerName: string,
+    paymentType: string,
+    farmId?: string,
+    createdBy: string,
+  ): Promise<any> {
+    const supabase = this.databaseService.getClient();
+
+    // Get account mappings
+    // Try to get salary/wages expense account - use 'labor' or 'salary' as mapping key
+    let expenseAccountId = await this.getAccountIdByMapping(
+      supabase,
+      organizationId,
+      'cost_type',
+      'labor',
+    );
+
+    // Fallback to 'salary' if 'labor' not found
+    if (!expenseAccountId) {
+      expenseAccountId = await this.getAccountIdByMapping(
+        supabase,
+        organizationId,
+        'cost_type',
+        'salary',
+      );
+    }
+
+    // Fallback to 'wages' if still not found
+    if (!expenseAccountId) {
+      expenseAccountId = await this.getAccountIdByMapping(
+        supabase,
+        organizationId,
+        'cost_type',
+        'wages',
+      );
+    }
+
+    const cashAccountId = await this.getAccountIdByMapping(
+      supabase,
+      organizationId,
+      'cash',
+      'bank',
+    );
+
+    // Log warning if mappings are missing but don't fail (allow payment to be created)
+    if (!expenseAccountId) {
+      this.logger.warn(
+        `Account mapping missing for worker payment expense (labor/salary/wages). ` +
+        `Payment ${paymentId} created but journal entry not created. ` +
+        `Please configure account mappings for labor/salary/wages.`,
+      );
+      return null;
+    }
+
+    if (!cashAccountId) {
+      this.logger.warn(
+        `Cash account mapping missing. ` +
+        `Payment ${paymentId} created but journal entry not created. ` +
+        `Please configure cash/bank account mapping.`,
+      );
+      return null;
+    }
+
+    // Generate journal entry number
+    const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+
+    // Create journal entry
+    const { data: journalEntry, error: entryError } = await supabase
+      .from('journal_entries')
+      .insert({
+        organization_id: organizationId,
+        entry_number: entryNumber,
+        entry_date: date,
+        entry_type: JournalEntryType.EXPENSE,
+        description: `Worker payment: ${workerName} - ${paymentType}`,
+        reference_id: paymentId,
+        reference_type: 'worker_payment',
+        total_debit: 0, // Will be updated by trigger
+        total_credit: 0, // Will be updated by trigger
+        status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
+        created_by: createdBy,
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      this.logger.error(`Failed to create journal entry for worker payment: ${entryError.message}`);
+      throw new BadRequestException(`Failed to create journal entry: ${entryError.message}`);
+    }
+
+    // Create journal items (debit expense, credit cash)
+    const items = [
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: expenseAccountId,
+        debit: amount,
+        credit: 0,
+        description: `Salary/Wages payment for ${workerName}`,
+        farm_id: farmId || null,
+      },
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: cashAccountId,
+        debit: 0,
+        credit: amount,
+        description: `Payment to ${workerName} - ${paymentType}`,
+        farm_id: farmId || null,
+      },
+    ];
+
+    // Validate double-entry before inserting
+    const totalDebit = items.reduce((sum, item) => sum + item.debit, 0);
+    const totalCredit = items.reduce((sum, item) => sum + item.credit, 0);
+
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      throw new BadRequestException(
+        `Worker payment journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
+
+    const { error: itemsError } = await supabase
+      .from('journal_items')
+      .insert(items);
+
+    if (itemsError) {
+      this.logger.error(`Failed to create journal items for worker payment: ${itemsError.message}`);
+      // Rollback journal entry
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
+    }
+
+    // Post the journal entry now that items are inserted and validated
+    const { error: postError } = await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED })
+      .eq('id', journalEntry.id);
+
+    if (postError) {
+      this.logger.error(`Failed to post journal entry: ${postError.message}`);
+      throw new BadRequestException(`Failed to post journal entry: ${postError.message}`);
+    }
+
+    this.logger.log(`Journal entry created for worker payment ${paymentId}: ${entryNumber}`);
+    return journalEntry;
+  }
+
+  /**
    * Validate journal entry balance (debits must equal credits)
    */
   validateJournalBalance(dto: CreateJournalEntryDto): void {

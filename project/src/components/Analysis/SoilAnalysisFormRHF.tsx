@@ -217,7 +217,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
                 name="ph_level"
                 label="pH"
                 type="number"
-                step="0.1"
+                step="0.01"
                 min="0"
                 max="14"
               />

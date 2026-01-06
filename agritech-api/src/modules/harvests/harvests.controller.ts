@@ -28,6 +28,10 @@ export class HarvestsController {
   @Get()
   @ApiOperation({ summary: 'Get all harvests for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'Filter from date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'Filter to date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'date_from', required: false, description: 'Filter from date (YYYY-MM-DD) - legacy format' })
+  @ApiQuery({ name: 'date_to', required: false, description: 'Filter to date (YYYY-MM-DD) - legacy format' })
   @ApiResponse({
     status: 200,
     description: 'Harvests retrieved successfully',
@@ -48,8 +52,16 @@ export class HarvestsController {
     @Request() req,
     @Param('organizationId') organizationId: string,
     @Query() filters: HarvestFiltersDto,
+    @Query('date_from') legacyDateFrom?: string,
+    @Query('date_to') legacyDateTo?: string,
   ) {
-    return this.harvestsService.findAll(req.user.id, organizationId, filters);
+    // Support both camelCase and snake_case date parameters
+    const finalFilters = {
+      ...filters,
+      dateFrom: filters.dateFrom || legacyDateFrom,
+      dateTo: filters.dateTo || legacyDateTo,
+    };
+    return this.harvestsService.findAll(req.user.id, organizationId, finalFilters);
   }
 
   @Get(':harvestId')
