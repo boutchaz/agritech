@@ -1,4 +1,11 @@
 import type { Core } from '@strapi/strapi';
+import {
+  cropCategoriesFromPlantingData,
+  treeTypesFromPlantingData,
+  cerealCropsFromPlantingData,
+  vegetableCropsFromPlantingData,
+  oliveVarietiesFromPlantingData,
+} from './planting-system-data';
 
 // =====================================================
 // REFERENCE DATA - EN/FR/AR TRANSLATIONS
@@ -37,14 +44,8 @@ const treeCategories = [
   { name: 'Argan', name_fr: 'Arganiers', name_ar: 'الأركان', value: 'argan', icon: '🌳', sort_order: 8, is_global: true },
 ];
 
-const cropCategories = [
-  { name: 'Cereals', name_fr: 'Céréales', name_ar: 'الحبوب', value: 'cereals', icon: '🌾', sort_order: 1, is_global: true },
-  { name: 'Vegetables', name_fr: 'Légumes', name_ar: 'الخضروات', value: 'vegetables', icon: '🥬', sort_order: 2, is_global: true },
-  { name: 'Legumes', name_fr: 'Légumineuses', name_ar: 'البقوليات', value: 'legumes', icon: '🫘', sort_order: 3, is_global: true },
-  { name: 'Oilseeds', name_fr: 'Oléagineux', name_ar: 'البذور الزيتية', value: 'oilseeds', icon: '🌻', sort_order: 4, is_global: true },
-  { name: 'Fodder', name_fr: 'Fourrage', name_ar: 'العلف', value: 'fodder', icon: '🌿', sort_order: 5, is_global: true },
-  { name: 'Industrial Crops', name_fr: 'Cultures industrielles', name_ar: 'المحاصيل الصناعية', value: 'industrial', icon: '🏭', sort_order: 6, is_global: true },
-];
+// Crop categories from plantingSystemData.ts
+const cropCategories = cropCategoriesFromPlantingData;
 
 const unitsOfMeasure = [
   { name: 'Kilograms', name_fr: 'Kilogrammes', name_ar: 'كيلوغرام', value: 'kg', symbol: 'kg', category: 'weight', sort_order: 1 },
@@ -353,6 +354,154 @@ async function seedCollection(
   }
 }
 
+// Seed crop types with category relations
+async function seedCropTypes(strapi: Core.Strapi) {
+  try {
+    // Get all crop categories
+    const categories = await strapi.entityService.findMany('api::crop-category.crop-category', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const categoryMap = new Map<string, number>();
+    for (const cat of categories || []) {
+      categoryMap.set(cat.value, cat.id);
+    }
+
+    // Combine all crop types
+    const allCropTypes = [
+      ...treeTypesFromPlantingData,
+      ...cerealCropsFromPlantingData,
+      ...vegetableCropsFromPlantingData,
+    ];
+
+    const existingCropTypes = await strapi.entityService.findMany('api::crop-type.crop-type', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const existingValues = new Set(
+      (existingCropTypes || []).map((item: any) => item.value).filter(Boolean)
+    );
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const cropType of allCropTypes) {
+      if (existingValues.has(cropType.value)) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const categoryId = categoryMap.get(cropType.category);
+        const cropTypeData: any = {
+          name: cropType.name,
+          name_fr: cropType.name_fr,
+          name_ar: cropType.name_ar,
+          value: cropType.value,
+          sort_order: cropType.sort_order,
+          is_global: true,
+          publishedAt: new Date(),
+        };
+
+        if (categoryId) {
+          cropTypeData.crop_category = categoryId;
+        }
+
+        await strapi.entityService.create('api::crop-type.crop-type', {
+          data: cropTypeData,
+        });
+        created++;
+      } catch (error: any) {
+        strapi.log.warn(`Failed to create crop type ${cropType.name}: ${error.message}`);
+      }
+    }
+
+    if (created > 0 || skipped > 0) {
+      strapi.log.info(`  ✅ Crop Types: ${created} created, ${skipped} skipped`);
+    }
+  } catch (error: any) {
+    strapi.log.error(`Error seeding crop types: ${error.message}`);
+  }
+}
+
+// Seed varieties with crop type relations
+async function seedVarieties(strapi: Core.Strapi) {
+  try {
+    // Get all crop types
+    const cropTypes = await strapi.entityService.findMany('api::crop-type.crop-type', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const cropTypeMap = new Map<string, number>();
+    for (const ct of cropTypes || []) {
+      // Map by value (e.g., 'olivier') or name
+      cropTypeMap.set(ct.value, ct.id);
+      cropTypeMap.set(ct.name?.toLowerCase(), ct.id);
+      cropTypeMap.set(ct.name_fr?.toLowerCase(), ct.id);
+    }
+
+    const existingVarieties = await strapi.entityService.findMany('api::variety.variety', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const existingValues = new Set(
+      (existingVarieties || []).map((item: any) => item.value).filter(Boolean)
+    );
+
+    let created = 0;
+    let skipped = 0;
+
+    // Seed olive varieties (only varieties we have data for)
+    for (const variety of oliveVarietiesFromPlantingData) {
+      if (existingValues.has(variety.value)) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        // Find the olive crop type (value is 'olivier' from treeTypesFromPlantingData)
+        const oliveCropTypeId = cropTypeMap.get('olivier');
+
+        if (!oliveCropTypeId) {
+          strapi.log.warn(`Olive crop type not found, skipping variety ${variety.name}`);
+          continue;
+        }
+
+        const varietyData: any = {
+          name: variety.name,
+          name_fr: variety.name_fr,
+          name_ar: variety.name_ar,
+          value: variety.value,
+          origin: variety.origin,
+          main_use: variety.main_use,
+          characteristics: variety.characteristics,
+          sort_order: variety.sort_order,
+          is_global: true,
+          crop_type: oliveCropTypeId,
+          publishedAt: new Date(),
+        };
+
+        await strapi.entityService.create('api::variety.variety', {
+          data: varietyData,
+        });
+        created++;
+      } catch (error: any) {
+        strapi.log.warn(`Failed to create variety ${variety.name}: ${error.message}`);
+      }
+    }
+
+    if (created > 0 || skipped > 0) {
+      strapi.log.info(`  ✅ Varieties: ${created} created, ${skipped} skipped`);
+    }
+  } catch (error: any) {
+    strapi.log.error(`Error seeding varieties: ${error.message}`);
+  }
+}
+
 export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
@@ -363,7 +512,16 @@ export default {
     await seedCollection(strapi, 'api::soil-type.soil-type', soilTypes, 'value', 'Soil Types');
     await seedCollection(strapi, 'api::irrigation-type.irrigation-type', irrigationTypes, 'value', 'Irrigation Types');
     await seedCollection(strapi, 'api::tree-category.tree-category', treeCategories, 'value', 'Tree Categories');
+    
+    // Seed crop categories from plantingSystemData.ts
     await seedCollection(strapi, 'api::crop-category.crop-category', cropCategories, 'value', 'Crop Categories');
+    
+    // Seed crop types with category relations
+    await seedCropTypes(strapi);
+    
+    // Seed varieties with crop type relations
+    await seedVarieties(strapi);
+    
     await seedCollection(strapi, 'api::unit-of-measure.unit-of-measure', unitsOfMeasure, 'value', 'Units of Measure');
     await seedCollection(strapi, 'api::quality-grade.quality-grade', qualityGrades, 'value', 'Quality Grades');
     await seedCollection(strapi, 'api::task-priority.task-priority', taskPriorities, 'value', 'Task Priorities');
