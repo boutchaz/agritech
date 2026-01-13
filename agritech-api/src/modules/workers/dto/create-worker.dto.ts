@@ -11,6 +11,7 @@ import {
   IsArray,
   Min,
   Max,
+  Matches,
 } from 'class-validator';
 
 export class CreateWorkerDto {
@@ -27,9 +28,15 @@ export class CreateWorkerDto {
   @IsString()
   cin?: string;
 
-  @ApiPropertyOptional({ description: 'Phone number' })
+  @ApiPropertyOptional({
+    description: 'Phone number (international format)',
+    example: '+212 6 12 34 56 78'
+  })
   @IsOptional()
   @IsString()
+  @Matches(/^[\+]?[0-9()\s\-.]{8,20}$/, {
+    message: 'Phone number must be in valid international format (8-20 characters, can include +, digits, spaces, parentheses, hyphens, dots)'
+  })
   phone?: string;
 
   @ApiPropertyOptional({ description: 'Email address' })

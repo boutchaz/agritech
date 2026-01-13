@@ -13086,60 +13086,36 @@ CREATE INDEX IF NOT EXISTS idx_warehouses_name_fts ON warehouses USING GIN (to_t
 -- DATA INTEGRITY CONSTRAINTS
 -- =====================================================
 
--- Email format validation
+-- =====================================================
+-- NOTE: Email and phone format validations have been moved to NestJS API
+-- using class-validator decorators (@IsEmail(), @Matches())
+-- The following constraints are dropped to avoid regex errors in PostgreSQL
+-- =====================================================
+
+-- Drop email format constraints (validation moved to NestJS)
 DO $$
 BEGIN
   -- Organizations email
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_organizations_email_format'
-  ) THEN
-    ALTER TABLE organizations ADD CONSTRAINT chk_organizations_email_format
-      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-  END IF;
+  ALTER TABLE organizations DROP CONSTRAINT IF EXISTS chk_organizations_email_format;
 
   -- User profiles email
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_user_profiles_email_format'
-  ) THEN
-    ALTER TABLE user_profiles ADD CONSTRAINT chk_user_profiles_email_format
-      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-  END IF;
+  ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS chk_user_profiles_email_format;
 
   -- Suppliers email
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_suppliers_email_format'
-  ) THEN
-    ALTER TABLE suppliers ADD CONSTRAINT chk_suppliers_email_format
-      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-  END IF;
+  ALTER TABLE suppliers DROP CONSTRAINT IF EXISTS chk_suppliers_email_format;
 
   -- Customers email
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_customers_email_format'
-  ) THEN
-    ALTER TABLE customers ADD CONSTRAINT chk_customers_email_format
-      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-  END IF;
+  ALTER TABLE customers DROP CONSTRAINT IF EXISTS chk_customers_email_format;
 
   -- Workers email
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_workers_email_format'
-  ) THEN
-    ALTER TABLE workers ADD CONSTRAINT chk_workers_email_format
-      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-  END IF;
+  ALTER TABLE workers DROP CONSTRAINT IF EXISTS chk_workers_email_format;
 END $$;
 
--- Phone number format validation (basic international format)
+-- Drop phone format constraints (validation moved to NestJS)
 DO $$
 BEGIN
   -- Organizations phone
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_organizations_phone_format'
-  ) THEN
-    ALTER TABLE organizations ADD CONSTRAINT chk_organizations_phone_format
-      CHECK (phone IS NULL OR phone ~* '^[\+]?[0-9\(\)\s\-\.\]{8,20}$');
-  END IF;
+  ALTER TABLE organizations DROP CONSTRAINT IF EXISTS chk_organizations_phone_format;
 END $$;
 
 -- Business rule constraints: date ranges
@@ -13278,7 +13254,22 @@ DECLARE
   v_old_data JSONB;
   v_new_data JSONB;
   v_changed_fields TEXT[];
+  v_organization_id UUID;
 BEGIN
+  -- Determine organization_id based on table type
+  -- For organizations table, use its own id; for others, use organization_id column
+  IF TG_TABLE_NAME = 'organizations' THEN
+    IF TG_OP = 'DELETE' THEN
+      v_organization_id := OLD.id;
+    ELSE
+      v_organization_id := NEW.id;
+    END IF;
+  ELSIF TG_OP = 'DELETE' THEN
+    v_organization_id := OLD.organization_id;
+  ELSE
+    v_organization_id := NEW.organization_id;
+  END IF;
+
   -- Handle DELETE
   IF (TG_OP = 'DELETE') THEN
     v_old_data := to_jsonb(OLD);
@@ -13291,7 +13282,7 @@ BEGIN
       'DELETE',
       v_old_data,
       auth.uid(),
-      COALESCE(OLD.organization_id, (OLD.organization_id)::UUID)
+      v_organization_id
     );
     RETURN OLD;
 
@@ -13307,7 +13298,7 @@ BEGIN
       'INSERT',
       v_new_data,
       auth.uid(),
-      COALESCE(NEW.organization_id, (NEW.organization_id)::UUID)
+      v_organization_id
     );
     RETURN NEW;
 
@@ -13336,7 +13327,7 @@ BEGIN
         v_new_data,
         v_changed_fields,
         auth.uid(),
-        COALESCE(NEW.organization_id, OLD.organization_id)
+        v_organization_id
       );
     END IF;
     RETURN NEW;
