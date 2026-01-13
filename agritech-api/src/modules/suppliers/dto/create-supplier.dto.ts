@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsBoolean, Matches } from 'class-validator';
 
 export class CreateSupplierDto {
   @IsString()
@@ -17,11 +17,15 @@ export class CreateSupplierDto {
   email?: string;
 
   @IsOptional()
-  @IsString()
+  @Matches(/^[\+]?[0-9()\s\-.]{8,20}$/, {
+    message: 'Phone number must be in valid international format (8-20 characters, can include +, digits, spaces, parentheses, hyphens, dots)'
+  })
   phone?: string;
 
   @IsOptional()
-  @IsString()
+  @Matches(/^[\+]?[0-9()\s\-.]{8,20}$/, {
+    message: 'Mobile number must be in valid international format (8-20 characters, can include +, digits, spaces, parentheses, hyphens, dots)'
+  })
   mobile?: string;
 
   @IsOptional()
