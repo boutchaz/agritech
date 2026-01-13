@@ -56,23 +56,23 @@ const ParcelOverview = () => {
             <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                {t('farmHierarchy.parcel.detail.overview.noSatelliteData')}
+                {t('parcels.index.noSatelliteData')}
               </h4>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                {t('farmHierarchy.parcel.detail.overview.noSatelliteDataDesc')}
+                {t('parcels.index.noSatelliteDataDesc')}
               </p>
               <Link
                 to={`/parcels/${parcelId}/satellite`}
                 className="inline-flex items-center gap-2 mt-2 text-sm font-medium text-amber-800 dark:text-amber-200 hover:underline"
               >
                 <Satellite className="h-4 w-4" />
-                {t('farmHierarchy.parcel.detail.overview.goToSatellite')}
+                {t('parcels.index.goToSatellite')}
               </Link>
             </div>
             <button
               onClick={() => refetchIndices()}
               className="p-2 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
-              title="Actualiser les données"
+              title={t('parcels.index.refreshData')}
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -86,14 +86,14 @@ const ParcelOverview = () => {
           <div className="flex items-center space-x-2 mb-2">
             <Droplets className="h-5 w-5 text-blue-600" />
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              {t('farmHierarchy.parcel.detail.overview.irrigationIndex')}
+              {t('parcels.index.irrigationIndex')}
             </span>
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {data.irrigation !== null ? `${data.irrigation}%` : '--'}
           </div>
           {data.irrigation === null && (
-            <p className="text-xs text-gray-500 mt-1">{t('farmHierarchy.parcel.detail.overview.basedOnNdmi')}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('parcels.index.basedOnNdmi')}</p>
           )}
         </div>
 
@@ -101,7 +101,7 @@ const ParcelOverview = () => {
           <div className="flex items-center space-x-2 mb-2">
             <TrendingUp className="h-5 w-5 text-green-600" />
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              {t('farmHierarchy.parcel.detail.overview.expectedYield')}
+              {t('parcels.index.expectedYield')}
             </span>
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -113,7 +113,7 @@ const ParcelOverview = () => {
           <div className="flex items-center space-x-2 mb-2">
             <Satellite className="h-5 w-5 text-green-600" />
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              {t('farmHierarchy.parcel.detail.overview.ndvi')}
+              {t('parcels.index.ndvi')}
             </span>
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -131,7 +131,7 @@ const ParcelOverview = () => {
           )}
           {indices?.lastUpdate && (
             <p className="text-xs text-gray-500 mt-2">
-              {t('farmHierarchy.parcel.detail.overview.updatedOn')} {data.lastUpdate}
+              {t('parcels.index.updatedOn')} {data.lastUpdate}
             </p>
           )}
         </div>
@@ -146,7 +146,7 @@ const ParcelOverview = () => {
               data.health === 'Critique' ? 'bg-red-500' : 'bg-gray-400'
             }`}></div>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              {t('farmHierarchy.parcel.detail.overview.vegetationHealth')}
+              {t('parcels.index.vegetationHealth')}
             </span>
           </div>
           <div className={`text-lg font-medium ${data.healthColor}`}>
@@ -158,46 +158,46 @@ const ParcelOverview = () => {
 
       {/* Quick Summary */}
       <div className="bg-white dark:bg-gray-700 rounded-lg p-6 shadow-sm">
-        <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('farmHierarchy.parcel.detail.overview.summary')}</h4>
+        <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('parcels.index.summary')}</h4>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-            <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.area')}:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.area')}:</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {parcel.calculated_area || parcel.area ? `${parcel.calculated_area || parcel.area} ha` : t('farmHierarchy.parcel.detail.overview.notDefined')}
+              {parcel.calculated_area || parcel.area ? `${parcel.calculated_area || parcel.area} ha` : t('parcels.index.notDefined')}
             </span>
           </div>
           {parcel.soil_type && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.soilType')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.soilType')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.soil_type}</span>
             </div>
           )}
           {parcel.irrigation_type && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.irrigation')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.irrigation')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.irrigation_type}</span>
             </div>
           )}
           {parcel.tree_type && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.treeType')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.treeType')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.tree_type}</span>
             </div>
           )}
           {parcel.variety && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.variety')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.variety')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.variety}</span>
             </div>
           )}
           {parcel.planting_year && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.plantingYear')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.plantingYear')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.planting_year}</span>
             </div>
           )}
           <div className="flex justify-between items-center py-2">
-            <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.overview.lastUpdate')}:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('parcels.index.lastUpdate')}:</span>
             <span className="font-medium text-gray-900 dark:text-white">{data.lastUpdate}</span>
           </div>
         </div>
@@ -206,7 +206,7 @@ const ParcelOverview = () => {
       {/* Parcel Description */}
       {parcel.description && (
         <div className="bg-white dark:bg-gray-700 rounded-lg p-6 shadow-sm">
-          <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('farmHierarchy.parcel.detail.overview.description')}</h4>
+          <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('parcels.index.description')}</h4>
           <p className="text-gray-600 dark:text-gray-400">{parcel.description}</p>
         </div>
       )}

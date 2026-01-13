@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,7 +90,7 @@ const workerPaymentSchema = z.object({
   }
   return true;
 }, {
-  message: 'Please provide the required payment configuration for the selected type',
+  message: 'workers.configuration.errors.paymentConfigurationRequired',
 });
 
 type WorkerPaymentFormData = z.infer<typeof workerPaymentSchema>;
@@ -109,6 +110,7 @@ export function WorkerConfiguration({
   onSuccess,
   onCancel,
 }: WorkerConfigurationProps) {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
 
@@ -215,9 +217,9 @@ export function WorkerConfiguration({
               <Package className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <h4 className="font-semibold text-blue-900">Piece-Work Payment</h4>
+              <h4 className="font-semibold text-blue-900">{t('workers.configuration.sections.pieceWork')}</h4>
               <p className="text-sm text-blue-700">
-                Worker is paid based on units completed (trees, boxes, kg, etc.)
+                {t('workers.configuration.descriptions.pieceWork')}
               </p>
             </div>
           </div>
@@ -228,9 +230,9 @@ export function WorkerConfiguration({
               name="default_work_unit_id"
               render={({ field }) => (
                 <div>
-                  <label className="text-sm font-medium">Default Work Unit *</label>
+                  <label className="text-sm font-medium">{t('workers.configuration.fields.defaultWorkUnit')}</label>
                   <Select {...field}>
-                    <option value="">Select unit...</option>
+                    <option value="">{t('workers.configuration.placeholders.selectUnit')}</option>
                     {workUnits.map((unit) => (
                       <option key={unit.id} value={unit.id}>
                         {unit.name} ({unit.code})
@@ -245,7 +247,7 @@ export function WorkerConfiguration({
                   {workUnits.length === 0 && (
                     <p className="text-sm text-amber-600 mt-1">
                       <Info className="inline h-3 w-3 mr-1" />
-                      No work units available. Please create work units first.
+                      {t('workers.configuration.messages.noWorkUnits')}
                     </p>
                   )}
                 </div>
@@ -258,14 +260,14 @@ export function WorkerConfiguration({
               render={({ field }) => (
                 <div>
                   <label className="text-sm font-medium">
-                    Rate per Unit * ({currentOrganization?.currency || 'MAD'})
+                    {t('workers.configuration.fields.ratePerUnit', { currency: currentOrganization?.currency || 'MAD' })}
                   </label>
                   <Input
                     {...field}
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="e.g., 5.00"
+                    placeholder={t('workers.configuration.placeholders.ratePerUnit')}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
                   />
                   {form.formState.errors.rate_per_unit && (
@@ -280,10 +282,11 @@ export function WorkerConfiguration({
 
           <div className="mt-3 p-3 bg-blue-100 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Example:</strong> If rate is {form.watch('rate_per_unit') || '5'}{' '}
-              {currentOrganization?.currency || 'MAD'} per unit and worker completes 100 units,
-              they earn {(form.watch('rate_per_unit') || 5) * 100}{' '}
-              {currentOrganization?.currency || 'MAD'}.
+              <strong>{t('workers.configuration.examples.label')}:</strong> {t('workers.configuration.examples.pieceWork', {
+                rate: form.watch('rate_per_unit') || '5',
+                currency: currentOrganization?.currency || 'MAD',
+                total: (form.watch('rate_per_unit') || 5) * 100
+              })}
             </p>
           </div>
         </Card>
@@ -299,9 +302,9 @@ export function WorkerConfiguration({
               <Calendar className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <h4 className="font-semibold text-green-900">Daily Wage</h4>
+              <h4 className="font-semibold text-green-900">{t('workers.configuration.sections.dailyWage')}</h4>
               <p className="text-sm text-green-700">
-                Worker is paid a fixed amount per day worked
+                {t('workers.configuration.descriptions.dailyWage')}
               </p>
             </div>
           </div>
@@ -312,14 +315,14 @@ export function WorkerConfiguration({
             render={({ field }) => (
               <div>
                 <label className="text-sm font-medium">
-                  Daily Rate * ({currentOrganization?.currency || 'MAD'})
+                  {t('workers.configuration.fields.dailyRate', { currency: currentOrganization?.currency || 'MAD' })}
                 </label>
                 <Input
                   {...field}
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="e.g., 150.00"
+                  placeholder={t('workers.configuration.placeholders.dailyRate')}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
                 />
                 {form.formState.errors.daily_rate && (
@@ -343,9 +346,9 @@ export function WorkerConfiguration({
               <DollarSign className="h-5 w-5 text-purple-500" />
             </div>
             <div>
-              <h4 className="font-semibold text-purple-900">Monthly Salary</h4>
+              <h4 className="font-semibold text-purple-900">{t('workers.configuration.sections.monthlySalary')}</h4>
               <p className="text-sm text-purple-700">
-                Worker receives a fixed monthly salary
+                {t('workers.configuration.descriptions.monthlySalary')}
               </p>
             </div>
           </div>
@@ -356,14 +359,14 @@ export function WorkerConfiguration({
             render={({ field }) => (
               <div>
                 <label className="text-sm font-medium">
-                  Monthly Salary * ({currentOrganization?.currency || 'MAD'})
+                  {t('workers.configuration.fields.monthlySalary', { currency: currentOrganization?.currency || 'MAD' })}
                 </label>
                 <Input
                   {...field}
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="e.g., 4500.00"
+                  placeholder={t('workers.configuration.placeholders.monthlySalary')}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
                 />
                 {form.formState.errors.monthly_salary && (
@@ -387,9 +390,9 @@ export function WorkerConfiguration({
               <TrendingUp className="h-5 w-5 text-orange-500" />
             </div>
             <div>
-              <h4 className="font-semibold text-orange-900">Metayage (Revenue Share)</h4>
+              <h4 className="font-semibold text-orange-900">{t('workers.configuration.sections.metayage')}</h4>
               <p className="text-sm text-orange-700">
-                Worker receives a percentage of harvest revenue
+                {t('workers.configuration.descriptions.metayage')}
               </p>
             </div>
           </div>
@@ -399,14 +402,14 @@ export function WorkerConfiguration({
             name="metayage_percentage"
             render={({ field }) => (
               <div>
-                <label className="text-sm font-medium">Revenue Share Percentage * (%)</label>
+                <label className="text-sm font-medium">{t('workers.configuration.fields.metayagePercentage')}</label>
                 <Input
                   {...field}
                   type="number"
                   step="1"
                   min="0"
                   max="100"
-                  placeholder="e.g., 30"
+                  placeholder={t('workers.configuration.placeholders.metayagePercentage')}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
                 />
                 {form.formState.errors.metayage_percentage && (
@@ -420,11 +423,12 @@ export function WorkerConfiguration({
 
           <div className="mt-3 p-3 bg-orange-100 rounded-lg">
             <p className="text-sm text-orange-800">
-              <strong>Example:</strong> If harvest revenue is 10,000{' '}
-              {currentOrganization?.currency || 'MAD'} and share is{' '}
-              {form.watch('metayage_percentage') || 30}%, worker earns{' '}
-              {((form.watch('metayage_percentage') || 30) / 100) * 10000}{' '}
-              {currentOrganization?.currency || 'MAD'}.
+              <strong>{t('workers.configuration.examples.label')}:</strong> {t('workers.configuration.examples.metayage', {
+                revenue: '10,000',
+                currency: currentOrganization?.currency || 'MAD',
+                percentage: form.watch('metayage_percentage') || 30,
+                earnings: ((form.watch('metayage_percentage') || 30) / 100) * 10000
+              })}
             </p>
           </div>
         </Card>
@@ -439,13 +443,13 @@ export function WorkerConfiguration({
   // =====================================================
 
   if (isLoadingWorker) {
-    return <Card className="p-6"><p className="text-center">Loading...</p></Card>;
+    return <Card className="p-6"><p className="text-center">{t('workers.configuration.states.loading')}</p></Card>;
   }
 
   if (!worker) {
     return (
       <Card className="p-6">
-        <p className="text-center text-red-500">Worker not found</p>
+        <p className="text-center text-red-500">{t('workers.configuration.states.notFound')}</p>
       </Card>
     );
   }
@@ -461,7 +465,7 @@ export function WorkerConfiguration({
           <h3 className="font-semibold">
             {worker.first_name} {worker.last_name}
           </h3>
-          <p className="text-sm text-muted-foreground">Payment Configuration</p>
+          <p className="text-sm text-muted-foreground">{t('workers.configuration.title')}</p>
         </div>
       </div>
 
@@ -471,11 +475,11 @@ export function WorkerConfiguration({
         name="worker_type"
         render={({ field }) => (
           <div>
-            <label className="text-sm font-medium">Worker Type *</label>
+            <label className="text-sm font-medium">{t('workers.configuration.fields.workerType')}</label>
             <Select {...field}>
-              <option value="daily_worker">Daily Worker</option>
-              <option value="fixed_salary">Permanent (Fixed Salary)</option>
-              <option value="metayage">Metayage (Revenue Share)</option>
+              <option value="daily_worker">{t('workers.configuration.workerTypes.dailyWorker')}</option>
+              <option value="fixed_salary">{t('workers.configuration.workerTypes.fixedSalary')}</option>
+              <option value="metayage">{t('workers.configuration.workerTypes.metayage')}</option>
             </Select>
           </div>
         )}
@@ -487,22 +491,22 @@ export function WorkerConfiguration({
         name="payment_frequency"
         render={({ field }) => (
           <div>
-            <label className="text-sm font-medium">Payment Frequency *</label>
+            <label className="text-sm font-medium">{t('workers.configuration.fields.paymentFrequency')}</label>
             <Select {...field}>
               {selectedWorkerType === 'daily_worker' && (
                 <>
-                  <option value="daily">Daily</option>
-                  <option value="per_unit">Per Unit (Piece-work)</option>
+                  <option value="daily">{t('workers.configuration.paymentFrequencies.daily')}</option>
+                  <option value="per_unit">{t('workers.configuration.paymentFrequencies.perUnit')}</option>
                 </>
               )}
               {selectedWorkerType === 'fixed_salary' && (
                 <>
-                  <option value="monthly">Monthly</option>
-                  <option value="per_unit">Per Unit (Piece-work)</option>
+                  <option value="monthly">{t('workers.configuration.paymentFrequencies.monthly')}</option>
+                  <option value="per_unit">{t('workers.configuration.paymentFrequencies.perUnit')}</option>
                 </>
               )}
               {selectedWorkerType === 'metayage' && (
-                <option value="harvest_share">Harvest Share</option>
+                <option value="harvest_share">{t('workers.configuration.paymentFrequencies.harvestShare')}</option>
               )}
             </Select>
           </div>
@@ -517,26 +521,26 @@ export function WorkerConfiguration({
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             <X className="h-4 w-4 mr-2" />
-            Cancel
+            {t('workers.configuration.buttons.cancel')}
           </Button>
         )}
         <Button type="submit" disabled={updateMutation.isPending}>
           <Save className="h-4 w-4 mr-2" />
-          {updateMutation.isPending ? 'Saving...' : 'Save Configuration'}
+          {updateMutation.isPending ? t('workers.configuration.states.saving') : t('workers.configuration.buttons.save')}
         </Button>
       </div>
 
       {updateMutation.isError && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-600">
-            {updateMutation.error?.message || 'Failed to update payment configuration'}
+            {updateMutation.error?.message || t('workers.configuration.errors.updateFailed')}
           </p>
         </div>
       )}
 
       {updateMutation.isSuccess && (
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-600">Payment configuration updated successfully!</p>
+          <p className="text-sm text-green-600">{t('workers.configuration.messages.success')}</p>
         </div>
       )}
     </form>

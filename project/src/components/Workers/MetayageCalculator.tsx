@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Info, Save } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useWorkers, useCreateMetayageSettlement } from '../../hooks/useWorkers';
 import { calculateMetayageShare } from '../../types/workers';
 import type { CalculationBasis } from '../../types/workers';
@@ -16,6 +17,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   farmId,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { data: workers = [] } = useWorkers(organizationId, farmId);
   const createSettlement = useCreateMetayageSettlement();
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
@@ -55,7 +57,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
   const handleSaveSettlement = async () => {
     if (!selectedWorkerId || !grossRevenue || !periodStart || !periodEnd) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      alert(t('workers.metayage.validation.fillAllRequired'));
       return;
     }
 
@@ -85,10 +87,10 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
       setNotes('');
 
       onSuccess?.();
-      alert('Règlement enregistré avec succès');
+      alert(t('workers.metayage.validation.settlementSaved'));
     } catch (error) {
       console.error('Error saving settlement:', error);
-      alert('Erreur lors de l\'enregistrement');
+      alert(t('workers.metayage.validation.saveError'));
     }
   };
 
@@ -97,14 +99,14 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
       <div className="flex items-center gap-3 mb-6">
         <Calculator className="w-6 h-6 text-purple-600" />
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Calculateur de Métayage
+          {t('workers.metayage.title')}
         </h2>
       </div>
 
       {metayageWorkers.length === 0 ? (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <p className="text-yellow-800 dark:text-yellow-200">
-            Aucun travailleur en métayage actif. Veuillez d'abord ajouter un travailleur de type "Métayage".
+            {t('workers.metayage.noWorkers')}
           </p>
         </div>
       ) : (
@@ -112,14 +114,14 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
           {/* Worker Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Travailleur (Khammass/Rebâa) *
+              {t('workers.metayage.fields.worker')} *
             </label>
             <select
               value={selectedWorkerId}
               onChange={(e) => setSelectedWorkerId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">-- Sélectionner un travailleur --</option>
+              <option value="">{t('workers.metayage.fields.selectWorker')}</option>
               {metayageWorkers.map(worker => (
                 <option key={worker.id} value={worker.id}>
                   {worker.first_name} {worker.last_name} ({worker.metayage_type?.toUpperCase()} - {worker.metayage_percentage}%)
@@ -136,14 +138,14 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                   <Info className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-medium text-purple-900 dark:text-purple-100 mb-1">
-                      Configuration du travailleur:
+                      {t('workers.metayage.workerConfig.title')}:
                     </p>
                     <ul className="text-sm text-purple-800 dark:text-purple-200 space-y-1">
-                      <li><strong>Type:</strong> {selectedWorker.metayage_type?.toUpperCase()}</li>
-                      <li><strong>Pourcentage:</strong> {selectedWorker.metayage_percentage}%</li>
+                      <li><strong>{t('workers.metayage.workerConfig.type')}:</strong> {selectedWorker.metayage_type?.toUpperCase()}</li>
+                      <li><strong>{t('workers.metayage.workerConfig.percentage')}:</strong> {selectedWorker.metayage_percentage}%</li>
                       <li>
-                        <strong>Base de calcul:</strong>{' '}
-                        {selectedWorker.calculation_basis === 'gross_revenue' ? 'Revenu brut' : 'Revenu net (après charges)'}
+                        <strong>{t('workers.metayage.workerConfig.calculationBasis')}:</strong>{' '}
+                        {selectedWorker.calculation_basis === 'gross_revenue' ? t('workers.metayage.type.grossRevenue') : t('workers.metayage.type.netRevenue')}
                       </li>
                     </ul>
                   </div>
@@ -154,7 +156,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Début période *
+                    {t('workers.metayage.fields.periodStart')} *
                   </label>
                   <input
                     type="date"
@@ -165,7 +167,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Fin période *
+                    {t('workers.metayage.fields.periodEnd')} *
                   </label>
                   <input
                     type="date"
@@ -176,7 +178,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date de récolte
+                    {t('workers.metayage.fields.harvestDate')}
                   </label>
                   <input
                     type="date"
@@ -191,7 +193,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Revenu brut ({currencySymbol}) *
+                    {t('workers.metayage.fields.grossRevenue', { currency: currencySymbol })} *
                   </label>
                   <input
                     type="number"
@@ -202,13 +204,13 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                     placeholder="15000.00"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Montant total de la vente de la récolte
+                    {t('workers.metayage.fields.grossRevenueHint')}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Charges totales ({currencySymbol})
+                    {t('workers.metayage.fields.totalCharges', { currency: currencySymbol })}
                   </label>
                   <input
                     type="number"
@@ -219,7 +221,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                     placeholder="3000.00"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Intrants, eau, frais de récolte, etc.
+                    {t('workers.metayage.fields.totalChargesHint')}
                   </p>
                 </div>
               </div>
@@ -227,7 +229,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               {/* Calculation Basis */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Base de calcul
+                  {t('workers.metayage.fields.calculationBasis')}
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer ${
@@ -243,7 +245,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                       className="w-4 h-4 text-purple-600"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-900 dark:text-white">
-                      Revenu brut
+                      {t('workers.metayage.type.grossRevenue')}
                     </span>
                   </label>
                   <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer ${
@@ -259,7 +261,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                       className="w-4 h-4 text-purple-600"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-900 dark:text-white">
-                      Revenu net (après charges)
+                      {t('workers.metayage.type.netRevenue')}
                     </span>
                   </label>
                 </div>
@@ -268,24 +270,24 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               {/* Calculation Results */}
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Résultat du calcul
+                  {t('workers.metayage.results.title')}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Revenu brut:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('workers.metayage.results.grossRevenue')}:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
                         {formatCurrency(grossRevenueNum)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Charges totales:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('workers.metayage.results.totalCharges')}:</span>
                       <span className="font-medium text-red-600 dark:text-red-400">
                         -{formatCurrency(totalChargesNum)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-purple-200 dark:border-purple-700">
-                      <span className="text-gray-600 dark:text-gray-400">Revenu net:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('workers.metayage.results.netRevenue')}:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
                         {formatCurrency(netRevenue)}
                       </span>
@@ -294,19 +296,19 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Base de calcul:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('workers.metayage.results.calculationBasis')}:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
                         {formatCurrency(baseAmount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Pourcentage travailleur:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('workers.metayage.results.workerPercentage')}:</span>
                       <span className="font-medium text-purple-600 dark:text-purple-400">
                         {percentage}%
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-purple-200 dark:border-purple-700">
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">Part travailleur:</span>
+                      <span className="text-lg font-semibold text-gray-900 dark:text-white">{t('workers.metayage.results.workerShare')}:</span>
                       <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                         {formatCurrency(workerShare)}
                       </span>
@@ -318,14 +320,14 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes
+                  {t('workers.metayage.fields.notes')}
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Détails sur la récolte, conditions spéciales..."
+                  placeholder={t('workers.metayage.fields.notesPlaceholder')}
                 />
               </div>
 
@@ -339,12 +341,12 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                   {createSettlement.isPending ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Enregistrement...</span>
+                      <span>{t('workers.metayage.buttons.saving')}</span>
                     </>
                   ) : (
                     <>
                       <Save className="w-5 h-5" />
-                      <span>Enregistrer le règlement</span>
+                      <span>{t('workers.metayage.buttons.save')}</span>
                     </>
                   )}
                 </button>

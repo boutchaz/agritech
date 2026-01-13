@@ -13,10 +13,10 @@ function CropCyclesPage() {
       activeModule="crop-cycles"
       header={
         <ModernPageHeader
-          title={t('cropCycles.pageTitle', 'Crop Cycles')}
+          title={t('production.cropCycles.pageTitle')}
           breadcrumbs={[
-            { label: t('nav.dashboard', 'Dashboard'), path: '/dashboard' },
-            { label: t('cropCycles.pageTitle', 'Crop Cycles'), isActive: true },
+            { label: t('nav.dashboard'), path: '/dashboard' },
+            { label: t('production.cropCycles.pageTitle'), isActive: true },
           ]}
         />
       }

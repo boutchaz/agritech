@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, UserPlus, AlertCircle, X , Shield} from 'lucide-react';
+import { Save, UserPlus, AlertCircle, X, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Worker, WorkerFormData } from '../../types/workers';
 import {
   WORKER_TYPE_OPTIONS,
@@ -21,13 +22,13 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 
-// Zod schema with conditional validation
-const workerSchema = z.object({
-  first_name: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
-  last_name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+// Zod schema factory function with conditional validation
+const createWorkerSchema = (t: any) => z.object({
+  first_name: z.string().min(2, t('workers.form.validation.firstNameMin')),
+  last_name: z.string().min(2, t('workers.form.validation.lastNameMin')),
   cin: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email('Email invalide').optional().or(z.literal('')),
+  email: z.string().email(t('workers.form.validation.emailInvalid')).optional().or(z.literal('')),
   address: z.string().optional(),
   date_of_birth: z.string().optional(),
   worker_type: z.enum(['fixed_salary', 'daily_worker', 'metayage']),
@@ -53,14 +54,14 @@ const workerSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['monthly_salary'],
-      message: 'Le salaire mensuel est requis pour un employé à salaire fixe',
+      message: t('workers.form.validation.monthlySalaryRequired'),
     });
   }
   if (data.worker_type === 'daily_worker' && !data.daily_rate) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['daily_rate'],
-      message: 'Le tarif journalier est requis pour un travailleur journalier',
+      message: t('workers.form.validation.dailyRateRequired'),
     });
   }
   if (data.worker_type === 'metayage') {
@@ -68,14 +69,14 @@ const workerSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['metayage_percentage'],
-        message: 'Le pourcentage de métayage est requis',
+        message: t('workers.form.validation.metayagePercentageRequired'),
       });
     }
     if (!data.metayage_type) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['metayage_type'],
-        message: 'Le type de métayage est requis',
+        message: t('workers.form.validation.metayageTypeRequired'),
       });
     }
   }
@@ -98,8 +99,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const isEditing = !!worker;
-  
+
   // Ensure farms is always an array
   const farmsArray = Array.isArray(farms) ? farms : [];
   const createWorker = useCreateWorker();
@@ -118,7 +120,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<WorkerFormData>({
-    resolver: zodResolver(workerSchema),
+    resolver: zodResolver(createWorkerSchema(t)),
     mode: 'onBlur',
     defaultValues: worker ? {
       first_name: worker.first_name,
@@ -266,13 +268,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
           if (!result.success) {
             console.error('Failed to grant platform access:', result.error);
-            alert(`Travailleur créé mais l'accès plateforme a échoué: ${result.error}`);
+            alert(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${result.error}`);
           } else {
-            alert(result.message || 'Travailleur créé avec accès plateforme!');
+            alert(result.message || t('workers.form.success.workerCreatedWithAccess'));
           }
         } catch (error) {
           console.error('Error granting platform access:', error);
-          alert('Travailleur créé mais l\'accès plateforme a échoué. Réessayez depuis la page des utilisateurs.');
+          alert(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
         } finally {
           setPlatformAccessLoading(false);
         }
@@ -313,7 +315,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
             <UserPlus className="w-6 h-6 text-blue-600" />
-            <span>{isEditing ? 'Modifier le travailleur' : 'Ajouter un travailleur'}</span>
+            <span>{isEditing ? t('workers.form.title.edit') : t('workers.form.title.add')}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -326,12 +328,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
-                    Veuillez corriger les erreurs suivantes:
+                    {t('workers.form.errors.correctFollowingErrors')}
                   </h4>
                   <ul className="text-sm text-red-700 dark:text-red-300 space-y-1 list-disc list-inside">
                     {Object.entries(errors).map(([field, error]) => (
                       <li key={field}>
-                        {error?.message || `Erreur dans le champ: ${field}`}
+                        {error?.message || `${t('workers.form.errors.errorInField')}: ${field}`}
                       </li>
                     ))}
                   </ul>
@@ -343,7 +345,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Worker Type */}
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Type de travailleur *
+              {t('workers.form.fields.workerType')} *
             </label>
             <select
               {...register('worker_type')}
@@ -363,18 +365,18 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Personal Information */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Informations personnelles
+              {t('workers.form.sections.personalInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Prénom *
+                  {t('workers.form.fields.firstName')} *
                 </label>
                 <input
                   {...register('first_name')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Mohamed"
+                  placeholder={t('workers.form.placeholders.firstName')}
                 />
                 {errors.first_name && (
                   <p className="text-red-600 text-sm mt-1">{errors.first_name.message}</p>
@@ -383,13 +385,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nom *
+                  {t('workers.form.fields.lastName')} *
                 </label>
                 <input
                   {...register('last_name')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Alami"
+                  placeholder={t('workers.form.placeholders.lastName')}
                 />
                 {errors.last_name && (
                   <p className="text-red-600 text-sm mt-1">{errors.last_name.message}</p>
@@ -398,37 +400,37 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  CIN
+                  {t('workers.form.fields.cin')}
                 </label>
                 <input
                   {...register('cin')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="AB123456"
+                  placeholder={t('workers.form.placeholders.cin')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Téléphone
+                  {t('workers.form.fields.phone')}
                 </label>
                 <input
                   {...register('phone')}
                   type="tel"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="+212 6XX XXX XXX"
+                  placeholder={t('workers.form.placeholders.phone')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
+                  {t('workers.form.fields.email')}
                 </label>
                 <input
                   {...register('email')}
                   type="email"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="exemple@email.com"
+                  placeholder={t('workers.form.placeholders.email')}
                 />
                 {errors.email && (
                   <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
@@ -437,7 +439,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date de naissance
+                  {t('workers.form.fields.dateOfBirth')}
                 </label>
                 <input
                   {...register('date_of_birth')}
@@ -448,13 +450,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Adresse
+                  {t('workers.form.fields.address')}
                 </label>
                 <textarea
                   {...register('address')}
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Adresse complète"
+                  placeholder={t('workers.form.placeholders.address')}
                 />
               </div>
             </div>
@@ -467,7 +469,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    Accès à la plateforme
+                    {t('workers.form.sections.platformAccess')}
                   </h4>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -483,15 +485,15 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
                 <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
                   {grantPlatformAccess
-                    ? 'Ce travailleur pourra se connecter et consulter ses tâches assignées avec un accès limité.'
-                    : 'Donnez accès à la plateforme pour que ce travailleur puisse consulter ses tâches.'}
+                    ? t('workers.form.platformAccess.enabled')
+                    : t('workers.form.platformAccess.disabled')}
                 </p>
 
                 {grantPlatformAccess && !watchEmail && (
                   <div className="flex items-start gap-2 mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      Un email est requis pour créer un compte plateforme. Veuillez renseigner l'email du travailleur.
+                      {t('workers.form.platformAccess.emailRequired')}
                     </p>
                   </div>
                 )}
@@ -500,7 +502,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   <div className="flex items-start gap-2 mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
                     <Shield className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-green-700 dark:text-green-300">
-                      Ce travailleur dispose déjà d'un accès plateforme (Rôle: Travailleur de ferme).
+                      {t('workers.form.platformAccess.alreadyHasAccess')}
                     </p>
                   </div>
                 )}
@@ -511,30 +513,30 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Employment Details */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Détails de l'emploi
+              {t('workers.form.sections.employmentDetails')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Poste/Fonction
+                  {t('workers.form.fields.position')}
                 </label>
                 <input
                   {...register('position')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: Tractoriste, Chef d'équipe..."
+                  placeholder={t('workers.form.placeholders.position')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ferme
+                  {t('workers.form.fields.farm')}
                 </label>
                 <select
                   {...register('farm_id')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">-- Aucune ferme --</option>
+                  <option value="">{t('workers.form.options.noFarm')}</option>
                   {farmsArray.map(farm => (
                     <option key={farm.id} value={farm.id}>
                       {farm.name}
@@ -543,14 +545,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 </select>
                 {farmsArray.length === 0 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Aucune ferme disponible. Veuillez créer une ferme d'abord.
+                    {t('workers.form.validation.noFarmAvailable')}
                   </p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date d'embauche *
+                  {t('workers.form.fields.hireDate')} *
                 </label>
                 <input
                   {...register('hire_date')}
@@ -574,19 +576,19 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <label htmlFor="is_cnss_declared" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Déclaré à la CNSS
+                {t('workers.form.fields.declaredToCNSS')}
               </label>
             </div>
             {isCnssDecl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Numéro CNSS
+                  {t('workers.form.fields.cnssNumber')}
                 </label>
                 <input
                   {...register('cnss_number')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="CNSS123456"
+                  placeholder={t('workers.form.placeholders.cnssNumber')}
                 />
               </div>
             )}
@@ -595,21 +597,21 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Compensation - Conditional based on worker type */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Rémunération
+              {t('workers.form.sections.compensation')}
             </h3>
 
             {/* Fixed Salary */}
             {workerType === 'fixed_salary' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Salaire mensuel ({currencySymbol}) *
+                  {t('workers.form.fields.monthlySalary', { currency: currencySymbol })} *
                 </label>
                 <input
                   {...register('monthly_salary', { valueAsNumber: true })}
                   type="number"
                   step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="3000.00"
+                  placeholder={t('workers.form.placeholders.monthlySalary')}
                 />
                 {errors.monthly_salary && (
                   <p className="text-red-600 text-sm mt-1">{errors.monthly_salary.message}</p>
@@ -621,14 +623,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             {workerType === 'daily_worker' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Taux journalier ({currencySymbol}) *
+                  {t('workers.form.fields.dailyRate', { currency: currencySymbol })} *
                 </label>
                 <input
                   {...register('daily_rate', { valueAsNumber: true })}
                   type="number"
                   step="0.01"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="120.00"
+                  placeholder={t('workers.form.placeholders.dailyRate')}
                 />
                 {errors.daily_rate && (
                   <p className="text-red-600 text-sm mt-1">{errors.daily_rate.message}</p>
@@ -642,7 +644,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type de métayage *
+                      {t('workers.form.fields.metayageType')} *
                     </label>
                     <select
                       {...register('metayage_type')}
@@ -661,7 +663,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Pourcentage (%) *
+                      {t('workers.form.fields.metayagePercentage')} *
                     </label>
                     <input
                       {...register('metayage_percentage', { valueAsNumber: true })}
@@ -670,7 +672,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                       min="0"
                       max="50"
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="20.00"
+                      placeholder={t('workers.form.placeholders.metayagePercentage')}
                     />
                     {errors.metayage_percentage && (
                       <p className="text-red-600 text-sm mt-1">{errors.metayage_percentage.message}</p>
@@ -680,7 +682,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Base de calcul
+                    {t('workers.form.fields.calculationBasis')}
                   </label>
                   <select
                     {...register('calculation_basis')}
@@ -695,11 +697,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 </div>
 
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-                  <p className="font-medium mb-1">ℹ️ Informations sur le métayage:</p>
+                  <p className="font-medium mb-1">ℹ️ {t('workers.form.metayageInfo.title')}</p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li><strong>Khammass (1/5):</strong> Le travailleur reçoit 20% de la récolte/revenu</li>
-                    <li><strong>Rebâa (1/4):</strong> Le travailleur reçoit 25% de la récolte/revenu</li>
-                    <li><strong>Tholth (1/3):</strong> Le travailleur reçoit 33% de la récolte/revenu</li>
+                    <li><strong>{t('workers.form.metayageInfo.khammass.title')}:</strong> {t('workers.form.metayageInfo.khammass.description')}</li>
+                    <li><strong>{t('workers.form.metayageInfo.rebaa.title')}:</strong> {t('workers.form.metayageInfo.rebaa.description')}</li>
+                    <li><strong>{t('workers.form.metayageInfo.tholth.title')}:</strong> {t('workers.form.metayageInfo.tholth.description')}</li>
                   </ul>
                 </div>
               </div>
@@ -709,20 +711,20 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Payment Settings */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Paramètres de paiement
+              {t('workers.form.sections.paymentSettings')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Payment Frequency */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Fréquence de paiement
+                  {t('workers.form.fields.paymentFrequency')}
                 </label>
                 <select
                   {...register('payment_frequency')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Sélectionner...</option>
+                  <option value="">{t('workers.form.options.select')}</option>
                   {PAYMENT_FREQUENCY_OPTIONS.map(option => {
                     // Conditional display based on worker type
                     // "per_task" only for daily workers
@@ -751,64 +753,64 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   })}
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {workerType === 'fixed_salary' && 'Généralement mensuel pour les salariés fixes'}
-                  {workerType === 'daily_worker' && 'Journalier ou à la tâche pour les ouvriers'}
-                  {workerType === 'metayage' && 'Partage de récolte pour le métayage'}
+                  {workerType === 'fixed_salary' && t('workers.form.paymentFrequencyHint.fixedSalary')}
+                  {workerType === 'daily_worker' && t('workers.form.paymentFrequencyHint.dailyWorker')}
+                  {workerType === 'metayage' && t('workers.form.paymentFrequencyHint.metayage')}
                 </p>
               </div>
 
               {/* Payment Method */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Mode de paiement
+                  {t('workers.form.fields.paymentMethod')}
                 </label>
                 <select
                   {...register('payment_method')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="cash">Espèces</option>
-                  <option value="bank_transfer">Virement bancaire</option>
-                  <option value="check">Chèque</option>
-                  <option value="mobile_money">Mobile Money</option>
+                  <option value="">{t('workers.form.options.select')}</option>
+                  <option value="cash">{t('workers.form.paymentMethods.cash')}</option>
+                  <option value="bank_transfer">{t('workers.form.paymentMethods.bankTransfer')}</option>
+                  <option value="check">{t('workers.form.paymentMethods.check')}</option>
+                  <option value="mobile_money">{t('workers.form.paymentMethods.mobileMoney')}</option>
                 </select>
               </div>
 
               {/* Bank Account (conditional) */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Numéro de compte bancaire (optionnel)
+                  {t('workers.form.fields.bankAccount')}
                 </label>
                 <input
                   {...register('bank_account')}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="IBAN ou RIB"
+                  placeholder={t('workers.form.placeholders.bankAccount')}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Nécessaire pour les virements bancaires
+                  {t('workers.form.bankAccountHint')}
                 </p>
               </div>
             </div>
 
             {/* Payment frequency info box - conditional based on worker type */}
             <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-              <p className="font-medium mb-1">ℹ️ Informations sur les fréquences de paiement:</p>
+              <p className="font-medium mb-1">ℹ️ {t('workers.form.paymentFrequencyInfo.title')}:</p>
               <ul className="list-disc list-inside space-y-1">
                 {workerType === 'fixed_salary' && (
                   <>
-                    <li><strong>Mensuel:</strong> Paiement fixe chaque mois (recommandé pour salariés fixes)</li>
-                    <li><strong>Journalier:</strong> Paiement basé sur les jours effectivement travaillés</li>
+                    <li><strong>{t('workers.form.paymentFrequencyInfo.monthly')}:</strong> {t('workers.form.paymentFrequencyInfo.monthlyDescription')}</li>
+                    <li><strong>{t('workers.form.paymentFrequencyInfo.daily')}:</strong> {t('workers.form.paymentFrequencyInfo.dailyDescription')}</li>
                   </>
                 )}
                 {workerType === 'daily_worker' && (
                   <>
-                    <li><strong>Journalier:</strong> Paiement basé sur le nombre de jours travaillés</li>
-                    <li><strong>À la tâche:</strong> Paiement par tâche ou unité complétée (ex: nombre d'arbres taillés, kg récoltés)</li>
+                    <li><strong>{t('workers.form.paymentFrequencyInfo.daily')}:</strong> {t('workers.form.paymentFrequencyInfo.dailyWorkerDailyDescription')}</li>
+                    <li><strong>{t('workers.form.paymentFrequencyInfo.perTask')}:</strong> {t('workers.form.paymentFrequencyInfo.perTaskDescription')}</li>
                   </>
                 )}
                 {workerType === 'metayage' && (
-                  <li><strong>Partage de récolte:</strong> Paiement basé sur le pourcentage du revenu de la récolte (khammass, rebâa, tholth)</li>
+                  <li><strong>{t('workers.form.paymentFrequencyInfo.harvestShare')}:</strong> {t('workers.form.paymentFrequencyInfo.harvestShareDescription')}</li>
                 )}
               </ul>
             </div>
@@ -817,13 +819,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Skills & Certifications */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Compétences et certifications
+              {t('workers.form.sections.skillsAndCertifications')}
             </h3>
 
             {/* Specialties */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Spécialités
+                {t('workers.form.fields.specialties')}
               </label>
               <div className="flex gap-2 mb-2">
                 <input
@@ -832,14 +834,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   onChange={(e) => setSpecialtyInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: Taille, Irrigation, Récolte..."
+                  placeholder={t('workers.form.placeholders.specialties')}
                 />
                 <button
                   type="button"
                   onClick={addSpecialty}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Ajouter
+                  {t('workers.form.buttons.add')}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -864,7 +866,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             {/* Certifications */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Certifications
+                {t('workers.form.fields.certifications')}
               </label>
               <div className="flex gap-2 mb-2">
                 <input
@@ -873,14 +875,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   onChange={(e) => setCertificationInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())}
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: Phytosanitaire, Conduite tracteur..."
+                  placeholder={t('workers.form.placeholders.certifications')}
                 />
                 <button
                   type="button"
                   onClick={addCertification}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Ajouter
+                  {t('workers.form.buttons.add')}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -906,13 +908,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Notes
+              {t('workers.form.fields.notes')}
             </label>
             <textarea
               {...register('notes')}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Informations supplémentaires..."
+              placeholder={t('workers.form.placeholders.notes')}
             />
           </div>
 
@@ -923,7 +925,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               variant="outline"
               onClick={onClose}
             >
-              Annuler
+              {t('workers.form.buttons.cancel')}
             </Button>
             <Button
               type="submit"
@@ -932,12 +934,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  <span>Enregistrement...</span>
+                  <span>{t('workers.form.buttons.saving')}</span>
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  <span>{isEditing ? 'Mettre à jour' : 'Créer'}</span>
+                  <span>{isEditing ? t('workers.form.buttons.update') : t('workers.form.buttons.create')}</span>
                 </>
               )}
             </Button>

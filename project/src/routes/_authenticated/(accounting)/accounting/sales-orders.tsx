@@ -369,7 +369,7 @@ const AppContent: React.FC = () => {
                         <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
                           {tableState.search || tableState.datePreset !== 'all'
                             ? t('billingModule.salesOrders.empty.filtered', 'No sales orders match your filters.')
-                            : t('billingModule.salesOrders.empty', 'No sales orders found. Orders are created from accepted quotes.')}
+                            : t('billingModule.salesOrders.noData', 'No sales orders found. Orders are created from accepted quotes.')}
                         </td>
                       </tr>
                     )}

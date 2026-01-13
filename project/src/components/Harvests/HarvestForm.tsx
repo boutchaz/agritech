@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Wheat, Calendar, Star, MapPin, TrendingUp, Warehouse } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useFarms, useParcelsByFarm } from '../../hooks/useParcelsQuery';
 import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
@@ -11,43 +12,44 @@ interface HarvestFormProps {
   onClose: () => void;
 }
 
-const UNITS: { value: HarvestUnit; label: string }[] = [
-  { value: 'kg', label: 'Kilogrammes (kg)' },
-  { value: 'tons', label: 'Tonnes' },
-  { value: 'units', label: 'Unités' },
-  { value: 'boxes', label: 'Caisses' },
-  { value: 'crates', label: 'Cageots' },
-  { value: 'liters', label: 'Litres' },
-];
-
-const QUALITY_GRADES: { value: QualityGrade; label: string }[] = [
-  { value: 'Extra', label: 'Extra (Premium)' },
-  { value: 'A', label: 'Catégorie A' },
-  { value: 'First', label: 'Premier choix' },
-  { value: 'B', label: 'Catégorie B' },
-  { value: 'Second', label: 'Deuxième choix' },
-  { value: 'C', label: 'Catégorie C' },
-  { value: 'Third', label: 'Troisième choix' },
-];
-
-const STATUSES: { value: HarvestStatus; label: string }[] = [
-  { value: 'stored', label: 'Stockée' },
-  { value: 'in_delivery', label: 'En livraison' },
-  { value: 'delivered', label: 'Livrée' },
-  { value: 'sold', label: 'Vendue' },
-  { value: 'spoiled', label: 'Avariée' },
-];
-
-const INTENDED_FOR: { value: IntendedFor; label: string }[] = [
-  { value: 'market', label: 'Marché local' },
-  { value: 'storage', label: 'Stockage' },
-  { value: 'processing', label: 'Transformation' },
-  { value: 'export', label: 'Export' },
-  { value: 'direct_client', label: 'Client direct' },
-];
-
 const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+
+  const UNITS = useMemo(() => [
+    { value: 'kg' as HarvestUnit, label: t('harvests.form.units.kg') },
+    { value: 'tons' as HarvestUnit, label: t('harvests.form.units.tons') },
+    { value: 'units' as HarvestUnit, label: t('harvests.form.units.units') },
+    { value: 'boxes' as HarvestUnit, label: t('harvests.form.units.boxes') },
+    { value: 'crates' as HarvestUnit, label: t('harvests.form.units.crates') },
+    { value: 'liters' as HarvestUnit, label: t('harvests.form.units.liters') },
+  ], [t]);
+
+  const QUALITY_GRADES = useMemo(() => [
+    { value: 'Extra' as QualityGrade, label: t('harvests.form.qualityGrades.extra') },
+    { value: 'A' as QualityGrade, label: t('harvests.form.qualityGrades.a') },
+    { value: 'First' as QualityGrade, label: t('harvests.form.qualityGrades.first') },
+    { value: 'B' as QualityGrade, label: t('harvests.form.qualityGrades.b') },
+    { value: 'Second' as QualityGrade, label: t('harvests.form.qualityGrades.second') },
+    { value: 'C' as QualityGrade, label: t('harvests.form.qualityGrades.c') },
+    { value: 'Third' as QualityGrade, label: t('harvests.form.qualityGrades.third') },
+  ], [t]);
+
+  const STATUSES = useMemo(() => [
+    { value: 'stored' as HarvestStatus, label: t('harvests.form.statuses.stored') },
+    { value: 'in_delivery' as HarvestStatus, label: t('harvests.form.statuses.inDelivery') },
+    { value: 'delivered' as HarvestStatus, label: t('harvests.form.statuses.delivered') },
+    { value: 'sold' as HarvestStatus, label: t('harvests.form.statuses.sold') },
+    { value: 'spoiled' as HarvestStatus, label: t('harvests.form.statuses.spoiled') },
+  ], [t]);
+
+  const INTENDED_FOR = useMemo(() => [
+    { value: 'market' as IntendedFor, label: t('harvests.form.intendedFor.market') },
+    { value: 'storage' as IntendedFor, label: t('harvests.form.intendedFor.storage') },
+    { value: 'processing' as IntendedFor, label: t('harvests.form.intendedFor.processing') },
+    { value: 'export' as IntendedFor, label: t('harvests.form.intendedFor.export') },
+    { value: 'direct_client' as IntendedFor, label: t('harvests.form.intendedFor.directClient') },
+  ], [t]);
   const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
   const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
   const [formData, setFormData] = useState({
@@ -123,7 +125,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
       }
       onClose();
     } catch (_error) {
-      alert('Erreur lors de l\'enregistrement');
+      alert(t('harvests.form.validation.saveError'));
     }
   };
 
@@ -143,10 +145,10 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {harvest ? 'Modifier la récolte' : 'Nouvelle récolte'}
+                {harvest ? t('harvests.form.title.edit') : t('harvests.form.title.new')}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Enregistrez les détails de votre récolte
+                {t('harvests.form.title.subtitle')}
               </p>
             </div>
           </div>
@@ -163,12 +165,12 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Localisation
+              {t('harvests.form.sections.location')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ferme <span className="text-red-500">*</span>
+                  {t('harvests.form.fields.farm')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
@@ -177,13 +179,13 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   disabled={farmsLoading}
                 >
-                  <option value="">Sélectionner une ferme</option>
+                  <option value="">{t('harvests.form.placeholders.selectFarm')}</option>
                   {farms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Parcelle <span className="text-red-500">*</span>
+                  {t('harvests.form.fields.parcel')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
@@ -193,7 +195,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                   disabled={!formData.farm_id || parcelsLoading}
                 >
                   <option value="">
-                    {!formData.farm_id ? 'Sélectionnez d\'abord une ferme' : 'Sélectionner une parcelle'}
+                    {!formData.farm_id ? t('harvests.form.placeholders.selectFarmFirst') : t('harvests.form.placeholders.selectParcel')}
                   </option>
                   {parcels.map(p => (
                     <option key={p.id} value={p.id}>
@@ -204,10 +206,10 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                 {selectedParcel && (
                   <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                     <p className="text-sm font-medium text-green-700 dark:text-green-300">
-                      {selectedParcel.tree_type || selectedParcel.planting_type || 'Culture non spécifiée'}
+                      {selectedParcel.tree_type || selectedParcel.planting_type || t('harvests.form.messages.cropNotSpecified')}
                     </p>
                     <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                      {selectedParcel.variety && `Variété: ${selectedParcel.variety}`}
+                      {selectedParcel.variety && `${t('harvests.form.messages.variety')}: ${selectedParcel.variety}`}
                       {selectedParcel.variety && selectedParcel.area && ' • '}
                       {selectedParcel.area && `${selectedParcel.area} ${selectedParcel.area_unit || 'ha'}`}
                     </p>
@@ -221,12 +223,12 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Détails de la récolte
+              {t('harvests.form.sections.harvestDetails')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date de récolte <span className="text-red-500">*</span>
+                  {t('harvests.form.fields.harvestDate')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -238,14 +240,14 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Quantité récoltée <span className="text-red-500">*</span>
+                  {t('harvests.form.fields.quantity')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   required
                   min="0"
                   step="0.01"
-                  placeholder="0"
+                  placeholder={t('harvests.form.placeholders.quantity')}
                   value={formData.quantity || ''}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -258,7 +260,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Unité <span className="text-red-500">*</span>
+                  {t('harvests.form.fields.unit')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
@@ -276,31 +278,31 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Star className="h-4 w-4" />
-              Qualité
+              {t('harvests.form.sections.quality')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Grade de qualité
+                  {t('harvests.form.fields.qualityGrade')}
                 </label>
                 <select
                   value={formData.quality_grade}
                   onChange={(e) => setFormData({ ...formData, quality_grade: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 >
-                  <option value="">Non spécifié</option>
+                  <option value="">{t('harvests.form.placeholders.unspecified')}</option>
                   {QUALITY_GRADES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Score de qualité (1-10)
+                  {t('harvests.form.fields.qualityScore')}
                 </label>
                 <input
                   type="number"
                   min="1"
                   max="10"
-                  placeholder="Ex: 8"
+                  placeholder={t('harvests.form.placeholders.qualityScore')}
                   value={formData.quality_score}
                   onChange={(e) => setFormData({ ...formData, quality_score: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
@@ -313,12 +315,12 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Warehouse className="h-4 w-4" />
-              Stockage & Destination
+              {t('harvests.form.sections.storageAndDestination')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Entrepôt / Lieu de stockage
+                  {t('harvests.form.fields.warehouse')}
                 </label>
                 <select
                   value={formData.warehouse_id}
@@ -326,7 +328,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   disabled={warehousesLoading}
                 >
-                  <option value="">Sélectionner un entrepôt</option>
+                  <option value="">{t('harvests.form.placeholders.selectWarehouse')}</option>
                   {warehouses.filter(w => w.is_active).map(w => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -339,35 +341,35 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                   const selectedWarehouse = warehouses.find(w => w.id === formData.warehouse_id);
                   return selectedWarehouse && (
                     <p className="mt-1 text-xs text-gray-500">
-                      {selectedWarehouse.temperature_controlled && 'Température contrôlée'}
+                      {selectedWarehouse.temperature_controlled && t('harvests.form.messages.temperatureControlled')}
                       {selectedWarehouse.temperature_controlled && selectedWarehouse.humidity_controlled && ' • '}
-                      {selectedWarehouse.humidity_controlled && 'Humidité contrôlée'}
-                      {selectedWarehouse.capacity && ` • Capacité: ${selectedWarehouse.capacity} ${selectedWarehouse.capacity_unit || 'm³'}`}
+                      {selectedWarehouse.humidity_controlled && t('harvests.form.messages.humidityControlled')}
+                      {selectedWarehouse.capacity && ` • ${t('harvests.form.messages.capacity')}: ${selectedWarehouse.capacity} ${selectedWarehouse.capacity_unit || 'm³'}`}
                     </p>
                   );
                 })()}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Destination prévue
+                  {t('harvests.form.fields.intendedFor')}
                 </label>
                 <select
                   value={formData.intended_for}
                   onChange={(e) => setFormData({ ...formData, intended_for: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 >
-                  <option value="">Non spécifié</option>
+                  <option value="">{t('harvests.form.placeholders.unspecified')}</option>
                   {INTENDED_FOR.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                 </select>
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Emplacement précis (optionnel)
+                {t('harvests.form.fields.storageLocation')}
               </label>
               <input
                 type="text"
-                placeholder="Ex: Allée 3, Étagère B2, Chambre froide 2"
+                placeholder={t('harvests.form.placeholders.storageLocation')}
                 value={formData.storage_location}
                 onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
@@ -376,7 +378,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Statut
+                  {t('harvests.form.fields.status')}
                 </label>
                 <select
                   value={formData.status}
@@ -388,13 +390,13 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Prix unitaire estimé (MAD)
+                  {t('harvests.form.fields.expectedPricePerUnit')}
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="Ex: 15.00"
+                  placeholder={t('harvests.form.placeholders.price')}
                   value={formData.expected_price_per_unit}
                   onChange={(e) => setFormData({ ...formData, expected_price_per_unit: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
@@ -405,7 +407,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
                 <span className="text-sm text-green-700 dark:text-green-300">
-                  Revenu estimé: <strong>{estimatedRevenue} MAD</strong>
+                  {t('harvests.form.messages.estimatedRevenue')}: <strong>{estimatedRevenue} MAD</strong>
                 </span>
               </div>
             )}
@@ -414,11 +416,11 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
           {/* Notes Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Notes / Observations
+              {t('harvests.form.fields.notes')}
             </label>
             <textarea
               rows={3}
-              placeholder="Ajoutez des observations sur la récolte, conditions météo, problèmes rencontrés..."
+              placeholder={t('harvests.form.placeholders.notes')}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
@@ -432,7 +434,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               onClick={onClose}
               className="px-5 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
             >
-              Annuler
+              {t('harvests.form.buttons.cancel')}
             </button>
             <button
               type="submit"
@@ -442,7 +444,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               {(createMutation.isPending || updateMutation.isPending) && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {harvest ? 'Mettre à jour' : 'Enregistrer la récolte'}
+              {harvest ? t('harvests.form.buttons.update') : t('harvests.form.buttons.save')}
             </button>
           </div>
         </form>

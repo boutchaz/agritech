@@ -40,6 +40,9 @@
     "none": "Aucun"
   },
   "common": {
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "none": "Aucun",
     "errors": {
       "generic": "Une erreur est survenue. Veuillez réessayer.",
       "network": "Erreur réseau. Vérifiez votre connexion.",
@@ -113,7 +116,8 @@
     "receptionBatches": "Lots de Réception",
     "qualityControl": "Contrôle Qualité",
     "campaigns": "Campagnes",
-    "cropCycles": "Cycles de Culture"
+    "cropCycles": "Cycles de Culture",
+    "chat": "Assistant IA"
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -125,6 +129,34 @@
       "entries": "Entrées de Stock",
       "reception": "Lots de Réception",
       "reports": "Rapports & Analyses"
+    },
+    "lowStockAlerts": {
+      "title": "Alertes de Stock Faible",
+      "itemsBelowMinimum": "article(s) sous le niveau de stock minimum",
+      "createEntry": "Créer une Entrée de Stock",
+      "currentStock": "Stock Actuel",
+      "minimumLevel": "Niveau Minimum",
+      "totalValue": "Valeur Totale",
+      "byFarm": "Par Ferme/Entrepôt",
+      "addStock": "Ajouter du Stock",
+      "viewItem": "Voir l'Article",
+      "viewAll": "Voir les {{count}} articles en stock faible",
+      "allOptimal": "Tous les niveaux de stock sont optimaux"
+    },
+    "itemFarmUsage": {
+      "noUsage": "Aucune donnée d'utilisation trouvée pour cet article",
+      "totalUsage": "Utilisation Totale",
+      "totalQuantity": "Quantité Totale Utilisée",
+      "lastUsed": "Dernière Utilisation",
+      "never": "Jamais",
+      "byFarm": "Utilisation par Ferme",
+      "usageEvents": "événement(s) d'utilisation",
+      "quantityUsed": "Quantité Utilisée",
+      "parcel": "Parcelle",
+      "relatedTasks": "Tâches Connexes",
+      "viewTask": "Voir la Tâche",
+      "viewFarm": "Voir la Ferme",
+      "more": "plus"
     }
   },
   "dashboard": {
@@ -1919,15 +1951,125 @@
   "accountingModule": {
     "dashboard": {
       "title": "Tableau de bord comptable",
-      "subtitle": "Aperçu de votre performance financière"
+      "subtitle": "Aperçu de votre performance financière",
+      "metrics": {
+        "totalInvoices": "Total des Factures",
+        "outstanding": "en attente",
+        "totalPayments": "Total des Paiements",
+        "received": "reçus",
+        "cashReceived": "Argent Reçu",
+        "payments": "paiements",
+        "journalEntries": "Écritures Comptables",
+        "posted": "comptabilisées"
+      },
+      "alert": {
+        "title": "Module Comptable Actif",
+        "message": "Votre module comptable est maintenant actif. Commencez par créer des factures ou enregistrer des paiements."
+      },
+      "quickActions": {
+        "title": "Actions Rapides",
+        "subtitle": "Tâches comptables courantes",
+        "createInvoice": "Créer une Facture",
+        "recordPayment": "Enregistrer un Paiement",
+        "createJournalEntry": "Créer une Écriture Comptable"
+      },
+      "recentActivity": {
+        "title": "Activité Récente",
+        "subtitle": "Dernières transactions"
+      },
+      "gettingStarted": {
+        "title": "Pour Commencer",
+        "subtitle": "Complétez ces étapes pour configurer votre comptabilité",
+        "step1": "Examinez votre Plan Comptable (déjà pré-rempli avec les valeurs par défaut)",
+        "step2": "Créez votre première facture de vente ou d'achat",
+        "step3": "Enregistrez un paiement et affectez-le aux factures",
+        "step4": "Consultez vos rapports financiers (Bilan, Compte de Résultat)"
+      },
+      "activity": {
+        "salesInvoice": "Facture de Vente",
+        "purchaseInvoice": "Facture d'Achat",
+        "created": "créée",
+        "submitted": "soumise",
+        "paymentReceived": "Paiement reçu de",
+        "paymentMade": "Paiement effectué à"
+      }
     },
     "accounts": {
       "title": "Plan Comptable",
       "subtitle": "Gérez votre hiérarchie de comptes",
+      "subtitleAlt": "Gérez votre hiérarchie du plan comptable",
       "searchPlaceholder": "Rechercher par code ou nom...",
       "filterByType": "Filtrer par type",
       "parentAccount": "Aucun (Compte Racine)",
-      "descriptionPlaceholder": "Description optionnelle"
+      "descriptionPlaceholder": "Description optionnelle",
+      "newAccount": "Nouveau Compte",
+      "showInactive": "Afficher les inactifs",
+      "allTypes": "Tous les types",
+      "table": {
+        "code": "Code",
+        "name": "Nom",
+        "type": "Type",
+        "currency": "Devise",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "accountTypes": {
+        "Asset": "Actifs",
+        "Liability": "Passifs",
+        "Equity": "Capitaux Propres",
+        "Revenue": "Revenus",
+        "Expense": "Dépenses"
+      },
+      "accountKinds": {
+        "group": "Groupe",
+        "ledger": "Compte"
+      },
+      "empty": {
+        "title": "Aucun Plan Comptable Trouvé",
+        "description": "Commencez rapidement en important un plan comptable standard pour le Maroc (Plan Comptable Marocain), ou créez des comptes manuellement.",
+        "descriptionShort": "Commencez en important un plan comptable standard ou créez des comptes manuellement.",
+        "noMatches": "Aucun compte ne correspond à vos critères de recherche."
+      },
+      "actions": {
+        "seedChart": "Importer le Plan",
+        "seedChartAlt": "Importer le Plan Comptable",
+        "seeding": "Importation...",
+        "seedingAlt": "Importation des comptes...",
+        "createManually": "Créer Manuellement"
+      },
+      "form": {
+        "editTitle": "Modifier le Compte",
+        "createTitle": "Créer un Nouveau Compte",
+        "editDescription": "Mettez à jour les détails du compte ci-dessous",
+        "createDescription": "Ajoutez un nouveau compte à votre plan comptable",
+        "code": "Code Compte *",
+        "codePlaceholder": "ex: 1000",
+        "name": "Nom du Compte *",
+        "namePlaceholder": "ex: Caisse",
+        "type": "Type de Compte *",
+        "subtype": "Sous-type de Compte",
+        "subtypePlaceholder": "ex: Actif Courant",
+        "parent": "Compte Parent",
+        "currency": "Devise",
+        "currencyHelp": "La devise est définie au niveau de l'organisation et ne peut pas être modifiée par compte. Pour changer la devise, allez dans Paramètres de l'organisation.",
+        "description": "Description",
+        "isGroup": "Compte Groupe (peut contenir des comptes enfants)",
+        "isActive": "Actif",
+        "allowCostCenter": "Autoriser le Suivi des Centres de Coûts",
+        "level": "Niveau {{number}}",
+        "cancel": "Annuler",
+        "update": "Mettre à jour le Compte",
+        "create": "Créer le Compte"
+      },
+      "delete": {
+        "title": "Supprimer le Compte",
+        "confirmation": "Êtes-vous sûr de vouloir supprimer le compte \"{{name}}\" ? Cette action ne peut pas être annulée.",
+        "button": "Supprimer le Compte"
+      }
     },
     "journal": {
       "title": "Écritures Comptables",
@@ -1970,17 +2112,264 @@
       "title": "Rapports Financiers",
       "subtitle": "Accédez aux rapports financiers et analyses complètes"
     },
-    "invoice": {
-      "selectItem": "Sélectionner un article",
-      "descriptionPlaceholder": "Description",
-      "remarksPlaceholder": "Remarques ou notes optionnelles"
+    "invoices": {
+      "title": "Factures",
+      "subtitle": "Gérer les factures de vente et d'achat",
+      "pageTitle": "Factures",
+      "allInvoices": "Toutes les Factures",
+      "description": "Suivre et gérer vos factures",
+      "tableDescription": "Une liste de toutes vos factures de vente et d'achat",
+      "loading": "Chargement des factures...",
+      "search": {
+        "placeholder": "Rechercher des factures par numéro ou client..."
+      },
+      "filter": {
+        "allTypes": "Tous les Types",
+        "sales": "Ventes",
+        "purchase": "Achats",
+        "allStatus": "Tous les Statuts"
+      },
+      "status": {
+        "draft": "Brouillon",
+        "submitted": "Soumise",
+        "paid": "Payée",
+        "partiallyPaid": "Partiellement Payée",
+        "overdue": "En Retard",
+        "cancelled": "Annulée"
+      },
+      "type": {
+        "sales": "Vente",
+        "purchase": "Achat"
+      },
+      "stats": {
+        "total": "Total des Factures",
+        "pending": "En Attente",
+        "paid": "Payées",
+        "overdue": "En Retard"
+      },
+      "table": {
+        "invoiceNumber": "Facture N°",
+        "type": "Type",
+        "party": "Client/Fournisseur",
+        "date": "Date",
+        "amount": "Montant",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "actions": {
+        "create": "Créer une Facture",
+        "menu": "Actions",
+        "submit": "Soumettre la Facture",
+        "download": "Télécharger PDF",
+        "delete": "Supprimer",
+        "confirmDelete": "Êtes-vous sûr de vouloir supprimer la facture {{invoiceNumber}} ? Cette action ne peut pas être annulée.",
+        "deleteSuccess": "Facture {{invoiceNumber}} supprimée avec succès",
+        "deleteError": "Échec de la suppression de la facture",
+        "onlyDraftDelete": "Seules les factures en brouillon peuvent être supprimées",
+        "editDraftOnly": "Seules les factures en brouillon peuvent être modifiées"
+      },
+      "empty": {
+        "message": "Aucune facture trouvée. Créez votre première facture pour commencer.",
+        "filtered": "Aucune facture ne correspond à vos filtres."
+      },
+      "error": {
+        "loading": "Erreur lors du chargement des factures"
+      },
+      "form": {
+        "title": {
+          "create": "Créer une Nouvelle Facture",
+          "edit": "Modifier la Facture"
+        },
+        "description": {
+          "create": "Ajouter une nouvelle facture de vente ou d'achat avec des lignes",
+          "edit": "Mettre à jour les détails de la facture et les lignes"
+        },
+        "loading": "Chargement de la facture...",
+        "optional": "Optionnel",
+        "fields": {
+          "invoiceType": "Type de Facture",
+          "customer": "Client",
+          "supplier": "Fournisseur",
+          "selectParty": "Sélectionner {{party}}",
+          "invoiceDate": "Date de Facture",
+          "dueDate": "Date d'Échéance",
+          "farm": "Ferme",
+          "farmHelp": "Lier cette facture à une ferme spécifique pour un meilleur suivi",
+          "noFarmSelected": "Aucune ferme sélectionnée",
+          "parcel": "Parcelle",
+          "parcelHelp": "Lier à une parcelle spécifique",
+          "parcelHelpSelectFarm": "Sélectionnez d'abord une ferme",
+          "parcelHelpNoParcels": "Aucune parcelle disponible pour cette ferme",
+          "noParcelSelected": "Aucune parcelle sélectionnée",
+          "remarks": "Remarques",
+          "remarksPlaceholder": "Remarques ou notes optionnelles"
+        },
+        "invoiceTypes": {
+          "sales": "Facture de Vente",
+          "purchase": "Facture d'Achat"
+        },
+        "items": {
+          "title": "Lignes de Facture",
+          "addItem": "Ajouter une Ligne",
+          "selectItem": "Sélectionner un article",
+          "addNewItem": "Ajouter un Nouvel Article",
+          "loadingItems": "Chargement des articles...",
+          "noItemsFound": "Aucun article trouvé",
+          "selectAccount": "Sélectionner un compte",
+          "noTax": "Aucune taxe",
+          "placeholders": {
+            "description": "Description",
+            "quantity": "1",
+            "rate": "0.00"
+          },
+          "columns": {
+            "itemName": "Nom de l'Article",
+            "description": "Description",
+            "account": "Compte",
+            "tax": "Taxe",
+            "quantity": "Qté",
+            "rate": "Taux",
+            "amount": "Montant",
+            "action": "Action"
+          }
+        },
+        "totals": {
+          "subtotal": "Sous-total",
+          "totalTax": "Total des Taxes",
+          "grandTotal": "Grand Total"
+        },
+        "buttons": {
+          "cancel": "Annuler",
+          "create": "Créer la Facture",
+          "creating": "Création...",
+          "update": "Mettre à Jour la Facture",
+          "updating": "Mise à jour...",
+          "goToCustomers": "Aller aux Clients",
+          "goToStockManagement": "Aller à la Gestion des Stocks"
+        },
+        "actions": {
+          "create": "créer",
+          "update": "mettre à jour"
+        },
+        "errors": {
+          "noCustomers": "Aucun client trouvé.",
+          "noSuppliers": "Aucun fournisseur trouvé."
+        },
+        "validation": {
+          "itemNameRequired": "Le nom de l'article est requis",
+          "quantityMin": "La quantité doit être d'au moins 1",
+          "ratePositive": "Le taux doit être positif",
+          "accountRequired": "Le compte est requis",
+          "partyRequired": "Veuillez sélectionner un client/fournisseur",
+          "invoiceDateRequired": "La date de facture est requise",
+          "dueDateRequired": "La date d'échéance est requise",
+          "atLeastOneItem": "Au moins un article est requis",
+          "dueDateAfterInvoiceDate": "La date d'échéance doit être égale ou postérieure à la date de facture"
+        },
+        "toast": {
+          "createSuccess": "Facture créée avec succès",
+          "updateSuccess": "Facture mise à jour avec succès",
+          "saveError": "Échec de l'action {{action}} de la facture"
+        }
+      }
+    },
+    "payments": {
+      "title": "Paiements",
+      "subtitle": "Gérer les transactions de paiement",
+      "form": {
+        "title": {
+          "new": "Nouveau Paiement",
+          "edit": "Modifier le Paiement"
+        },
+        "fields": {
+          "paymentType": "Type de Paiement",
+          "paymentDate": "Date de Paiement",
+          "customer": "Client",
+          "supplier": "Fournisseur",
+          "optional": "Optionnel",
+          "partyName": "Nom de la Tiers",
+          "name": "Nom",
+          "amount": "Montant",
+          "paymentMethod": "Méthode de Paiement",
+          "referenceNumber": "Numéro de Référence",
+          "remarks": "Remarques",
+          "status": "Statut"
+        },
+        "paymentTypes": {
+          "received": "Paiement Reçu",
+          "made": "Paiement Effectué"
+        },
+        "methods": {
+          "cash": "Espèces",
+          "bankTransfer": "Virement Bancaire",
+          "check": "Chèque",
+          "mobileMoney": "Mobile Money"
+        },
+        "statuses": {
+          "draft": "Brouillon",
+          "submitted": "Soumis",
+          "cancelled": "Annulé"
+        },
+        "actions": {
+          "select": "Sélectionner",
+          "enter": "Entrer"
+        },
+        "placeholders": {
+          "referenceNumber": "Numéro de chèque, ID de transaction, etc.",
+          "remarks": "Notes supplémentaires sur ce paiement"
+        },
+        "validation": {
+          "partyNameRequired": "Le nom de la tiers est requis",
+          "paymentDateRequired": "La date de paiement est requise",
+          "amountMin": "Le montant doit être supérieur à 0"
+        },
+        "errors": {
+          "saveFailed": "Échec de l'enregistrement du paiement :"
+        },
+        "buttons": {
+          "cancel": "Annuler",
+          "create": "Créer un Paiement",
+          "update": "Mettre à jour le Paiement"
+        }
+      }
     }
   },
   "billingModule": {
     "salesOrders": {
       "title": "Commandes de Vente",
       "subtitle": "Gérez les commandes clients et l'exécution",
-      "selectWarehouse": "Sélectionner un entrepôt..."
+      "selectWarehouse": "Sélectionner un entrepôt...",
+      "allOrders": "Toutes les Commandes de Vente",
+      "trackOrders": "Suivez les commandes de la confirmation à l'achèvement",
+      "search": "Rechercher par numéro de commande ou client...",
+      "stats": {
+        "totalOrders": "Total des Commandes",
+        "draft": "Brouillon",
+        "confirmed": "Confirmée",
+        "inProgress": "En Cours",
+        "shipped": "Expédiée",
+        "completed": "Terminée",
+        "totalValue": "Valeur Totale"
+      },
+      "table": {
+        "orderNumber": "Commande N°",
+        "customer": "Client",
+        "orderDate": "Date de Commande",
+        "expectedDate": "Date Attendue",
+        "amount": "Montant",
+        "invoiced": "Facturé",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "viewAndManage": "Voir et gérer vos commandes de vente",
+      "noData": "Aucune commande de vente trouvée. Les commandes sont créées à partir des devis acceptés.",
+      "empty": {
+        "filtered": "Aucune commande de vente ne correspond à vos filtres."
+      },
+      "error": {
+        "loading": "Erreur lors du chargement des commandes de vente",
+        "unknown": "Erreur inconnue"
+      }
     },
     "purchaseOrders": {
       "title": "Commandes d'Achat",
@@ -2353,6 +2742,93 @@
       "intensive": "Intensive",
       "super_intensive": "Super-intensive",
       "organic": "Biologique"
+    },
+    "detail": {
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "soil": "Analyse Sol",
+        "satellite": "Satellite",
+        "weather": "Météo",
+        "production": "Production",
+        "profitability": "Rentabilité",
+        "reports": "Rapports"
+      },
+      "loading": "Chargement des détails de la parcelle...",
+      "notFound": "Parcelle non trouvée",
+      "backToParcels": "Retour aux Parcelles",
+      "breadcrumbs": {
+        "farm": "Ferme",
+        "parcels": "Parcelles"
+      }
+    },
+    "analyse": {
+      "title": "Analyse",
+      "newAnalysis": "Nouvelle Analyse",
+      "saveError": "Erreur lors de l'enregistrement de l'analyse du sol",
+      "plantSaveError": "Erreur lors de l'enregistrement de l'analyse de la plante",
+      "waterSaveError": "Erreur lors de l'enregistrement de l'analyse de l'eau",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette analyse ?",
+      "deleteError": "Erreur lors de la suppression de l'analyse",
+      "selectAnalysisType": "Sélectionner le Type d'Analyse",
+      "tabs": {
+        "soil": "Analyse du Sol",
+        "plant": "Analyse de la Plante",
+        "water": "Analyse de l'Eau"
+      },
+      "soilDescription": "Analyser le pH, les nutriments, la matière organique et la composition du sol",
+      "plantDescription": "Analyser les tissus foliaires, la teneur en nutriments et la santé des plantes",
+      "waterDescription": "Analyser la qualité de l'eau d'irrigation, le pH et la teneur en minéraux",
+      "noAnalyses": "Aucune analyse encore. Ajoutez votre première analyse pour commencer.",
+      "addAnalysis": "Ajouter une Analyse",
+      "analysisDate": "Date d'Analyse :",
+      "laboratory": "Laboratoire",
+      "deleteAnalysis": "Supprimer",
+      "notes": "Notes",
+      "soilInfo": "Informations sur le Sol",
+      "soilType": "Type de Sol"
+    },
+    "index": {
+      "noSatelliteData": "Aucune Donnée Satellite Disponible",
+      "noSatelliteDataDesc": "L'imagerie satellite n'a pas encore été traitée pour cette parcelle. Allez dans l'onglet Satellite pour demander l'imagerie.",
+      "goToSatellite": "Aller à l'onglet Satellite",
+      "refreshData": "Actualiser les Données",
+      "irrigationIndex": "Indice d'Irrigation",
+      "basedOnNdmi": "Basé sur NDMI",
+      "expectedYield": "Rendement Attendu",
+      "ndvi": "NDVI",
+      "updatedOn": "Mis à jour le",
+      "vegetationHealth": "Santé de la Végétation",
+      "summary": "Résumé de la Parcelle",
+      "area": "Surface",
+      "notDefined": "Non défini",
+      "soilType": "Type de Sol",
+      "irrigation": "Irrigation",
+      "treeType": "Type d'Arbre",
+      "variety": "Variété",
+      "plantingYear": "Année de Plantation",
+      "lastUpdate": "Dernière Mise à Jour",
+      "description": "Description"
+    },
+    "profitability": {
+      "loading": "Chargement de la rentabilité..."
+    },
+    "reports": {
+      "loading": "Chargement des rapports..."
+    },
+    "satellite": {
+      "loading": "Chargement de l'analyse satellite...",
+      "noBoundary": {
+        "title": "Les données limitrophes de la parcelle sont requises pour l'analyse satellite.",
+        "description": "Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.",
+        "defineButton": "Définir les limites de la parcelle"
+      }
+    },
+    "weather": {
+      "loadingFallback": "Chargement des données météo...",
+      "noBoundary": {
+        "title": "Les données de localisation de la parcelle sont requises pour l'analyse météo.",
+        "description": "Veuillez définir les limites de la parcelle pour accéder aux analyses météo et climatiques."
+      }
     }
   },
   "analysis": {
@@ -2478,6 +2954,7 @@
       "notFound": "Travailleur introuvable",
       "backToList": "Retour aux travailleurs",
       "noPosition": "Aucun poste assigné",
+      "settlementsOnlyForMetayage": "Les règlements sont uniquement disponibles pour les travailleurs en métayage",
       "tabs": {
         "info": "Informations",
         "payments": "Paiements",
@@ -2516,6 +2993,7 @@
       "amount": "Montant",
       "status": "Statut",
       "method": "Méthode",
+      "actions": "Actions",
       "markAsPaid": "Marquer comme payé",
       "processSuccess": "Paiement marqué comme payé",
       "processError": "Échec du traitement du paiement"
@@ -2546,12 +3024,24 @@
       "description": "Description",
       "status": "Statut"
     },
+    "workRecordStatuses": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "cancelled": "Annulé"
+    },
     "settlements": {
       "period": "Période",
       "grossRevenue": "Revenu brut",
       "charges": "Charges",
       "share": "Part du travailleur",
       "status": "Statut"
+    },
+    "settlementStatuses": {
+      "pending": "En attente",
+      "partial": "Partiel",
+      "paid": "Payé",
+      "cancelled": "Annulé"
     },
     "metayageTypes": {
       "khemmas": "Khemmas (1/5)",
@@ -2563,7 +3053,396 @@
       "gross": "Revenu brut",
       "net": "Revenu net (après charges)"
     },
-    "perDay": "par jour"
+    "perDay": "par jour",
+    "metayage": {
+      "title": "Calculateur de Métayage",
+      "calculator": "Calculateur",
+      "noWorkers": "Aucun travailleur en métayage actif. Veuillez d'abord ajouter un travailleur de type \"Métayage\".",
+      "workerConfig": {
+        "title": "Configuration du travailleur",
+        "type": "Type",
+        "percentage": "Pourcentage",
+        "calculationBasis": "Base de calcul"
+      },
+      "type": {
+        "grossRevenue": "Revenu brut",
+        "netRevenue": "Revenu net (après charges)"
+      },
+      "fields": {
+        "worker": "Travailleur (Khammass/Rebâa)",
+        "selectWorker": "-- Sélectionner un travailleur --",
+        "periodStart": "Début période",
+        "periodEnd": "Fin période",
+        "harvestDate": "Date de récolte",
+        "grossRevenue": "Revenu brut ({{currency}})",
+        "grossRevenueHint": "Montant total de la vente de la récolte",
+        "totalCharges": "Charges totales ({{currency}})",
+        "totalChargesHint": "Intrants, eau, frais de récolte, etc.",
+        "calculationBasis": "Base de calcul",
+        "notes": "Notes",
+        "notesPlaceholder": "Détails sur la récolte, conditions spéciales..."
+      },
+      "buttons": {
+        "save": "Enregistrer le règlement",
+        "saving": "Enregistrement..."
+      },
+      "results": {
+        "title": "Résultat du calcul",
+        "grossRevenue": "Revenu brut",
+        "totalCharges": "Charges totales",
+        "netRevenue": "Revenu net",
+        "calculationBasis": "Base de calcul",
+        "workerPercentage": "Pourcentage travailleur",
+        "workerShare": "Part travailleur"
+      },
+      "validation": {
+        "fillAllRequired": "Veuillez remplir tous les champs obligatoires",
+        "settlementSaved": "Règlement enregistré avec succès",
+        "saveError": "Erreur lors de l'enregistrement"
+      }
+    },
+    "configuration": {
+      "title": "Configuration de Paiement",
+      "sections": {
+        "pieceWork": "Paiement à la Tâche",
+        "dailyWage": "Salaire Journalier",
+        "monthlySalary": "Salaire Mensuel",
+        "metayage": "Métayage (Partage des Revenus)"
+      },
+      "descriptions": {
+        "pieceWork": "Le travailleur est payé en fonction des unités complétées (arbres, caisses, kg, etc.)",
+        "dailyWage": "Le travailleur est payé un montant fixe par jour travaillé",
+        "monthlySalary": "Le travailleur reçoit un salaire mensuel fixe",
+        "metayage": "Le travailleur reçoit un pourcentage des revenus de la récolte"
+      },
+      "fields": {
+        "workerType": "Type de travailleur",
+        "paymentFrequency": "Fréquence de paiement",
+        "defaultWorkUnit": "Unité de travail par défaut *",
+        "ratePerUnit": "Taux par unité * ({{currency}})",
+        "dailyRate": "Taux journalier * ({{currency}})",
+        "monthlySalary": "Salaire mensuel * ({{currency}})",
+        "metayagePercentage": "Pourcentage de partage des revenus * (%)"
+      },
+      "placeholders": {
+        "selectUnit": "Sélectionner une unité...",
+        "ratePerUnit": "ex: 5,00",
+        "dailyRate": "ex: 150,00",
+        "monthlySalary": "ex: 4500,00",
+        "metayagePercentage": "ex: 30"
+      },
+      "workerTypes": {
+        "dailyWorker": "Travailleur Journalier",
+        "fixedSalary": "Permanent (Salaire Fixe)",
+        "metayage": "Métayage (Partage des Revenus)"
+      },
+      "paymentFrequencies": {
+        "daily": "Journalier",
+        "monthly": "Mensuel",
+        "perUnit": "Par unité (à la tâche)",
+        "harvestShare": "Part de récolte"
+      },
+      "examples": {
+        "label": "Exemple",
+        "pieceWork": "Si le taux est {{rate}} {{currency}} par unité et le travailleur complète 100 unités, il gagne {{total}} {{currency}}.",
+        "metayage": "Si le revenu de la récolte est {{revenue}} {{currency}} et la part est {{percentage}}%, le travailleur gagne {{earnings}} {{currency}}."
+      },
+      "buttons": {
+        "cancel": "Annuler",
+        "save": "Enregistrer la Configuration"
+      },
+      "states": {
+        "loading": "Chargement...",
+        "saving": "Enregistrement...",
+        "notFound": "Travailleur non trouvé"
+      },
+      "messages": {
+        "success": "Configuration de paiement mise à jour avec succès!",
+        "noWorkUnits": "Aucune unité de travail disponible. Veuillez d'abord créer des unités de travail."
+      },
+      "errors": {
+        "paymentConfigurationRequired": "Veuillez fournir la configuration de paiement requise pour le type sélectionné",
+        "updateFailed": "Échec de la mise à jour de la configuration de paiement"
+      }
+    }
+  },
+  "campaigns": {
+    "pageTitle": "Campagnes Agricoles",
+    "title": "Campagnes Agricoles",
+    "description": "Gérer les campagnes agricoles pour la planification de la production.",
+    "addNew": "Nouvelle Campagne",
+    "loading": "Chargement des campagnes...",
+    "empty": "Aucune campagne encore. Créez votre première campagne agricole pour commencer.",
+    "noPermission": "Vous n'avez pas la permission de gérer les campagnes.",
+    "cycles": "Cycles",
+    "area": "Surface",
+    "profit": "Bénéfice Net",
+    "status": {
+      "completed": "Terminée",
+      "active": "Active",
+      "planned": "Planifiée",
+      "cancelled": "Annulée"
+    },
+    "type": {
+      "general": "Générale",
+      "rainfed": "Pluviale",
+      "irrigated": "Irriguée",
+      "greenhouse": "Serre"
+    },
+    "edit": {
+      "title": "Modifier la Campagne",
+      "description": "Mettre à jour les détails de la campagne."
+    },
+    "create": {
+      "title": "Créer une Campagne",
+      "description": "Ajouter une nouvelle campagne agricole pour le suivi de la production."
+    },
+    "form": {
+      "code": "Code",
+      "name": "Nom",
+      "description": "Description",
+      "descriptionPlaceholder": "Notes de campagne...",
+      "startDate": "Date de Début",
+      "endDate": "Date de Fin",
+      "campaignType": "Type de Campagne",
+      "primaryFiscalYear": "Exercice Fiscal Principal",
+      "selectFiscalYear": "Sélectionner...",
+      "setCurrent": "Définir comme campagne actuelle",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    }
+  },
+  "cropCycles": {
+    "pageTitle": "Cycles Culturaux",
+    "title": "Cycles Culturaux",
+    "description": "Suivez les cycles de production de la plantation à la récolte avec une attribution complète des coûts.",
+    "addNew": "Nouveau Cycle",
+    "metrics": {
+      "totalArea": "Surface Totale",
+      "totalCosts": "Coûts Totaux",
+      "totalRevenue": "Revenu Total",
+      "netProfit": "Profit Net"
+    },
+    "filter": {
+      "campaign": "Toutes les Campagnes",
+      "allCampaigns": "Toutes les Campagnes",
+      "status": "Tous les Statuts",
+      "allStatuses": "Tous les Statuts"
+    },
+    "status": {
+      "planned": "Planifié",
+      "land_prep": "Préparation Sol",
+      "growing": "En Croissance",
+      "harvesting": "Récolte",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "loading": "Chargement des cycles culturaux...",
+    "empty": "Aucun cycle cultural trouvé. Créez votre premier cycle pour commencer le suivi de la production.",
+    "complete": "Marquer Terminé",
+    "area": "Surface",
+    "yield": "Rendement",
+    "costs": "Coûts",
+    "revenue": "Revenu",
+    "profit": "Profit",
+    "edit": {
+      "title": "Modifier le Cycle Cultural",
+      "description": "Mettre à jour les détails du cycle cultural."
+    },
+    "create": {
+      "title": "Créer un Cycle Cultural",
+      "description": "Commencer le suivi d'un nouveau cycle de production."
+    },
+    "form": {
+      "farm": "Ferme",
+      "selectFarm": "Sélectionner une ferme...",
+      "parcel": "Parcelle",
+      "selectParcel": "Sélectionner une parcelle...",
+      "cropType": "Type de Culture",
+      "cropTypePlaceholder": "ex: Blé, Olivier, Tomate",
+      "variety": "Variété",
+      "varietyPlaceholder": "ex: Picholine, Roma",
+      "cycleCode": "Code Cycle",
+      "generate": "Générer",
+      "season": "Saison",
+      "selectSeason": "Sélectionner...",
+      "campaign": "Campagne",
+      "selectCampaign": "Sélectionner...",
+      "fiscalYear": "Exercice Fiscal",
+      "selectFiscalYear": "Sélectionner...",
+      "plantingDate": "Date de Plantation",
+      "harvestStart": "Début Récolte",
+      "harvestEnd": "Fin Récolte",
+      "area": "Surface (ha)",
+      "yieldPerHa": "Rendement Prev/ha",
+      "yieldUnit": "Unité",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes supplémentaires...",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    }
+  },
+  "production": {
+    "cropCycles": {
+      "pageTitle": "Cycles Culturaux"
+    },
+    "harvests": {
+      "title": "Récoltes",
+      "loading": "Chargement des récoltes...",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette récolte ?",
+      "deleteError": "Erreur lors de la suppression de la récolte",
+      "searchPlaceholder": "Rechercher par culture, parcelle, ferme...",
+      "filters": "Filtres",
+      "export": "Exporter",
+      "newHarvest": "Nouvelle Récolte",
+      "harvestsCount": "{{count}} récolte enregistrée",
+      "harvestsCount_plural": "{{count}} récoltes enregistrées",
+      "filterLabels": {
+        "allStatuses": "Tous les statuts"
+      },
+      "statuses": {
+        "stored": "Stocké",
+        "in_delivery": "En livraison",
+        "delivered": "Livré",
+        "sold": "Vendu",
+        "spoiled": "Gâté"
+      },
+      "emptyState": {
+        "modifySearch": "Essayez de modifier votre recherche",
+        "startFirst": "Commencez par enregistrer votre première récolte"
+      },
+      "noResults": "Aucun résultat trouvé",
+      "noHarvests": "Aucune récolte enregistrée",
+      "csvHeaders": {
+        "date": "Date",
+        "parcel": "Parcelle",
+        "crop": "Culture",
+        "quantity": "Quantité",
+        "unit": "Unité",
+        "quality": "Qualité",
+        "destination": "Destination",
+        "status": "Statut"
+      }
+    },
+    "intelligence": {
+      "pageTitle": "Intelligence de Production",
+      "subtitle": "Suivi des rendements, prévisions et benchmarks de performance",
+      "loadingOrganization": "Chargement de l'organisation..."
+    },
+    "qualityControl": {
+      "pageTitle": "Contrôle Qualité",
+      "subtitle": "Gérer les inspections et les processus de contrôle qualité",
+      "breadcrumbLabel": "Contrôle Qualité",
+      "title": "Contrôle Qualité",
+      "moduleTitle": "Module de Contrôle Qualité",
+      "moduleDescription": "Gérez les inspections et les processus de contrôle qualité",
+      "underDevelopment": "Le module de contrôle qualité est actuellement en développement.",
+      "loadingOrganization": "Chargement de l'organisation...",
+      "plannedFeaturesTitle": "Fonctionnalités prévues :",
+      "featureChecklists": "Listes de contrôle qualité pour les lots de réception",
+      "featureDefectDetection": "Détection visuelle des défauts et enregistrement",
+      "featureGrades": "Attribution des grades (Extra, A, B, C, etc.)",
+      "featureMetrics": "Suivi des indicateurs de qualité dans le temps",
+      "featureNonConformity": "Rapport de non-conformité",
+      "featureWorkflow": "Workflow d'acceptation/rejet des lots",
+      "featureCertificates": "Génération de certificats de qualité",
+      "noteLabel": "Note",
+      "noteMessage": "Les données de qualité peuvent déjà être enregistrées dans le formulaire de lot de réception. Cette page dédiée fournira des workflows et des analyses de contrôle qualité avancés.",
+      "plannedFeatures": {
+        "title": "Fonctionnalités prévues :",
+        "inspectionChecklists": "Listes de contrôle qualité pour les lots de réception",
+        "defectDetection": "Détection visuelle des défauts et enregistrement",
+        "gradeAssignment": "Attribution des grades (Extra, A, B, C, etc.)",
+        "metricsTracking": "Suivi des indicateurs de qualité dans le temps",
+        "nonConformityReporting": "Rapport de non-conformité",
+        "acceptanceWorkflow": "Workflow d'acceptation/rejet des lots",
+        "certificatesGeneration": "Génération de certificats de qualité"
+      },
+      "note": {
+        "label": "Note",
+        "message": "Les données de qualité peuvent déjà être enregistrées dans le formulaire de lot de réception. Cette page dédiée fournira des workflows et des analyses de contrôle qualité avancés."
+      }
+    },
+    "satelliteAnalysis": {
+      "title": "Analyse Satellite",
+      "subtitle": "Analyser la santé de la végétation et les conditions des cultures using l'imagerie satellite",
+      "proFeatureTitle": "Analyse Satellite - Fonctionnalité Professionnelle",
+      "proFeatureDescription": "Débloquez une puissante analyse d'images satellite pour surveiller la santé des cultures, les indices de végétation (NDVI, NDWI) et obtenir des informations basées sur les données pour l'agriculture de précision.",
+      "featureRealtime": "Analyse d'images satellite en temps réel",
+      "featureVegetation": "Surveillance de la santé de la végétation (NDVI, NDWI, EVI)",
+      "featureHistorical": "Tendances historiques et analyse de séries temporelles",
+      "upgradeButton": "Passer à la version Professionnelle",
+      "noFarmTitle": "Aucune Ferme Sélectionnée",
+      "noFarmMessage": "Veuillez sélectionner une ferme pour accéder aux fonctionnalités d'analyse satellite.",
+      "currentFarmLabel": "Ferme Actuelle",
+      "parcelsAvailable": "{{count}} parcelle disponible pour l'analyse",
+      "parcelsAvailable_plural": "{{count}} parcelles disponibles pour l'analyse",
+      "selectParcelTitle": "Sélectionner une Parcelle pour l'Analyse",
+      "loadingParcels": "Chargement des parcelles...",
+      "noParcelsTitle": "Aucune parcelle trouvée pour cette ferme.",
+      "noParcelsMessage": "Ajoutez des parcelles avec des limites définies pour activer l'analyse satellite.",
+      "areaLabel": "Surface",
+      "soilLabel": "Sol",
+      "irrigationLabel": "Irrigation",
+      "hectares": "hectares",
+      "boundaryDefined": "Limites définies",
+      "noBoundary": "Pas de données limitrophes",
+      "vegetationIndicesTitle": "Analyse des Indices de Végétation",
+      "loadingAnalysisTools": "Chargement des outils d'analyse...",
+      "historicalTrendsTitle": "Tendances Historiques",
+      "loadingHistoricalData": "Chargement des données historiques...",
+      "analysisSummaryTitle": "Résumé de l'Analyse",
+      "latestResultsTitle": "Derniers Résultats",
+      "parcelInfoTitle": "Informations sur la Parcelle",
+      "nameLabel": "Nom",
+      "soilTypeLabel": "Type de Sol",
+      "boundaryRequiredTitle": "Données Limitrophes Requises",
+      "boundaryRequiredMessage": "La parcelle sélectionnée \"{{parcelName}}\" n'a pas de coordonnées limitrophes définies. Les données limitrophes sont requises pour l'analyse satellite."
+    }
+  },
+  "workforce": {
+    "tasks": {
+      "title": "Gestion des Tâches",
+      "subtitle": "Planifiez et suivez les tâches agricoles",
+      "breadcrumb": "Tâches",
+      "loading": "Chargement...",
+      "list": "Liste",
+      "calendar": "Calendrier",
+      "navigationLabel": "Navigation des tâches",
+      "calendarPage": {
+        "loading": "Chargement du calendrier...",
+        "title": "Calendrier des tâches",
+        "noTasks": "Aucune tâche prévue",
+        "view": "Voir"
+      },
+      "listPage": {
+        "loading": "Chargement des tâches...",
+        "title": "Tâches",
+        "noTasks": "Aucune tâche trouvée"
+      }
+    },
+    "employees": {
+      "loadingOrganization": "Chargement de l'organisation..."
+    },
+    "pieceWork": {
+      "selectFarm": "Veuillez sélectionner une ferme pour voir les enregistrements de travail à la pièce",
+      "title": "Enregistrements de Travail à la Pièce",
+      "subtitle": "Suivez le travail effectué par unités (arbres, caisses, kg, etc.)",
+      "filtersLabel": "Filtres :",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "paymentStatus": "Statut de paiement",
+      "statusAll": "Tous les statuts",
+      "statusPending": "En attente",
+      "statusApproved": "Approuvé",
+      "statusPaid": "Payé",
+      "statusDisputed": "Disputé",
+      "thisMonth": "Ce mois",
+      "statsTotalRecords": "Total des enregistrements",
+      "statsPending": "En attente",
+      "statsTotalAmount": "Montant total",
+      "statsWorkers": "Travailleurs"
+    }
   },
   "tasks": {
     "title": "Gestion des Tâches",
@@ -3315,6 +4194,93 @@
     "emptyState": {
       "modifySearch": "Essayez de modifier votre recherche",
       "startFirst": "Commencez par enregistrer votre première récolte"
+    },
+    "form": {
+      "title": {
+        "new": "Nouvelle Récolte",
+        "edit": "Modifier la Récolte",
+        "subtitle": "Enregistrez les détails de votre récolte"
+      },
+      "sections": {
+        "location": "Emplacement",
+        "harvestDetails": "Détails de la Récolte",
+        "quality": "Qualité",
+        "storageAndDestination": "Stockage et Destination"
+      },
+      "fields": {
+        "farm": "Ferme",
+        "parcel": "Parcelle",
+        "harvestDate": "Date de Récolte",
+        "quantity": "Quantité Récoltée",
+        "unit": "Unité",
+        "qualityGrade": "Qualité",
+        "qualityScore": "Note de Qualité (1-10)",
+        "warehouse": "Entrepôt / Lieu de Stockage",
+        "intendedFor": "Destination Prévue",
+        "storageLocation": "Emplacement Spécifique (optionnel)",
+        "status": "Statut",
+        "expectedPricePerUnit": "Prix Unitaire Estimé (MAD)",
+        "notes": "Notes / Observations"
+      },
+      "units": {
+        "kg": "Kilogrammes (kg)",
+        "tons": "Tonnes",
+        "units": "Unités",
+        "boxes": "Caisses",
+        "crates": "Cagettes",
+        "liters": "Litres"
+      },
+      "qualityGrades": {
+        "extra": "Extra (Premium)",
+        "a": "Catégorie A",
+        "first": "Premier Choix",
+        "b": "Catégorie B",
+        "second": "Deuxième Choix",
+        "c": "Catégorie C",
+        "third": "Troisième Choix"
+      },
+      "statuses": {
+        "stored": "Stocké",
+        "inDelivery": "En Livraison",
+        "delivered": "Livré",
+        "sold": "Vendu",
+        "spoiled": "Gâté"
+      },
+      "intendedFor": {
+        "market": "Marché Local",
+        "storage": "Stockage",
+        "processing": "Transformation",
+        "export": "Export",
+        "directClient": "Client Direct"
+      },
+      "placeholders": {
+        "selectFarm": "Sélectionner une ferme",
+        "selectParcel": "Sélectionner une parcelle",
+        "selectFarmFirst": "Sélectionner d'abord une ferme",
+        "quantity": "0",
+        "unspecified": "Non spécifié",
+        "qualityScore": "Ex: 8",
+        "selectWarehouse": "Sélectionner un entrepôt",
+        "storageLocation": "Ex: Allée 3, Étagère B2, Chambre Froid 2",
+        "price": "Ex: 15,00",
+        "notes": "Ajoutez des observations sur la récolte, conditions météo, problèmes rencontrés..."
+      },
+      "messages": {
+        "cropNotSpecified": "Culture non spécifiée",
+        "variety": "Variété",
+        "temperatureControlled": "Température Contrôlée",
+        "humidityControlled": "Humidité Contrôlée",
+        "capacity": "Capacité",
+        "estimatedRevenue": "Revenu Estimé"
+      },
+      "validation": {
+        "saveError": "Erreur lors de l'enregistrement"
+      },
+      "buttons": {
+        "cancel": "Annuler",
+        "save": "Enregistrer la Récolte",
+        "update": "Mettre à jour"
+      }
     }
   },
   "utilities": {
@@ -3324,9 +4290,104 @@
     "loadingDashboard": "Chargement du tableau de bord..."
   },
   "receptionBatches": {
-    "title": "Gestion des Lots de Réception",
-    "subtitle": "Traçabilité de la réception et contrôle qualité des récoltes",
-    "loading": "Chargement de l'organisation..."
+    "title": "Lots de Réception",
+    "subtitle": "Suivez la réception des récoltes et le contrôle qualité",
+    "loading": "Chargement des lots de réception...",
+    "list": {
+      "title": "Lots de Réception",
+      "subtitle": "{{count}} lots trouvés",
+      "subtitleEmpty": "Suivez la réception des récoltes et le contrôle qualité",
+      "create": "Nouveau Lot de Réception",
+      "search": "Rechercher par code de lot, producteur ou notes...",
+      "filters": {
+        "allStatuses": "Tous les Statuts",
+        "allDecisions": "Toutes les Décisions",
+        "status": {
+          "received": "Reçu",
+          "qualityChecked": "Contrôle Qualité Effectué",
+          "decisionMade": "Décision Prise",
+          "processed": "Traité",
+          "cancelled": "Annulé"
+        },
+        "decision": {
+          "pending": "En Attente",
+          "directSale": "Vente Directe",
+          "storage": "Stockage",
+          "transformation": "Transformation",
+          "rejected": "Rejeté"
+        }
+      },
+      "table": {
+        "batchCode": "Code du Lot",
+        "receptionDate": "Date de Réception",
+        "parcel": "Parcelle",
+        "weight": "Poids",
+        "quality": "Qualité",
+        "decision": "Décision",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "stats": {
+        "totalBatches": "Total des Lots",
+        "allTime": "Total",
+        "totalWeight": "Poids Total",
+        "received": "Reçu",
+        "avgQuality": "Qualité Moyenne",
+        "outOf": "sur {{max}}",
+        "pendingDecisions": "Décisions en Attente",
+        "awaitingDecision": "En attente de décision"
+      },
+      "empty": {
+        "title": "Aucun lot de réception trouvé",
+        "searchTitle": "Aucun lot de réception correspondant trouvé",
+        "description": "Créez votre premier lot de réception pour suivre le contrôle qualité des récoltes",
+        "searchDescription": "Essayez d'ajuster vos critères de recherche"
+      },
+      "mobile": {
+        "empty": "Aucun lot de réception trouvé",
+        "searchEmpty": "Aucun lot correspondant trouvé"
+      },
+      "actions": {
+        "viewDetails": "Voir Détails",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "cancelBatch": "Annuler le Lot"
+      },
+      "decisions": {
+        "directSale": "Vente Directe",
+        "pending": "En Attente",
+        "storage": "Stockage",
+        "transformation": "Transformation",
+        "rejected": "Rejeté"
+      },
+      "statuses": {
+        "received": "Reçu",
+        "qualityChecked": "Contrôle Qualité Effectué",
+        "decisionMade": "Décision Prise",
+        "processed": "Traité",
+        "cancelled": "Annulé"
+      },
+      "quality": {
+        "notGraded": "Non noté",
+        "outOf": "/{{max}}"
+      },
+      "toasts": {
+        "cancelSuccess": "Lot de réception annulé",
+        "deleteSuccess": "Lot de réception supprimé",
+        "cancelFailed": "Échec de l'annulation du lot : {{message}}",
+        "deleteFailed": "Échec de la suppression du lot : {{message}}"
+      },
+      "confirm": {
+        "cancelTitle": "Annuler le Lot de Réception",
+        "cancelDescription": "Cela marquera le lot comme annulé. Cette action ne peut pas être annulée.",
+        "deleteTitle": "Supprimer le Lot de Réception",
+        "deleteDescription": "Cela supprimera définitivement le lot. Seuls les lots avec le statut \"Reçu\" peuvent être supprimés.",
+        "confirmButton": "{{action}}",
+        "cancelButton": "Annuler",
+        "cancelAction": "Annuler le Lot",
+        "deleteAction": "Supprimer le Lot"
+      }
+    }
   },
   "analyses": {
     "title": "Analyses de Sol, Plante et Eau",
@@ -3604,6 +4665,18 @@
       "grandTotal": "Total TTC",
       "outstanding": "Reste à payer",
       "remarks": "Remarques"
+    },
+    "chat": {
+      "title": "Assistant IA",
+      "subtitle": "Posez des questions sur votre ferme, vos travailleurs, votre comptabilité et plus encore",
+      "placeholder": "Demandez des informations sur votre ferme, vos travailleurs, votre comptabilité, votre stock...",
+      "welcome": "Bonjour! Je suis votre assistant AgriTech. Comment puis-je vous aider aujourd'hui?",
+      "listening": "Écoute...",
+      "voiceNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
+      "clear": "Effacer",
+      "send": "Envoyer",
+      "error": "Erreur lors de l'envoi du message",
+      "retry": "Réessayer"
     }
   }
 }

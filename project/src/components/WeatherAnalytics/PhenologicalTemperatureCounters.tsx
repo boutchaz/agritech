@@ -281,18 +281,6 @@ const cropPhenologicalConfig: Record<string, PhenologicalStage[]> = {
       nameKey: 'phenological.general',
       thresholds: [
         {
-          name: 'Cold Hours',
-          nameKey: 'phenological.coldHours',
-          description: 'Hours below 10°C',
-          descriptionKey: 'phenological.coldHoursGeneralDesc',
-          threshold: 10,
-          comparison: 'below',
-          unit: 'hours',
-          icon: <Snowflake className="h-5 w-5" />,
-          color: 'text-blue-600',
-          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-        },
-        {
           name: 'Frost Risk',
           nameKey: 'phenological.frostRisk',
           description: 'Hours below 0°C - frost damage risk',
@@ -303,6 +291,18 @@ const cropPhenologicalConfig: Record<string, PhenologicalStage[]> = {
           icon: <Snowflake className="h-5 w-5" />,
           color: 'text-cyan-600',
           bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+        },
+        {
+          name: 'Cold Hours',
+          nameKey: 'phenological.coldHours',
+          description: 'Hours below 10°C',
+          descriptionKey: 'phenological.coldHoursGeneralDesc',
+          threshold: 7,
+          comparison: 'below',
+          unit: 'hours',
+          icon: <Snowflake className="h-5 w-5" />,
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
         },
         {
           name: 'Growing Hours',

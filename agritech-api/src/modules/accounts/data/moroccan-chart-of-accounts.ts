@@ -148,7 +148,7 @@ export const moroccanChartOfAccounts: AccountData[] = [
   { code: '4457', name: 'TVA collectée', account_type: 'Liability', account_subtype: 'Payable', is_group: false, is_active: true, currency_code: 'MAD' },
 
   // Personnel
-  { code: '4430', name: 'Rémunérations dues au personnel', account_type: 'Liability', account_subtype: 'Payable', is_group: false, is_active: true, currency_code: 'MAD' },
+  { code: '4431', name: 'Rémunérations dues au personnel', account_type: 'Liability', account_subtype: 'Payable', is_group: false, is_active: true, currency_code: 'MAD' },
 
   // =====================================================
   // CLASS 5: FINANCIAL ACCOUNTS (TRÉSORERIE)

@@ -23,13 +23,13 @@ const ParcelLayout = () => {
   });
 
   const tabs = [
-    { id: 'overview', name: t('farmHierarchy.parcel.detail.tabs.overview'), icon: ChartBar, path: `/parcels/${parcelId}` },
-    { id: 'analyse', name: t('farmHierarchy.parcel.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/analyse` },
-    { id: 'satellite', name: t('farmHierarchy.parcel.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
-    { id: 'weather', name: t('farmHierarchy.parcel.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
-    { id: 'production', name: t('farmHierarchy.parcel.detail.tabs.production'), icon: TrendingUp, path: `/parcels/${parcelId}/production` },
-    { id: 'profitability', name: t('farmHierarchy.parcel.detail.tabs.profitability'), icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
-    { id: 'reports', name: t('farmHierarchy.parcel.detail.tabs.reports'), icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
+    { id: 'overview', name: t('parcels.detail.tabs.overview'), icon: ChartBar, path: `/parcels/${parcelId}` },
+    { id: 'analyse', name: t('parcels.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/analyse` },
+    { id: 'satellite', name: t('parcels.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
+    { id: 'weather', name: t('parcels.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
+    { id: 'production', name: t('parcels.detail.tabs.production'), icon: TrendingUp, path: `/parcels/${parcelId}/production` },
+    { id: 'profitability', name: t('parcels.detail.tabs.profitability'), icon: DollarSign, path: `/parcels/${parcelId}/profitability` },
+    { id: 'reports', name: t('parcels.detail.tabs.reports'), icon: FileSpreadsheet, path: `/parcels/${parcelId}/reports` },
   ];
 
   if (isLoading) {
@@ -37,7 +37,7 @@ const ParcelLayout = () => {
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.loading')}</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('parcels.detail.loading')}</p>
         </div>
       </div>
     );
@@ -47,12 +47,12 @@ const ParcelLayout = () => {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.notFound')}</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('parcels.detail.notFound')}</p>
           <button
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
             className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
-            {t('farmHierarchy.parcel.detail.backToParcels')}
+            {t('parcels.detail.backToParcels')}
           </button>
         </div>
       </div>
@@ -68,8 +68,8 @@ const ParcelLayout = () => {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization?.name || '', path: '/settings/organization' },
-          { icon: TreePine, label: farm?.name || t('farmHierarchy.parcel.detail.breadcrumbs.farm'), path: '/farms' },
-          { icon: MapPin, label: t('farmHierarchy.parcel.detail.breadcrumbs.parcels'), path: '/parcels' },
+          { icon: TreePine, label: farm?.name || t('parcels.detail.breadcrumbs.farm'), path: '/farms' },
+          { icon: MapPin, label: t('parcels.detail.breadcrumbs.parcels'), path: '/parcels' },
           { icon: MapPin, label: parcel.name, isActive: true }
         ]}
         title={parcel.name}
@@ -115,7 +115,7 @@ const ParcelLayout = () => {
           onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
           className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
         >
-          <span>← {t('farmHierarchy.parcel.detail.backToParcels')}</span>
+          <span>← {t('parcels.detail.backToParcels')}</span>
         </button>
       </div>
     </>

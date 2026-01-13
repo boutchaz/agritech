@@ -40,6 +40,9 @@
     "none": "لا يوجد"
   },
   "common": {
+    "edit": "تعديل",
+    "cancel": "إلغاء",
+    "none": "لا يوجد",
     "errors": {
       "generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
       "network": "خطأ في الشبكة. تحقق من اتصالك.",
@@ -113,7 +116,8 @@
     "receptionBatches": "دفعات الاستلام",
     "qualityControl": "مراقبة الجودة",
     "campaigns": "الحملات الزراعية",
-    "cropCycles": "دورات المحاصيل"
+    "cropCycles": "دورات المحاصيل",
+    "chat": "المساعد الذكي"
   },
   "stock": {
     "title": "إدارة المخزون",
@@ -125,6 +129,34 @@
       "entries": "قيود المخزون",
       "reception": "دفعات الاستلام",
       "reports": "التقارير والتحليلات"
+    },
+    "lowStockAlerts": {
+      "title": "تنبيهات انخفاض المخزون",
+      "itemsBelowMinimum": "مادة/مواد أقل من الحد الأدنى للمخزون",
+      "createEntry": "إنشاء قيد مخزون",
+      "currentStock": "المخزون الحالي",
+      "minimumLevel": "الحد الأدنى",
+      "totalValue": "القيمة الإجمالية",
+      "byFarm": "حسب المزرعة/المستودع",
+      "addStock": "إضافة مخزون",
+      "viewItem": "عرض المادة",
+      "viewAll": "عرض جميع {{count}} مواد منخفضة المخزون",
+      "allOptimal": "جميع مستويات المخزون في الحالة المثلى"
+    },
+    "itemFarmUsage": {
+      "noUsage": "لا توجد بيانات استخدام لهذه المادة",
+      "totalUsage": "إجمالي الاستخدام",
+      "totalQuantity": "الكمية المستخدمة الإجمالية",
+      "lastUsed": "آخر استخدام",
+      "never": "أبداً",
+      "byFarm": "الاستخدام حسب المزرعة",
+      "usageEvents": "حدث/أحداث استخدام",
+      "quantityUsed": "الكمية المستخدمة",
+      "parcel": "القطعة",
+      "relatedTasks": "المهام ذات الصلة",
+      "viewTask": "عرض المهمة",
+      "viewFarm": "عرض المزرعة",
+      "more": "المزيد"
     }
   },
   "dashboard": {
@@ -1919,15 +1951,125 @@
   "accountingModule": {
     "dashboard": {
       "title": "لوحة التحكم المحاسبية",
-      "subtitle": "نظرة عامة على أدائك المالي"
+      "subtitle": "نظرة عامة على أدائك المالي",
+      "metrics": {
+        "totalInvoices": "إجمالي الفواتير",
+        "outstanding": "معلقة",
+        "totalPayments": "إجمالي المدفوعات",
+        "received": "مستلمة",
+        "cashReceived": "المبلغ المستلم",
+        "payments": "مدفوعات",
+        "journalEntries": "القيود اليومية",
+        "posted": "مُدرجة"
+      },
+      "alert": {
+        "title": "الوحدة المحاسبية مفعلة",
+        "message": "وحدة المحاسبة الخاصة بك مفعلة الآن. ابدأ بإنشاء الفواتير أو تسجيل المدفوعات."
+      },
+      "quickActions": {
+        "title": "إجراءات سريعة",
+        "subtitle": "مهام محاسبية شائعة",
+        "createInvoice": "إنشاء فاتورة",
+        "recordPayment": "تسجيل دفعة",
+        "createJournalEntry": "إنشاء قيد يومي"
+      },
+      "recentActivity": {
+        "title": "النشاط الأخير",
+        "subtitle": "أحدث المعاملات"
+      },
+      "gettingStarted": {
+        "title": "البدء",
+        "subtitle": "أكمل هذه الخطوات لإعداد محاسبتك",
+        "step1": "راجع دليل الحسابات الخاص بك (مُجهز مسبقاً بالقيم الافتراضية)",
+        "step2": "أنشئ فاتورة مبيعات أو مشترياتك الأولى",
+        "step3": "سجل دفعة وقم بتخصيصها للفواتير",
+        "step4": "عرض تقاريرك المالية (الميزانية العمومية، قائمة الدخل)"
+      },
+      "activity": {
+        "salesInvoice": "فاتورة مبيعات",
+        "purchaseInvoice": "فاتورة مشتريات",
+        "created": "تم إنشاؤها",
+        "submitted": "تم تقديمها",
+        "paymentReceived": "دفعة مستلمة من",
+        "paymentMade": "دفعة مدفوعة إلى"
+      }
     },
     "accounts": {
       "title": "دليل الحسابات",
       "subtitle": "إدارة التسلسل الهرمي للحسابات",
+      "subtitleAlt": "إدارة التسلسل الهرمي لدليل الحسابات",
       "searchPlaceholder": "البحث بالرمز أو الاسم...",
       "filterByType": "تصفية حسب النوع",
       "parentAccount": "لا شيء (حساب رئيسي)",
-      "descriptionPlaceholder": "وصف اختياري"
+      "descriptionPlaceholder": "وصف اختياري",
+      "newAccount": "حساب جديد",
+      "showInactive": "عرض غير النشط",
+      "allTypes": "جميع الأنواع",
+      "table": {
+        "code": "الرمز",
+        "name": "الاسم",
+        "type": "النوع",
+        "currency": "العملة",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "status": {
+        "active": "نشط",
+        "inactive": "غير نشط"
+      },
+      "accountTypes": {
+        "Asset": "الأصول",
+        "Liability": "الخصوم",
+        "Equity": "حقوق الملكية",
+        "Revenue": "الإيرادات",
+        "Expense": "المصروفات"
+      },
+      "accountKinds": {
+        "group": "مجموعة",
+        "ledger": "دفتر"
+      },
+      "empty": {
+        "title": "لم يتم العثور على دليل حسابات",
+        "description": "ابدأ بسرعة عن طريق استيراد دليل حسابات قياسي للمغرب (الPlan Comptable Marocain)، أو أنشئ الحسابات يدوياً.",
+        "descriptionShort": "ابدأ عن طريق استيراد دليل حسابات قياسي أو أنشئ الحسابات يدوياً.",
+        "noMatches": "لا توجد حسابات تطابق معايير البحث الخاصة بك."
+      },
+      "actions": {
+        "seedChart": "استيراد الدليل",
+        "seedChartAlt": "استيراد دليل الحسابات",
+        "seeding": "جاري الاستيراد...",
+        "seedingAlt": "جاري استيراد الحسابات...",
+        "createManually": "إنشاء يدوياً"
+      },
+      "form": {
+        "editTitle": "تعديل الحساب",
+        "createTitle": "إنشاء حساب جديد",
+        "editDescription": "تحديث تفاصيل الحساب أدناه",
+        "createDescription": "إضافة حساب جديد إلى دليل الحسابات الخاص بك",
+        "code": "رمز الحساب *",
+        "codePlaceholder": "مثال: 1000",
+        "name": "اسم الحساب *",
+        "namePlaceholder": "مثال: الصندوق",
+        "type": "نوع الحساب *",
+        "subtype": "النوع الفرعي للحساب",
+        "subtypePlaceholder": "مثال: أصل متداول",
+        "parent": "الحساب الأصل",
+        "currency": "العملة",
+        "currencyHelp": "يتم تعيين العملة على مستوى المنظمة ولا يمكن تغييرها لكل حساب. لتغيير العملة، انتقل إلى إعدادات المنظمة.",
+        "description": "الوصف",
+        "isGroup": "حساب مجموعة (يمكن أن يحتوي على حسابات فرعية)",
+        "isActive": "نشط",
+        "allowCostCenter": "السماح بتتبع مراكز التكلفة",
+        "level": "المستوى {{number}}",
+        "cancel": "إلغاء",
+        "update": "تحديث الحساب",
+        "create": "إنشاء الحساب"
+      },
+      "delete": {
+        "title": "حذف الحساب",
+        "confirmation": "هل أنت متأكد من حذف الحساب \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+        "button": "حذف الحساب"
+      }
     },
     "journal": {
       "title": "القيود اليومية",
@@ -1963,6 +2105,62 @@
     "payments": {
       "title": "المدفوعات",
       "subtitle": "تتبع وإدارة المدفوعات الواردة والصادرة",
+      "form": {
+        "title": {
+          "new": "دفعة جديدة",
+          "edit": "تعديل الدفعة"
+        },
+        "fields": {
+          "paymentType": "نوع الدفعة",
+          "paymentDate": "تاريخ الدفعة",
+          "customer": "العميل",
+          "supplier": "المورد",
+          "optional": "اختياري",
+          "partyName": "اسم الجهة",
+          "name": "الاسم",
+          "amount": "المبلغ",
+          "paymentMethod": "طريقة الدفع",
+          "referenceNumber": "رقم المرجع",
+          "remarks": "ملاحظات",
+          "status": "الحالة"
+        },
+        "paymentTypes": {
+          "received": "دفعة مستلمة",
+          "made": "دفعة مدفوعة"
+        },
+        "methods": {
+          "cash": "نقداً",
+          "bankTransfer": "تحويل بنكي",
+          "check": "شيك",
+          "mobileMoney": "المال عبر الهاتف"
+        },
+        "statuses": {
+          "draft": "مسودة",
+          "submitted": "مُقدَّمة",
+          "cancelled": "مُلغاة"
+        },
+        "actions": {
+          "select": "اختر",
+          "enter": "أدخل"
+        },
+        "placeholders": {
+          "referenceNumber": "رقم الشيك، معرف العملية، إلخ.",
+          "remarks": "ملاحظات إضافية حول هذه الدفعة"
+        },
+        "validation": {
+          "partyNameRequired": "اسم الجهة مطلوب",
+          "paymentDateRequired": "تاريخ الدفعة مطلوب",
+          "amountMin": "يجب أن يكون المبلغ أكبر من صفر"
+        },
+        "errors": {
+          "saveFailed": "فشل حفظ الدفعة:"
+        },
+        "buttons": {
+          "cancel": "إلغاء",
+          "create": "إنشاء دفعة",
+          "update": "تحديث الدفعة"
+        }
+      },
       "referencePlaceholder": "رقم الشيك، معرف المعاملة، إلخ.",
       "notesPlaceholder": "ملاحظات إضافية حول هذه الدفعة"
     },
@@ -1970,17 +2168,107 @@
       "title": "التقارير المالية",
       "subtitle": "الوصول إلى التقارير المالية والتحليلات الشاملة"
     },
-    "invoice": {
-      "selectItem": "اختر مادة",
-      "descriptionPlaceholder": "الوصف",
-      "remarksPlaceholder": "ملاحظات اختيارية"
+    "invoices": {
+      "title": "الفواتير",
+      "subtitle": "إدارة فواتير المبيعات والمشتريات",
+      "pageTitle": "الفواتير",
+      "allInvoices": "جميع الفواتير",
+      "description": "تتبع وإدارة فواتيرك",
+      "tableDescription": "قائمة بجميع فواتير المبيعات والمشتريات",
+      "loading": "جاري تحميل الفواتير...",
+      "search": {
+        "placeholder": "البحث عن فواتير بالرقم أو العميل..."
+      },
+      "filter": {
+        "allTypes": "جميع الأنواع",
+        "sales": "المبيعات",
+        "purchase": "المشتريات",
+        "allStatus": "جميع الحالات"
+      },
+      "status": {
+        "draft": "مسودة",
+        "submitted": "مُقدَّمة",
+        "paid": "مدفوعة",
+        "partiallyPaid": "مدفوعة جزئياً",
+        "overdue": "متأخرة",
+        "cancelled": "ملغاة"
+      },
+      "type": {
+        "sales": "بيع",
+        "purchase": "شراء"
+      },
+      "stats": {
+        "total": "إجمالي الفواتير",
+        "pending": "قيد الانتظار",
+        "paid": "مدفوعة",
+        "overdue": "متأخرة"
+      },
+      "table": {
+        "invoiceNumber": "فاتورة رقم",
+        "type": "النوع",
+        "party": "العميل/المورد",
+        "date": "التاريخ",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "actions": {
+        "create": "إنشاء فاتورة",
+        "menu": "الإجراءات",
+        "submit": "تقديم الفاتورة",
+        "download": "تحميل PDF",
+        "delete": "حذف",
+        "confirmDelete": "هل أنت متأكد من حذف الفاتورة {{invoiceNumber}}؟ لا يمكن التراجع عن هذا الإجراء.",
+        "deleteSuccess": "تم حذف الفاتورة {{invoiceNumber}} بنجاح",
+        "deleteError": "فشل حذف الفاتورة",
+        "onlyDraftDelete": "يمكن حذف الفواتير في حالة المسودة فقط",
+        "editDraftOnly": "يمكن تعديل الفواتير في حالة المسودة فقط"
+      },
+      "empty": {
+        "message": "لم يتم العثور على فواتير. أنشئ فاتورتك الأولى للبدء.",
+        "filtered": "لا توجد فواتير تطابق فلاتر البحث."
+      },
+      "error": {
+        "loading": "خطأ في تحميل الفواتير"
+      }
     }
   },
   "billingModule": {
     "salesOrders": {
       "title": "أوامر المبيعات",
       "subtitle": "إدارة طلبات العملاء والتنفيذ",
-      "selectWarehouse": "اختر مستودع..."
+      "selectWarehouse": "اختر مستودع...",
+      "allOrders": "جميع أوامر المبيعات",
+      "trackOrders": "تتبع الطلبات من التأكيد إلى الإنجاز",
+      "search": "البحث برقم الطلب أو العميل...",
+      "stats": {
+        "totalOrders": "إجمالي الطلبات",
+        "draft": "مسودة",
+        "confirmed": "مؤكد",
+        "inProgress": "قيد التنفيذ",
+        "shipped": "تم الشحن",
+        "completed": "مكتمل",
+        "totalValue": "القيمة الإجمالية"
+      },
+      "table": {
+        "orderNumber": "طلب رقم",
+        "customer": "العميل",
+        "orderDate": "تاريخ الطلب",
+        "expectedDate": "التاريخ المتوقع",
+        "amount": "المبلغ",
+        "invoiced": "مفوتر",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "viewAndManage": "عرض وإدارة أوامر المبيعات الخاصة بك",
+      "noData": "لم يتم العثور على أوامر مبيعات. يتم إنشاء الطلبات من العروض المقبولة.",
+      "empty": {
+        "filtered": "لا توجد أوامر مبيعات تطابق فلاتر البحث."
+      },
+      "error": {
+        "loading": "خطأ في تحميل أوامر المبيعات",
+        "unknown": "خطأ غير معروف"
+      }
     },
     "purchaseOrders": {
       "title": "أوامر الشراء",
@@ -2353,6 +2641,93 @@
       "intensive": "مكثفة",
       "super_intensive": "مكثفة جداً",
       "organic": "عضوية"
+    },
+    "detail": {
+      "tabs": {
+        "overview": "نظرة عامة",
+        "soil": "تحليل التربة",
+        "satellite": "القمر الصناعي",
+        "weather": "الطقس",
+        "production": "الإنتاج",
+        "profitability": "الربحية",
+        "reports": "التقارير"
+      },
+      "loading": "جاري تحميل تفاصيل القطعة...",
+      "notFound": "القطعة غير موجودة",
+      "backToParcels": "العودة إلى القطع",
+      "breadcrumbs": {
+        "farm": "المزرعة",
+        "parcels": "القطع"
+      }
+    },
+    "analyse": {
+      "title": "التحليل",
+      "newAnalysis": "تحليل جديد",
+      "saveError": "خطأ في حفظ تحليل التربة",
+      "plantSaveError": "خطأ في حفظ تحليل النبات",
+      "waterSaveError": "خطأ في حفظ تحليل الماء",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا التحليل؟",
+      "deleteError": "خطأ في حذف التحليل",
+      "selectAnalysisType": "اختر نوع التحليل",
+      "tabs": {
+        "soil": "تحليل التربة",
+        "plant": "تحليل النبات",
+        "water": "تحليل الماء"
+      },
+      "soilDescription": "تحليل درجة الحموضة، والمغذيات، والمادة العضوية وتكوين التربة",
+      "plantDescription": "تحليل أنسجة الأوراق ومحتوى المغذيات وصحة النبات",
+      "waterDescription": "تحليل جودة مياه الري ودرجة الحموضة والمحتوى المعدني",
+      "noAnalyses": "لا توجد تحليلات بعد. أضف أول تحليل للبدء.",
+      "addAnalysis": "إضافة تحليل",
+      "analysisDate": "تاريخ التحليل:",
+      "laboratory": "المختبر",
+      "deleteAnalysis": "حذف",
+      "notes": "ملاحظات",
+      "soilInfo": "معلومات التربة",
+      "soilType": "نوع التربة"
+    },
+    "index": {
+      "noSatelliteData": "لا توجد بيانات الأقمار الصناعية متاحة",
+      "noSatelliteDataDesc": "لم تتم معالجة صور الأقمار الصناعية لهذه القطعة بعد. انتقل إلى تبويب القمر الصناعي لطلب الصور.",
+      "goToSatellite": "الذهاب إلى تبويب القمر الصناعي",
+      "refreshData": "تحديث البيانات",
+      "irrigationIndex": "مؤشر الري",
+      "basedOnNdmi": "بناءً على NDMI",
+      "expectedYield": "العائد المتوقع",
+      "ndvi": "NDVI",
+      "updatedOn": "آخر تحديث",
+      "vegetationHealth": "صحة النباتات",
+      "summary": "ملخص القطعة",
+      "area": "المساحة",
+      "notDefined": "غير محدد",
+      "soilType": "نوع التربة",
+      "irrigation": "الري",
+      "treeType": "نوع الشجرة",
+      "variety": "الصنف",
+      "plantingYear": "سنة الزراعة",
+      "lastUpdate": "آخر تحديث",
+      "description": "الوصف"
+    },
+    "profitability": {
+      "loading": "جاري تحميل الربحية..."
+    },
+    "reports": {
+      "loading": "جاري تحميل التقارير..."
+    },
+    "satellite": {
+      "loading": "جاري تحليل تحليل القمر الصناعي...",
+      "noBoundary": {
+        "title": "بيانات حدود القطعة مطلوبة لتحليل القمر الصناعي.",
+        "description": "يرجى تحديد حدود القطعة للوصول إلى ميزات صور الأقمار الصناعية.",
+        "defineButton": "تحديد حدود القطعة"
+      }
+    },
+    "weather": {
+      "loadingFallback": "جاري تحميل بيانات الطقس...",
+      "noBoundary": {
+        "title": "بيانات موقع القطعة مطلوبة لتحليل الطقس.",
+        "description": "يرجى تحديد حدود القطعة للوصول إلى تحليلات الطقس والمناخ."
+      }
     }
   },
   "analysis": {
@@ -2385,6 +2760,240 @@
       "saveError": "خطأ في حفظ التحليل.",
       "deleteConfirm": "هل أنت متأكد من حذف هذا التحليل؟",
       "deleteError": "خطأ في حذف التحليل."
+    }
+  },
+  "campaigns": {
+    "pageTitle": "الحملات الزراعية",
+    "title": "الحملات الزراعية",
+    "description": "إدارة الحملات الزراعية لتخطيط الإنتاج.",
+    "addNew": "حملة جديدة",
+    "loading": "جاري تحميل الحملات...",
+    "empty": "لا توجد حملات بعد. أنشئ أول حملة زراعية للبدء.",
+    "noPermission": "ليس لديك إذن لإدارة الحملات.",
+    "cycles": "الدورات",
+    "area": "المساحة",
+    "profit": "صافي الربح",
+    "status": {
+      "completed": "مكتملة",
+      "active": "نشطة",
+      "planned": "مخطط لها",
+      "cancelled": "ملغاة"
+    },
+    "type": {
+      "general": "عامة",
+      "rainfed": "مطيرة",
+      "irrigated": "مروية",
+      "greenhouse": "صوبة زجاجية"
+    },
+    "edit": {
+      "title": "تعديل الحملة",
+      "description": "تحديث تفاصيل الحملة."
+    },
+    "create": {
+      "title": "إنشاء حملة",
+      "description": "إضافة حملة زراعية جديدة لتتبع الإنتاج."
+    },
+    "form": {
+      "code": "الرمز",
+      "name": "الاسم",
+      "description": "الوصف",
+      "descriptionPlaceholder": "ملاحظات الحملة...",
+      "startDate": "تاريخ البدء",
+      "endDate": "تاريخ الانتهاء",
+      "campaignType": "نوع الحملة",
+      "primaryFiscalYear": "السنة المالية الرئيسية",
+      "selectFiscalYear": "اختر...",
+      "setCurrent": "تعيين كحملة حالية",
+      "update": "تحديث",
+      "create": "إنشاء"
+    }
+  },
+  "cropCycles": {
+    "pageTitle": "دورات المحاصيل",
+    "title": "دورات المحاصيل",
+    "description": "تتبع دورات الإنتاج من الزراعة إلى الحصاد مع تتبع كامل للتكاليف.",
+    "addNew": "دورة جديدة",
+    "metrics": {
+      "totalArea": "المساحة الإجمالية",
+      "totalCosts": "إجمالي التكاليف",
+      "totalRevenue": "إجمالي الإيرادات",
+      "netProfit": "صافي الربح"
+    },
+    "filter": {
+      "campaign": "جميع الحملات",
+      "allCampaigns": "جميع الحملات",
+      "status": "جميع الحالات",
+      "allStatuses": "جميع الحالات"
+    },
+    "status": {
+      "planned": "مخطط",
+      "land_prep": "تحضير الأرض",
+      "growing": "نامي",
+      "harvesting": "جاري الحصاد",
+      "completed": "مكتمل",
+      "cancelled": "ملغي"
+    },
+    "loading": "جاري تحميل دورات المحاصيل...",
+    "empty": "لم يتم العثور على دورات محاصيل. قم بإنشاء دورتك الأولى لبدء تتبع الإنتاج.",
+    "complete": "تحديد كمكتمل",
+    "area": "المساحة",
+    "yield": "العائد",
+    "costs": "التكاليف",
+    "revenue": "الإيرادات",
+    "profit": "الربح",
+    "edit": {
+      "title": "تعديل دورة المحصول",
+      "description": "تحديث تفاصيل دورة المحصول."
+    },
+    "create": {
+      "title": "إنشاء دورة محصول",
+      "description": "بدء تتبع دورة إنتاجية جديدة."
+    },
+    "form": {
+      "farm": "المزرعة",
+      "selectFarm": "اختر المزرعة...",
+      "parcel": "القطعة",
+      "selectParcel": "اختر القطعة...",
+      "cropType": "نوع المحصول",
+      "cropTypePlaceholder": "مثال: قمح، زيتون، طماطم",
+      "variety": "الصنف",
+      "varietyPlaceholder": "مثال: بيشولين، روما",
+      "cycleCode": "رمز الدورة",
+      "generate": "توليد",
+      "season": "الموسم",
+      "selectSeason": "اختر...",
+      "campaign": "الحملة",
+      "selectCampaign": "اختر...",
+      "fiscalYear": "السنة المالية",
+      "selectFiscalYear": "اختر...",
+      "plantingDate": "تاريخ الزراعة",
+      "harvestStart": "بداية الحصاد",
+      "harvestEnd": "نهاية الحصاد",
+      "area": "المساحة (هكتار)",
+      "yieldPerHa": "العائد المتوقع/هكتار",
+      "yieldUnit": "الوحدة",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "ملاحظات إضافية...",
+      "update": "تحديث",
+      "create": "إنشاء"
+    }
+  },
+  "production": {
+    "cropCycles": {
+      "pageTitle": "دورات المحاصيل"
+    },
+    "harvests": {
+      "title": "الحصادات",
+      "loading": "جاري تحميل الحصادات...",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا الحصاد؟",
+      "deleteError": "خطأ في حذف الحصاد",
+      "searchPlaceholder": "البحث حسب المحصول، القطعة، المزرعة...",
+      "filters": "الفلاتر",
+      "export": "تصدير",
+      "newHarvest": "حصاد جديد",
+      "harvestsCount": "{{count}} حصاد مسجل",
+      "harvestsCount_plural": "{{count}} حصادات مسجلة",
+      "filterLabels": {
+        "allStatuses": "جميع الحالات"
+      },
+      "statuses": {
+        "stored": "مُخزن",
+        "in_delivery": "قيد التسليم",
+        "delivered": "مُسلم",
+        "sold": "مباع",
+        "spoiled": "تالف"
+      },
+      "emptyState": {
+        "modifySearch": "حاول تعديل بحثك",
+        "startFirst": "ابدأ بتسجيل أول حصاد لك"
+      },
+      "noResults": "لم يتم العثور على نتائج",
+      "noHarvests": "لا توجد حصادات مسجلة",
+      "csvHeaders": {
+        "date": "التاريخ",
+        "parcel": "القطعة",
+        "crop": "المحصول",
+        "quantity": "الكمية",
+        "unit": "الوحدة",
+        "quality": "الجودة",
+        "destination": "الوجهة",
+        "status": "الحالة"
+      }
+    },
+    "intelligence": {
+      "pageTitle": "ذكاء الإنتاج",
+      "subtitle": "تتبع الغلة، التوقعات، ومعايير الأداء",
+      "loadingOrganization": "جاري تحميل المنظمة..."
+    },
+    "qualityControl": {
+      "pageTitle": "مراقبة الجودة",
+      "subtitle": "إدارة عمليات الفحص ومراقبة الجودة",
+      "breadcrumbLabel": "مراقبة الجودة",
+      "title": "مراقبة الجودة",
+      "moduleTitle": "وحدة مراقبة الجودة",
+      "moduleDescription": "إدارة عمليات الفحص ومراقبة الجودة",
+      "underDevelopment": "وحدة مراقبة الجودة قيد التطوير حالياً.",
+      "loadingOrganization": "جاري تحميل المنظمة...",
+      "plannedFeaturesTitle": "الميزات المخطط لها:",
+      "featureChecklists": "قوائم فحص الجودة لدفات الاستلام",
+      "featureDefectDetection": "الكشف عن العيوب البصرية وتسجيلها",
+      "featureGrades": "تعيين الدرجات (ممتاز، أ، ب، ج، إلخ)",
+      "featureMetrics": "تتبع مؤشرات الجودة بمرور الوقت",
+      "featureNonConformity": "إبلاغ عدم المطابقة",
+      "featureWorkflow": "سير عمل قبول/رفض الدفعات",
+      "featureCertificates": "إنشاء شهادات الجودة",
+      "noteLabel": "ملاحظة",
+      "noteMessage": "بيانات الجودة يمكن تسجيلها بالفعل في نموذج دفعة الاستلام. هذه الصفحة المخصصة ستوفر سير عمل وتحليلات متقدمة لمراقبة الجودة.",
+      "plannedFeatures": {
+        "title": "الميزات المخطط لها:",
+        "inspectionChecklists": "قوائم فحص الجودة لدفات الاستلام",
+        "defectDetection": "الكشف عن العيوب البصرية وتسجيلها",
+        "gradeAssignment": "تعيين الدرجات (ممتاز، أ، ب، ج، إلخ)",
+        "metricsTracking": "تتبع مؤشرات الجودة بمرور الوقت",
+        "nonConformityReporting": "إبلاغ عدم المطابقة",
+        "acceptanceWorkflow": "سير عمل قبول/رفض الدفعات",
+        "certificatesGeneration": "إنشاء شهادات الجودة"
+      },
+      "note": {
+        "label": "ملاحظة",
+        "message": "بيانات الجودة يمكن تسجيلها بالفعل في نموذج دفعة الاستلام. هذه الصفحة المخصصة ستوفر سير عمل وتحليلات متقدمة لمراقبة الجودة."
+      }
+    },
+    "satelliteAnalysis": {
+      "title": "تحليل القمر الصناعي",
+      "subtitle": "تحليل صحة النباتات وظروف المحاصيل باستخدام صور الأقمار الصناعية",
+      "proFeatureTitle": "تحليل القمر الصناعي - ميزة احترافية",
+      "proFeatureDescription": "استفد من تحليل صور الأقمار الصناعية لمراقبة صحة المحاصيل ومؤشرات الغطاء النباتي (NDVI، NDWI) والحصول على رؤى قائمة على البيانات للزراعة الدقيقة.",
+      "featureRealtime": "تحليل صور الأقمار الصناعية في الوقت الفعلي",
+      "featureVegetation": "مراقبة صحة النباتات (NDVI، NDWI، EVI)",
+      "featureHistorical": "الاتجاهات التاريخية وتحليل السلاسل الزمنية",
+      "upgradeButton": "الترقية إلى النسخة الاحترافية",
+      "noFarmTitle": "لم يتم تحديد مزرعة",
+      "noFarmMessage": "يرجى تحديد مزرعة للوصول إلى ميزات تحليل القمر الصناعي.",
+      "currentFarmLabel": "المزرعة الحالية",
+      "parcelsAvailable": "{{count}} قطعة متاحة للتحليل",
+      "parcelsAvailable_plural": "{{count}} قطع متاحة للتحليل",
+      "selectParcelTitle": "اختر قطعة للتحليل",
+      "loadingParcels": "جاري تحميل القطع...",
+      "noParcelsTitle": "لم يتم العثور على قطع لهذه المزرعة.",
+      "noParcelsMessage": "أضف قطع بحدود محددة لتفعيل تحليل القمر الصناعي.",
+      "areaLabel": "المساحة",
+      "soilLabel": "التربة",
+      "irrigationLabel": "الري",
+      "hectares": "هكتار",
+      "boundaryDefined": "الحدود محددة",
+      "noBoundary": "لا توجد بيانات حدودية",
+      "vegetationIndicesTitle": "تحليل مؤشرات الغطاء النباتي",
+      "loadingAnalysisTools": "جاري تحميل أدوات التحليل...",
+      "historicalTrendsTitle": "الاتجاهات التاريخية",
+      "loadingHistoricalData": "جاري تحميل البيانات التاريخية...",
+      "analysisSummaryTitle": "ملخص التحليل",
+      "latestResultsTitle": "أحدث النتائج",
+      "parcelInfoTitle": "معلومات القطعة",
+      "nameLabel": "الاسم",
+      "soilTypeLabel": "نوع التربة",
+      "boundaryRequiredTitle": "مطلوب بيانات الحدود",
+      "boundaryRequiredMessage": "القطعة المحددة \"{{parcelName}}\" ليس لها إحداثيات حدود محددة. بيانات الحدود مطلوبة لتحليل القمر الصناعي."
     }
   },
   "workers": {
@@ -2478,6 +3087,7 @@
       "notFound": "لم يتم العثور على العامل",
       "backToList": "العودة للعمال",
       "noPosition": "لا يوجد منصب معين",
+      "settlementsOnlyForMetayage": "التسويات متاحة فقط للعمال بالمشاركة",
       "tabs": {
         "info": "المعلومات",
         "payments": "المدفوعات",
@@ -2516,6 +3126,7 @@
       "amount": "المبلغ",
       "status": "الحالة",
       "method": "الطريقة",
+      "actions": "الإجراءات",
       "markAsPaid": "تحديد كمدفوع",
       "processSuccess": "تم تحديد الدفع كمدفوع",
       "processError": "فشل في معالجة الدفع"
@@ -2546,12 +3157,24 @@
       "description": "الوصف",
       "status": "الحالة"
     },
+    "workRecordStatuses": {
+      "pending": "قيد الانتظار",
+      "approved": "موافق عليه",
+      "paid": "مدفوع",
+      "cancelled": "ملغي"
+    },
     "settlements": {
       "period": "الفترة",
       "grossRevenue": "الإيراد الإجمالي",
       "charges": "المصاريف",
       "share": "حصة العامل",
       "status": "الحالة"
+    },
+    "settlementStatuses": {
+      "pending": "قيد الانتظار",
+      "partial": "جزئي",
+      "paid": "مدفوع",
+      "cancelled": "ملغي"
     },
     "metayageTypes": {
       "khemmas": "خماس (1/5)",
@@ -2563,7 +3186,294 @@
       "gross": "الإيراد الإجمالي",
       "net": "الإيراد الصافي (بعد المصاريف)"
     },
-    "perDay": "في اليوم"
+    "perDay": "في اليوم",
+    "metayage": {
+      "title": "حاسبة المشاركة",
+      "calculator": "الحاسبة",
+      "noWorkers": "لا يوجد عمال مشاركة نشطين. يرجى أولاً إضافة عامل من نوع \"المشاركة\".",
+      "workerConfig": {
+        "title": "إعدادات العامل",
+        "type": "النوع",
+        "percentage": "النسبة المئوية",
+        "calculationBasis": "أساس الحساب"
+      },
+      "type": {
+        "grossRevenue": "الإيراد الإجمالي",
+        "netRevenue": "الإيراد الصافي (بعد المصاريف)"
+      },
+      "fields": {
+        "worker": "عامل (خماس/ربع)",
+        "selectWorker": "-- اختر عاملاً --",
+        "periodStart": "بداية الفترة",
+        "periodEnd": "نهاية الفترة",
+        "harvestDate": "تاريخ الحصاد",
+        "grossRevenue": "الإيراد الإجمالي ({{currency}})",
+        "grossRevenueHint": "المبلغ الإجمالي من بيع المحصول",
+        "totalCharges": "المصاريف الإجمالية ({{currency}})",
+        "totalChargesHint": "المدخلات، المياه، تكاليف الحصاد، إلخ",
+        "calculationBasis": "أساس الحساب",
+        "notes": "ملاحظات",
+        "notesPlaceholder": "تفاصيل حول الحصاد، شروط خاصة..."
+      },
+      "buttons": {
+        "save": "حفظ التسوية",
+        "saving": "جاري الحفظ..."
+      },
+      "results": {
+        "title": "نتيجة الحساب",
+        "grossRevenue": "الإيراد الإجمالي",
+        "totalCharges": "المصاريف الإجمالية",
+        "netRevenue": "الإيراد الصافي",
+        "calculationBasis": "أساس الحساب",
+        "workerPercentage": "نسبة العامل",
+        "workerShare": "حصة العامل"
+      },
+      "validation": {
+        "fillAllRequired": "يرجى ملء جميع الحقول المطلوبة",
+        "settlementSaved": "تم حفظ التسوية بنجاح",
+        "saveError": "خطأ في حفظ التسوية"
+      }
+    },
+    "configuration": {
+      "title": "إعدادات الدفع",
+      "sections": {
+        "pieceWork": "الدفع حسب المهمة",
+        "dailyWage": "الأجر اليومي",
+        "monthlySalary": "الراتب الشهري",
+        "metayage": "المشاركة (تقاسم الإيرادات)"
+      },
+      "descriptions": {
+        "pieceWork": "يُدفع للعامل بناءً على الوحدات المُنجزة (أشجار، صناديق، كغ، إلخ)",
+        "dailyWage": "يُدفع للعامل مبلغ ثابت لكل يوم عمل",
+        "monthlySalary": "يتلقى العامل راتباً شهرياً ثابتاً",
+        "metayage": "يتلقى العامل نسبة مئوية من إيرادات المحصول"
+      },
+      "fields": {
+        "workerType": "نوع العامل",
+        "paymentFrequency": "تكرار الدفع",
+        "defaultWorkUnit": "وحدة العمل الافتراضية *",
+        "ratePerUnit": "المعدل لكل وحدة * ({{currency}})",
+        "dailyRate": "المعدل اليومي * ({{currency}})",
+        "monthlySalary": "الراتب الشهري * ({{currency}})",
+        "metayagePercentage": "نسبة تقاسم الإيرادات * (%)"
+      },
+      "placeholders": {
+        "selectUnit": "اختر الوحدة...",
+        "ratePerUnit": "مثال: 5.00",
+        "dailyRate": "مثال: 150.00",
+        "monthlySalary": "مثال: 4500.00",
+        "metayagePercentage": "مثال: 30"
+      },
+      "workerTypes": {
+        "dailyWorker": "عامل يومي",
+        "fixedSalary": "دائم (راتب ثابت)",
+        "metayage": "مشارك (تقاسم الإيرادات)"
+      },
+      "paymentFrequencies": {
+        "daily": "يومي",
+        "monthly": "شهري",
+        "perUnit": "لكل وحدة (حسب المهمة)",
+        "harvestShare": "حصة المحصول"
+      },
+      "examples": {
+        "label": "مثال",
+        "pieceWork": "إذا كان المعدل {{rate}} {{currency}} لكل وحدة وأتم العامل 100 وحدة، فإنه يكسب {{total}} {{currency}}.",
+        "metayage": "إذا كان إيراد المحصول {{revenue}} {{currency}} والنسبة {{percentage}}%، فإن العامل يكسب {{earnings}} {{currency}}."
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "save": "حفظ الإعدادات"
+      },
+      "states": {
+        "loading": "جاري التحميل...",
+        "saving": "جاري الحفظ...",
+        "notFound": "العامل غير موجود"
+      },
+      "messages": {
+        "success": "تم تحديث إعدادات الدفع بنجاح!",
+        "noWorkUnits": "لا توجد وحدات عمل متاحة. يرجى إنشاء وحدات العمل أولاً."
+      },
+      "errors": {
+        "paymentConfigurationRequired": "يرجى توفير إعدادات الدفع المطلوبة للنوع المحدد",
+        "updateFailed": "فشل تحديث إعدادات الدفع"
+      }
+    },
+    "form": {
+      "title": {
+        "add": "إضافة عامل",
+        "edit": "تعديل العامل"
+      },
+      "sections": {
+        "personalInfo": "المعلومات الشخصية",
+        "platformAccess": "الوصول للمنصة",
+        "employmentDetails": "تفاصيل التوظيف",
+        "compensation": "التعويض",
+        "paymentSettings": "إعدادات الدفع",
+        "skillsAndCertifications": "المهارات والشهادات"
+      },
+      "fields": {
+        "workerType": "نوع العامل",
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "cin": "رقم البطاقة الوطنية",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "dateOfBirth": "تاريخ الميلاد",
+        "address": "العنوان",
+        "position": "المنصب/الدور",
+        "farm": "المزرعة",
+        "hireDate": "تاريخ التوظيف",
+        "declaredToCNSS": "مصرح للضمان الاجتماعي",
+        "cnssNumber": "رقم الضمان الاجتماعي",
+        "monthlySalary": "الراتب الشهري ({{currency}})",
+        "dailyRate": "الأجر اليومي ({{currency}})",
+        "metayageType": "نوع المشاركة",
+        "metayagePercentage": "النسبة المئوية (%)",
+        "calculationBasis": "أساس الحساب",
+        "paymentFrequency": "تكرار الدفع",
+        "paymentMethod": "طريقة الدفع",
+        "bankAccount": "رقم الحساب البنكي (اختياري)",
+        "specialties": "التخصصات",
+        "certifications": "الشهادات",
+        "notes": "ملاحظات"
+      },
+      "placeholders": {
+        "firstName": "محمد",
+        "lastName": "العلمي",
+        "cin": "AB123456",
+        "phone": "+212 6XX XXX XXX",
+        "email": "example@email.com",
+        "address": "العنوان الكامل",
+        "position": "مثال: سائق جرار، رئيس فريق...",
+        "cnssNumber": "CNSS123456",
+        "monthlySalary": "3000.00",
+        "dailyRate": "120.00",
+        "metayagePercentage": "20.00",
+        "bankAccount": "IBAN أو RIB",
+        "specialties": "مثال: التقليم، الري، الحصاد...",
+        "certifications": "مثال: العلاجات الصحية، قيادة الجرار...",
+        "notes": "معلومات إضافية..."
+      },
+      "options": {
+        "select": "اختر...",
+        "noFarm": "-- لا توجد مزرعة --"
+      },
+      "paymentMethods": {
+        "cash": "نقداً",
+        "bankTransfer": "تحويل بنكي",
+        "check": "شيك",
+        "mobileMoney": "الدفع عبر الهاتف"
+      },
+      "platformAccess": {
+        "enabled": "سيتمكن هذا العامل من تسجيل الدخول وعرض مهامه المخصصة بوصوح محدود.",
+        "disabled": "امنح وصول المنصة لهذا العامل لعرض مهامه المخصصة.",
+        "emailRequired": "مطلوب بريد إلكتروني لإنشاء حساب منصة. يرجى توفير بريد العامل الإلكتروني.",
+        "alreadyHasAccess": "لديك هذا العامل وصول للمنصة بالفعل (الدور: عامل مزرعة)."
+      },
+      "metayageInfo": {
+        "title": "معلومات عن المشاركة",
+        "khammass": {
+          "title": "خماس (1/5)",
+          "description": "يتلقى العامل 20% من المحصول/الإيراد"
+        },
+        "rebaa": {
+          "title": "رباع (1/4)",
+          "description": "يتلقى العامل 25% من المحصول/الإيراد"
+        },
+        "tholth": {
+          "title": "ثلث (1/3)",
+          "description": "يتلقى العامل 33% من المحصول/الإيراد"
+        }
+      },
+      "paymentFrequencyHint": {
+        "fixedSalary": "عموماً شهرياً للموظفين براتب ثابت",
+        "dailyWorker": "يومياً أو لكل مهمة للعمال اليوميين",
+        "metayage": "حصة المحصول للمشاركة"
+      },
+      "paymentFrequencyInfo": {
+        "title": "معلومات عن تكرارات الدفع",
+        "monthly": "شهري",
+        "monthlyDescription": "دفع ثابت كل شهر (موصى به للموظفين براتب ثابت)",
+        "daily": "يومي",
+        "dailyDescription": "الدفع بناءً على الأيام الفعلية للعمل",
+        "dailyWorkerDailyDescription": "الدفع بناءً على عدد أيام العمل",
+        "perTask": "لكل مهمة",
+        "perTaskDescription": "الدفع لكل مهمة أو وحدة مكتملة (مثال: عدد الأشجار المُقلمة، كغ محصودة)",
+        "harvestShare": "حصة المحصول",
+        "harvestShareDescription": "الدفع بناءً على نسبة مئوية من إيرادات المحصول (خماس، رباع، ثلث)"
+      },
+      "bankAccountHint": "مطلوب للتحويلات البنكية",
+      "buttons": {
+        "add": "إضافة",
+        "cancel": "إلغاء",
+        "create": "إنشاء",
+        "update": "تحديث",
+        "saving": "جاري الحفظ..."
+      },
+      "validation": {
+        "firstNameMin": "يجب أن يحتوي الاسم الأول على حرفين على الأقل",
+        "lastNameMin": "يجب أن يحتوي اسم العائلة على حرفين على الأقل",
+        "emailInvalid": "بريد إلكتروني غير صالح",
+        "monthlySalaryRequired": "الراتب الشهري مطلوب للموظف براتب ثابت",
+        "dailyRateRequired": "الأجر اليومي مطلوب للعامل اليومي",
+        "metayagePercentageRequired": "نسبة المشاركة مطلوبة",
+        "metayageTypeRequired": "نوع المشاركة مطلوب",
+        "noFarmAvailable": "لا توجد مزارع متاحة. يرجى إنشاء مزرعة أولاً.",
+        "correctFollowingErrors": "يرجى تصحيح الأخطاء التالية:",
+        "errorInField": "خطأ في الحقل"
+      },
+      "errors": {
+        "workerCreatedButAccessFailed": "تم إنشاء العامل لكن فشل الوصول للمنصة",
+        "workerCreatedAccessFailedTryUsers": "تم إنشاء العامل لكن فشل الوصول للمنصة. حاول مرة أخرى من صفحة المستخدمين."
+      },
+      "success": {
+        "workerCreatedWithAccess": "تم إنشاء العامل مع وصول المنصة!"
+      }
+    }
+  },
+  "workforce": {
+    "tasks": {
+      "title": "إدارة المهام",
+      "subtitle": "خطط وتتبع المهام الزراعية",
+      "breadcrumb": "المهام",
+      "loading": "جاري التحميل...",
+      "list": "قائمة",
+      "calendar": "التقويم",
+      "navigationLabel": "تنقل المهام",
+      "calendarPage": {
+        "loading": "جاري تحميل التقويم...",
+        "title": "تقويم المهام",
+        "noTasks": "لا توجد مهام مجدولة",
+        "view": "عرض"
+      },
+      "listPage": {
+        "loading": "جاري تحميل المهام...",
+        "title": "المهام",
+        "noTasks": "لم يتم العثور على مهام"
+      }
+    },
+    "employees": {
+      "loadingOrganization": "جاري تحميل المنظمة..."
+    },
+    "pieceWork": {
+      "selectFarm": "يرجى تحديد مزرعة لعرض سجلات العمل بالقطعة",
+      "title": "سجلات العمل بالقطعة",
+      "subtitle": "تتبع العمل المنجز بالوحدات (أشجار، صناديق، كغ، إلخ)",
+      "filtersLabel": "الفلاتر:",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "paymentStatus": "حالة الدفع",
+      "statusAll": "جميع الحالات",
+      "statusPending": "قيد الانتظار",
+      "statusApproved": "موافق عليه",
+      "statusPaid": "مدفوع",
+      "statusDisputed": "متنازع عليه",
+      "thisMonth": "هذا الشهر",
+      "statsTotalRecords": "إجمالي السجلات",
+      "statsPending": "قيد الانتظار",
+      "statsTotalAmount": "المبلغ الإجمالي",
+      "statsWorkers": "العمال"
+    }
   },
   "tasks": {
     "title": "إدارة المهام",
@@ -3315,6 +4225,93 @@
     "emptyState": {
       "modifySearch": "حاول تعديل بحثك",
       "startFirst": "ابدأ بتسجيل حصادك الأول"
+    },
+    "form": {
+      "title": {
+        "new": "حصاد جديد",
+        "edit": "تعديل الحصاد",
+        "subtitle": "سجل تفاصيل حصادك"
+      },
+      "sections": {
+        "location": "الموقع",
+        "harvestDetails": "تفاصيل الحصاد",
+        "quality": "الجودة",
+        "storageAndDestination": "التخزين والوجهة"
+      },
+      "fields": {
+        "farm": "المزرعة",
+        "parcel": "القطعة",
+        "harvestDate": "تاريخ الحصاد",
+        "quantity": "الكمية المحصودة",
+        "unit": "الوحدة",
+        "qualityGrade": "الجودة",
+        "qualityScore": "تقييم الجودة (1-10)",
+        "warehouse": "مستودع / مكان التخزين",
+        "intendedFor": "الوجهة المحددة",
+        "storageLocation": "الموقع المحدد (اختياري)",
+        "status": "الحالة",
+        "expectedPricePerUnit": "السعر المتوقع للوحدة (درهم)",
+        "notes": "ملاحظات / ملاحظات"
+      },
+      "units": {
+        "kg": "كيلوجرام (كغ)",
+        "tons": "أطنان",
+        "units": "وحدات",
+        "boxes": "صناديق",
+        "crates": "صناديق بلاستيك",
+        "liters": "لترات"
+      },
+      "qualityGrades": {
+        "extra": "إكستراع (ممتاز)",
+        "a": "الفئة أ",
+        "first": "الاختيار الأول",
+        "b": "الفئة ب",
+        "second": "الاختيار الثاني",
+        "c": "الفئة ج",
+        "third": "الاختيار الثالث"
+      },
+      "statuses": {
+        "stored": "مُخزّن",
+        "inDelivery": "قيد التوصيل",
+        "delivered": "تم التوصيل",
+        "sold": "تم البيع",
+        "spoiled": "تالف"
+      },
+      "intendedFor": {
+        "market": "السوق المحلي",
+        "storage": "التخزين",
+        "processing": "المعالجة",
+        "export": "التصدير",
+        "directClient": "عميل مباشر"
+      },
+      "placeholders": {
+        "selectFarm": "اختر المزرعة",
+        "selectParcel": "اختر القطعة",
+        "selectFarmFirst": "اختر المزرعة أولاً",
+        "quantity": "0",
+        "unspecified": "غير محدد",
+        "qualityScore": "مثال: 8",
+        "selectWarehouse": "اختر المستودع",
+        "storageLocation": "مثال: ممر 3، رف B2، غرفة باردة 2",
+        "price": "مثال: 15.00",
+        "notes": "أضف ملاحظات حول الحصاد، ظروف الطقس، المشاكل التي واجهتها..."
+      },
+      "messages": {
+        "cropNotSpecified": "المحصول غير محدد",
+        "variety": "الصنف",
+        "temperatureControlled": "التحكم في درجة الحرارة",
+        "humidityControlled": "التحكم في الرطوبة",
+        "capacity": "السعة",
+        "estimatedRevenue": "الإيراد المتوقع"
+      },
+      "validation": {
+        "saveError": "خطأ في الحفظ"
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "save": "حفظ الحصاد",
+        "update": "تحديث"
+      }
     }
   },
   "utilities": {
@@ -3324,9 +4321,104 @@
     "loadingDashboard": "جاري تحميل لوحة التحكم..."
   },
   "receptionBatches": {
-    "title": "إدارة دفعات الاستلام",
-    "subtitle": "تتبع الاستلام ومراقبة جودة المحاصيل",
-    "loading": "جاري تحميل المنظمة..."
+    "title": "دفعات الاستلام",
+    "subtitle": "تتبع استلام المحاصيل ومراقبة الجودة",
+    "loading": "جاري تحميل دفعات الاستلام...",
+    "list": {
+      "title": "دفعات الاستلام",
+      "subtitle": "{{count}} دفعة موجودة",
+      "subtitleEmpty": "تتبع استلام المحاصيل ومراقبة الجودة",
+      "create": "دفعة استلام جديدة",
+      "search": "البحث حسب رمز الدفعة أو المُنتِج أو الملاحظات...",
+      "filters": {
+        "allStatuses": "جميع الحالات",
+        "allDecisions": "جميع القرارات",
+        "status": {
+          "received": "مُستَلَم",
+          "qualityChecked": "فحص الجودة مُنجز",
+          "decisionMade": "تم اتخاذ القرار",
+          "processed": "مُعالَج",
+          "cancelled": "مُلغى"
+        },
+        "decision": {
+          "pending": "قيد الانتظار",
+          "directSale": "بيع مباشر",
+          "storage": "تخزين",
+          "transformation": "تصنيع",
+          "rejected": "مرفوض"
+        }
+      },
+      "table": {
+        "batchCode": "رمز الدفعة",
+        "receptionDate": "تاريخ الاستلام",
+        "parcel": "القطعة",
+        "weight": "الوزن",
+        "quality": "الجودة",
+        "decision": "القرار",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "stats": {
+        "totalBatches": "إجمالي الدفعات",
+        "allTime": "الإجمالي",
+        "totalWeight": "الوزن الإجمالي",
+        "received": "مُستَلَم",
+        "avgQuality": "متوسط الجودة",
+        "outOf": "من {{max}}",
+        "pendingDecisions": "قرارات قيد الانتظار",
+        "awaitingDecision": "في انتظار القرار"
+      },
+      "empty": {
+        "title": "لا توجد دفعات استلام",
+        "searchTitle": "لا توجد دفعات استلام مطابقة",
+        "description": "أنشئ أول دفعة استلام لتتبع مراقبة جودة المحاصيل",
+        "searchDescription": "حاول تعديل معايير البحث"
+      },
+      "mobile": {
+        "empty": "لا توجد دفعات استلام",
+        "searchEmpty": "لا توجد دفعات مطابقة"
+      },
+      "actions": {
+        "viewDetails": "عرض التفاصيل",
+        "edit": "تعديل",
+        "delete": "حذف",
+        "cancelBatch": "إلغاء الدفعة"
+      },
+      "decisions": {
+        "directSale": "بيع مباشر",
+        "pending": "قيد الانتظار",
+        "storage": "تخزين",
+        "transformation": "تصنيع",
+        "rejected": "مرفوض"
+      },
+      "statuses": {
+        "received": "مُستَلَم",
+        "qualityChecked": "فحص الجودة مُنجز",
+        "decisionMade": "تم اتخاذ القرار",
+        "processed": "مُعالَج",
+        "cancelled": "مُلغى"
+      },
+      "quality": {
+        "notGraded": "غير مُصنَّف",
+        "outOf": "/{{max}}"
+      },
+      "toasts": {
+        "cancelSuccess": "تم إلغاء دفعة الاستلام",
+        "deleteSuccess": "تم حذف دفعة الاستلام",
+        "cancelFailed": "فشل إلغاء الدفعة: {{message}}",
+        "deleteFailed": "فشل حذف الدفعة: {{message}}"
+      },
+      "confirm": {
+        "cancelTitle": "إلغاء دفعة الاستلام",
+        "cancelDescription": "سيؤدي هذا إلى وضع علامة \"مُلغاة\" على الدفعة. لا يمكن التراجع عن هذا الإجراء.",
+        "deleteTitle": "حذف دفعة الاستلام",
+        "deleteDescription": "سيؤدي هذا إلى حذف الدفعة بشكل دائم. يمكن حذف الدفعات ذات الحالة \"مُستَلَم\" فقط.",
+        "confirmButton": "{{action}}",
+        "cancelButton": "إلغاء",
+        "cancelAction": "إلغاء الدفعة",
+        "deleteAction": "حذف الدفعة"
+      }
+    }
   },
   "analyses": {
     "title": "تحليلات التربة والنبات والمياه",
@@ -3685,6 +4777,18 @@
       "grandTotal": "الإجمالي الكلي",
       "notes": "ملاحظات",
       "internalComments": "تعليقات داخلية"
+    },
+    "chat": {
+      "title": "المساعد الذكي",
+      "subtitle": "اطرح أسئلة حول مزرعتك وعمالك ومحاسبتك والمزيد",
+      "placeholder": "اسأل عن مزرعتك وعمالك ومحاسبتك ومخزونك...",
+      "welcome": "مرحباً! أنا مساعد AgriTech الخاص بك. كيف يمكنني مساعدتك اليوم؟",
+      "listening": "جاري الاستماع...",
+      "voiceNotSupported": "الإدخال الصوتي غير مدعوم في هذا المتصفح",
+      "clear": "مسح",
+      "send": "إرسال",
+      "error": "خطأ في إرسال الرسالة",
+      "retry": "إعادة المحاولة"
     }
   }
 }

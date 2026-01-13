@@ -59,7 +59,7 @@ function HarvestsPage() {
   };
 
   const handleDeleteHarvest = async (harvestId: string) => {
-    if (!confirm(t('harvests.deleteConfirm'))) return;
+    if (!confirm(t('production.harvests.deleteConfirm'))) return;
 
     try {
       await deleteHarvestMutation.mutateAsync({
@@ -68,7 +68,7 @@ function HarvestsPage() {
       });
     } catch (error) {
       console.error('Error deleting harvest:', error);
-      alert(t('harvests.deleteError'));
+      alert(t('production.harvests.deleteError'));
     }
   };
 
@@ -91,7 +91,16 @@ function HarvestsPage() {
   const exportToCSV = () => {
     if (allHarvestsForExport.length === 0) return;
 
-    const headers = ['Date', 'Parcelle', 'Culture', 'Quantité', 'Unité', 'Qualité', 'Destination', 'Statut'];
+    const headers = [
+      t('production.harvests.csvHeaders.date'),
+      t('production.harvests.csvHeaders.parcel'),
+      t('production.harvests.csvHeaders.crop'),
+      t('production.harvests.csvHeaders.quantity'),
+      t('production.harvests.csvHeaders.unit'),
+      t('production.harvests.csvHeaders.quality'),
+      t('production.harvests.csvHeaders.destination'),
+      t('production.harvests.csvHeaders.status')
+    ];
     const rows = allHarvestsForExport.map(h => [
       format(new Date(h.harvest_date), 'dd/MM/yyyy'),
       h.parcel_name || '',
@@ -121,7 +130,7 @@ function HarvestsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('harvests.loading')}</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('production.harvests.loading')}</p>
         </div>
       </div>
     );
@@ -133,19 +142,19 @@ function HarvestsPage() {
       header={
         <>
           {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('harvests.title')} />
+          <MobileNavBar title={t('production.harvests.title')} />
 
           {/* Desktop Header */}
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
                 { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
-                { icon: Package, label: t('harvests.title'), isActive: true }
+                { icon: Package, label: t('production.harvests.title'), isActive: true }
               ]}
-              title={t('harvests.title')}
-              subtitle={t('harvests.harvestsCount', { count: totalItems })}
+              title={t('production.harvests.title')}
+              subtitle={t('production.harvests.harvestsCount', { count: totalItems })}
               showSearch={true}
-              searchPlaceholder={t('harvests.searchPlaceholder')}
+              searchPlaceholder={t('production.harvests.searchPlaceholder')}
               onSearch={(query) => tableState.setSearch(query)}
               actions={
                 <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
@@ -154,7 +163,7 @@ function HarvestsPage() {
                     className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
                   >
                     <Filter className="h-4 w-4" />
-                    {t('harvests.filters')}
+                    {t('production.harvests.filters')}
                   </button>
 
                   <button
@@ -163,7 +172,7 @@ function HarvestsPage() {
                     className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     <Download className="h-4 w-4" />
-                    {t('harvests.export')}
+                    {t('production.harvests.export')}
                   </button>
 
                   <button
@@ -172,7 +181,7 @@ function HarvestsPage() {
                     className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
                   >
                     <Plus className="h-4 w-4" />
-                    {t('harvests.newHarvest')}
+                    {t('production.harvests.newHarvest')}
                   </button>
                 </div>
               }
@@ -190,7 +199,7 @@ function HarvestsPage() {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
             >
               <Plus className="h-5 w-5" />
-              {t('harvests.newHarvest')}
+              {t('production.harvests.newHarvest')}
             </button>
           </div>
 
@@ -204,7 +213,7 @@ function HarvestsPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <input
                   type="text"
-                  placeholder={t('harvests.searchPlaceholder')}
+                  placeholder={t('production.harvests.searchPlaceholder')}
                   value={tableState.search}
                   onChange={(e) => tableState.setSearch(e.target.value)}
                   className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -222,12 +231,12 @@ function HarvestsPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-full sm:w-40"
               >
-                <option value="all">{t('harvests.filterLabels.allStatuses')}</option>
-                <option value="stored">{t('harvests.statuses.stored')}</option>
-                <option value="in_delivery">{t('harvests.statuses.in_delivery')}</option>
-                <option value="delivered">{t('harvests.statuses.delivered')}</option>
-                <option value="sold">{t('harvests.statuses.sold')}</option>
-                <option value="spoiled">{t('harvests.statuses.spoiled')}</option>
+                <option value="all">{t('production.harvests.filterLabels.allStatuses')}</option>
+                <option value="stored">{t('production.harvests.statuses.stored')}</option>
+                <option value="in_delivery">{t('production.harvests.statuses.in_delivery')}</option>
+                <option value="delivered">{t('production.harvests.statuses.delivered')}</option>
+                <option value="sold">{t('production.harvests.statuses.sold')}</option>
+                <option value="spoiled">{t('production.harvests.statuses.spoiled')}</option>
               </select>
             </div>
           </div>
@@ -243,10 +252,10 @@ function HarvestsPage() {
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
               <Package className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {tableState.search ? t('harvests.noResults') : t('harvests.noHarvests')}
+                {tableState.search ? t('production.harvests.noResults') : t('production.harvests.noHarvests')}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {tableState.search ? t('harvests.emptyState.modifySearch') : t('harvests.emptyState.startFirst')}
+                {tableState.search ? t('production.harvests.emptyState.modifySearch') : t('production.harvests.emptyState.startFirst')}
               </p>
               {!tableState.search && (
                 <button
@@ -254,7 +263,7 @@ function HarvestsPage() {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
                 >
                   <Plus className="h-4 w-4" />
-                  {t('harvests.newHarvest')}
+                  {t('production.harvests.newHarvest')}
                 </button>
               )}
             </div>

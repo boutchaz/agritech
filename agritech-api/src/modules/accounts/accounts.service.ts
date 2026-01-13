@@ -1,12 +1,18 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { moroccanChartOfAccounts } from './data/moroccan-chart-of-accounts';
+import { frenchChartOfAccounts } from './data/french-chart-of-accounts';
+import { usaChartOfAccounts } from './data/usa-chart-of-accounts';
+import { ukChartOfAccounts } from './data/uk-chart-of-accounts';
+import { germanChartOfAccounts } from './data/german-chart-of-accounts';
+import { tunisianChartOfAccounts } from './data/tunisian-chart-of-accounts';
 import {
   ChartOfAccountsTemplate,
   TemplateCountry,
   TemplateAccount,
   ApplyTemplateResult,
 } from './dto/apply-template.dto';
+import { AccountingStandard, getSupportedCountries } from './data/types';
 
 interface AccountData {
   code: string;
@@ -69,7 +75,7 @@ export class AccountsService {
 
     if (error) {
       this.logger.error(`Failed to fetch account: ${error.message}`, error);
-      throw error;
+      throw new BadRequestException(`Failed to fetch account: ${error.message}`);
     }
 
     if (!data) {
@@ -269,59 +275,111 @@ export class AccountsService {
   }
 
   private getFallbackTemplates(): TemplateCountry[] {
-    return [
-      {
-        country_code: 'MAR',
-        country_name: 'Morocco',
-        country_name_native: 'المغرب',
-        accounting_standard: 'CGNC',
-        default_currency: 'MAD',
-        version: '1.0.0',
-      },
-    ];
+    // Use the centralized countries list from types
+    const countries = getSupportedCountries();
+
+    return countries.map((country) => ({
+      country_code: country.code,
+      country_name: country.name,
+      country_name_native: this.getNativeCountryName(country.code),
+      accounting_standard: country.standard,
+      default_currency: country.currency,
+      version: '1.0.0',
+    }));
+  }
+
+  /**
+   * Get native country name for supported countries
+   */
+  private getNativeCountryName(countryCode: string): string {
+    const nativeNames: Record<string, string> = {
+      MA: 'المغرب',
+      FR: 'France',
+      TN: 'تونس',
+      US: 'United States',
+      GB: 'United Kingdom',
+      DE: 'Deutschland',
+    };
+    return nativeNames[countryCode] || '';
   }
 
   async getTemplateByCountry(countryCode: string): Promise<ChartOfAccountsTemplate> {
+    // Validate input - only reject null/undefined/non-string types
+    if (countryCode === null || countryCode === undefined) {
+      throw new NotFoundException('Invalid country code provided');
+    }
+    if (typeof countryCode !== 'string') {
+      throw new NotFoundException('Invalid country code provided');
+    }
+
     const cmsUrl = this.getCmsUrl();
-    const upperCountryCode = countryCode.toUpperCase();
+    const upperCountryCode = countryCode.trim().toUpperCase();
 
     try {
       const response = await fetch(`${cmsUrl}/api/chart-of-account-templates/country/${upperCountryCode}`);
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new NotFoundException(`Template not found for country: ${upperCountryCode}`);
-        }
-        throw new BadRequestException(`Failed to fetch template: ${response.statusText}`);
+        // For 404 and other HTTP errors, fall back to local templates
+        this.logger.warn(`CMS returned ${response.status}: ${response.statusText}, using fallback template for ${upperCountryCode}`);
+        return this.getFallbackTemplate(upperCountryCode);
       }
 
       const result = await response.json();
       return result.data?.attributes || result.data;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw error;
-      }
-
-      if (upperCountryCode === 'MAR') {
-        this.logger.warn('CMS unavailable, using hardcoded Moroccan template');
-        return this.getFallbackMoroccanTemplate();
-      }
-
-      throw new BadRequestException(`Template not available for country: ${upperCountryCode}`);
+      // Use fallback templates for network errors and other exceptions
+      this.logger.warn(`CMS unavailable, using fallback template for ${upperCountryCode}: ${error.message}`);
+      return this.getFallbackTemplate(upperCountryCode);
     }
   }
 
-  private getFallbackMoroccanTemplate(): ChartOfAccountsTemplate {
+  /**
+   * Get fallback template for a specific country
+   */
+  private getFallbackTemplate(countryCode: string): ChartOfAccountsTemplate {
+    const chartMap: Record<string, any> = {
+      MA: moroccanChartOfAccounts,
+      FR: frenchChartOfAccounts,
+      TN: tunisianChartOfAccounts,
+      US: usaChartOfAccounts,
+      GB: ukChartOfAccounts,
+      DE: germanChartOfAccounts,
+    };
+
+    const chart = chartMap[countryCode];
+    if (!chart) {
+      throw new NotFoundException(`Template not found for country: ${countryCode}`);
+    }
+
+    // For new country charts using CountryChartOfAccounts format
+    if (chart.metadata && chart.accounts) {
+      return {
+        id: 0,
+        country_code: chart.metadata.country_code,
+        country_name: chart.metadata.country_name,
+        country_name_native: chart.metadata.country_name_native,
+        accounting_standard: chart.metadata.accounting_standard,
+        default_currency: chart.metadata.default_currency,
+        version: chart.metadata.version,
+        description: chart.metadata.description,
+        accounts: chart.accounts as any,
+        is_default: true,
+        supported_industries: chart.metadata.supported_industries,
+        fiscal_year_start_month: chart.metadata.fiscal_year_start_month,
+      };
+    }
+
+    // For legacy Moroccan chart format
     return {
       id: 0,
-      country_code: 'MAR',
+      country_code: 'MA',
       country_name: 'Morocco',
       country_name_native: 'المغرب',
       accounting_standard: 'CGNC',
       default_currency: 'MAD',
       version: '1.0.0',
       description: 'Moroccan Chart of Accounts based on CGNC',
-      accounts: moroccanChartOfAccounts as TemplateAccount[],
+      accounts: chart as any,
       is_default: true,
       supported_industries: ['agriculture'],
       fiscal_year_start_month: 1,
@@ -359,7 +417,8 @@ export class AccountsService {
       const accountsWithParent: Array<{ code: string; parent_code: string }> = [];
 
       for (const account of template.accounts) {
-        const description = account.description_fr || null;
+        // Handle both legacy Moroccan format (description_fr) and new format (description)
+        const description = account.description_fr || (account as any).description || null;
 
         const result = await client.query(
           `INSERT INTO accounts (

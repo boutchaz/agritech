@@ -6,12 +6,14 @@ import { useParcels } from '@/hooks/useParcels';
 import { IndexCalculationResponse } from '@/lib/satellite-api';
 import { useCan } from '@/lib/casl';
 import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 
 // Lazy load heavy satellite components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('@/components/SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('@/components/SatelliteAnalysisView/TimeSeriesChart'));
 
 function SatelliteAnalysisPage() {
+  const { t } = useTranslation();
   const { currentFarm } = useAuth();
   const { can } = useCan();
   const navigate = useNavigate();
@@ -41,31 +43,30 @@ function SatelliteAnalysisPage() {
             <Lock className="w-8 h-8 text-blue-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Satellite Analysis - Professional Feature
+            {t('production.satelliteAnalysis.proFeatureTitle')}
           </h2>
           <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Unlock powerful satellite imagery analysis to monitor crop health, vegetation indices (NDVI, NDWI),
-            and get data-driven insights for precision agriculture.
+            {t('production.satelliteAnalysis.proFeatureDescription')}
           </p>
           <div className="space-y-3 mb-6">
             <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
               <Satellite className="w-4 h-4 text-blue-600" />
-              <span>Real-time satellite imagery analysis</span>
+              <span>{t('production.satelliteAnalysis.featureRealtime')}</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
               <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span>Vegetation health monitoring (NDVI, NDWI, EVI)</span>
+              <span>{t('production.satelliteAnalysis.featureVegetation')}</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
               <BarChart3 className="w-4 h-4 text-blue-600" />
-              <span>Historical trends and time-series analysis</span>
+              <span>{t('production.satelliteAnalysis.featureHistorical')}</span>
             </div>
           </div>
           <button
             onClick={() => navigate({ to: '/settings/subscription' })}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
           >
-            Upgrade to Professional
+            {t('production.satelliteAnalysis.upgradeButton')}
             <span>→</span>
           </button>
         </div>
@@ -79,8 +80,8 @@ function SatelliteAnalysisPage() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
           <MapPin className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="text-yellow-800 font-medium">No Farm Selected</h4>
-            <p className="text-yellow-700">Please select a farm to access satellite analysis features.</p>
+            <h4 className="text-yellow-800 font-medium">{t('production.satelliteAnalysis.noFarmTitle')}</h4>
+            <p className="text-yellow-700">{t('production.satelliteAnalysis.noFarmMessage')}</p>
           </div>
         </div>
       </div>
@@ -94,10 +95,10 @@ function SatelliteAnalysisPage() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Satellite className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Satellite Analysis</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('production.satelliteAnalysis.title')}</h1>
           </div>
           <p className="text-gray-600">
-            Analyze vegetation health and crop conditions using satellite imagery
+            {t('production.satelliteAnalysis.subtitle')}
           </p>
         </div>
       </div>
@@ -106,26 +107,26 @@ function SatelliteAnalysisPage() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="w-4 h-4 text-blue-600" />
-          <span className="font-medium text-blue-900">Current Farm:</span>
+          <span className="font-medium text-blue-900">{t('production.satelliteAnalysis.currentFarmLabel')}:</span>
           <span className="text-blue-800">{currentFarm.name}</span>
         </div>
         <p className="text-blue-700 text-sm">
           {currentFarm.location && `${currentFarm.location} • `}
-          {parcels.length} parcel{parcels.length !== 1 ? 's' : ''} available for analysis
+          {t('production.satelliteAnalysis.parcelsAvailable', { count: parcels.length })}
         </p>
       </div>
 
       {/* Parcel Selection */}
       <div className="bg-white rounded-lg shadow p-6" data-tour="satellite-indices">
-        <h2 className="text-lg font-semibold mb-4">Select Parcel for Analysis</h2>
+        <h2 className="text-lg font-semibold mb-4">{t('production.satelliteAnalysis.selectParcelTitle')}</h2>
 
         {parcelsLoading ? (
-          <div className="text-gray-500">Loading parcels...</div>
+          <div className="text-gray-500">{t('production.satelliteAnalysis.loadingParcels')}</div>
         ) : parcels.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <p className="text-gray-600">No parcels found for this farm.</p>
+            <p className="text-gray-600">{t('production.satelliteAnalysis.noParcelsTitle')}</p>
             <p className="text-sm text-gray-500 mt-1">
-              Add parcels with defined boundaries to enable satellite analysis.
+              {t('production.satelliteAnalysis.noParcelsMessage')}
             </p>
           </div>
         ) : (
@@ -143,13 +144,13 @@ function SatelliteAnalysisPage() {
                 <h3 className="font-medium text-gray-900">{parcel.name}</h3>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
                   {parcel.area && (
-                    <p>Area: {parcel.area} {parcel.area_unit || 'hectares'}</p>
+                    <p>{t('production.satelliteAnalysis.areaLabel')}: {parcel.area} {parcel.area_unit || t('production.satelliteAnalysis.hectares')}</p>
                   )}
                   {parcel.soil_type && (
-                    <p>Soil: {parcel.soil_type}</p>
+                    <p>{t('production.satelliteAnalysis.soilLabel')}: {parcel.soil_type}</p>
                   )}
                   {parcel.irrigation_type && (
-                    <p>Irrigation: {parcel.irrigation_type}</p>
+                    <p>{t('production.satelliteAnalysis.irrigationLabel')}: {parcel.irrigation_type}</p>
                   )}
                 </div>
 
@@ -159,7 +160,7 @@ function SatelliteAnalysisPage() {
                     parcel.boundary ? 'bg-green-500' : 'bg-red-500'
                   }`} />
                   <span className="text-xs text-gray-500">
-                    {parcel.boundary ? 'Boundary defined' : 'No boundary data'}
+                    {parcel.boundary ? t('production.satelliteAnalysis.boundaryDefined') : t('production.satelliteAnalysis.noBoundary')}
                   </span>
                 </div>
               </div>
@@ -175,12 +176,12 @@ function SatelliteAnalysisPage() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-5 h-5 text-green-600" />
-              <h2 className="text-xl font-semibold">Vegetation Indices Analysis</h2>
+              <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.vegetationIndicesTitle')}</h2>
             </div>
             <Suspense fallback={
               <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">Loading analysis tools...</span>
+                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingAnalysisTools')}</span>
               </div>
             }>
               <IndicesCalculator
@@ -195,12 +196,12 @@ function SatelliteAnalysisPage() {
           <div data-tour="satellite-timeline">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-semibold">Historical Trends</h2>
+              <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.historicalTrendsTitle')}</h2>
             </div>
             <Suspense fallback={
               <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">Loading historical data...</span>
+                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingHistoricalData')}</span>
               </div>
             }>
               <TimeSeriesChart
@@ -214,10 +215,10 @@ function SatelliteAnalysisPage() {
           {/* Analysis Summary */}
           {calculationResults && (
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Analysis Summary</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('production.satelliteAnalysis.analysisSummaryTitle')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium mb-3">Latest Results</h3>
+                  <h3 className="font-medium mb-3">{t('production.satelliteAnalysis.latestResultsTitle')}</h3>
                   <div className="space-y-2">
                     {calculationResults.indices.map((result, index) => (
                       <div key={index} className="flex justify-between items-center">
@@ -228,15 +229,15 @@ function SatelliteAnalysisPage() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-medium mb-3">Parcel Information</h3>
+                  <h3 className="font-medium mb-3">{t('production.satelliteAnalysis.parcelInfoTitle')}</h3>
                   <div className="space-y-2 text-sm">
-                    <p><span className="text-gray-600">Name:</span> {selectedParcel.name}</p>
-                    <p><span className="text-gray-600">Area:</span> {selectedParcel.area} {selectedParcel.area_unit || 'hectares'}</p>
+                    <p><span className="text-gray-600">{t('production.satelliteAnalysis.nameLabel')}:</span> {selectedParcel.name}</p>
+                    <p><span className="text-gray-600">{t('production.satelliteAnalysis.areaLabel')}:</span> {selectedParcel.area} {selectedParcel.area_unit || t('production.satelliteAnalysis.hectares')}</p>
                     {selectedParcel.soil_type && (
-                      <p><span className="text-gray-600">Soil Type:</span> {selectedParcel.soil_type}</p>
+                      <p><span className="text-gray-600">{t('production.satelliteAnalysis.soilTypeLabel')}:</span> {selectedParcel.soil_type}</p>
                     )}
                     {selectedParcel.irrigation_type && (
-                      <p><span className="text-gray-600">Irrigation:</span> {selectedParcel.irrigation_type}</p>
+                      <p><span className="text-gray-600">{t('production.satelliteAnalysis.irrigationLabel')}:</span> {selectedParcel.irrigation_type}</p>
                     )}
                   </div>
                 </div>
@@ -252,10 +253,9 @@ function SatelliteAnalysisPage() {
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="text-yellow-800 font-medium">Boundary Data Required</h4>
+              <h4 className="text-yellow-800 font-medium">{t('production.satelliteAnalysis.boundaryRequiredTitle')}</h4>
               <p className="text-yellow-700">
-                The selected parcel "{selectedParcel.name}" doesn't have boundary coordinates defined.
-                Boundary data is required for satellite analysis.
+                {t('production.satelliteAnalysis.boundaryRequiredMessage', { parcelName: selectedParcel.name })}
               </p>
             </div>
           </div>

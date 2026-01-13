@@ -88,7 +88,7 @@ export class FiscalYearsService {
     const client = this.databaseService.getClient();
 
     // Check if fiscal year exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Fiscal year not found');
     }
@@ -141,7 +141,7 @@ export class FiscalYearsService {
     const client = this.databaseService.getClient();
 
     // Check if fiscal year exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Fiscal year not found');
     }
@@ -174,7 +174,7 @@ export class FiscalYearsService {
     const client = this.databaseService.getClient();
 
     // Check if fiscal year exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Fiscal year not found');
     }
@@ -209,7 +209,7 @@ export class FiscalYearsService {
     const client = this.databaseService.getClient();
 
     // Check if fiscal year exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Fiscal year not found');
     }

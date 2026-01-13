@@ -168,7 +168,7 @@ export function useCreateReceptionBatch() {
         throw new Error('No organization selected');
       }
 
-      return receptionBatchesApi.create(currentOrganization.id, data);
+      return receptionBatchesApi.create(data, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });

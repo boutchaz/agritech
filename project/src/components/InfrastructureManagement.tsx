@@ -743,7 +743,7 @@ const InfrastructureManagement: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span>{t('infrastructure.tabs.byFarm')}</span>
+              <span>{t('infrastructure.tabs.farm')}</span>
               <span className="py-0.5 px-1.5 sm:px-2 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {allFarmStructures.length}
               </span>

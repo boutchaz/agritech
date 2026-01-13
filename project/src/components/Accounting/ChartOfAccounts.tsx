@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter, Database as DatabaseIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ const accountTypeIcons: Record<AccountType, string> = {
 };
 
 export const ChartOfAccounts: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { data: accounts = [], isLoading, createAccount, updateAccount, deleteAccount } = useAccounts();
   const queryClient = useQueryClient();
@@ -297,9 +299,9 @@ export const ChartOfAccounts: React.FC = () => {
           </TableCell>
           <TableCell className="text-center">
             {account.is_active ? (
-              <Badge className="bg-green-100 text-green-800">Active</Badge>
+              <Badge className="bg-green-100 text-green-800">{t('accountingModule.accounts.status.active')}</Badge>
             ) : (
-              <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+              <Badge className="bg-gray-100 text-gray-800">{t('accountingModule.accounts.status.inactive')}</Badge>
             )}
           </TableCell>
           <TableCell className="text-right">
@@ -343,15 +345,15 @@ export const ChartOfAccounts: React.FC = () => {
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Building2 className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate">Chart of Accounts</span>
+                <span className="truncate">{t('accountingModule.accounts.title')}</span>
               </CardTitle>
               <CardDescription className="mt-1 text-sm">
-                Manage your accounting chart of accounts hierarchy
+                {t('accountingModule.accounts.subtitleAlt')}
               </CardDescription>
             </div>
             <Button onClick={handleCreateAccount} className="w-full sm:w-auto justify-center flex-shrink-0">
               <Plus className="h-4 w-4 mr-2" />
-              New Account
+              {t('accountingModule.accounts.newAccount')}
             </Button>
           </div>
         </CardHeader>
@@ -363,7 +365,7 @@ export const ChartOfAccounts: React.FC = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search accounts by code or name..."
+                  placeholder={t('accountingModule.accounts.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full"
@@ -376,15 +378,15 @@ export const ChartOfAccounts: React.FC = () => {
               <Select value={filterType} onValueChange={(val) => setFilterType(val as AccountType | 'all')}>
                 <SelectTrigger className="w-full sm:w-[220px]">
                   <Filter className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <SelectValue placeholder="Filter by type" />
+                  <SelectValue placeholder={t('accountingModule.accounts.filterByType')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Asset">Assets</SelectItem>
-                  <SelectItem value="Liability">Liabilities</SelectItem>
-                  <SelectItem value="Equity">Equity</SelectItem>
-                  <SelectItem value="Revenue">Revenue</SelectItem>
-                  <SelectItem value="Expense">Expenses</SelectItem>
+                  <SelectItem value="all">{t('accountingModule.accounts.allTypes')}</SelectItem>
+                  <SelectItem value="Asset">{t('accountingModule.accounts.accountTypes.Asset')}</SelectItem>
+                  <SelectItem value="Liability">{t('accountingModule.accounts.accountTypes.Liability')}</SelectItem>
+                  <SelectItem value="Equity">{t('accountingModule.accounts.accountTypes.Equity')}</SelectItem>
+                  <SelectItem value="Revenue">{t('accountingModule.accounts.accountTypes.Revenue')}</SelectItem>
+                  <SelectItem value="Expense">{t('accountingModule.accounts.accountTypes.Expense')}</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2 px-1">
@@ -394,7 +396,7 @@ export const ChartOfAccounts: React.FC = () => {
                   onCheckedChange={(checked) => setShowInactive(checked as boolean)}
                 />
                 <Label htmlFor="showInactive" className="text-sm cursor-pointer whitespace-nowrap">
-                  Show Inactive
+                  {t('accountingModule.accounts.showInactive')}
                 </Label>
               </div>
             </div>
@@ -406,12 +408,12 @@ export const ChartOfAccounts: React.FC = () => {
               <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-center">Currency</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('accountingModule.accounts.table.code')}</TableHead>
+                  <TableHead>{t('accountingModule.accounts.table.name')}</TableHead>
+                  <TableHead>{t('accountingModule.accounts.table.type')}</TableHead>
+                  <TableHead className="text-center">{t('accountingModule.accounts.table.currency')}</TableHead>
+                  <TableHead className="text-center">{t('accountingModule.accounts.table.status')}</TableHead>
+                  <TableHead className="text-right">{t('accountingModule.accounts.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -423,11 +425,10 @@ export const ChartOfAccounts: React.FC = () => {
                           <DatabaseIcon className="h-16 w-16 text-gray-300" />
                           <div className="space-y-2">
                             <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                              No Chart of Accounts Found
+                              {t('accountingModule.accounts.empty.title')}
                             </p>
                             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md px-4">
-                              Get started quickly by seeding a standard chart of accounts for Morocco (Plan Comptable Marocain),
-                              or create accounts manually.
+                              {t('accountingModule.accounts.empty.description')}
                             </p>
                           </div>
                           <div className="flex flex-col sm:flex-row gap-3 px-4">
@@ -438,7 +439,7 @@ export const ChartOfAccounts: React.FC = () => {
                               className="w-full sm:w-auto"
                             >
                               <DatabaseIcon className="h-4 w-4 mr-2" />
-                              {isSeeding ? 'Seeding...' : 'Seed Chart'}
+                              {isSeeding ? t('accountingModule.accounts.actions.seeding') : t('accountingModule.accounts.actions.seedChart')}
                             </Button>
                             <Button
                               onClick={handleCreateAccount}
@@ -447,13 +448,13 @@ export const ChartOfAccounts: React.FC = () => {
                               className="w-full sm:w-auto"
                             >
                               <Plus className="h-4 w-4 mr-2" />
-                              Create Manually
+                              {t('accountingModule.accounts.actions.createManually')}
                             </Button>
                           </div>
                         </div>
                       ) : (
                         <p className="text-gray-500">
-                          No accounts match your search criteria.
+                          {t('accountingModule.accounts.empty.noMatches')}
                         </p>
                       )}
                     </TableCell>
@@ -473,10 +474,10 @@ export const ChartOfAccounts: React.FC = () => {
                 <DatabaseIcon className="h-16 w-16 text-gray-300" />
                 <div className="space-y-2 text-center">
                   <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    No Chart of Accounts Found
+                    {t('accountingModule.accounts.empty.title')}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Get started by seeding a standard chart of accounts or create accounts manually.
+                    {t('accountingModule.accounts.empty.descriptionShort')}
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 w-full">
@@ -487,7 +488,7 @@ export const ChartOfAccounts: React.FC = () => {
                     className="w-full"
                   >
                     <DatabaseIcon className="h-4 w-4 mr-2" />
-                    {isSeeding ? 'Seeding Accounts...' : 'Seed Chart of Accounts'}
+                    {isSeeding ? t('accountingModule.accounts.actions.seedingAlt') : t('accountingModule.accounts.actions.seedChartAlt')}
                   </Button>
                   <Button
                     onClick={handleCreateAccount}
@@ -496,13 +497,13 @@ export const ChartOfAccounts: React.FC = () => {
                     className="w-full"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Manually
+                    {t('accountingModule.accounts.actions.createManually')}
                   </Button>
                 </div>
               </div>
             ) : flattenedAccounts.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
-                <p>No accounts match your search criteria.</p>
+                <p>{t('accountingModule.accounts.empty.noMatches')}</p>
               </div>
             ) : (
               flattenedAccounts.map(({ account, level }) => (
@@ -523,7 +524,7 @@ export const ChartOfAccounts: React.FC = () => {
                           {account.account_type}
                         </Badge>
                         <Badge className={account.is_active ? 'bg-green-100 text-green-800 text-xs' : 'bg-gray-100 text-gray-800 text-xs'}>
-                          {account.is_active ? 'Active' : 'Inactive'}
+                          {account.is_active ? t('accountingModule.accounts.status.active') : t('accountingModule.accounts.status.inactive')}
                         </Badge>
                       </div>
                       <div>
@@ -540,12 +541,12 @@ export const ChartOfAccounts: React.FC = () => {
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>Level {level + 1}</span>
+                        <span>{t('accountingModule.accounts.form.level', { number: level + 1 })}</span>
                         <span>•</span>
                         <span>{account.currency_code || currentOrganization?.currency || 'MAD'}</span>
                         <span>•</span>
                         <Badge variant="outline" className="text-xs">
-                          {account.is_group ? 'Group' : 'Ledger'}
+                          {account.is_group ? t('accountingModule.accounts.accountKinds.group') : t('accountingModule.accounts.accountKinds.ledger')}
                         </Badge>
                       </div>
                     </div>
@@ -575,33 +576,33 @@ export const ChartOfAccounts: React.FC = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              {editingAccount ? 'Edit Account' : 'Create New Account'}
+              {editingAccount ? t('accountingModule.accounts.form.editTitle') : t('accountingModule.accounts.form.createTitle')}
             </DialogTitle>
             <DialogDescription className="text-sm">
               {editingAccount
-                ? 'Update the account details below'
-                : 'Add a new account to your chart of accounts'}
+                ? t('accountingModule.accounts.form.editDescription')
+                : t('accountingModule.accounts.form.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="code">Account Code *</Label>
+                <Label htmlFor="code">{t('accountingModule.accounts.form.code')}</Label>
                 <Input
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="e.g., 1000"
+                  placeholder={t('accountingModule.accounts.form.codePlaceholder')}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="name">Account Name *</Label>
+                <Label htmlFor="name">{t('accountingModule.accounts.form.name')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Cash"
+                  placeholder={t('accountingModule.accounts.form.namePlaceholder')}
                   required
                 />
               </div>
@@ -609,7 +610,7 @@ export const ChartOfAccounts: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="account_type">Account Type *</Label>
+                <Label htmlFor="account_type">{t('accountingModule.accounts.form.type')}</Label>
                 <Select
                   value={formData.account_type}
                   onValueChange={(val) => setFormData({ ...formData, account_type: val as AccountType })}
@@ -618,28 +619,28 @@ export const ChartOfAccounts: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Asset">Asset</SelectItem>
-                    <SelectItem value="Liability">Liability</SelectItem>
-                    <SelectItem value="Equity">Equity</SelectItem>
-                    <SelectItem value="Revenue">Revenue</SelectItem>
-                    <SelectItem value="Expense">Expense</SelectItem>
+                    <SelectItem value="Asset">{t('accountingModule.accounts.accountTypes.Asset')}</SelectItem>
+                    <SelectItem value="Liability">{t('accountingModule.accounts.accountTypes.Liability')}</SelectItem>
+                    <SelectItem value="Equity">{t('accountingModule.accounts.accountTypes.Equity')}</SelectItem>
+                    <SelectItem value="Revenue">{t('accountingModule.accounts.accountTypes.Revenue')}</SelectItem>
+                    <SelectItem value="Expense">{t('accountingModule.accounts.accountTypes.Expense')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="account_subtype">Account Subtype</Label>
+                <Label htmlFor="account_subtype">{t('accountingModule.accounts.form.subtype')}</Label>
                 <Input
                   id="account_subtype"
                   value={formData.account_subtype}
                   onChange={(e) => setFormData({ ...formData, account_subtype: e.target.value })}
-                  placeholder="e.g., Current Asset"
+                  placeholder={t('accountingModule.accounts.form.subtypePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="parent_id">Parent Account</Label>
+                <Label htmlFor="parent_id">{t('accountingModule.accounts.form.parent')}</Label>
                 <Select
                   value={formData.parent_id || 'none'}
                   onValueChange={(val) =>
@@ -647,10 +648,10 @@ export const ChartOfAccounts: React.FC = () => {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None (Root Account)" />
+                    <SelectValue placeholder={t('accountingModule.accounts.parentAccount')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None (Root Account)</SelectItem>
+                    <SelectItem value="none">{t('accountingModule.accounts.parentAccount')}</SelectItem>
                     {accounts
                       .filter((acc) => acc.is_group && acc.id !== editingAccount?.id)
                       .map((acc) => (
@@ -662,7 +663,7 @@ export const ChartOfAccounts: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="currency_code">Currency</Label>
+                <Label htmlFor="currency_code">{t('accountingModule.accounts.form.currency')}</Label>
                 <Select
                   value={formData.currency_code}
                   onValueChange={(val) => setFormData({ ...formData, currency_code: val })}
@@ -679,19 +680,18 @@ export const ChartOfAccounts: React.FC = () => {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Currency is set at organization level and cannot be changed per account.
-                  To change currency, go to Organization Settings.
+                  {t('accountingModule.accounts.form.currencyHelp')}
                 </p>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('accountingModule.accounts.form.description')}</Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
+                placeholder={t('accountingModule.accounts.descriptionPlaceholder')}
               />
             </div>
 
@@ -706,7 +706,7 @@ export const ChartOfAccounts: React.FC = () => {
                   className="mt-0.5"
                 />
                 <Label htmlFor="is_group" className="cursor-pointer text-sm leading-relaxed">
-                  Group Account (can contain child accounts)
+                  {t('accountingModule.accounts.form.isGroup')}
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -719,7 +719,7 @@ export const ChartOfAccounts: React.FC = () => {
                   className="mt-0.5"
                 />
                 <Label htmlFor="is_active" className="cursor-pointer text-sm leading-relaxed">
-                  Active
+                  {t('accountingModule.accounts.form.isActive')}
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -732,7 +732,7 @@ export const ChartOfAccounts: React.FC = () => {
                   className="mt-0.5"
                 />
                 <Label htmlFor="allow_cost_center" className="cursor-pointer text-sm leading-relaxed">
-                  Allow Cost Center Tracking
+                  {t('accountingModule.accounts.form.allowCostCenter')}
                 </Label>
               </div>
             </div>
@@ -744,14 +744,14 @@ export const ChartOfAccounts: React.FC = () => {
                 onClick={() => setIsDialogOpen(false)}
                 className="w-full sm:w-auto order-2 sm:order-1"
               >
-                Cancel
+                {t('accountingModule.accounts.form.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={createAccount.isPending || updateAccount.isPending}
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
-                {editingAccount ? 'Update Account' : 'Create Account'}
+                {editingAccount ? t('accountingModule.accounts.form.update') : t('accountingModule.accounts.form.create')}
               </Button>
             </DialogFooter>
           </form>
@@ -762,10 +762,9 @@ export const ChartOfAccounts: React.FC = () => {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Delete Account</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">{t('accountingModule.accounts.delete.title')}</DialogTitle>
             <DialogDescription className="text-sm">
-              Are you sure you want to delete the account "{deletingAccount?.name}"? This action cannot
-              be undone.
+              {t('accountingModule.accounts.delete.confirmation', { name: deletingAccount?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -774,7 +773,7 @@ export const ChartOfAccounts: React.FC = () => {
               onClick={() => setIsDeleteDialogOpen(false)}
               className="w-full sm:w-auto order-2 sm:order-1"
             >
-              Cancel
+              {t('accountingModule.accounts.form.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -782,7 +781,7 @@ export const ChartOfAccounts: React.FC = () => {
               disabled={deleteAccount.isPending}
               className="w-full sm:w-auto order-1 sm:order-2"
             >
-              Delete Account
+              {t('accountingModule.accounts.delete.button')}
             </Button>
           </DialogFooter>
         </DialogContent>

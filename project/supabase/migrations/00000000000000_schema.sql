@@ -42,7 +42,7 @@ $$ LANGUAGE plpgsql;
 DO $$ BEGIN
   CREATE TYPE quote_status AS ENUM (
     'draft',        -- Being prepared
-    'sent',         -- Sent to customer
+    'submitted',         -- Sent to customer
     'accepted',     -- Customer accepted
     'rejected',     -- Customer rejected
     'expired',      -- Validity period expired
@@ -1714,49 +1714,38 @@ BEGIN
   WITH harvest_stats AS (
     SELECT
       hr.parcel_id,
-      p.parcel_name,
-      f.farm_name,
-      hr.crop_type,
+      p.name AS parcel_name,
+      f.name AS farm_name,
       COUNT(*) as total_harvests,
       AVG(CASE
-        WHEN p.area_hectares > 0 THEN hr.actual_yield / p.area_hectares
+        WHEN p.area > 0 THEN hr.quantity / p.area
         ELSE NULL
       END) as avg_yield_per_hectare,
-      AVG(hr.estimated_yield) as avg_target_yield,
-      AVG(CASE
-        WHEN hr.estimated_yield > 0
-        THEN ((hr.actual_yield - hr.estimated_yield) / hr.estimated_yield * 100)
-        ELSE NULL
-      END) as avg_variance_percent,
-      SUM(COALESCE(hr.revenue_amount, 0)) as total_revenue,
-      SUM(COALESCE(hr.cost_amount, 0)) as total_cost,
-      SUM(COALESCE(hr.profit_amount, 0)) as total_profit,
+      AVG(hr.quantity) as avg_target_yield,
+      SUM(COALESCE(hr.estimated_revenue, 0)) as total_revenue,
+      SUM(0) as total_cost,
+      SUM(0) as total_profit,
       MAX(hr.harvest_date) as last_harvest_date
     FROM harvest_records hr
     JOIN parcels p ON hr.parcel_id = p.id
-    JOIN farms f ON p.farm_id = f.id
+    JOIN farms f ON hr.farm_id = f.id
     WHERE hr.organization_id = p_organization_id
-      AND (p_farm_id IS NULL OR p.farm_id = p_farm_id)
+      AND (p_farm_id IS NULL OR hr.farm_id = p_farm_id)
       AND (p_parcel_id IS NULL OR hr.parcel_id = p_parcel_id)
       AND (p_from_date IS NULL OR hr.harvest_date >= p_from_date)
       AND (p_to_date IS NULL OR hr.harvest_date <= p_to_date)
-    GROUP BY hr.parcel_id, p.parcel_name, f.farm_name, hr.crop_type
+    GROUP BY hr.parcel_id, p.name, f.name
   )
   SELECT
     hs.parcel_id,
     hs.parcel_name,
     hs.farm_name,
-    hs.crop_type,
+    NULL::TEXT AS crop_type,
     hs.total_harvests,
     ROUND(hs.avg_yield_per_hectare, 2) as avg_yield_per_hectare,
     ROUND(hs.avg_target_yield, 2) as avg_target_yield,
-    ROUND(hs.avg_variance_percent, 2) as avg_variance_percent,
-    CASE
-      WHEN hs.avg_variance_percent >= 10 THEN 'excellent'
-      WHEN hs.avg_variance_percent >= 0 THEN 'good'
-      WHEN hs.avg_variance_percent >= -10 THEN 'acceptable'
-      ELSE 'poor'
-    END as performance_rating,
+    NULL::NUMERIC AS avg_variance_percent,
+    'unknown'::TEXT AS performance_rating,
     ROUND(hs.total_revenue, 2) as total_revenue,
     ROUND(hs.total_cost, 2) as total_cost,
     ROUND(hs.total_profit, 2) as total_profit,
@@ -4324,25 +4313,7 @@ CREATE POLICY "org_delete_subscriptions" ON subscriptions
 -- =====================================================
 -- 21. AUDIT & LOGGING TABLES
 -- =====================================================
-
--- Audit Logs
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  table_name TEXT NOT NULL,
-  record_id UUID NOT NULL,
-  action TEXT NOT NULL,
-  user_id UUID REFERENCES auth.users(id),
-  old_values JSONB,
-  new_values JSONB,
-  ip_address INET,
-  user_agent TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (action IN ('INSERT', 'UPDATE', 'DELETE'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs(table_name, record_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_date ON audit_logs(created_at DESC);
+-- NOTE: audit_logs table is defined later in the improvements section (line 13270)
 
 -- Financial Transactions (legacy)
 CREATE TABLE IF NOT EXISTS financial_transactions (
@@ -4770,7 +4741,7 @@ ALTER TABLE role_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_assignments_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE permission_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE farm_management_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+-- audit_logs RLS is enabled after table creation (line 13270+)
 ALTER TABLE financial_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE livestock ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_settings ENABLE ROW LEVEL SECURITY;
@@ -7675,21 +7646,7 @@ CREATE POLICY "org_delete_permission_groups" ON permission_groups
 -- AUDIT & LOGGING TABLES
 -- =====================================================
 
--- Audit Logs Policies (allow users to see their own audit logs or org members to see org logs)
-DROP POLICY IF EXISTS "org_read_audit_logs" ON audit_logs;
-CREATE POLICY "org_read_audit_logs" ON audit_logs
-  FOR SELECT USING (
-    user_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM organization_users
-      WHERE user_id = auth.uid()
-        AND is_active = true
-    )
-  );
-
-DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
-CREATE POLICY "org_write_audit_logs" ON audit_logs
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+-- Audit Logs Policies are set after table creation (line 13270+)
 
 -- Financial Transactions Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_financial_transactions" ON financial_transactions;
@@ -12637,6 +12594,1093 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON organization_ai_settings TO service_role
 
 COMMENT ON TABLE organization_ai_settings IS 'Stores encrypted API keys for AI providers (OpenAI, Gemini) per organization';
 COMMENT ON COLUMN organization_ai_settings.encrypted_api_key IS 'API key encrypted with AES-256-GCM. Never expose this directly to clients.';
+
+-- =====================================================
+-- Chat conversations table (2025-01-12)
+-- =====================================================
+-- Chat conversations table for storing AI chat history
+CREATE TABLE IF NOT EXISTS public.chat_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  language TEXT DEFAULT 'en' CHECK (language IN ('en', 'fr', 'ar')),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Ensure user has access to the organization
+  CONSTRAINT chat_conversations_org_user FOREIGN KEY (organization_id, user_id)
+    REFERENCES public.organization_users(organization_id, user_id) ON DELETE CASCADE
+);
+
+-- Indexes for efficient queries
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_org_user_created
+  ON public.chat_conversations(organization_id, user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_org_created
+  ON public.chat_conversations(organization_id, created_at DESC);
+
+-- Add comments
+COMMENT ON TABLE public.chat_conversations IS 'Stores chat conversation history between users and AI assistant';
+COMMENT ON COLUMN public.chat_conversations.metadata IS 'Additional metadata like tokens used, model info, etc.';
+COMMENT ON COLUMN public.chat_conversations.role IS 'Message role: either "user" or "assistant"';
+COMMENT ON COLUMN public.chat_conversations.content IS 'Message content text';
+
+-- Enable RLS
+ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: Users can only see their own conversations in their organization
+DO $$ BEGIN
+CREATE POLICY "Users can view their own chat history"
+  ON public.chat_conversations FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    AND user_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "Users can insert their own messages"
+  ON public.chat_conversations FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    AND user_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "Users can delete their own messages"
+  ON public.chat_conversations FOR DELETE
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    AND user_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+GRANT SELECT, INSERT, DELETE ON public.chat_conversations TO authenticated;
+GRANT SELECT, INSERT, DELETE ON public.chat_conversations TO service_role;
+
+-- =====================================================
+-- 2025-01-10: Organizations Multi-Country Accounting Support
+-- =====================================================
+
+-- Add country_code column (ISO 3166-1 alpha-2)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'organizations'
+    AND column_name = 'country_code'
+  ) THEN
+    ALTER TABLE organizations ADD COLUMN country_code VARCHAR(2);
+  END IF;
+END $$;
+
+-- Add accounting_standard column
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'organizations'
+    AND column_name = 'accounting_standard'
+  ) THEN
+    ALTER TABLE organizations ADD COLUMN accounting_standard VARCHAR(50);
+  END IF;
+END $$;
+
+-- Add accounting_settings JSONB column
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS accounting_settings JSONB DEFAULT '{}';
+
+-- Add fiscal_year_start_month to organizations
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS fiscal_year_start_month INTEGER DEFAULT 1;
+
+-- Create accounting standards enum type
+DO $$ BEGIN
+  CREATE TYPE accounting_standard_enum AS ENUM (
+    'CGNC',      -- Morocco
+    'PCG',       -- France
+    'PCN',       -- Tunisia
+    'US_GAAP',   -- USA
+    'FRS102',    -- UK
+    'HGB',       -- Germany
+    'IFRS',      -- International
+    'OHADA'      -- Africa
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- Add indexes
+CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
+CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
+
+-- Comments
+COMMENT ON COLUMN organizations.country_code IS 'ISO 3166-1 alpha-2 country code (MA, FR, US, GB, DE, etc.)';
+COMMENT ON COLUMN organizations.accounting_standard IS 'Primary accounting standard (CGNC=Morocco, PCG=France, US_GAAP=USA, FRS102=UK, HGB=Germany)';
+COMMENT ON COLUMN organizations.accounting_settings IS 'Country-specific accounting configurations stored as JSONB';
+COMMENT ON COLUMN organizations.fiscal_year_start_month IS 'Month when fiscal year starts (1=January, 4=April for UK, etc.)';
+
+-- =====================================================
+-- 2025-01-10: Accounts Table Enhancement
+-- =====================================================
+
+-- Add is_default_chart column to accounts table
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_default_chart BOOLEAN DEFAULT false;
+
+COMMENT ON COLUMN accounts.is_default_chart IS 'Indicates if account is part of the default chart template for the country';
+
+-- =====================================================
+-- 2025-01-10: Cost Centers Enhancements
+-- =====================================================
+
+-- Add budget tracking columns to cost_centers table
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS annual_budget DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_currency VARCHAR(3) DEFAULT 'MAD';
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_fiscal_year INTEGER;
+
+-- Add default account assignments
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS default_expense_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS default_revenue_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
+
+-- Add performance tracking
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_variance_threshold DECIMAL(5,2) DEFAULT 10;
+
+-- Add parent_id for hierarchical cost centers
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'cost_centers'
+    AND column_name = 'parent_id'
+  ) THEN
+    ALTER TABLE cost_centers ADD COLUMN parent_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Create cost_center_budgets table
+CREATE TABLE IF NOT EXISTS cost_center_budgets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cost_center_id UUID NOT NULL REFERENCES cost_centers(id) ON DELETE CASCADE,
+  fiscal_year INTEGER NOT NULL,
+  account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
+  budget_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+  actual_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+  variance DECIMAL(15,2) GENERATED ALWAYS AS (budget_amount - actual_amount) STORED,
+  variance_percentage DECIMAL(5,2) GENERATED ALWAYS AS (
+    CASE WHEN budget_amount > 0
+    THEN ROUND(((budget_amount - actual_amount) / budget_amount) * 100, 2)
+    ELSE 0 END
+  ) STORED,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cost_centers_parent ON cost_centers(parent_id) WHERE parent_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cost_centers_default_expense_account ON cost_centers(default_expense_account_id) WHERE default_expense_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cost_centers_default_revenue_account ON cost_centers(default_revenue_account_id) WHERE default_revenue_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cost_centers_budget_fiscal_year ON cost_centers(budget_fiscal_year) WHERE budget_fiscal_year IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_cost_center_budgets_cc ON cost_center_budgets(cost_center_id);
+CREATE INDEX IF NOT EXISTS idx_cost_center_budgets_year ON cost_center_budgets(fiscal_year);
+CREATE INDEX IF NOT EXISTS idx_cost_center_budgets_account ON cost_center_budgets(account_id) WHERE account_id IS NOT NULL;
+
+-- Unique index for cost_center_id + fiscal_year + account_id (with NULL handling)
+CREATE UNIQUE INDEX idx_cost_center_budgets_unique
+  ON cost_center_budgets(cost_center_id, fiscal_year, COALESCE(account_id, '00000000-0000-0000-0000-000000000000'::UUID));
+
+CREATE TRIGGER update_cost_center_budgets_updated_at
+  BEFORE UPDATE ON cost_center_budgets
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Comments
+COMMENT ON TABLE cost_center_budgets IS 'Budget vs actual tracking for cost centers by fiscal year and account';
+COMMENT ON COLUMN cost_centers.budget_currency IS 'Currency code for the budget (e.g., MAD, EUR, USD)';
+COMMENT ON COLUMN cost_centers.default_expense_account_id IS 'Default expense account for this cost center';
+
+-- =====================================================
+-- 2025-01-10: Account Mappings Enhancements
+-- =====================================================
+
+-- Add columns to account_mappings
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS accounting_standard VARCHAR(50);
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT false;
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 2;
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS effective_date DATE;
+ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS expiry_date DATE;
+
+-- Add organization_id if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'account_mappings'
+    AND column_name = 'organization_id'
+  ) THEN
+    ALTER TABLE account_mappings ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Drop and recreate indexes
+DROP INDEX IF EXISTS idx_account_mappings_lookup;
+DROP INDEX IF EXISTS idx_account_mappings_template_lookup;
+DROP INDEX IF EXISTS idx_account_mappings_org_override;
+
+CREATE UNIQUE INDEX idx_account_mappings_template_lookup
+  ON account_mappings(country_code, accounting_standard, mapping_type, mapping_key)
+  WHERE organization_id IS NULL AND is_default = true;
+
+CREATE UNIQUE INDEX idx_account_mappings_org_override
+  ON account_mappings(organization_id, mapping_type, mapping_key)
+  WHERE organization_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_account_mappings_country ON account_mappings(country_code) WHERE country_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_standard ON account_mappings(accounting_standard) WHERE accounting_standard IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_org ON account_mappings(organization_id) WHERE organization_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_hierarchy ON account_mappings(hierarchy_level);
+CREATE INDEX IF NOT EXISTS idx_account_mappings_is_default ON account_mappings(is_default) WHERE is_default = true;
+
+ALTER TABLE account_mappings
+  ADD CONSTRAINT chk_account_mappings_hierarchy_level
+  CHECK (hierarchy_level IN (0, 1, 2));
+
+-- Comments
+COMMENT ON COLUMN account_mappings.country_code IS 'ISO 3166-1 alpha-2 country code for country-specific templates';
+COMMENT ON COLUMN account_mappings.is_default IS 'TRUE = part of default country template, FALSE = custom organization mapping';
+COMMENT ON COLUMN account_mappings.hierarchy_level IS 'Mapping inheritance level: 0=global, 1=country template, 2=organization override';
+
+-- =====================================================
+-- 2025-01-10: Account Translations
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS account_translations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  language_code VARCHAR(10) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(account_id, language_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_translations_account ON account_translations(account_id);
+CREATE INDEX IF NOT EXISTS idx_account_translations_language ON account_translations(language_code);
+CREATE INDEX IF NOT EXISTS idx_account_translations_account_language ON account_translations(account_id, language_code);
+
+DROP TRIGGER IF EXISTS update_account_translations_updated_at ON account_translations;
+CREATE TRIGGER update_account_translations_updated_at
+  BEFORE UPDATE ON account_translations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Translation function
+CREATE OR REPLACE FUNCTION get_account_name_translation(
+  p_account_id UUID,
+  p_language_code VARCHAR DEFAULT 'en'
+)
+RETURNS TABLE (
+  account_id UUID,
+  language_code VARCHAR,
+  name VARCHAR,
+  description TEXT,
+  is_translation BOOLEAN
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    a.id AS account_id,
+    COALESCE(at.language_code, 'en') AS language_code,
+    COALESCE(at.name, a.name) AS name,
+    COALESCE(at.description, a.description) AS description,
+    (at.id IS NOT NULL) AS is_translation
+  FROM accounts a
+  LEFT JOIN account_translations at
+    ON at.account_id = a.id
+    AND at.language_code = p_language_code
+  WHERE a.id = p_account_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Upsert function
+CREATE OR REPLACE FUNCTION upsert_account_translation(
+  p_account_id UUID,
+  p_language_code VARCHAR,
+  p_name VARCHAR,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS account_translations AS $$
+DECLARE
+  v_result account_translations;
+BEGIN
+  INSERT INTO account_translations (account_id, language_code, name, description)
+  VALUES (p_account_id, p_language_code, p_name, p_description)
+  ON CONFLICT (account_id, language_code)
+  DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    updated_at = NOW()
+  RETURNING * INTO v_result;
+
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON TABLE account_translations IS 'Account name and description translations for multi-language support';
+COMMENT ON COLUMN account_translations.language_code IS 'ISO 639-1 language code (en, fr, es, ar, de, it, pt, etc.)';
+
+-- =====================================================
+-- 2025-01-10: Tax Configurations
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS tax_configurations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_code VARCHAR(2),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  tax_name VARCHAR(255) NOT NULL,
+  tax_code VARCHAR(50),
+  tax_rate DECIMAL(5,2) NOT NULL,
+  tax_type VARCHAR(50) NOT NULL,
+  applies_to VARCHAR(50)[] NOT NULL,
+  is_default BOOLEAN DEFAULT false,
+  is_compound BOOLEAN DEFAULT false,
+  is_reverse_charge BOOLEAN DEFAULT false,
+  effective_date DATE DEFAULT CURRENT_DATE,
+  expiry_date DATE,
+  account_id UUID REFERENCES accounts(id),
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (organization_id IS NULL OR country_code IS NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tax_configurations_country ON tax_configurations(country_code) WHERE organization_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tax_configurations_org ON tax_configurations(organization_id) WHERE organization_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tax_configurations_type ON tax_configurations(tax_type);
+CREATE INDEX IF NOT EXISTS idx_tax_configurations_is_default ON tax_configurations(is_default) WHERE is_default = true;
+
+CREATE UNIQUE INDEX idx_tax_configurations_country_unique
+  ON tax_configurations(country_code, tax_type, tax_code)
+  WHERE organization_id IS NULL AND is_default = true;
+
+CREATE UNIQUE INDEX idx_tax_configurations_org_unique
+  ON tax_configurations(organization_id, tax_type, tax_code)
+  WHERE organization_id IS NOT NULL;
+
+DO $$ BEGIN
+  CREATE TYPE tax_type_enum AS ENUM (
+    'vat', 'sales_tax', 'gst', 'income_tax', 'excise', 'withholding', 'customs', 'other'
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TRIGGER update_tax_configurations_updated_at
+  BEFORE UPDATE ON tax_configurations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Default tax configurations for countries
+INSERT INTO tax_configurations (country_code, tax_name, tax_code, tax_rate, tax_type, applies_to, is_default, description) VALUES
+  ('MA', 'TVA Normal 20%', 'TVA20', 20.00, 'vat', ARRAY['sales', 'purchases', 'services'], true, 'Standard VAT rate for most goods and services in Morocco'),
+  ('MA', 'TVA Intermédiaire 14%', 'TVA14', 14.00, 'vat', ARRAY['sales', 'services'], false, 'Intermediate VAT rate for certain services'),
+  ('MA', 'TVA Réduite 10%', 'TVA10', 10.00, 'vat', ARRAY['sales', 'purchases', 'services'], false, 'Reduced VAT rate for essential goods'),
+  ('FR', 'TVA Normal 20%', 'TVA20', 20.00, 'vat', ARRAY['sales', 'purchases', 'services'], true, 'Standard VAT rate in France'),
+  ('FR', 'TVA Intermédiaire 10%', 'TVA10', 10.00, 'vat', ARRAY['sales', 'services'], false, 'Intermediate VAT rate for accommodation, transport, restaurants'),
+  ('GB', 'Standard VAT', 'VAT_STD', 20.00, 'vat', ARRAY['sales', 'purchases', 'services'], true, 'Standard VAT rate in the UK'),
+  ('DE', 'Mehrwertsteuer Normal', 'MwSt19', 19.00, 'vat', ARRAY['sales', 'purchases', 'services'], true, 'Standard VAT rate in Germany'),
+  ('TN', 'TVA Normal 19%', 'TVA19', 19.00, 'vat', ARRAY['sales', 'purchases', 'services'], true, 'Standard VAT rate in Tunisia'),
+  ('US', 'State Sales Tax (Average)', 'SALES_TAX', 6.00, 'sales_tax', ARRAY['sales', 'services'], true, 'Average state sales tax rate (varies by state)')
+ON CONFLICT DO NOTHING;
+
+-- Tax calculation function
+CREATE OR REPLACE FUNCTION calculate_tax_amount(
+  p_organization_id UUID,
+  p_amount DECIMAL,
+  p_tax_type VARCHAR DEFAULT 'vat',
+  p_transaction_type VARCHAR DEFAULT 'sales'
+)
+RETURNS DECIMAL AS $$
+DECLARE
+  v_tax_rate DECIMAL;
+  v_tax_amount DECIMAL;
+BEGIN
+  SELECT COALESCE(org_tax.tax_rate, country_tax.tax_rate) INTO v_tax_rate
+  FROM organizations org
+  LEFT JOIN tax_configurations org_tax
+    ON org_tax.organization_id = org.id
+    AND org_tax.tax_type = p_tax_type
+    AND p_transaction_type = ANY(org_tax.applies_to)
+  LEFT JOIN tax_configurations country_tax
+    ON country_tax.country_code = org.country_code
+    AND country_tax.organization_id IS NULL
+    AND country_tax.tax_type = p_tax_type
+    AND p_transaction_type = ANY(country_tax.applies_to)
+  WHERE org.id = p_organization_id
+  ORDER BY org_tax.id NULLS LAST, country_tax.is_default DESC
+  LIMIT 1;
+
+  IF v_tax_rate IS NULL THEN
+    RETURN 0;
+  END IF;
+
+  v_tax_amount := (p_amount * v_tax_rate) / 100;
+  RETURN ROUND(v_tax_amount, 2);
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON TABLE tax_configurations IS 'Tax rate configurations by country and organization for VAT, sales tax, and other taxes';
+COMMENT ON COLUMN tax_configurations.tax_rate IS 'Tax rate as percentage (e.g., 20.00 = 20%)';
+COMMENT ON COLUMN tax_configurations.is_compound IS 'TRUE = compound tax (calculated on amount including other taxes)';
+
+-- =====================================================
+-- PERFORMANCE OPTIMIZATIONS
+-- =====================================================
+
+-- GIN indexes for JSONB columns (improves JSON query performance)
+CREATE INDEX IF NOT EXISTS idx_parcels_boundary ON parcels USING GIN (boundary);
+CREATE INDEX IF NOT EXISTS idx_organizations_settings ON organizations USING GIN (accounting_settings);
+CREATE INDEX IF NOT EXISTS idx_account_mappings_metadata ON account_mappings USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_tax_configurations_metadata ON tax_configurations USING GIN (metadata);
+
+-- Composite indexes for common query patterns (organization + status/filter + date)
+CREATE INDEX IF NOT EXISTS idx_invoices_org_status_date ON invoices(organization_id, status, invoice_date DESC);
+CREATE INDEX IF NOT EXISTS idx_accounting_payments_org_status_date ON accounting_payments(organization_id, status, payment_date DESC);
+CREATE INDEX IF NOT EXISTS idx_tasks_org_status_priority ON tasks(organization_id, status, priority, due_date);
+CREATE INDEX IF NOT EXISTS idx_harvest_records_org_date ON harvest_records(organization_id, harvest_date DESC);
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_org_status ON crop_cycles(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_org_active ON workers(organization_id, is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_reception_batches_org_status ON reception_batches(organization_id, status, reception_date DESC);
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_org_date ON quality_inspections(organization_id, inspection_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_orders_org_status ON sales_orders(organization_id, status, order_date DESC);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_org_status ON purchase_orders(organization_id, status, order_date DESC);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_org_date ON journal_entries(organization_id, entry_date DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_org_date ON stock_entries(organization_id, entry_date DESC);
+CREATE INDEX IF NOT EXISTS idx_deliveries_org_date ON deliveries(organization_id, delivery_date DESC);
+CREATE INDEX IF NOT EXISTS idx_work_records_org_date ON work_records(organization_id, work_date DESC);
+
+-- Full-text search indexes for important text fields
+CREATE INDEX IF NOT EXISTS idx_organizations_name_fts ON organizations USING GIN (to_tsvector('english', name));
+CREATE INDEX IF NOT EXISTS idx_organizations_name_fts_fr ON organizations USING GIN (to_tsvector('french', name));
+CREATE INDEX IF NOT EXISTS idx_parcels_name_fts ON parcels USING GIN (to_tsvector('english', COALESCE(name, '')));
+CREATE INDEX IF NOT EXISTS idx_items_name_fts ON items USING GIN (to_tsvector('english', COALESCE(item_name, '')));
+CREATE INDEX IF NOT EXISTS idx_workers_name_fts ON workers USING GIN (to_tsvector('english', COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')));
+CREATE INDEX IF NOT EXISTS idx_suppliers_name_fts ON suppliers USING GIN (to_tsvector('english', COALESCE(name, '')));
+CREATE INDEX IF NOT EXISTS idx_customers_name_fts ON customers USING GIN (to_tsvector('english', COALESCE(name, '')));
+CREATE INDEX IF NOT EXISTS idx_warehouses_name_fts ON warehouses USING GIN (to_tsvector('english', COALESCE(name, '')));
+
+-- =====================================================
+-- DATA INTEGRITY CONSTRAINTS
+-- =====================================================
+
+-- Email format validation
+DO $$
+BEGIN
+  -- Organizations email
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_organizations_email_format'
+  ) THEN
+    ALTER TABLE organizations ADD CONSTRAINT chk_organizations_email_format
+      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END IF;
+
+  -- User profiles email
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_user_profiles_email_format'
+  ) THEN
+    ALTER TABLE user_profiles ADD CONSTRAINT chk_user_profiles_email_format
+      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END IF;
+
+  -- Suppliers email
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_suppliers_email_format'
+  ) THEN
+    ALTER TABLE suppliers ADD CONSTRAINT chk_suppliers_email_format
+      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END IF;
+
+  -- Customers email
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_customers_email_format'
+  ) THEN
+    ALTER TABLE customers ADD CONSTRAINT chk_customers_email_format
+      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END IF;
+
+  -- Workers email
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_workers_email_format'
+  ) THEN
+    ALTER TABLE workers ADD CONSTRAINT chk_workers_email_format
+      CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END IF;
+END $$;
+
+-- Phone number format validation (basic international format)
+DO $$
+BEGIN
+  -- Organizations phone
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_organizations_phone_format'
+  ) THEN
+    ALTER TABLE organizations ADD CONSTRAINT chk_organizations_phone_format
+      CHECK (phone IS NULL OR phone ~* '^[\+]?[0-9\(\)\s\-\.\]{8,20}$');
+  END IF;
+END $$;
+
+-- Business rule constraints: date ranges
+DO $$
+BEGIN
+  -- Crop cycles: harvest dates should be after planting date
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_crop_cycles_date_range'
+  ) THEN
+    ALTER TABLE crop_cycles ADD CONSTRAINT chk_crop_cycles_date_range
+      CHECK (
+        (expected_harvest_end IS NULL OR planting_date IS NULL OR expected_harvest_end >= planting_date)
+        AND (actual_harvest_end IS NULL OR planting_date IS NULL OR actual_harvest_end >= planting_date)
+      );
+  END IF;
+
+  -- Tasks: due_date >= created_at
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_tasks_date_range'
+  ) THEN
+    ALTER TABLE tasks ADD CONSTRAINT chk_tasks_date_range
+      CHECK (due_date IS NULL OR created_at IS NULL OR due_date >= created_at);
+  END IF;
+
+  -- Fiscal years: end_date >= start_date
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_fiscal_years_date_range'
+  ) THEN
+    ALTER TABLE fiscal_years ADD CONSTRAINT chk_fiscal_years_date_range
+      CHECK (end_date >= start_date);
+  END IF;
+END $$;
+
+-- Numeric value constraints
+DO $$
+BEGIN
+  -- Overall score must be between 0 and 100 for quality_inspections
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_quality_inspections_overall_score_range'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'quality_inspections' AND column_name = 'overall_score'
+  ) THEN
+    ALTER TABLE quality_inspections ADD CONSTRAINT chk_quality_inspections_overall_score_range
+      CHECK (overall_score IS NULL OR (overall_score >= 0 AND overall_score <= 100));
+  END IF;
+
+  -- Workers daily wage should be positive
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_workers_daily_rate_positive'
+  ) THEN
+    ALTER TABLE workers ADD CONSTRAINT chk_workers_daily_rate_positive
+      CHECK (daily_rate IS NULL OR daily_rate >= 0);
+  END IF;
+
+  -- Areas should be positive
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_parcels_area_positive'
+  ) THEN
+    ALTER TABLE parcels ADD CONSTRAINT chk_parcels_area_positive
+      CHECK (area IS NULL OR area > 0);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_farms_size_positive'
+  ) THEN
+    ALTER TABLE farms ADD CONSTRAINT chk_farms_size_positive
+      CHECK (size IS NULL OR size > 0);
+  END IF;
+END $$;
+
+-- =====================================================
+-- AUDIT LOGGING
+-- =====================================================
+
+-- Audit logs table to track all data changes
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name TEXT NOT NULL,
+  record_id UUID NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+  old_data JSONB,
+  new_data JSONB,
+  changed_fields TEXT[],
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_org ON audit_logs(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+-- Enable RLS on audit_logs
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for audit_logs
+-- Users can see their own audit logs or org members can see org logs
+DROP POLICY IF EXISTS "org_read_audit_logs" ON audit_logs;
+CREATE POLICY "org_read_audit_logs" ON audit_logs
+  FOR SELECT USING (
+    user_id = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM organization_users
+      WHERE user_id = auth.uid()
+        AND organization_id = audit_logs.organization_id
+        AND is_active = true
+    )
+  );
+
+-- Only authenticated users can insert audit logs (done via triggers)
+DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
+CREATE POLICY "org_write_audit_logs" ON audit_logs
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+GRANT SELECT ON audit_logs TO authenticated;
+GRANT INSERT ON audit_logs TO authenticated;
+
+COMMENT ON TABLE audit_logs IS 'Audit trail for all data changes across the system';
+COMMENT ON COLUMN audit_logs.table_name IS 'Name of the table where the change occurred';
+COMMENT ON COLUMN audit_logs.record_id IS 'ID of the affected record';
+COMMENT ON COLUMN audit_logs.action IS 'Type of action: INSERT, UPDATE, or DELETE';
+COMMENT ON COLUMN audit_logs.old_data IS 'Previous state of the record (for UPDATE and DELETE)';
+COMMENT ON COLUMN audit_logs.new_data IS 'New state of the record (for INSERT and UPDATE)';
+COMMENT ON COLUMN audit_logs.changed_fields IS 'List of fields that were modified (for UPDATE)';
+COMMENT ON COLUMN audit_logs.ip_address IS 'IP address of the user making the change';
+COMMENT ON COLUMN audit_logs.user_agent IS 'Browser/user agent string';
+
+-- Generic audit trigger function
+CREATE OR REPLACE FUNCTION audit_trigger_func()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_old_data JSONB;
+  v_new_data JSONB;
+  v_changed_fields TEXT[];
+BEGIN
+  -- Handle DELETE
+  IF (TG_OP = 'DELETE') THEN
+    v_old_data := to_jsonb(OLD);
+    INSERT INTO audit_logs (
+      table_name, record_id, action, old_data, user_id, organization_id
+    )
+    VALUES (
+      TG_TABLE_NAME,
+      OLD.id,
+      'DELETE',
+      v_old_data,
+      auth.uid(),
+      COALESCE(OLD.organization_id, (OLD.organization_id)::UUID)
+    );
+    RETURN OLD;
+
+  -- Handle INSERT
+  ELSIF (TG_OP = 'INSERT') THEN
+    v_new_data := to_jsonb(NEW);
+    INSERT INTO audit_logs (
+      table_name, record_id, action, new_data, user_id, organization_id
+    )
+    VALUES (
+      TG_TABLE_NAME,
+      NEW.id,
+      'INSERT',
+      v_new_data,
+      auth.uid(),
+      COALESCE(NEW.organization_id, (NEW.organization_id)::UUID)
+    );
+    RETURN NEW;
+
+  -- Handle UPDATE
+  ELSIF (TG_OP = 'UPDATE') THEN
+    v_old_data := to_jsonb(OLD);
+    v_new_data := to_jsonb(NEW);
+
+    -- Detect changed fields
+    SELECT ARRAY_AGG(KEY) INTO v_changed_fields
+    FROM (
+      SELECT KEY
+      FROM jsonb_each_text(v_old_data)
+      WHERE jsonb_each_text.value IS DISTINCT FROM (SELECT jsonb_each_text(v_new_data -> KEY))
+    ) changed;
+
+    IF v_changed_fields IS NOT NULL AND array_length(v_changed_fields, 1) > 0 THEN
+      INSERT INTO audit_logs (
+        table_name, record_id, action, old_data, new_data, changed_fields, user_id, organization_id
+      )
+      VALUES (
+        TG_TABLE_NAME,
+        NEW.id,
+        'UPDATE',
+        v_old_data,
+        v_new_data,
+        v_changed_fields,
+        auth.uid(),
+        COALESCE(NEW.organization_id, OLD.organization_id)
+      );
+    END IF;
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply audit triggers to critical tables
+DO $$
+BEGIN
+  -- Organizations
+  DROP TRIGGER IF EXISTS audit_organizations ON organizations;
+  CREATE TRIGGER audit_organizations AFTER INSERT OR UPDATE OR DELETE ON organizations
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  -- Users (workers)
+  DROP TRIGGER IF EXISTS audit_workers ON workers;
+  CREATE TRIGGER audit_workers AFTER INSERT OR UPDATE OR DELETE ON workers
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  -- Financial tables
+  DROP TRIGGER IF EXISTS audit_invoices ON invoices;
+  CREATE TRIGGER audit_invoices AFTER INSERT OR UPDATE OR DELETE ON invoices
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  DROP TRIGGER IF EXISTS audit_accounting_payments ON accounting_payments;
+  CREATE TRIGGER audit_accounting_payments AFTER INSERT OR UPDATE OR DELETE ON accounting_payments
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  DROP TRIGGER IF EXISTS audit_journal_entries ON journal_entries;
+  CREATE TRIGGER audit_journal_entries AFTER INSERT OR UPDATE OR DELETE ON journal_entries
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  -- Production tables
+  DROP TRIGGER IF EXISTS audit_crop_cycles ON crop_cycles;
+  CREATE TRIGGER audit_crop_cycles AFTER INSERT OR UPDATE OR DELETE ON crop_cycles
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  DROP TRIGGER IF EXISTS audit_harvest_records ON harvest_records;
+  CREATE TRIGGER audit_harvest_records AFTER INSERT OR UPDATE OR DELETE ON harvest_records
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  DROP TRIGGER IF EXISTS audit_reception_batches ON reception_batches;
+  CREATE TRIGGER audit_reception_batches AFTER INSERT OR UPDATE OR DELETE ON reception_batches
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  -- Cost centers
+  DROP TRIGGER IF EXISTS audit_cost_centers ON cost_centers;
+  CREATE TRIGGER audit_cost_centers AFTER INSERT OR UPDATE OR DELETE ON cost_centers
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+
+  -- Tasks
+  DROP TRIGGER IF EXISTS audit_tasks ON tasks;
+  CREATE TRIGGER audit_tasks AFTER INSERT OR UPDATE OR DELETE ON tasks
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();
+END $$;
+
+-- =====================================================
+-- SOFT DELETE PATTERN (OPTIONAL - can be enabled per table)
+-- =====================================================
+
+-- Function to soft delete records
+CREATE OR REPLACE FUNCTION soft_delete(table_name TEXT, record_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  EXECUTE FORMAT(
+    'UPDATE %I SET deleted_at = NOW(), is_active = false WHERE id = $1',
+    table_name
+  ) USING record_id;
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Add deleted_at column to critical tables for soft delete support
+DO $$
+BEGIN
+  ALTER TABLE workers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+  ALTER TABLE tasks ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+  ALTER TABLE crop_cycles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+  ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+END $$;
+
+-- Indexes for soft delete queries
+CREATE INDEX IF NOT EXISTS idx_workers_deleted ON workers(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_deleted ON tasks(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_deleted ON crop_cycles(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_harvest_records_deleted ON harvest_records(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- =====================================================
+-- TABLE AND COLUMN COMMENTS FOR CORE TABLES
+-- =====================================================
+
+-- Organizations
+COMMENT ON TABLE organizations IS 'Organizations/farms using the AgriTech platform';
+COMMENT ON COLUMN organizations.slug IS 'URL-friendly identifier for the organization';
+COMMENT ON COLUMN organizations.logo_url IS 'URL to the organization logo image';
+COMMENT ON COLUMN organizations.is_active IS 'Whether the organization is currently active';
+
+-- Organization Users
+COMMENT ON TABLE organization_users IS 'Junction table linking users to organizations with role information';
+COMMENT ON COLUMN organization_users.is_active IS 'Whether the user is active in this organization';
+
+-- Users (Workers)
+COMMENT ON TABLE workers IS 'Workers, employees, and laborers in the organization';
+COMMENT ON COLUMN workers.worker_type IS 'Type of worker: employee, day_laborer, or metayage';
+COMMENT ON COLUMN workers.daily_rate IS 'Daily wage rate for the worker';
+COMMENT ON COLUMN workers.is_active IS 'Employment status of the worker';
+
+-- Parcels
+COMMENT ON TABLE parcels IS 'Land parcels/fields within farms for crop cultivation';
+COMMENT ON COLUMN parcels.area IS 'Size of the parcel in the specified unit';
+COMMENT ON COLUMN parcels.area_unit IS 'Unit of measurement for area (hectare, acre, etc.)';
+COMMENT ON COLUMN parcels.boundary IS 'GeoJSON boundary for mapping and geospatial queries';
+COMMENT ON COLUMN parcels.is_active IS 'Whether the parcel is currently in use';
+
+-- Farms
+COMMENT ON TABLE farms IS 'Farms or agricultural operations within an organization';
+COMMENT ON COLUMN farms.size IS 'Size of the farm in the specified unit';
+COMMENT ON COLUMN farms.location IS 'Geographic location or address of the farm';
+
+-- Crop Cycles
+COMMENT ON TABLE crop_cycles IS 'Growing cycles for crops on specific parcels';
+COMMENT ON COLUMN crop_cycles.planting_date IS 'Planting or start date of the cycle';
+COMMENT ON COLUMN crop_cycles.expected_harvest_end IS 'Expected harvest end date';
+COMMENT ON COLUMN crop_cycles.actual_harvest_end IS 'Actual harvest end date';
+COMMENT ON COLUMN crop_cycles.status IS 'Current status: planned, active, completed, or cancelled';
+
+-- Harvest Records
+COMMENT ON TABLE harvest_records IS 'Harvest records tracking crop yields';
+COMMENT ON COLUMN harvest_records.harvest_date IS 'Date when harvest was collected';
+COMMENT ON COLUMN harvest_records.quantity IS 'Amount harvested in the specified unit';
+COMMENT ON COLUMN harvest_records.quality_grade IS 'Quality assessment of the harvest';
+
+-- Tasks
+COMMENT ON TABLE tasks IS 'Work tasks and assignments for workers';
+COMMENT ON COLUMN tasks.status IS 'Current task status: pending, in_progress, completed, or cancelled';
+COMMENT ON COLUMN tasks.priority IS 'Task priority level: low, medium, high, or urgent';
+COMMENT ON COLUMN tasks.due_date IS 'Deadline or target date for task completion';
+
+-- Cost Centers
+COMMENT ON TABLE cost_centers IS 'Organizational units for tracking costs and budgets';
+COMMENT ON COLUMN cost_centers.annual_budget IS 'Annual budget allocation for this cost center';
+
+-- Invoices
+COMMENT ON TABLE invoices IS 'Sales and purchase invoices for billing';
+COMMENT ON COLUMN invoices.invoice_type IS 'Type: sales (outgoing) or purchase (incoming)';
+COMMENT ON COLUMN invoices.status IS 'Invoice status: draft, sent, paid, partially_paid, or cancelled';
+COMMENT ON COLUMN invoices.grand_total IS 'Final total including taxes and discounts';
+
+-- Accounting Payments
+COMMENT ON TABLE accounting_payments IS 'Payment records for invoices';
+COMMENT ON COLUMN accounting_payments.status IS 'Payment status: pending, completed, or cancelled';
+COMMENT ON COLUMN accounting_payments.payment_method IS 'Method of payment: cash, transfer, card, check, etc.';
+
+-- Journal Entries
+COMMENT ON TABLE journal_entries IS 'Accounting journal entries for double-entry bookkeeping';
+COMMENT ON COLUMN journal_entries.entry_date IS 'Date of the financial transaction';
+COMMENT ON COLUMN journal_entries.status IS 'Entry status: draft, posted, or cancelled';
+
+-- Fiscal Years
+COMMENT ON TABLE fiscal_years IS 'Fiscal/financial year periods for accounting';
+COMMENT ON COLUMN fiscal_years.is_current IS 'Whether this is the currently active fiscal year';
+
+-- Quality Inspections
+COMMENT ON TABLE quality_inspections IS 'Quality inspection and testing records';
+COMMENT ON COLUMN quality_inspections.overall_score IS 'Overall quality score from 0 to 100';
+
+-- Reception Batches
+COMMENT ON TABLE reception_batches IS 'Records of harvested crop batches received at warehouses';
+COMMENT ON COLUMN reception_batches.status IS 'Status: pending, received, rejected, or in_quality_control';
+
+-- Warehouses
+COMMENT ON TABLE warehouses IS 'Storage facilities for inventory and harvests';
+COMMENT ON COLUMN warehouses.location IS 'Physical location or address of the warehouse';
+
+-- Items (Inventory)
+COMMENT ON TABLE items IS 'Inventory items and products';
+COMMENT ON COLUMN items.default_unit IS 'Default unit of measurement for the item';
+COMMENT ON COLUMN items.minimum_stock_level IS 'Minimum stock level for reordering';
+
+-- Stock Entries
+COMMENT ON TABLE stock_entries IS 'Stock movement records (in/out transfers)';
+COMMENT ON COLUMN stock_entries.entry_type IS 'Type: in (receipt), out (issuance), transfer, or adjustment';
+
+-- Suppliers
+COMMENT ON TABLE suppliers IS 'Vendor and supplier records for purchases';
+COMMENT ON COLUMN suppliers.is_active IS 'Whether the supplier is currently active';
+
+-- Customers
+COMMENT ON TABLE customers IS 'Customer records for sales';
+COMMENT ON COLUMN customers.customer_type IS 'Type: individual, business, or government';
+
+-- Sales Orders
+COMMENT ON TABLE sales_orders IS 'Customer sales orders';
+COMMENT ON COLUMN sales_orders.status IS 'Order status: draft, confirmed, partial, delivered, or cancelled';
+
+-- Purchase Orders
+COMMENT ON TABLE purchase_orders IS 'Vendor purchase orders';
+COMMENT ON COLUMN purchase_orders.status IS 'Order status: draft, confirmed, partial, received, or cancelled';
+
+-- Deliveries
+COMMENT ON TABLE deliveries IS 'Delivery records for orders';
+COMMENT ON COLUMN deliveries.delivery_date IS 'Actual date of delivery';
+COMMENT ON COLUMN deliveries.status IS 'Delivery status: pending, in_transit, delivered, or cancelled';
+
+-- Work Records
+COMMENT ON TABLE work_records IS 'Daily work records for laborers';
+COMMENT ON COLUMN work_records.work_date IS 'Date when work was performed';
+COMMENT ON COLUMN work_records.payment_status IS 'Payment status: pending, paid, or cancelled';
+
+-- =====================================================
+-- SECURITY HELPER FUNCTIONS
+-- =====================================================
+
+-- Function to check if user has permission to access organization data
+CREATE OR REPLACE FUNCTION check_organization_access(p_user_id UUID, p_organization_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM organization_users
+    WHERE user_id = p_user_id
+    AND organization_id = p_organization_id
+    AND is_active = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's role in organization
+CREATE OR REPLACE FUNCTION get_user_org_role(p_user_id UUID, p_organization_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  v_role_id UUID;
+BEGIN
+  SELECT role_id INTO v_role_id
+  FROM organization_users
+  WHERE user_id = p_user_id
+  AND organization_id = p_organization_id
+  AND is_active = true;
+
+  RETURN v_role_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- VIEWS FOR COMMON QUERIES
+-- =====================================================
+
+-- Active workers view (excludes deleted/inactive)
+CREATE OR REPLACE VIEW v_active_workers AS
+SELECT
+  w.id,
+  w.organization_id,
+  w.first_name,
+  w.last_name,
+  w.first_name || ' ' || w.last_name AS full_name,
+  w.worker_type,
+  w.daily_rate,
+  w.phone,
+  w.email,
+  f.name AS farm_name,
+  COUNT(DISTINCT t.id) FILTER (WHERE t.status IN ('pending', 'in_progress')) AS active_tasks_count
+FROM workers w
+LEFT JOIN farms f ON f.id = w.farm_id
+LEFT JOIN tasks t ON t.assigned_to = w.id
+WHERE w.is_active = true
+  AND w.deleted_at IS NULL
+GROUP BY w.id, w.organization_id, w.first_name, w.last_name, w.worker_type, w.daily_rate, w.phone, w.email, f.name;
+
+COMMENT ON VIEW v_active_workers IS 'Active workers with their assigned tasks count';
+
+-- Active crop cycles view
+CREATE OR REPLACE VIEW v_active_crop_cycles AS
+SELECT
+  cc.id,
+  cc.organization_id,
+  cc.farm_id,
+  f.name AS farm_name,
+  cc.parcel_id,
+  p.name AS parcel_name,
+  cc.crop_type,
+  cc.planting_date,
+  cc.expected_harvest_end,
+  cc.status,
+  cc.expected_total_yield,
+  cc.actual_total_yield,
+  DATE_PART('day', AGE(COALESCE(cc.expected_harvest_end, CURRENT_DATE), cc.planting_date)) AS days_active,
+  CASE
+    WHEN cc.status = 'active' THEN ROUND(((CURRENT_DATE - cc.planting_date) /
+      NULLIF((COALESCE(cc.expected_harvest_end, CURRENT_DATE) - cc.planting_date), 0)) * 100, 1)
+    ELSE NULL
+  END AS progress_percentage
+FROM crop_cycles cc
+LEFT JOIN farms f ON f.id = cc.farm_id
+LEFT JOIN parcels p ON p.id = cc.parcel_id
+WHERE cc.status IN ('planned', 'active')
+  AND cc.deleted_at IS NULL
+ORDER BY cc.planting_date DESC;
+
+COMMENT ON VIEW v_active_crop_cycles IS 'Active and planned crop cycles with progress tracking';
+
+-- Financial summary by organization
+CREATE OR REPLACE VIEW v_organization_financial_summary AS
+SELECT
+  o.id AS organization_id,
+  o.name AS organization_name,
+  o.currency_code,
+  COUNT(DISTINCT i.id) FILTER (WHERE i.invoice_type = 'sales') AS sales_invoices_count,
+  COALESCE(SUM(i.grand_total) FILTER (WHERE i.invoice_type = 'sales' AND i.status IN ('submitted', 'paid', 'partially_paid')), 0) AS total_sales,
+  COALESCE(SUM(i.grand_total) FILTER (WHERE i.invoice_type = 'purchase' AND i.status IN ('submitted', 'paid', 'partially_paid')), 0) AS total_purchases,
+  COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'reconciled'), 0) AS total_payments,
+  COUNT(DISTINCT i.id) FILTER (WHERE i.status = 'submitted') AS pending_invoices_count,
+  COALESCE(SUM(i.grand_total) FILTER (WHERE i.status = 'submitted'), 0) AS pending_amount,
+  COUNT(DISTINCT je.id) AS journal_entries_count
+FROM organizations o
+LEFT JOIN invoices i ON i.organization_id = o.id
+LEFT JOIN accounting_payments p ON p.organization_id = o.id
+LEFT JOIN journal_entries je ON je.organization_id = o.id
+GROUP BY o.id, o.name, o.currency_code;
+
+COMMENT ON VIEW v_organization_financial_summary IS 'Financial summary metrics per organization';
+
+-- Production summary view
+CREATE OR REPLACE VIEW v_production_summary AS
+SELECT
+  o.id AS organization_id,
+  o.name AS organization_name,
+  EXTRACT(YEAR FROM h.harvest_date) AS harvest_year,
+  COUNT(DISTINCT h.id) AS harvests_count,
+  SUM(h.quantity) AS total_quantity,
+  COUNT(DISTINCT cc.id) AS crop_cycles_count,
+  COUNT(DISTINCT p.id) FILTER (WHERE p.is_active = true) AS active_parcels_count,
+  COUNT(DISTINCT w.id) FILTER (WHERE w.is_active = true AND w.deleted_at IS NULL) AS active_workers_count
+FROM organizations o
+LEFT JOIN harvest_records h ON h.organization_id = o.id
+LEFT JOIN crop_cycles cc ON cc.organization_id = o.id
+LEFT JOIN parcels p ON p.organization_id = o.id
+LEFT JOIN workers w ON w.organization_id = o.id
+GROUP BY o.id, o.name, EXTRACT(YEAR FROM h.harvest_date)
+ORDER BY harvest_year DESC;
+
+COMMENT ON VIEW v_production_summary IS 'Production metrics summary by organization and year';
 
 -- =====================================================
 -- END OF MERGED MIGRATIONS

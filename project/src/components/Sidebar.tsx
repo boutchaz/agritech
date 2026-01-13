@@ -35,6 +35,7 @@ import {
   ExternalLink,
   PanelLeftClose,
   PanelLeft,
+  Bot,
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -495,6 +496,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   {renderIcon(Building2)}
                   {renderText(t('nav.infrastructure'))}
+                </Button>
+              </ProtectedNavItem>
+
+              {/* AI Chat */}
+              <ProtectedNavItem action="read" subject="Chat">
+                <Button
+                  variant="ghost"
+                  className={getButtonClassName(currentPath === '/chat')}
+                  onClick={(e) => handleNavigation('/chat', e)}
+                  title={isCollapsed ? t('nav.chat') : undefined}
+                >
+                  {renderIcon(Bot)}
+                  {renderText(t('nav.chat'))}
                 </Button>
               </ProtectedNavItem>
             </div>

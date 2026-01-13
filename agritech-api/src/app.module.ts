@@ -67,6 +67,7 @@ import { LabServicesModule } from './modules/lab-services/lab-services.module';
 import { TreeManagementModule } from './modules/tree-management/tree-management.module';
 import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
 import { OrganizationAISettingsModule } from './modules/organization-ai-settings/organization-ai-settings.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { FiscalYearsModule } from './modules/fiscal-years/fiscal-years.module';
 import { BiologicalAssetsModule } from './modules/biological-assets/biological-assets.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
@@ -161,6 +162,7 @@ import { QualityControlModule } from './modules/quality-control/quality-control.
     FilesModule,
     AIReportsModule,
     OrganizationAISettingsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

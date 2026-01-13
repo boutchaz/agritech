@@ -1485,7 +1485,7 @@ const MapComponent: React.FC<MapProps> = ({
           }}>
             <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
               <DialogHeader>
-                <DialogTitle className="text-gray-900 dark:text-white">Détails de la parcelle: {parcelName}</DialogTitle>
+                <DialogTitle className="text-gray-900 dark:text-white">{t('map.parcelDetails')} {parcelName}</DialogTitle>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
@@ -1493,11 +1493,11 @@ const MapComponent: React.FC<MapProps> = ({
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                     <Sprout className="w-4 h-4" />
-                    Informations de base
+                    {t('map.basicInfo')}
                   </h4>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Surface (hectares)
+                      {t('map.areaHectares')}
                     </label>
                     <div className="flex items-center space-x-2">
                       <input
@@ -1512,18 +1512,18 @@ const MapComponent: React.FC<MapProps> = ({
                         step="0.1"
                         readOnly
                       />
-                      <span className="text-sm text-green-600 font-medium">Auto-calculée</span>
+                      <span className="text-sm text-green-600 font-medium">{t('map.autoCalculated')}</span>
                     </div>
                     {calculatedPerimeter > 0 && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Périmètre: {calculatedPerimeter} m
+                        {t('map.perimeter')}: {calculatedPerimeter} m
                       </p>
                     )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type de sol
+                      {t('map.soilType')}
                     </label>
                     <select
                       value={parcelDetails.soil_type}
@@ -1533,7 +1533,7 @@ const MapComponent: React.FC<MapProps> = ({
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="">Sélectionner...</option>
+                      <option value="">{t('map.select')}</option>
                       {soilTypes.map(type => {
                         const s = type as { id?: string; value?: string; name?: string; name_fr?: string };
                         const key = s.id || s.value || '';
@@ -1548,7 +1548,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type d'irrigation
+                      {t('map.irrigationType')}
                     </label>
                     <select
                       value={parcelDetails.irrigation_type}
@@ -1558,7 +1558,7 @@ const MapComponent: React.FC<MapProps> = ({
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="">Sélectionner...</option>
+                      <option value="">{t('map.select')}</option>
                       {irrigationTypes.map(type => {
                         const irr = type as { id?: string; value?: string; name?: string; name_fr?: string };
                         const key = irr.id || irr.value || '';
@@ -1576,12 +1576,12 @@ const MapComponent: React.FC<MapProps> = ({
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                     <Leaf className="w-4 h-4" />
-                    Culture et plantation
+                    {t('map.cropAndPlanting')}
                   </h4>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Catégorie de culture
+                      {t('map.cropCategory')}
                     </label>
                     <select
                       value={parcelDetails.crop_category}
@@ -1594,7 +1594,7 @@ const MapComponent: React.FC<MapProps> = ({
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="">Sélectionner...</option>
+                      <option value="">{t('map.select')}</option>
                       {availableCropCategories.map(category => {
                         const cat = category as { id?: string; value?: string; name?: string; name_fr?: string };
                         const key = cat.id || cat.value || '';
@@ -1610,7 +1610,7 @@ const MapComponent: React.FC<MapProps> = ({
                   {parcelDetails.crop_category && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de culture
+                        {t('map.cropType')}
                       </label>
                       {availableCropTypes.length > 0 ? (
                         <select
@@ -1622,7 +1622,7 @@ const MapComponent: React.FC<MapProps> = ({
                           }))}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                         >
-                          <option value="">Sélectionner...</option>
+                          <option value="">{t('map.select')}</option>
                           {availableCropTypes.map(crop => {
                             if (typeof crop === 'string') {
                               return (
@@ -1651,7 +1651,7 @@ const MapComponent: React.FC<MapProps> = ({
                             crop_type: e.target.value
                           }))}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                          placeholder="Ex: Tomates"
+                          placeholder={t('map.cropTypePlaceholder')}
                         />
                       )}
                     </div>
@@ -1660,7 +1660,7 @@ const MapComponent: React.FC<MapProps> = ({
                   {availableVarieties.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Variété
+                        {t('map.variety')}
                       </label>
                       <select
                         value={parcelDetails.variety}
@@ -1670,7 +1670,7 @@ const MapComponent: React.FC<MapProps> = ({
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                       >
-                        <option value="">Sélectionner...</option>
+                        <option value="">{t('map.select')}</option>
                         {availableVarieties.map(variety => {
                           if (typeof variety === 'string') {
                             return (
@@ -1695,7 +1695,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type de plantation
+                      {t('parcels.plantingType')}
                     </label>
                     <select
                       value={parcelDetails.planting_type}
@@ -1705,7 +1705,7 @@ const MapComponent: React.FC<MapProps> = ({
                       }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
-                      <option value="">Sélectionner...</option>
+                      <option value="">{t('map.select')}</option>
                       <option value="traditional">{t('parcels.plantingTypes.traditional')}</option>
                       <option value="intensive">{t('parcels.plantingTypes.intensive')}</option>
                       <option value="super_intensive">{t('parcels.plantingTypes.super_intensive')}</option>
@@ -1716,7 +1716,7 @@ const MapComponent: React.FC<MapProps> = ({
                   {parcelDetails.crop_category === 'trees' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Porte-greffe
+                        {t('map.rootstock')}
                       </label>
                       <input
                         type="text"
@@ -1726,7 +1726,7 @@ const MapComponent: React.FC<MapProps> = ({
                           rootstock: e.target.value
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                        placeholder="Ex: GF677"
+                        placeholder={t('map.rootstockPlaceholder')}
                       />
                     </div>
                   )}
@@ -1736,12 +1736,12 @@ const MapComponent: React.FC<MapProps> = ({
                 {availablePlantingSystems.length > 0 && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Système de plantation
+                      {t('map.plantingSystem')}
                     </h4>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type de système
+                        {t('map.systemType')}
                       </label>
                       <select
                         value={parcelDetails.planting_system}
@@ -1751,7 +1751,7 @@ const MapComponent: React.FC<MapProps> = ({
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                       >
-                        <option value="">Sélectionner...</option>
+                        <option value="">{t('map.select')}</option>
                         {availablePlantingSystems.map((system, idx) => (
                           <option key={idx} value={system.type}>
                             {system.type} ({system.spacing})
@@ -1765,7 +1765,7 @@ const MapComponent: React.FC<MapProps> = ({
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Espacement
+                              {t('map.spacing')}
                             </label>
                             <input
                               type="text"
@@ -1777,7 +1777,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Densité (plants/ha)
+                              {t('map.densityPlantsHa')}
                             </label>
                             <input
                               type="number"
@@ -1790,7 +1790,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Nombre total de plants
+                            {t('map.totalPlants')}
                           </label>
                           <input
                             type="number"
@@ -1799,7 +1799,7 @@ const MapComponent: React.FC<MapProps> = ({
                             readOnly
                           />
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Auto-calculé: {parcelDetails.area} ha × {parcelDetails.density_per_hectare} plants/ha
+                            {t('map.autoCalculatedFormula', { area: parcelDetails.area, density: parcelDetails.density_per_hectare })}
                           </p>
                         </div>
                       </>
@@ -1807,7 +1807,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Date de plantation
+                        {t('map.plantingDate')}
                       </label>
                       <input
                         type="date"
@@ -1821,7 +1821,7 @@ const MapComponent: React.FC<MapProps> = ({
                       />
                       {parcelDetails.planting_date && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Année de plantation: {new Date(parcelDetails.planting_date).getFullYear()}
+                          {t('map.plantingYear')}: {new Date(parcelDetails.planting_date).getFullYear()}
                         </p>
                       )}
                     </div>
@@ -1834,13 +1834,13 @@ const MapComponent: React.FC<MapProps> = ({
                   variant="outline"
                   onClick={cleanupDrawingState}
                 >
-                  Annuler
+                  {t('map.cancel')}
                 </Button>
                 <Button
                   onClick={handleSaveParcel}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  Enregistrer
+                  {t('map.save')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1853,7 +1853,7 @@ const MapComponent: React.FC<MapProps> = ({
               <button
                 onClick={requestUserLocation}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title="Aller à ma position"
+                title={t('map.goToMyPosition')}
               >
                 <Navigation className={`h-5 w-5 ${locationPermission === 'granted' ? 'text-blue-600' : 'text-gray-600'}`} />
               </button>
@@ -1862,7 +1862,7 @@ const MapComponent: React.FC<MapProps> = ({
               <button
                 onClick={() => setShowSearchBox(!showSearchBox)}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title="Rechercher un lieu"
+                title={t('map.searchLocation')}
               >
                 <Search className="h-5 w-5 text-gray-600" />
               </button>
@@ -1871,7 +1871,7 @@ const MapComponent: React.FC<MapProps> = ({
               <button
                 onClick={() => setShowPlaceNames(!showPlaceNames)}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={showPlaceNames ? "Masquer les noms de lieux" : "Afficher les noms de lieux"}
+                title={showPlaceNames ? t('map.hidePlaceNames') : t('map.showPlaceNames')}
               >
                 <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
               </button>
@@ -1898,7 +1898,7 @@ const MapComponent: React.FC<MapProps> = ({
                   setMapType(mapType === 'osm' ? 'satellite' : 'osm');
                 }}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={mapType === 'osm' ? 'Vue Satellite' : 'Vue Carte'}
+                title={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
               >
                 {mapType === 'osm' ? (
                   <Satellite className="h-5 w-5 text-gray-600" />
@@ -1913,7 +1913,7 @@ const MapComponent: React.FC<MapProps> = ({
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={isFullScreen ? "Quitter le plein écran" : "Mode plein écran"}
+                title={isFullScreen ? t('map.exitFullscreenMode') : t('map.fullscreenMode')}
               >
                 {isFullScreen ? (
                   <Minimize2 className="h-5 w-5 text-gray-600" />
@@ -1932,7 +1932,7 @@ const MapComponent: React.FC<MapProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Rechercher un lieu au Maroc..."
+                    placeholder={t('map.searchPlaceholder')}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -1976,7 +1976,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                 {searchResults.length === 0 && searchQuery && !isSearching && (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Aucun résultat trouvé
+                    {t('map.noResultsFound')}
                   </p>
                 )}
               </div>
@@ -1987,7 +1987,7 @@ const MapComponent: React.FC<MapProps> = ({
             <div className="absolute top-4 left-4 space-y-3 z-10">
               <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Cliquez sur la carte et dessinez le contour de votre parcelle
+                  {t('map.drawInstructions')}
                 </p>
 
                 <div className="flex items-center space-x-2 mb-3">
@@ -1999,7 +1999,7 @@ const MapComponent: React.FC<MapProps> = ({
                       }`}
                   >
                     <Wand2 className="h-4 w-4" />
-                    <span>Mode assisté</span>
+                    <span>{t('map.assistedMode')}</span>
                   </button>
 
                   <button
@@ -2010,17 +2010,17 @@ const MapComponent: React.FC<MapProps> = ({
                       }`}
                   >
                     <Grid3x3 className="h-4 w-4" />
-                    <span>Magnétisme</span>
+                    <span>{t('map.magnetism')}</span>
                   </button>
                 </div>
 
                 {calculatedArea > 0 && (
                   <div className="text-xs space-y-1 pt-2 border-t border-gray-200 dark:border-gray-600">
                     <p className="text-gray-600 dark:text-gray-400">
-                      Surface: <span className="font-semibold text-gray-900 dark:text-white">{calculatedArea} ha</span>
+                      {t('map.area')}: <span className="font-semibold text-gray-900 dark:text-white">{calculatedArea} ha</span>
                     </p>
                     <p className="text-gray-600 dark:text-gray-400">
-                      Périmètre: <span className="font-semibold text-gray-900 dark:text-white">{calculatedPerimeter} m</span>
+                      {t('map.perimeter')}: <span className="font-semibold text-gray-900 dark:text-white">{calculatedPerimeter} m</span>
                     </p>
                   </div>
                 )}
@@ -2034,17 +2034,17 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <Satellite className="h-5 w-5 text-blue-600" />
-                  <span>Calculer les Indices de Végétation</span>
+                  <span>{t('map.calculateVegetationIndices')}</span>
                 </h3>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Période d'analyse
+                      {t('map.analysisPeriod')}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Date de début</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('map.startDate')}</label>
                         <input
                           type="date"
                           value={dateRange.start_date}
@@ -2053,7 +2053,7 @@ const MapComponent: React.FC<MapProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('map.endDate')}</label>
                         <input
                           type="date"
                           value={dateRange.end_date}
@@ -2066,7 +2066,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Indices à calculer
+                      {t('map.indicesToCalculate')}
                     </label>
                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
                       {availableIndices.map((index) => (
@@ -2101,7 +2101,7 @@ const MapComponent: React.FC<MapProps> = ({
                     onClick={() => setShowIndicesDialog(false)}
                     className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
-                    Annuler
+                    {t('map.cancel')}
                   </button>
                   <button
                     onClick={handleCalculateIndices}
@@ -2109,7 +2109,7 @@ const MapComponent: React.FC<MapProps> = ({
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 flex items-center space-x-2"
                   >
                     {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-                    <span>Calculer</span>
+                    <span>{t('map.calculate')}</span>
                   </button>
                 </div>
               </div>
@@ -2122,17 +2122,17 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px]">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <BarChart3 className="h-5 w-5 text-purple-600" />
-                  <span>Analyse de Série Temporelle</span>
+                  <span>{t('map.timeSeriesAnalysis')}</span>
                 </h3>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Période d'analyse
+                      {t('map.analysisPeriod')}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Date de début</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('map.startDate')}</label>
                         <input
                           type="date"
                           value={dateRange.start_date}
@@ -2141,7 +2141,7 @@ const MapComponent: React.FC<MapProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Date de fin</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('map.endDate')}</label>
                         <input
                           type="date"
                           value={dateRange.end_date}
@@ -2154,7 +2154,7 @@ const MapComponent: React.FC<MapProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Index à analyser
+                      {t('map.indexToAnalyze')}
                     </label>
                     <select
                       value={selectedTimeSeriesIndex}
@@ -2179,7 +2179,7 @@ const MapComponent: React.FC<MapProps> = ({
                     onClick={() => setShowTimeSeriesDialog(false)}
                     className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
-                    Annuler
+                    {t('map.cancel')}
                   </button>
                   <button
                     onClick={handleGetTimeSeries}
@@ -2187,7 +2187,7 @@ const MapComponent: React.FC<MapProps> = ({
                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 flex items-center space-x-2"
                   >
                     {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-                    <span>Analyser</span>
+                    <span>{t('map.analyze')}</span>
                   </button>
                 </div>
               </div>
@@ -2219,7 +2219,7 @@ const MapComponent: React.FC<MapProps> = ({
                   disabled={indicesLoading || !selectedParcel.boundary}
                 >
                   <BarChart3 className="h-4 w-4" />
-                  <span>Série Temporelle</span>
+                  <span>{t('map.timeSeries')}</span>
                 </button>
                 {/* Delete functionality removed - handled in parent component */}
               </div>
@@ -2229,7 +2229,7 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="flex items-start space-x-3">
                 <Ruler className="h-5 w-5 text-blue-500 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Surface</p>
+                  <p className="text-sm font-medium text-gray-600">{t('map.area')}</p>
                   <p className="text-lg font-semibold">{selectedParcel.area} ha</p>
                 </div>
               </div>
@@ -2237,10 +2237,10 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="flex items-start space-x-3">
                 <Tree className="h-5 w-5 text-green-500 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Arbres</p>
+                  <p className="text-sm font-medium text-gray-600">{t('map.trees')}</p>
                   <p className="text-lg font-semibold">{selectedParcel.trees_count || 0}</p>
                   <p className="text-sm text-gray-500">
-                    {selectedParcel.planting_density} arbres/ha
+                    {selectedParcel.planting_density} {t('map.treesPerHa')}
                   </p>
                 </div>
               </div>
@@ -2248,7 +2248,7 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="flex items-start space-x-3">
                 <Droplets className="h-5 w-5 text-blue-500 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Irrigation</p>
+                  <p className="text-sm font-medium text-gray-600">{t('map.irrigation')}</p>
                   <p className="text-lg font-semibold">{selectedParcel.irrigation_type}</p>
                 </div>
               </div>
@@ -2257,7 +2257,7 @@ const MapComponent: React.FC<MapProps> = ({
                 <div className="flex items-start space-x-3">
                   <Tree className="h-5 w-5 text-green-500 mt-1" />
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Variétés</p>
+                    <p className="text-sm font-medium text-gray-600">{t('map.varieties')}</p>
                     <p className="text-lg font-semibold">{selectedParcel.varieties.join(', ')}</p>
                   </div>
                 </div>
@@ -2269,7 +2269,7 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
                   <Satellite className="h-4 w-4 text-blue-600" />
-                  <span>Indices de Végétation</span>
+                  <span>{t('map.vegetationIndices')}</span>
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {indicesResults.map((result, index) => (
@@ -2281,7 +2281,7 @@ const MapComponent: React.FC<MapProps> = ({
                         <button
                           onClick={() => handleExportIndexMap(result.index)}
                           className="text-blue-600 hover:text-blue-800"
-                          title="Télécharger la carte"
+                          title={t('map.downloadMap')}
                         >
                           <Download className="h-4 w-4" />
                         </button>
@@ -2303,29 +2303,29 @@ const MapComponent: React.FC<MapProps> = ({
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h4 className="text-md font-semibold mb-3 flex items-center space-x-2">
                   <BarChart3 className="h-4 w-4 text-purple-600" />
-                  <span>Série Temporelle - {timeSeriesResults.index}</span>
+                  <span>{t('map.timeSeries')} - {timeSeriesResults.index}</span>
                 </h4>
 
                 {timeSeriesResults.statistics && (
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">Moyenne</p>
+                      <p className="text-xs text-gray-500">{t('map.average')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.mean.toFixed(3)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">Min</p>
+                      <p className="text-xs text-gray-500">{t('map.min')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.min.toFixed(3)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">Max</p>
+                      <p className="text-xs text-gray-500">{t('map.max')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.max.toFixed(3)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">Médiane</p>
+                      <p className="text-xs text-gray-500">{t('map.median')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.median.toFixed(3)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">Écart-type</p>
+                      <p className="text-xs text-gray-500">{t('map.standardDeviation')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.std.toFixed(3)}</p>
                     </div>
                   </div>
