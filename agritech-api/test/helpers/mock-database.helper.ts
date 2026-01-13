@@ -37,6 +37,8 @@ export interface MockQueryBuilder {
   not: jest.Mock;
   match: jest.Mock;
   textSearch: jest.Mock;
+  head: jest.Mock;
+  then: jest.Mock;
 }
 
 export const createMockQueryBuilder = (): MockQueryBuilder => {
@@ -69,6 +71,8 @@ export const createMockQueryBuilder = (): MockQueryBuilder => {
     not: jest.fn(),
     match: jest.fn(),
     textSearch: jest.fn(),
+    head: jest.fn(),
+    then: jest.fn(),
   };
 
   const chainableMethods = [
@@ -98,12 +102,23 @@ export const createMockQueryBuilder = (): MockQueryBuilder => {
     'not',
     'match',
     'textSearch',
+    'head',
   ];
 
   chainableMethods.forEach((method) => {
     (builder[method as keyof MockQueryBuilder] as jest.Mock).mockReturnValue(
       builder,
     );
+  });
+
+  // Terminal methods that return Promises
+  builder.single.mockResolvedValue({ data: null, error: null });
+  builder.maybeSingle.mockResolvedValue({ data: null, error: null });
+
+  // Make the builder thenable (can be awaited)
+  builder.then.mockImplementation((resolve: (value: { data: any[]; error: any }) => void) => {
+    resolve({ data: [], error: null });
+    return Promise.resolve({ data: [], error: null });
   });
 
   return builder;
@@ -150,7 +165,7 @@ export interface MockSupabaseClient {
 }
 
 export const createMockSupabaseClient = (): MockSupabaseClient => ({
-  from: jest.fn(),
+  from: jest.fn().mockReturnValue(createMockQueryBuilder()) as any,
   rpc: jest.fn(),
   auth: {
     getUser: jest.fn(),
@@ -284,6 +299,22 @@ export const expectOrganizationFilter = (
     'organization_id',
     organizationId,
   );
+};
+
+/**
+ * Setup thenable mock for query builder - handles promise resolution
+ * This helper makes the query builder thenable (can be awaited)
+ */
+export const setupThenableMock = (
+  queryBuilder: MockQueryBuilder,
+  data: any,
+  error: any = null,
+): void => {
+  queryBuilder.then.mockImplementation((resolve: (value: { data: any; error: any }) => void) => {
+    const result = { data, error };
+    resolve(result);
+    return Promise.resolve(result);
+  });
 };
 
 /**

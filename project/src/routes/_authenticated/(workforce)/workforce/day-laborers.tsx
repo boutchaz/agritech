@@ -1,19 +1,22 @@
 import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/components/MultiTenantAuthProvider'
 import { PageLayout } from '@/components/PageLayout'
 import DayLaborerManagement from '@/components/DayLaborerManagement'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
   if (!currentOrganization) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('workers.loadingOrganization')}</p>
         </div>
       </div>
     );

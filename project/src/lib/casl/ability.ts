@@ -15,7 +15,7 @@ export type Subject =
   | 'Cost' | 'Revenue' | 'Utility' | 'Structure' | 'Tree'
   | 'SatelliteReport' | 'Sensor' | 'Analytics' | 'API'
   | 'Stock' | 'Infrastructure' | 'FarmHierarchy' | 'Task' | 'Report' | 'Settings'
-  | 'Dashboard'
+  | 'Dashboard' | 'Chat'
   // Accounting subjects
   | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
   | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport' | 'AccountMapping'
@@ -85,6 +85,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Report');
     can('manage', 'Settings');
     can('read', 'Dashboard');
+    can('read', 'Chat');
     can('invite', 'User');
     can('remove', 'User');
     can('read', 'Organization');
@@ -141,6 +142,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Task');
     can('read', 'Report');
     can('read', 'Dashboard');
+    can('read', 'Chat');
     can('read', 'Farm');
     can('update', 'Farm');
     can('read', 'User');
@@ -191,6 +193,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'DayLaborer');
     can('read', 'Worker');
     can('read', 'Dashboard');
+    can('read', 'Chat');
     can('read', 'Task');
     can('update', 'Task'); // Can update their assigned tasks
     can('read', 'Settings');
@@ -243,6 +246,7 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Revenue');
     can('read', 'Worker');
     can('read', 'Dashboard');
+    can('read', 'Chat');
     can('read', 'FarmHierarchy');
     can('read', 'Task');
     can('read', 'Report');

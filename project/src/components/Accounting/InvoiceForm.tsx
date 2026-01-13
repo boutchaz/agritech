@@ -34,26 +34,27 @@ import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { QuickCreateItem } from '../Billing/QuickCreateItem';
+import { useTranslation } from 'react-i18next';
 
 // Invoice item schema
-const invoiceItemSchema = z.object({
+const getInvoiceItemSchema = (t: (key: string) => string) => z.object({
   item_id: z.string().optional(),
-  item_name: z.string().min(1, 'Item name is required'),
+  item_name: z.string().min(1, t('accounting.invoices.form.validation.itemNameRequired')),
   description: z.string().optional(),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  rate: z.coerce.number().min(0, 'Rate must be positive'),
-  account_id: z.string().min(1, 'Account is required'),
+  quantity: z.coerce.number().min(1, t('accounting.invoices.form.validation.quantityMin')),
+  rate: z.coerce.number().min(0, t('accounting.invoices.form.validation.ratePositive')),
+  account_id: z.string().min(1, t('accounting.invoices.form.validation.accountRequired')),
   tax_id: z.string().optional(),
 });
 
 // Invoice schema with date validation
-const invoiceSchema = z
+const getInvoiceSchema = (t: (key: string) => string) => z
   .object({
     invoice_type: z.enum(['sales', 'purchase']),
-    party_id: z.string().min(1, 'Please select a customer/supplier'),
-    invoice_date: z.string().min(1, 'Invoice date is required'),
-    due_date: z.string().min(1, 'Due date is required'),
-    items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
+    party_id: z.string().min(1, t('accounting.invoices.form.validation.partyRequired')),
+    invoice_date: z.string().min(1, t('accounting.invoices.form.validation.invoiceDateRequired')),
+    due_date: z.string().min(1, t('accounting.invoices.form.validation.dueDateRequired')),
+    items: z.array(getInvoiceItemSchema(t)).min(1, t('accounting.invoices.form.validation.atLeastOneItem')),
     remarks: z.string().optional(),
     farm_id: z.string().nullable().optional(),
     parcel_id: z.string().nullable().optional(),
@@ -66,12 +67,12 @@ const invoiceSchema = z
       return dueDate >= invoiceDate;
     },
     {
-      message: 'Due date must be on or after invoice date',
+      message: t('accounting.invoices.form.validation.dueDateAfterInvoiceDate'),
       path: ['due_date'],
     }
   );
 
-type InvoiceFormData = z.infer<typeof invoiceSchema>;
+type InvoiceFormData = z.infer<ReturnType<typeof getInvoiceSchema>>;
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -81,6 +82,7 @@ interface InvoiceFormProps {
 }
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuccess, editInvoiceId }) => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm, farms } = useAuth();
   const navigate = useNavigate();
   const createInvoice = useCreateInvoice();
@@ -132,7 +134,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     formState: { errors },
     reset,
   } = useForm<InvoiceFormData>({
-    resolver: zodResolver(invoiceSchema),
+    resolver: zodResolver(getInvoiceSchema(t)),
     defaultValues: {
       invoice_type: 'sales',
       invoice_date: new Date().toISOString().split('T')[0],
@@ -302,7 +304,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
             line_total: item.quantity * item.rate,
           })),
         });
-        toast.success('Invoice updated successfully');
+        toast.success(t('accounting.invoices.form.toast.updateSuccess'));
       } else {
         // Create new invoice with transformed items
         await createInvoice.mutateAsync({
@@ -315,14 +317,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           farm_id: data.farm_id,
           parcel_id: data.parcel_id,
         });
-        toast.success('Invoice created successfully');
+        toast.success(t('accounting.invoices.form.toast.createSuccess'));
       }
       reset();
       onClose();
       onSuccess?.();
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} invoice:`, error);
-      toast.error(error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} invoice`);
+      toast.error(error instanceof Error ? error.message : t('accounting.invoices.form.toast.saveError', { action: isEditMode ? t('accounting.invoices.form.actions.update') : t('accounting.invoices.form.actions.create') }));
     } finally {
       setIsSubmitting(false);
     }
@@ -340,16 +342,16 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Invoice' : 'Create New Invoice'}</DialogTitle>
+          <DialogTitle>{isEditMode ? t('accounting.invoices.form.title.edit') : t('accounting.invoices.form.title.create')}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? 'Update the invoice details and line items' : 'Add a new sales or purchase invoice with line items'}
+            {isEditMode ? t('accounting.invoices.form.description.edit') : t('accounting.invoices.form.description.create')}
           </DialogDescription>
         </DialogHeader>
 
         {isEditMode && isLoadingInvoice ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-2 text-gray-600">Loading invoice...</span>
+            <span className="ml-2 text-gray-600">{t('accounting.invoices.form.loading')}</span>
           </div>
         ) : (
 
@@ -357,13 +359,13 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           {/* Invoice Header */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="invoice_type">Invoice Type *</Label>
+              <Label htmlFor="invoice_type">{t('accounting.invoices.form.fields.invoiceType')} *</Label>
               <Select
                 id="invoice_type"
                 {...register('invoice_type')}
               >
-                <option value="sales">Sales Invoice</option>
-                <option value="purchase">Purchase Invoice</option>
+                <option value="sales">{t('accounting.invoices.form.invoiceTypes.sales')}</option>
+                <option value="purchase">{t('accounting.invoices.form.invoiceTypes.purchase')}</option>
               </Select>
               {errors.invoice_type && (
                 <p className="text-sm text-red-600 mt-1">{errors.invoice_type.message}</p>
@@ -372,13 +374,13 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
             <div>
               <Label htmlFor="party_id">
-                {watchInvoiceType === 'sales' ? 'Customer' : 'Supplier'} *
+                {watchInvoiceType === 'sales' ? t('accounting.invoices.form.fields.customer') : t('accounting.invoices.form.fields.supplier')} *
               </Label>
               <Select
                 id="party_id"
                 {...register('party_id')}
               >
-                <option value="">Select {watchInvoiceType === 'sales' ? 'customer' : 'supplier'}</option>
+                <option value="">{t('accounting.invoices.form.fields.selectParty', { party: watchInvoiceType === 'sales' ? t('accounting.invoices.form.fields.customer').toLowerCase() : t('accounting.invoices.form.fields.supplier').toLowerCase() })}</option>
                 {watchInvoiceType === 'sales'
                   ? customers.map(customer => (
                       <option key={customer.id} value={customer.id}>
@@ -397,7 +399,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
               )}
               {watchInvoiceType === 'sales' && customers.length === 0 && (
                 <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">No customers found.</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">{t('accounting.invoices.form.errors.noCustomers')}</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -409,13 +411,13 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                     className="w-full"
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    Go to Customers
+                    {t('accounting.invoices.form.buttons.goToCustomers')}
                   </Button>
                 </div>
               )}
               {watchInvoiceType === 'purchase' && suppliers.length === 0 && (
                 <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">No suppliers found.</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">{t('accounting.invoices.form.errors.noSuppliers')}</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -427,7 +429,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                     className="w-full"
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    Go to Stock Management
+                    {t('accounting.invoices.form.buttons.goToStockManagement')}
                   </Button>
                 </div>
               )}
@@ -436,7 +438,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="invoice_date">Invoice Date *</Label>
+              <Label htmlFor="invoice_date">{t('accounting.invoices.form.fields.invoiceDate')} *</Label>
               <Input
                 id="invoice_date"
                 type="date"
@@ -448,7 +450,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
             </div>
 
             <div>
-              <Label htmlFor="due_date">Due Date *</Label>
+              <Label htmlFor="due_date">{t('accounting.invoices.form.fields.dueDate')} *</Label>
               <Input
                 id="due_date"
                 type="date"
@@ -463,12 +465,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           {/* Farm and Parcel (Optional) */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="farm_id">Farm (Optional)</Label>
+              <Label htmlFor="farm_id">{t('accounting.invoices.form.fields.farm')} ({t('accounting.invoices.form.optional')})</Label>
               <Select
                 id="farm_id"
                 {...register('farm_id')}
               >
-                <option value="">No farm selected</option>
+                <option value="">{t('accounting.invoices.form.fields.noFarmSelected')}</option>
                 {farms?.map(farm => (
                   <option key={farm.id} value={farm.id}>
                     {farm.name}
@@ -476,18 +478,18 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 ))}
               </Select>
               <p className="text-xs text-gray-500 mt-1">
-                Link this invoice to a specific farm for better tracking
+                {t('accounting.invoices.form.fields.farmHelp')}
               </p>
             </div>
 
             <div>
-              <Label htmlFor="parcel_id">Parcel (Optional)</Label>
+              <Label htmlFor="parcel_id">{t('accounting.invoices.form.fields.parcel')} ({t('accounting.invoices.form.optional')})</Label>
               <Select
                 id="parcel_id"
                 {...register('parcel_id')}
                 disabled={!watch('farm_id')}
               >
-                <option value="">No parcel selected</option>
+                <option value="">{t('accounting.invoices.form.fields.noParcelSelected')}</option>
                 {parcels.map(parcel => (
                   <option key={parcel.id} value={parcel.id}>
                     {parcel.name}
@@ -495,11 +497,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 ))}
               </Select>
               <p className="text-xs text-gray-500 mt-1">
-                {!watch('farm_id') 
-                  ? 'Select a farm first' 
-                  : parcels.length === 0 
-                    ? 'No parcels available for this farm'
-                    : 'Link to a specific parcel'}
+                {!watch('farm_id')
+                  ? t('accounting.invoices.form.fields.parcelHelpSelectFarm')
+                  : parcels.length === 0
+                    ? t('accounting.invoices.form.fields.parcelHelpNoParcels')
+                    : t('accounting.invoices.form.fields.parcelHelp')}
               </p>
             </div>
           </div>
@@ -507,7 +509,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           {/* Invoice Items */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Invoice Items</Label>
+              <Label className="text-lg font-semibold">{t('accounting.invoices.form.items.title')}</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -524,7 +526,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 }
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Item
+                {t('accounting.invoices.form.items.addItem')}
               </Button>
             </div>
 
@@ -533,28 +535,28 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Item Name *
+                      {t('accounting.invoices.form.items.columns.itemName')} *
                     </th>
                     <th className="px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Description
+                      {t('accounting.invoices.form.items.columns.description')}
                     </th>
                     <th className="px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Account *
+                      {t('accounting.invoices.form.items.columns.account')} *
                     </th>
                     <th className="px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Tax
+                      {t('accounting.invoices.form.items.columns.tax')}
                     </th>
                     <th className="px-3 py-2 text-right text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Qty *
+                      {t('accounting.invoices.form.items.columns.quantity')} *
                     </th>
                     <th className="px-3 py-2 text-right text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Rate *
+                      {t('accounting.invoices.form.items.columns.rate')} *
                     </th>
                     <th className="px-3 py-2 text-right text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Amount
+                      {t('accounting.invoices.form.items.columns.amount')}
                     </th>
                     <th className="px-3 py-2 text-center text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Action
+                      {t('accounting.invoices.form.items.columns.action')}
                     </th>
                   </tr>
                 </thead>
@@ -577,7 +579,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                           }}
                         >
                           <SelectTrigger className="w-full h-9">
-                            <SelectValue placeholder="Select item" />
+                            <SelectValue placeholder={t('accounting.invoices.form.items.selectItem')} />
                           </SelectTrigger>
                           <SelectContent>
                             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
@@ -592,16 +594,16 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                                 }}
                               >
                                 <PackagePlus className="h-4 w-4 mr-2" />
-                                Add New Item
+                                {t('accounting.invoices.form.items.addNewItem')}
                               </Button>
                             </div>
                             {itemsLoading ? (
                               <SelectItem value="_loading" disabled>
-                                Loading items...
+                                {t('accounting.invoices.form.items.loadingItems')}
                               </SelectItem>
                             ) : availableItems.length === 0 ? (
                               <SelectItem value="_none" disabled>
-                                No items found
+                                {t('accounting.invoices.form.items.noItemsFound')}
                               </SelectItem>
                             ) : (
                               availableItems.map((item) => (
@@ -622,7 +624,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                       <td className="px-3 py-2">
                         <Input
                           {...register(`items.${index}.description`)}
-                          placeholder="Description"
+                          placeholder={t('accounting.invoices.form.items.placeholders.description')}
                           className="h-9"
                         />
                       </td>
@@ -631,7 +633,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                           {...register(`items.${index}.account_id`)}
                           className="h-9"
                         >
-                          <option value="">Select account</option>
+                          <option value="">{t('accounting.invoices.form.items.selectAccount')}</option>
                           {availableAccounts.map((account) => (
                             <option key={account.id} value={account.id}>
                               {account.code} - {account.name}
@@ -649,7 +651,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                           {...register(`items.${index}.tax_id`)}
                           className="h-9"
                         >
-                          <option value="">No tax</option>
+                          <option value="">{t('accounting.invoices.form.items.noTax')}</option>
                           {allTaxes.map((tax) => (
                             <option key={tax.id} value={tax.id}>
                               {tax.name} ({tax.rate}%)
@@ -662,7 +664,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                           type="number"
                           step="0.01"
                           {...register(`items.${index}.quantity`)}
-                          placeholder="1"
+                          placeholder={t('accounting.invoices.form.items.placeholders.quantity')}
                           className="h-9 text-right"
                         />
                       </td>
@@ -671,7 +673,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
                           type="number"
                           step="0.01"
                           {...register(`items.${index}.rate`)}
-                          placeholder="0.00"
+                          placeholder={t('accounting.invoices.form.items.placeholders.rate')}
                           className="h-9 text-right"
                         />
                       </td>
@@ -709,7 +711,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           <div className="flex justify-end">
             <div className="w-80 space-y-2">
               <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="font-medium text-gray-700 dark:text-gray-300">Subtotal:</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{t('accounting.invoices.form.totals.subtotal')}:</span>
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {currencySymbol} {calculatedTotals.subtotal.toFixed(2)}
                 </span>
@@ -733,7 +735,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
               {calculatedTotals.tax_total > 0 && (
                 <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Total Tax:</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('accounting.invoices.form.totals.totalTax')}:</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
                     {currencySymbol} {calculatedTotals.tax_total.toFixed(2)}
                   </span>
@@ -741,7 +743,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
               )}
 
               <div className="flex justify-between items-center py-2 border-t-2 border-gray-900 dark:border-white">
-                <span className="font-bold text-gray-900 dark:text-white text-lg">Grand Total:</span>
+                <span className="font-bold text-gray-900 dark:text-white text-lg">{t('accounting.invoices.form.totals.grandTotal')}:</span>
                 <span className="font-bold text-gray-900 dark:text-white text-lg">
                   {currencySymbol} {calculatedTotals.grand_total.toFixed(2)}
                 </span>
@@ -751,22 +753,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
 
           {/* Remarks */}
           <div>
-            <Label htmlFor="remarks">Remarks</Label>
+            <Label htmlFor="remarks">{t('accounting.invoices.form.fields.remarks')}</Label>
             <Input
               id="remarks"
               {...register('remarks')}
-              placeholder="Optional remarks or notes"
+              placeholder={t('accounting.invoices.form.fields.remarksPlaceholder')}
             />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              {t('accounting.invoices.form.buttons.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting || createInvoice.isPending || updateInvoice.isPending}>
               {isSubmitting || createInvoice.isPending || updateInvoice.isPending
-                ? (isEditMode ? 'Updating...' : 'Creating...')
-                : (isEditMode ? 'Update Invoice' : 'Create Invoice')}
+                ? (isEditMode ? t('accounting.invoices.form.buttons.updating') : t('accounting.invoices.form.buttons.creating'))
+                : (isEditMode ? t('accounting.invoices.form.buttons.update') : t('accounting.invoices.form.buttons.create'))}
             </Button>
           </DialogFooter>
         </form>

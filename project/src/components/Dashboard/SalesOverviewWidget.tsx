@@ -39,7 +39,7 @@ const SalesOverviewWidget: React.FC = () => {
   }, [orders]);
 
   const handleViewOrders = () => {
-    navigate({ to: '/billing-sales-orders' });
+    navigate({ to: '/accounting/sales-orders' });
   };
 
   const getStatusColor = (status: string) => {

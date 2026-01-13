@@ -7,6 +7,13 @@ import { authSupabase } from './lib/auth-supabase'
 import './i18n/config'
 import './index.css'
 
+// Global React Query configuration for development
+const REACT_QUERY_DEV_CONFIG = {
+  // Set to false to disable refetch on window focus during development
+  // This prevents unnecessary API calls when switching between browser windows/tabs
+  refetchOnWindowFocus: false,
+}
+
 // Create a client with shorter stale time for fresher data
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,7 +21,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 1000, // 5 seconds - data goes stale quickly
       gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
       retry: 1,
-      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnWindowFocus: REACT_QUERY_DEV_CONFIG.refetchOnWindowFocus,
       refetchOnReconnect: true, // Refetch when network reconnects
     },
   },

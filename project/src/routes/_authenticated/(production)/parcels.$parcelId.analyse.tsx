@@ -52,7 +52,7 @@ const ParcelSoilAnalysis = () => {
       setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
     } catch (error) {
       console.error('Error saving soil analysis:', error);
-      alert(t('farmHierarchy.parcel.soil.saveError'));
+      alert(t('parcels.analyse.saveError'));
     }
   };
 
@@ -69,7 +69,7 @@ const ParcelSoilAnalysis = () => {
       setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
     } catch (error) {
       console.error('Error saving plant analysis:', error);
-      alert(t('farmHierarchy.parcel.plant.saveError', 'Error saving plant analysis'));
+      alert(t('parcels.analyse.plantSaveError'));
     }
   };
 
@@ -86,12 +86,12 @@ const ParcelSoilAnalysis = () => {
       setAnalysisTab('water'); // Switch to water tab to show the new analysis
     } catch (error) {
       console.error('Error saving water analysis:', error);
-      alert(t('farmHierarchy.parcel.water.saveError', 'Error saving water analysis'));
+      alert(t('parcels.analyse.waterSaveError'));
     }
   };
 
   const handleDeleteAnalysis = async (id: string) => {
-    if (confirm(t('farmHierarchy.parcel.soil.deleteConfirm'))) {
+    if (confirm(t('parcels.analyse.deleteConfirm'))) {
       try {
         // Use the correct delete function based on the current tab
         if (analysisTab === 'soil') {
@@ -103,7 +103,7 @@ const ParcelSoilAnalysis = () => {
         }
       } catch (error) {
         console.error('Error deleting analysis:', error);
-        alert(t('farmHierarchy.parcel.soil.deleteError'));
+        alert(t('parcels.analyse.deleteError'));
       }
     }
   };
@@ -159,7 +159,7 @@ const ParcelSoilAnalysis = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('farmHierarchy.parcel.soil.selectAnalysisType', 'Select Analysis Type')}
+            {t('parcels.analyse.selectAnalysisType')}
           </h3>
           <button
             onClick={() => setShowTypeSelector(false)}
@@ -178,10 +178,10 @@ const ParcelSoilAnalysis = () => {
             </div>
             <div className="text-left">
               <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
-                {t('farmHierarchy.parcel.soil.tabs.soil', 'Soil Analysis')}
+                {t('parcels.analyse.tabs.soil')}
               </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('farmHierarchy.parcel.soil.soilDescription', 'Analyze pH, nutrients, organic matter, and soil composition')}
+                {t('parcels.analyse.soilDescription')}
               </p>
             </div>
           </button>
@@ -195,10 +195,10 @@ const ParcelSoilAnalysis = () => {
             </div>
             <div className="text-left">
               <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
-                {t('farmHierarchy.parcel.soil.tabs.plant', 'Plant Analysis')}
+                {t('parcels.analyse.tabs.plant')}
               </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('farmHierarchy.parcel.soil.plantDescription', 'Analyze leaf tissue, nutrient content, and plant health')}
+                {t('parcels.analyse.plantDescription')}
               </p>
             </div>
           </button>
@@ -212,10 +212,10 @@ const ParcelSoilAnalysis = () => {
             </div>
             <div className="text-left">
               <h4 className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                {t('farmHierarchy.parcel.soil.tabs.water', 'Water Analysis')}
+                {t('parcels.analyse.tabs.water')}
               </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('farmHierarchy.parcel.soil.waterDescription', 'Analyze irrigation water quality, pH, and mineral content')}
+                {t('parcels.analyse.waterDescription')}
               </p>
             </div>
           </button>
@@ -240,14 +240,14 @@ const ParcelSoilAnalysis = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          {t('farmHierarchy.parcel.soil.title')}
+          {t('parcels.analyse.title')}
         </h3>
         <button
           onClick={() => setShowTypeSelector(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span>{t('farmHierarchy.parcel.soil.newAnalysis')}</span>
+          <span>{t('parcels.analyse.newAnalysis')}</span>
         </button>
       </div>
       {/* Analysis Type Tabs */}
@@ -263,7 +263,7 @@ const ParcelSoilAnalysis = () => {
           >
             <div className="flex items-center justify-center space-x-2">
               <Flask className="h-4 w-4" />
-              <span>{t('farmHierarchy.parcel.soil.tabs.soil')}</span>
+              <span>{t('parcels.analyse.tabs.soil')}</span>
             </div>
           </button>
           <button
@@ -276,7 +276,7 @@ const ParcelSoilAnalysis = () => {
           >
             <div className="flex items-center justify-center space-x-2">
               <Leaf className="h-4 w-4" />
-              <span>{t('farmHierarchy.parcel.soil.tabs.plant')}</span>
+              <span>{t('parcels.analyse.tabs.plant')}</span>
             </div>
           </button>
           <button
@@ -289,7 +289,7 @@ const ParcelSoilAnalysis = () => {
           >
             <div className="flex items-center justify-center space-x-2">
               <Droplets className="h-4 w-4" />
-              <span>{t('farmHierarchy.parcel.soil.tabs.water')}</span>
+              <span>{t('parcels.analyse.tabs.water')}</span>
             </div>
           </button>
         </div>
@@ -306,7 +306,7 @@ const ParcelSoilAnalysis = () => {
               {analysisTab === 'plant' && <Leaf className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
               {analysisTab === 'water' && <Droplets className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                {t('farmHierarchy.parcel.soil.noAnalyses')}
+                {t('parcels.analyse.noAnalyses')}
               </p>
               <button
                 onClick={() => {
@@ -319,7 +319,7 @@ const ParcelSoilAnalysis = () => {
                     : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
-                {t('farmHierarchy.parcel.soil.addAnalysis')}
+                {t('parcels.analyse.addAnalysis')}
               </button>
             </div>
           ) : (
@@ -334,11 +334,11 @@ const ParcelSoilAnalysis = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {t('farmHierarchy.parcel.soil.analysisDate')} {new Date(analysis.analysis_date).toLocaleDateString()}
+                          {t('parcels.analyse.analysisDate')} {new Date(analysis.analysis_date).toLocaleDateString()}
                         </span>
                         {analysis.laboratory && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {t('farmHierarchy.parcel.soil.laboratory')}: {analysis.laboratory}
+                            {t('parcels.analyse.laboratory')}: {analysis.laboratory}
                           </p>
                         )}
                       </div>
@@ -346,7 +346,7 @@ const ParcelSoilAnalysis = () => {
                         onClick={() => handleDeleteAnalysis(analysis.id)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
                       >
-                        {t('farmHierarchy.parcel.soil.deleteAnalysis')}
+                        {t('parcels.analyse.deleteAnalysis')}
                       </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -383,7 +383,7 @@ const ParcelSoilAnalysis = () => {
                     {analysis.notes && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          <strong>{t('farmHierarchy.parcel.soil.notes')}:</strong> {analysis.notes}
+                          <strong>{t('parcels.analyse.notes')}:</strong> {analysis.notes}
                         </p>
                       </div>
                     )}
@@ -398,11 +398,11 @@ const ParcelSoilAnalysis = () => {
       {parcel.soil_type && analysisTab === 'soil' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-            {t('farmHierarchy.parcel.soil.soilInfo')}
+            {t('parcels.analyse.soilInfo')}
           </h4>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.soil.soilType')}:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('parcels.analyse.soilType')}:</span>
               <span className="font-medium text-gray-900 dark:text-white">{parcel.soil_type}</span>
             </div>
           </div>

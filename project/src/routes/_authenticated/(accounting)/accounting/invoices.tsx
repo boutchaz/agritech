@@ -73,20 +73,20 @@ const AppContent: React.FC = () => {
 
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string, status: string) => {
     if (status !== 'draft') {
-      toast.error('Only draft invoices can be deleted');
+      toast.error(t('invoices.actions.onlyDraftDelete'));
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete invoice ${invoiceNumber}? This action cannot be undone.`)) {
+    if (!confirm(t('invoices.actions.confirmDelete', { invoiceNumber }))) {
       return;
     }
 
     try {
       await deleteMutation.mutateAsync(invoiceId);
-      toast.success(`Invoice ${invoiceNumber} deleted successfully`);
+      toast.success(t('invoices.actions.deleteSuccess', { invoiceNumber }));
     } catch (error) {
       console.error('Error deleting invoice:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete invoice');
+      toast.error(error instanceof Error ? error.message : t('invoices.actions.deleteError'));
     }
   };
 

@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useTranslation } from 'react-i18next';
 import {
   Plus,
   Save,
@@ -50,13 +51,13 @@ import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES } from '@/types/work-units
 // =====================================================
 
 const pieceWorkSchema = z.object({
-  worker_id: z.string().uuid('Please select a worker'),
-  work_date: z.string().min(1, 'Work date is required'),
+  worker_id: z.string().uuid(),
+  work_date: z.string().min(1),
   task_id: z.string().uuid().optional().or(z.literal('')),
   parcel_id: z.string().uuid().optional().or(z.literal('')),
-  work_unit_id: z.string().uuid('Please select a work unit'),
-  units_completed: z.number().positive('Units completed must be positive'),
-  rate_per_unit: z.number().nonnegative('Rate per unit must be non-negative'),
+  work_unit_id: z.string().uuid(),
+  units_completed: z.number().positive(),
+  rate_per_unit: z.number().nonnegative(),
   quality_rating: z.number().int().min(1).max(5).optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
@@ -83,6 +84,7 @@ export function PieceWorkEntry({
   parcelId,
   onSuccess,
 }: PieceWorkEntryProps) {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const queryClient = useQueryClient();
 
@@ -246,13 +248,13 @@ export function PieceWorkEntry({
     <>
       <Button onClick={handleOpenDialog}>
         <Plus className="h-4 w-4 mr-2" />
-        Record Piece Work
+        {t('workers.pieceWork.buttons.record')}
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Record Piece Work</DialogTitle>
+            <DialogTitle>{t('workers.pieceWork.title')}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -265,23 +267,23 @@ export function PieceWorkEntry({
                   <div>
                     <label className="text-sm font-medium flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      Worker *
+                      {t('workers.pieceWork.fields.worker')} *
                     </label>
                     <Select
                       {...field}
                       onChange={(e) => handleWorkerChange(e.target.value)}
                     >
-                      <option value="">Select worker...</option>
+                      <option value="">{t('workers.pieceWork.fields.selectWorker')}</option>
                       {workers.map((worker) => (
                         <option key={worker.id} value={worker.id}>
                           {worker.first_name} {worker.last_name}
-                          {worker.payment_frequency === 'per_unit' && ' (Piece-work)'}
+                          {worker.payment_frequency === 'per_unit' && ` (${t('workers.pieceWork.fields.pieceWork')})`}
                         </option>
                       ))}
                     </Select>
                     {form.formState.errors.worker_id && (
                       <p className="text-sm text-red-500 mt-1">
-                        {form.formState.errors.worker_id.message}
+                        {t('workers.pieceWork.validation.workerRequired')}
                       </p>
                     )}
                   </div>
@@ -295,12 +297,12 @@ export function PieceWorkEntry({
                   <div>
                     <label className="text-sm font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Date *
+                      {t('workers.pieceWork.fields.date')} *
                     </label>
                     <Input {...field} type="date" />
                     {form.formState.errors.work_date && (
                       <p className="text-sm text-red-500 mt-1">
-                        {form.formState.errors.work_date.message}
+                        {t('workers.pieceWork.validation.dateRequired')}
                       </p>
                     )}
                   </div>
@@ -315,9 +317,9 @@ export function PieceWorkEntry({
                 name="task_id"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Task (Optional)</label>
+                    <label className="text-sm font-medium">{t('workers.pieceWork.fields.task')}</label>
                     <Select {...field}>
-                      <option value="">None</option>
+                      <option value="">{t('workers.pieceWork.fields.none')}</option>
                       {tasks.map((task) => (
                         <option key={task.id} value={task.id}>
                           {task.title}
@@ -333,9 +335,9 @@ export function PieceWorkEntry({
                 name="parcel_id"
                 render={({ field }) => (
                   <div>
-                    <label className="text-sm font-medium">Parcel (Optional)</label>
+                    <label className="text-sm font-medium">{t('workers.pieceWork.fields.parcel')}</label>
                     <Select {...field}>
-                      <option value="">None</option>
+                      <option value="">{t('workers.pieceWork.fields.none')}</option>
                       {parcels.map((parcel) => (
                         <option key={parcel.id} value={parcel.id}>
                           {parcel.name}
@@ -351,7 +353,7 @@ export function PieceWorkEntry({
             <Card className="p-4 bg-muted/50">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Work Completed
+                {t('workers.pieceWork.fields.workCompleted')}
               </h3>
 
               <div className="grid grid-cols-3 gap-4">
@@ -360,9 +362,9 @@ export function PieceWorkEntry({
                   name="work_unit_id"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">Unit *</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.unit')} *</label>
                       <Select {...field}>
-                        <option value="">Select unit...</option>
+                        <option value="">{t('workers.pieceWork.fields.selectUnit')}</option>
                         {workUnits.map((unit) => (
                           <option key={unit.id} value={unit.id}>
                             {unit.name} ({unit.code})
@@ -371,7 +373,7 @@ export function PieceWorkEntry({
                       </Select>
                       {form.formState.errors.work_unit_id && (
                         <p className="text-sm text-red-500 mt-1">
-                          {form.formState.errors.work_unit_id.message}
+                          {t('workers.pieceWork.validation.unitRequired')}
                         </p>
                       )}
                     </div>
@@ -383,7 +385,7 @@ export function PieceWorkEntry({
                   name="units_completed"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">Units Completed *</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.unitsCompleted')} *</label>
                       <Input
                         {...field}
                         type="number"
@@ -393,7 +395,7 @@ export function PieceWorkEntry({
                       />
                       {form.formState.errors.units_completed && (
                         <p className="text-sm text-red-500 mt-1">
-                          {form.formState.errors.units_completed.message}
+                          {t('workers.pieceWork.validation.unitsPositive')}
                         </p>
                       )}
                     </div>
@@ -405,7 +407,7 @@ export function PieceWorkEntry({
                   name="rate_per_unit"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">Rate per Unit *</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.ratePerUnit')} *</label>
                       <Input
                         {...field}
                         type="number"
@@ -415,7 +417,7 @@ export function PieceWorkEntry({
                       />
                       {form.formState.errors.rate_per_unit && (
                         <p className="text-sm text-red-500 mt-1">
-                          {form.formState.errors.rate_per_unit.message}
+                          {t('workers.pieceWork.validation.rateNonNegative')}
                         </p>
                       )}
                     </div>
@@ -428,7 +430,7 @@ export function PieceWorkEntry({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
-                    Total Amount:
+                    {t('workers.pieceWork.fields.totalAmount')}:
                   </span>
                   <span className="text-lg font-bold">
                     {currentOrganization?.currency || 'MAD'} {totalAmount.toFixed(2)}
@@ -445,7 +447,7 @@ export function PieceWorkEntry({
                 <div>
                   <label className="text-sm font-medium flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4" />
-                    Quality Rating (Optional)
+                    {t('workers.pieceWork.fields.qualityRating')}
                   </label>
                   <div className="flex gap-2">
                     {QUALITY_RATINGS.map((rating) => (
@@ -470,7 +472,7 @@ export function PieceWorkEntry({
             <Card className="p-4 bg-muted/50">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Time Tracking (Optional)
+                {t('workers.pieceWork.fields.timeTracking')}
               </h3>
 
               <div className="grid grid-cols-3 gap-4">
@@ -479,7 +481,7 @@ export function PieceWorkEntry({
                   name="start_time"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">Start Time</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.startTime')}</label>
                       <Input {...field} type="time" />
                     </div>
                   )}
@@ -490,7 +492,7 @@ export function PieceWorkEntry({
                   name="end_time"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">End Time</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.endTime')}</label>
                       <Input {...field} type="time" />
                     </div>
                   )}
@@ -501,7 +503,7 @@ export function PieceWorkEntry({
                   name="break_duration"
                   render={({ field }) => (
                     <div>
-                      <label className="text-sm font-medium">Break (minutes)</label>
+                      <label className="text-sm font-medium">{t('workers.pieceWork.fields.breakDuration')}</label>
                       <Input
                         {...field}
                         type="number"
@@ -520,8 +522,8 @@ export function PieceWorkEntry({
               name="notes"
               render={({ field }) => (
                 <div>
-                  <label className="text-sm font-medium">Notes</label>
-                  <Textarea {...field} rows={3} placeholder="Additional notes..." />
+                  <label className="text-sm font-medium">{t('workers.pieceWork.fields.notes')}</label>
+                  <Textarea {...field} rows={3} placeholder={t('workers.pieceWork.fields.notesPlaceholder')} />
                 </div>
               )}
             />
@@ -530,11 +532,11 @@ export function PieceWorkEntry({
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {t('workers.pieceWork.buttons.cancel')}
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
                 <Save className="h-4 w-4 mr-2" />
-                {createMutation.isPending ? 'Saving...' : 'Save'}
+                {createMutation.isPending ? t('workers.pieceWork.buttons.saving') : t('workers.pieceWork.buttons.save')}
               </Button>
             </div>
 
@@ -542,9 +544,9 @@ export function PieceWorkEntry({
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-red-800">Error saving piece work</p>
+                  <p className="text-sm font-medium text-red-800">{t('workers.pieceWork.validation.saveError')}</p>
                   <p className="text-sm text-red-600">
-                    {createMutation.error?.message || 'Please try again'}
+                    {createMutation.error?.message || t('workers.pieceWork.validation.tryAgain')}
                   </p>
                 </div>
               </div>
@@ -570,6 +572,7 @@ interface PieceWorkListProps {
 }
 
 export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
   const { data: pieceWorkRecords = [], isLoading } = useQuery({
@@ -588,13 +591,13 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
   });
 
   if (isLoading) {
-    return <Card className="p-6"><p className="text-center">Loading...</p></Card>;
+    return <Card className="p-6"><p className="text-center">{t('workers.pieceWork.list.loading')}</p></Card>;
   }
 
   if (pieceWorkRecords.length === 0) {
     return (
       <Card className="p-6">
-        <p className="text-center text-muted-foreground">No piece work records found</p>
+        <p className="text-center text-muted-foreground">{t('workers.pieceWork.list.noRecords')}</p>
       </Card>
     );
   }
@@ -644,7 +647,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
                 </div>
 
                 {record.task && (
-                  <p className="text-sm text-muted-foreground mt-1">Task: {record.task.title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t('workers.pieceWork.list.task')}: {record.task.title}</p>
                 )}
 
                 {record.notes && (

@@ -40,6 +40,9 @@
     "none": "None"
   },
   "common": {
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "none": "None",
     "errors": {
       "generic": "An error occurred. Please try again.",
       "network": "Network error. Please check your connection.",
@@ -113,7 +116,8 @@
     "receptionBatches": "Reception Batches",
     "qualityControl": "Quality Control",
     "campaigns": "Campaigns",
-    "cropCycles": "Crop Cycles"
+    "cropCycles": "Crop Cycles",
+    "chat": "AI Assistant"
   },
   "stock": {
     "title": "Stock Management",
@@ -125,6 +129,34 @@
       "entries": "Stock Entries",
       "reception": "Reception Batches",
       "reports": "Reports & Analytics"
+    },
+    "lowStockAlerts": {
+      "title": "Low Stock Alerts",
+      "itemsBelowMinimum": "item(s) below minimum stock level",
+      "createEntry": "Create Stock Entry",
+      "currentStock": "Current Stock",
+      "minimumLevel": "Minimum Level",
+      "totalValue": "Total Value",
+      "byFarm": "By Farm/Warehouse",
+      "addStock": "Add Stock",
+      "viewItem": "View Item",
+      "viewAll": "View all {{count}} low stock items",
+      "allOptimal": "All stock levels are optimal"
+    },
+    "itemFarmUsage": {
+      "noUsage": "No usage data found for this item",
+      "totalUsage": "Total Usage",
+      "totalQuantity": "Total Quantity Used",
+      "lastUsed": "Last Used",
+      "never": "Never",
+      "byFarm": "Usage by Farm",
+      "usageEvents": "usage event(s)",
+      "quantityUsed": "Quantity Used",
+      "parcel": "Parcel",
+      "relatedTasks": "Related Tasks",
+      "viewTask": "View Task",
+      "viewFarm": "View Farm",
+      "more": "more"
     }
   },
   "dashboard": {
@@ -993,7 +1025,12 @@
     "editDescription": "Update supplier details",
     "deleteConfirmTitle": "Confirm Deletion",
     "deleteConfirmation": "Are you sure you want to delete the supplier",
-    "deleteWarning": "This action is irreversible."
+    "deleteWarning": "This action is irreversible.",
+    "loadError": "Error loading suppliers: {{error}}",
+    "unknownError": "Unknown error",
+    "deleteFailed": "Failed to delete supplier: {{error}}",
+    "updateFailed": "Failed to update supplier: {{error}}",
+    "createFailed": "Failed to create supplier: {{error}}"
   },
   "warehouses": {
     "title": "Warehouse Management",
@@ -1919,15 +1956,125 @@
   "accountingModule": {
     "dashboard": {
       "title": "Accounting Dashboard",
-      "subtitle": "Overview of your financial performance"
+      "subtitle": "Overview of your financial performance",
+      "metrics": {
+        "totalInvoices": "Total Invoices",
+        "outstanding": "outstanding",
+        "totalPayments": "Total Payments",
+        "received": "received",
+        "cashReceived": "Cash Received",
+        "payments": "payments",
+        "journalEntries": "Journal Entries",
+        "posted": "posted"
+      },
+      "alert": {
+        "title": "Accounting Module Active",
+        "message": "Your accounting module is now active. Start by creating invoices or recording payments."
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "subtitle": "Common accounting tasks",
+        "createInvoice": "Create Invoice",
+        "recordPayment": "Record Payment",
+        "createJournalEntry": "Create Journal Entry"
+      },
+      "recentActivity": {
+        "title": "Recent Activity",
+        "subtitle": "Latest transactions"
+      },
+      "gettingStarted": {
+        "title": "Getting Started",
+        "subtitle": "Complete these steps to set up your accounting",
+        "step1": "Review your Chart of Accounts (already seeded with defaults)",
+        "step2": "Create your first sales or purchase invoice",
+        "step3": "Record a payment and allocate it to invoices",
+        "step4": "View your financial reports (Balance Sheet, P&L)"
+      },
+      "activity": {
+        "salesInvoice": "Sales Invoice",
+        "purchaseInvoice": "Purchase Invoice",
+        "created": "created",
+        "submitted": "submitted",
+        "paymentReceived": "Payment received from",
+        "paymentMade": "Payment made to"
+      }
     },
     "accounts": {
       "title": "Chart of Accounts",
       "subtitle": "Manage your accounting account hierarchy",
+      "subtitleAlt": "Manage your accounting chart of accounts hierarchy",
       "searchPlaceholder": "Search accounts by code or name...",
       "filterByType": "Filter by type",
       "parentAccount": "None (Root Account)",
-      "descriptionPlaceholder": "Optional description"
+      "descriptionPlaceholder": "Optional description",
+      "newAccount": "New Account",
+      "showInactive": "Show Inactive",
+      "allTypes": "All Types",
+      "table": {
+        "code": "Code",
+        "name": "Name",
+        "type": "Type",
+        "currency": "Currency",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "accountTypes": {
+        "Asset": "Assets",
+        "Liability": "Liabilities",
+        "Equity": "Equity",
+        "Revenue": "Revenue",
+        "Expense": "Expenses"
+      },
+      "accountKinds": {
+        "group": "Group",
+        "ledger": "Ledger"
+      },
+      "empty": {
+        "title": "No Chart of Accounts Found",
+        "description": "Get started quickly by seeding a standard chart of accounts for Morocco (Plan Comptable Marocain), or create accounts manually.",
+        "descriptionShort": "Get started by seeding a standard chart of accounts or create accounts manually.",
+        "noMatches": "No accounts match your search criteria."
+      },
+      "actions": {
+        "seedChart": "Seed Chart",
+        "seedChartAlt": "Seed Chart of Accounts",
+        "seeding": "Seeding...",
+        "seedingAlt": "Seeding Accounts...",
+        "createManually": "Create Manually"
+      },
+      "form": {
+        "editTitle": "Edit Account",
+        "createTitle": "Create New Account",
+        "editDescription": "Update the account details below",
+        "createDescription": "Add a new account to your chart of accounts",
+        "code": "Account Code *",
+        "codePlaceholder": "e.g., 1000",
+        "name": "Account Name *",
+        "namePlaceholder": "e.g., Cash",
+        "type": "Account Type *",
+        "subtype": "Account Subtype",
+        "subtypePlaceholder": "e.g., Current Asset",
+        "parent": "Parent Account",
+        "currency": "Currency",
+        "currencyHelp": "Currency is set at organization level and cannot be changed per account. To change currency, go to Organization Settings.",
+        "description": "Description",
+        "isGroup": "Group Account (can contain child accounts)",
+        "isActive": "Active",
+        "allowCostCenter": "Allow Cost Center Tracking",
+        "level": "Level {{number}}",
+        "cancel": "Cancel",
+        "update": "Update Account",
+        "create": "Create Account"
+      },
+      "delete": {
+        "title": "Delete Account",
+        "confirmation": "Are you sure you want to delete the account \"{{name}}\"? This action cannot be undone.",
+        "button": "Delete Account"
+      }
     },
     "journal": {
       "title": "Journal Entries",
@@ -1970,17 +2117,264 @@
       "title": "Financial Reports",
       "subtitle": "Access comprehensive financial reports and analytics"
     },
-    "invoice": {
-      "selectItem": "Select item",
-      "descriptionPlaceholder": "Description",
-      "remarksPlaceholder": "Optional remarks or notes"
+    "invoices": {
+      "title": "Invoices",
+      "subtitle": "Manage sales and purchase invoices",
+      "pageTitle": "Invoices",
+      "allInvoices": "All Invoices",
+      "description": "Track and manage your invoices",
+      "tableDescription": "A list of all your sales and purchase invoices",
+      "loading": "Loading invoices...",
+      "search": {
+        "placeholder": "Search invoices by number or customer..."
+      },
+      "filter": {
+        "allTypes": "All Types",
+        "sales": "Sales",
+        "purchase": "Purchase",
+        "allStatus": "All Status"
+      },
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "paid": "Paid",
+        "partiallyPaid": "Partially Paid",
+        "overdue": "Overdue",
+        "cancelled": "Cancelled"
+      },
+      "type": {
+        "sales": "Sales",
+        "purchase": "Purchase"
+      },
+      "stats": {
+        "total": "Total Invoices",
+        "pending": "Pending",
+        "paid": "Paid",
+        "overdue": "Overdue"
+      },
+      "table": {
+        "invoiceNumber": "Invoice #",
+        "type": "Type",
+        "party": "Customer/Supplier",
+        "date": "Date",
+        "amount": "Amount",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "actions": {
+        "create": "Create Invoice",
+        "menu": "Actions",
+        "submit": "Submit Invoice",
+        "download": "Download PDF",
+        "delete": "Delete",
+        "confirmDelete": "Are you sure you want to delete invoice {{invoiceNumber}}? This action cannot be undone.",
+        "deleteSuccess": "Invoice {{invoiceNumber}} deleted successfully",
+        "deleteError": "Failed to delete invoice",
+        "onlyDraftDelete": "Only draft invoices can be deleted",
+        "editDraftOnly": "Only draft invoices can be edited"
+      },
+      "empty": {
+        "message": "No invoices found. Create your first invoice to get started.",
+        "filtered": "No invoices match your filters."
+      },
+      "error": {
+        "loading": "Error loading invoices"
+      },
+      "form": {
+        "title": {
+          "create": "Create New Invoice",
+          "edit": "Edit Invoice"
+        },
+        "description": {
+          "create": "Add a new sales or purchase invoice with line items",
+          "edit": "Update the invoice details and line items"
+        },
+        "loading": "Loading invoice...",
+        "optional": "Optional",
+        "fields": {
+          "invoiceType": "Invoice Type",
+          "customer": "Customer",
+          "supplier": "Supplier",
+          "selectParty": "Select {{party}}",
+          "invoiceDate": "Invoice Date",
+          "dueDate": "Due Date",
+          "farm": "Farm",
+          "farmHelp": "Link this invoice to a specific farm for better tracking",
+          "noFarmSelected": "No farm selected",
+          "parcel": "Parcel",
+          "parcelHelp": "Link to a specific parcel",
+          "parcelHelpSelectFarm": "Select a farm first",
+          "parcelHelpNoParcels": "No parcels available for this farm",
+          "noParcelSelected": "No parcel selected",
+          "remarks": "Remarks",
+          "remarksPlaceholder": "Optional remarks or notes"
+        },
+        "invoiceTypes": {
+          "sales": "Sales Invoice",
+          "purchase": "Purchase Invoice"
+        },
+        "items": {
+          "title": "Invoice Items",
+          "addItem": "Add Item",
+          "selectItem": "Select item",
+          "addNewItem": "Add New Item",
+          "loadingItems": "Loading items...",
+          "noItemsFound": "No items found",
+          "selectAccount": "Select account",
+          "noTax": "No tax",
+          "placeholders": {
+            "description": "Description",
+            "quantity": "1",
+            "rate": "0.00"
+          },
+          "columns": {
+            "itemName": "Item Name",
+            "description": "Description",
+            "account": "Account",
+            "tax": "Tax",
+            "quantity": "Qty",
+            "rate": "Rate",
+            "amount": "Amount",
+            "action": "Action"
+          }
+        },
+        "totals": {
+          "subtotal": "Subtotal",
+          "totalTax": "Total Tax",
+          "grandTotal": "Grand Total"
+        },
+        "buttons": {
+          "cancel": "Cancel",
+          "create": "Create Invoice",
+          "creating": "Creating...",
+          "update": "Update Invoice",
+          "updating": "Updating...",
+          "goToCustomers": "Go to Customers",
+          "goToStockManagement": "Go to Stock Management"
+        },
+        "actions": {
+          "create": "create",
+          "update": "update"
+        },
+        "errors": {
+          "noCustomers": "No customers found.",
+          "noSuppliers": "No suppliers found."
+        },
+        "validation": {
+          "itemNameRequired": "Item name is required",
+          "quantityMin": "Quantity must be at least 1",
+          "ratePositive": "Rate must be positive",
+          "accountRequired": "Account is required",
+          "partyRequired": "Please select a customer/supplier",
+          "invoiceDateRequired": "Invoice date is required",
+          "dueDateRequired": "Due date is required",
+          "atLeastOneItem": "At least one item is required",
+          "dueDateAfterInvoiceDate": "Due date must be on or after invoice date"
+        },
+        "toast": {
+          "createSuccess": "Invoice created successfully",
+          "updateSuccess": "Invoice updated successfully",
+          "saveError": "Failed to {{action}} invoice"
+        }
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "subtitle": "Manage payment transactions",
+      "form": {
+        "title": {
+          "new": "New Payment",
+          "edit": "Edit Payment"
+        },
+        "fields": {
+          "paymentType": "Payment Type",
+          "paymentDate": "Payment Date",
+          "customer": "Customer",
+          "supplier": "Supplier",
+          "optional": "Optional",
+          "partyName": "Party Name",
+          "name": "Name",
+          "amount": "Amount",
+          "paymentMethod": "Payment Method",
+          "referenceNumber": "Reference Number",
+          "remarks": "Remarks",
+          "status": "Status"
+        },
+        "paymentTypes": {
+          "received": "Payment Received",
+          "made": "Payment Made"
+        },
+        "methods": {
+          "cash": "Cash",
+          "bankTransfer": "Bank Transfer",
+          "check": "Check",
+          "mobileMoney": "Mobile Money"
+        },
+        "statuses": {
+          "draft": "Draft",
+          "submitted": "Submitted",
+          "cancelled": "Cancelled"
+        },
+        "actions": {
+          "select": "Select",
+          "enter": "Enter"
+        },
+        "placeholders": {
+          "referenceNumber": "Check number, transaction ID, etc.",
+          "remarks": "Additional notes about this payment"
+        },
+        "validation": {
+          "partyNameRequired": "Party name is required",
+          "paymentDateRequired": "Payment date is required",
+          "amountMin": "Amount must be greater than 0"
+        },
+        "errors": {
+          "saveFailed": "Failed to save payment:"
+        },
+        "buttons": {
+          "cancel": "Cancel",
+          "create": "Create Payment",
+          "update": "Update Payment"
+        }
+      }
     }
   },
   "billingModule": {
     "salesOrders": {
       "title": "Sales Orders",
       "subtitle": "Manage customer orders and fulfillment",
-      "selectWarehouse": "Select warehouse..."
+      "selectWarehouse": "Select warehouse...",
+      "allOrders": "All Sales Orders",
+      "trackOrders": "Track orders from confirmation to completion",
+      "search": "Search by order number or customer...",
+      "stats": {
+        "totalOrders": "Total Orders",
+        "draft": "Draft",
+        "confirmed": "Confirmed",
+        "inProgress": "In Progress",
+        "shipped": "Shipped",
+        "completed": "Completed",
+        "totalValue": "Total Value"
+      },
+      "table": {
+        "orderNumber": "Order #",
+        "customer": "Customer",
+        "orderDate": "Order Date",
+        "expectedDate": "Expected Date",
+        "amount": "Amount",
+        "invoiced": "Invoiced",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "viewAndManage": "View and manage your sales orders",
+      "noData": "No sales orders found. Orders are created from accepted quotes.",
+      "empty": {
+        "filtered": "No sales orders match your filters."
+      },
+      "error": {
+        "loading": "Error loading sales orders",
+        "unknown": "Unknown error"
+      }
     },
     "purchaseOrders": {
       "title": "Purchase Orders",
@@ -2353,6 +2747,93 @@
       "intensive": "Intensive",
       "super_intensive": "Super-intensive",
       "organic": "Organic"
+    },
+    "detail": {
+      "tabs": {
+        "overview": "Overview",
+        "soil": "Soil Analysis",
+        "satellite": "Satellite",
+        "weather": "Weather",
+        "production": "Production",
+        "profitability": "Profitability",
+        "reports": "Reports"
+      },
+      "loading": "Loading parcel details...",
+      "notFound": "Parcel not found",
+      "backToParcels": "Back to Parcels",
+      "breadcrumbs": {
+        "farm": "Farm",
+        "parcels": "Parcels"
+      }
+    },
+    "analyse": {
+      "title": "Analysis",
+      "newAnalysis": "New Analysis",
+      "saveError": "Error saving soil analysis",
+      "plantSaveError": "Error saving plant analysis",
+      "waterSaveError": "Error saving water analysis",
+      "deleteConfirm": "Are you sure you want to delete this analysis?",
+      "deleteError": "Error deleting analysis",
+      "selectAnalysisType": "Select Analysis Type",
+      "tabs": {
+        "soil": "Soil Analysis",
+        "plant": "Plant Analysis",
+        "water": "Water Analysis"
+      },
+      "soilDescription": "Analyze pH, nutrients, organic matter, and soil composition",
+      "plantDescription": "Analyze leaf tissue, nutrient content, and plant health",
+      "waterDescription": "Analyze irrigation water quality, pH, and mineral content",
+      "noAnalyses": "No analyses yet. Add your first analysis to get started.",
+      "addAnalysis": "Add Analysis",
+      "analysisDate": "Analysis Date:",
+      "laboratory": "Laboratory",
+      "deleteAnalysis": "Delete",
+      "notes": "Notes",
+      "soilInfo": "Soil Information",
+      "soilType": "Soil Type"
+    },
+    "index": {
+      "noSatelliteData": "No Satellite Data Available",
+      "noSatelliteDataDesc": "Satellite imagery hasn't been processed for this parcel yet. Go to the Satellite tab to request imagery.",
+      "goToSatellite": "Go to Satellite Tab",
+      "refreshData": "Refresh Data",
+      "irrigationIndex": "Irrigation Index",
+      "basedOnNdmi": "Based on NDMI",
+      "expectedYield": "Expected Yield",
+      "ndvi": "NDVI",
+      "updatedOn": "Updated on",
+      "vegetationHealth": "Vegetation Health",
+      "summary": "Parcel Summary",
+      "area": "Area",
+      "notDefined": "Not defined",
+      "soilType": "Soil Type",
+      "irrigation": "Irrigation",
+      "treeType": "Tree Type",
+      "variety": "Variety",
+      "plantingYear": "Planting Year",
+      "lastUpdate": "Last Update",
+      "description": "Description"
+    },
+    "profitability": {
+      "loading": "Loading profitability..."
+    },
+    "reports": {
+      "loading": "Loading reports..."
+    },
+    "satellite": {
+      "loading": "Loading satellite analysis...",
+      "noBoundary": {
+        "title": "Parcel boundary data is required for satellite analysis.",
+        "description": "Please define the parcel boundaries to access satellite imagery features.",
+        "defineButton": "Define parcel boundaries"
+      }
+    },
+    "weather": {
+      "loadingFallback": "Loading weather data...",
+      "noBoundary": {
+        "title": "Parcel location data is required for weather analysis.",
+        "description": "Please define the parcel boundaries to access weather & climate analyses."
+      }
     }
   },
   "analysis": {
@@ -2478,6 +2959,7 @@
       "notFound": "Worker not found",
       "backToList": "Back to Workers",
       "noPosition": "No position assigned",
+      "settlementsOnlyForMetayage": "Settlements are only available for sharecropping workers",
       "tabs": {
         "info": "Information",
         "payments": "Payments",
@@ -2516,6 +2998,7 @@
       "amount": "Amount",
       "status": "Status",
       "method": "Method",
+      "actions": "Actions",
       "markAsPaid": "Mark as Paid",
       "processSuccess": "Payment marked as paid",
       "processError": "Failed to process payment"
@@ -2546,12 +3029,24 @@
       "description": "Description",
       "status": "Status"
     },
+    "workRecordStatuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
     "settlements": {
       "period": "Period",
       "grossRevenue": "Gross Revenue",
       "charges": "Charges",
       "share": "Worker Share",
       "status": "Status"
+    },
+    "settlementStatuses": {
+      "pending": "Pending",
+      "partial": "Partial",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
     },
     "metayageTypes": {
       "khemmas": "Khemmas (1/5)",
@@ -2563,7 +3058,573 @@
       "gross": "Gross Revenue",
       "net": "Net Revenue (after charges)"
     },
-    "perDay": "per day"
+    "perDay": "per day",
+    "metayage": {
+      "title": "Sharecropping Calculator",
+      "calculator": "Calculator",
+      "noWorkers": "No active sharecropping workers. Please first add a worker of type 'Sharecropping'.",
+      "workerConfig": {
+        "title": "Worker Configuration",
+        "type": "Type",
+        "percentage": "Percentage",
+        "calculationBasis": "Calculation Basis"
+      },
+      "type": {
+        "grossRevenue": "Gross Revenue",
+        "netRevenue": "Net Revenue (after charges)"
+      },
+      "fields": {
+        "worker": "Worker (Khammass/Rebâa)",
+        "selectWorker": "-- Select a worker --",
+        "periodStart": "Period Start",
+        "periodEnd": "Period End",
+        "harvestDate": "Harvest Date",
+        "grossRevenue": "Gross Revenue ({{currency}})",
+        "grossRevenueHint": "Total amount from crop sale",
+        "totalCharges": "Total Charges ({{currency}})",
+        "totalChargesHint": "Inputs, water, harvest costs, etc.",
+        "calculationBasis": "Calculation Basis",
+        "notes": "Notes",
+        "notesPlaceholder": "Details about harvest, special conditions..."
+      },
+      "buttons": {
+        "save": "Save Settlement",
+        "saving": "Saving..."
+      },
+      "results": {
+        "title": "Calculation Result",
+        "grossRevenue": "Gross Revenue",
+        "totalCharges": "Total Charges",
+        "netRevenue": "Net Revenue",
+        "calculationBasis": "Calculation Basis",
+        "workerPercentage": "Worker Percentage",
+        "workerShare": "Worker Share"
+      },
+      "validation": {
+        "fillAllRequired": "Please fill all required fields",
+        "settlementSaved": "Settlement saved successfully",
+        "saveError": "Error saving settlement"
+      }
+    },
+    "configuration": {
+      "title": "Payment Configuration",
+      "sections": {
+        "pieceWork": "Piece-Work Payment",
+        "dailyWage": "Daily Wage",
+        "monthlySalary": "Monthly Salary",
+        "metayage": "Metayage (Revenue Share)"
+      },
+      "descriptions": {
+        "pieceWork": "Worker is paid based on units completed (trees, boxes, kg, etc.)",
+        "dailyWage": "Worker is paid a fixed amount per day worked",
+        "monthlySalary": "Worker receives a fixed monthly salary",
+        "metayage": "Worker receives a percentage of harvest revenue"
+      },
+      "fields": {
+        "workerType": "Worker Type",
+        "paymentFrequency": "Payment Frequency",
+        "defaultWorkUnit": "Default Work Unit *",
+        "ratePerUnit": "Rate per Unit * ({{currency}})",
+        "dailyRate": "Daily Rate * ({{currency}})",
+        "monthlySalary": "Monthly Salary * ({{currency}})",
+        "metayagePercentage": "Revenue Share Percentage * (%)"
+      },
+      "placeholders": {
+        "selectUnit": "Select unit...",
+        "ratePerUnit": "e.g., 5.00",
+        "dailyRate": "e.g., 150.00",
+        "monthlySalary": "e.g., 4500.00",
+        "metayagePercentage": "e.g., 30"
+      },
+      "workerTypes": {
+        "dailyWorker": "Daily Worker",
+        "fixedSalary": "Permanent (Fixed Salary)",
+        "metayage": "Metayage (Revenue Share)"
+      },
+      "paymentFrequencies": {
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "perUnit": "Per Unit (Piece-work)",
+        "harvestShare": "Harvest Share"
+      },
+      "examples": {
+        "label": "Example",
+        "pieceWork": "If rate is {{rate}} {{currency}} per unit and worker completes 100 units, they earn {{total}} {{currency}}.",
+        "metayage": "If harvest revenue is {{revenue}} {{currency}} and share is {{percentage}}%, worker earns {{earnings}} {{currency}}."
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "save": "Save Configuration"
+      },
+      "states": {
+        "loading": "Loading...",
+        "saving": "Saving...",
+        "notFound": "Worker not found"
+      },
+      "messages": {
+        "success": "Payment configuration updated successfully!",
+        "noWorkUnits": "No work units available. Please create work units first."
+      },
+      "errors": {
+        "paymentConfigurationRequired": "Please provide the required payment configuration for the selected type",
+        "updateFailed": "Failed to update payment configuration"
+      }
+    },
+    "pieceWork": {
+      "title": "Record Piece Work",
+      "fields": {
+        "worker": "Worker",
+        "selectWorker": "Select worker...",
+        "pieceWork": "Piece-work",
+        "date": "Date",
+        "task": "Task (Optional)",
+        "parcel": "Parcel (Optional)",
+        "none": "None",
+        "workCompleted": "Work Completed",
+        "unit": "Unit",
+        "selectUnit": "Select unit...",
+        "unitsCompleted": "Units Completed",
+        "ratePerUnit": "Rate per Unit",
+        "totalAmount": "Total Amount",
+        "qualityRating": "Quality Rating (Optional)",
+        "timeTracking": "Time Tracking (Optional)",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "breakDuration": "Break (minutes)",
+        "notes": "Notes",
+        "notesPlaceholder": "Additional notes..."
+      },
+      "buttons": {
+        "record": "Record Piece Work",
+        "save": "Save",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      },
+      "validation": {
+        "workerRequired": "Please select a worker",
+        "dateRequired": "Work date is required",
+        "unitRequired": "Please select a work unit",
+        "unitsPositive": "Units completed must be positive",
+        "rateNonNegative": "Rate per unit must be non-negative",
+        "saveError": "Error saving piece work",
+        "tryAgain": "Please try again"
+      },
+      "list": {
+        "loading": "Loading...",
+        "noRecords": "No piece work records found",
+        "task": "Task"
+      },
+      "form": {
+        "title": {
+          "add": "Add Worker",
+          "edit": "Edit Worker"
+        },
+        "sections": {
+          "personalInfo": "Personal Information",
+          "platformAccess": "Platform Access",
+          "employmentDetails": "Employment Details",
+          "compensation": "Compensation",
+          "paymentSettings": "Payment Settings",
+          "skillsAndCertifications": "Skills & Certifications"
+        },
+        "fields": {
+          "workerType": "Worker Type",
+          "firstName": "First Name",
+          "lastName": "Last Name",
+          "cin": "ID Number (CIN)",
+          "phone": "Phone",
+          "email": "Email",
+          "dateOfBirth": "Date of Birth",
+          "address": "Address",
+          "position": "Position/Role",
+          "farm": "Farm",
+          "hireDate": "Hire Date",
+          "declaredToCNSS": "Declared to CNSS",
+          "cnssNumber": "CNSS Number",
+          "monthlySalary": "Monthly Salary ({{currency}})",
+          "dailyRate": "Daily Rate ({{currency}})",
+          "metayageType": "Sharecropping Type",
+          "metayagePercentage": "Percentage (%)",
+          "calculationBasis": "Calculation Basis",
+          "paymentFrequency": "Payment Frequency",
+          "paymentMethod": "Payment Method",
+          "bankAccount": "Bank Account Number (optional)",
+          "specialties": "Specialties",
+          "certifications": "Certifications",
+          "notes": "Notes"
+        },
+        "placeholders": {
+          "firstName": "Mohamed",
+          "lastName": "Alami",
+          "cin": "AB123456",
+          "phone": "+212 6XX XXX XXX",
+          "email": "example@email.com",
+          "address": "Full address",
+          "position": "Ex: Tractor driver, Team leader...",
+          "cnssNumber": "CNSS123456",
+          "monthlySalary": "3000.00",
+          "dailyRate": "120.00",
+          "metayagePercentage": "20.00",
+          "bankAccount": "IBAN or RIB",
+          "specialties": "Ex: Pruning, Irrigation, Harvesting...",
+          "certifications": "Ex: Phytosanitary, Tractor driving...",
+          "notes": "Additional information..."
+        },
+        "options": {
+          "select": "Select...",
+          "noFarm": "-- No farm --"
+        },
+        "paymentMethods": {
+          "cash": "Cash",
+          "bankTransfer": "Bank Transfer",
+          "check": "Check",
+          "mobileMoney": "Mobile Money"
+        },
+        "platformAccess": {
+          "enabled": "This worker will be able to log in and view their assigned tasks with limited access.",
+          "disabled": "Grant platform access so this worker can view their assigned tasks.",
+          "emailRequired": "An email is required to create a platform account. Please provide the worker's email.",
+          "alreadyHasAccess": "This worker already has platform access (Role: Farm Worker)."
+        },
+        "metayageInfo": {
+          "title": "Information about sharecropping",
+          "khammass": {
+            "title": "Khammass (1/5)",
+            "description": "Worker receives 20% of harvest/revenue"
+          },
+          "rebaa": {
+            "title": "Rebâa (1/4)",
+            "description": "Worker receives 25% of harvest/revenue"
+          },
+          "tholth": {
+            "title": "Tholth (1/3)",
+            "description": "Worker receives 33% of harvest/revenue"
+          }
+        },
+        "paymentFrequencyHint": {
+          "fixedSalary": "Generally monthly for fixed salary employees",
+          "dailyWorker": "Daily or per task for daily workers",
+          "metayage": "Harvest share for sharecropping"
+        },
+        "paymentFrequencyInfo": {
+          "title": "Information about payment frequencies",
+          "monthly": "Monthly",
+          "monthlyDescription": "Fixed payment each month (recommended for fixed salary employees)",
+          "daily": "Daily",
+          "dailyDescription": "Payment based on days actually worked",
+          "dailyWorkerDailyDescription": "Payment based on number of days worked",
+          "perTask": "Per Task",
+          "perTaskDescription": "Payment per task or unit completed (e.g., number of trees pruned, kg harvested)",
+          "harvestShare": "Harvest Share",
+          "harvestShareDescription": "Payment based on percentage of harvest revenue (khammass, rebâa, tholth)"
+        },
+        "bankAccountHint": "Required for bank transfers",
+        "buttons": {
+          "add": "Add",
+          "cancel": "Cancel",
+          "create": "Create",
+          "update": "Update",
+          "saving": "Saving..."
+        },
+        "validation": {
+          "firstNameMin": "First name must contain at least 2 characters",
+          "lastNameMin": "Last name must contain at least 2 characters",
+          "emailInvalid": "Invalid email",
+          "monthlySalaryRequired": "Monthly salary is required for fixed salary employee",
+          "dailyRateRequired": "Daily rate is required for daily worker",
+          "metayagePercentageRequired": "Sharecropping percentage is required",
+          "metayageTypeRequired": "Sharecropping type is required",
+          "noFarmAvailable": "No farms available. Please create a farm first.",
+          "correctFollowingErrors": "Please correct the following errors:",
+          "errorInField": "Error in field"
+        },
+        "errors": {
+          "workerCreatedButAccessFailed": "Worker created but platform access failed",
+          "workerCreatedAccessFailedTryUsers": "Worker created but platform access failed. Try again from the users page."
+        },
+        "success": {
+          "workerCreatedWithAccess": "Worker created with platform access!"
+        }
+      }
+    }
+  },
+  "campaigns": {
+    "pageTitle": "Agricultural Campaigns",
+    "title": "Agricultural Campaigns",
+    "description": "Manage agricultural campaigns (Campagne Agricole) for production planning.",
+    "addNew": "New Campaign",
+    "loading": "Loading campaigns...",
+    "empty": "No campaigns yet. Create your first agricultural campaign to get started.",
+    "noPermission": "You do not have permission to manage campaigns.",
+    "cycles": "Cycles",
+    "area": "Area",
+    "profit": "Net Profit",
+    "status": {
+      "completed": "Completed",
+      "active": "Active",
+      "planned": "Planned",
+      "cancelled": "Cancelled"
+    },
+    "type": {
+      "general": "General",
+      "rainfed": "Rainfed",
+      "irrigated": "Irrigated",
+      "greenhouse": "Greenhouse"
+    },
+    "edit": {
+      "title": "Edit Campaign",
+      "description": "Update campaign details."
+    },
+    "create": {
+      "title": "Create Campaign",
+      "description": "Add a new agricultural campaign for production tracking."
+    },
+    "form": {
+      "code": "Code",
+      "name": "Name",
+      "description": "Description",
+      "descriptionPlaceholder": "Campaign notes...",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "campaignType": "Campaign Type",
+      "primaryFiscalYear": "Primary Fiscal Year",
+      "selectFiscalYear": "Select...",
+      "setCurrent": "Set as current campaign",
+      "update": "Update",
+      "create": "Create"
+    }
+  },
+  "cropCycles": {
+    "pageTitle": "Crop Cycles",
+    "title": "Crop Cycles",
+    "description": "Track production cycles from planting to harvest with full cost attribution.",
+    "addNew": "New Cycle",
+    "metrics": {
+      "totalArea": "Total Area",
+      "totalCosts": "Total Costs",
+      "totalRevenue": "Total Revenue",
+      "netProfit": "Net Profit"
+    },
+    "filter": {
+      "campaign": "All Campaigns",
+      "allCampaigns": "All Campaigns",
+      "status": "All Statuses",
+      "allStatuses": "All Statuses"
+    },
+    "status": {
+      "planned": "Planned",
+      "land_prep": "Land Prep",
+      "growing": "Growing",
+      "harvesting": "Harvesting",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "loading": "Loading crop cycles...",
+    "empty": "No crop cycles found. Create your first cycle to start tracking production.",
+    "complete": "Mark Complete",
+    "area": "Area",
+    "yield": "Yield",
+    "costs": "Costs",
+    "revenue": "Revenue",
+    "profit": "Profit",
+    "edit": {
+      "title": "Edit Crop Cycle",
+      "description": "Update crop cycle details."
+    },
+    "create": {
+      "title": "Create Crop Cycle",
+      "description": "Start tracking a new production cycle."
+    },
+    "form": {
+      "farm": "Farm",
+      "selectFarm": "Select farm...",
+      "parcel": "Parcel",
+      "selectParcel": "Select parcel...",
+      "cropType": "Crop Type",
+      "cropTypePlaceholder": "e.g., Wheat, Olive, Tomato",
+      "variety": "Variety",
+      "varietyPlaceholder": "e.g., Picholine, Roma",
+      "cycleCode": "Cycle Code",
+      "generate": "Generate",
+      "season": "Season",
+      "selectSeason": "Select...",
+      "campaign": "Campaign",
+      "selectCampaign": "Select...",
+      "fiscalYear": "Fiscal Year",
+      "selectFiscalYear": "Select...",
+      "plantingDate": "Planting Date",
+      "harvestStart": "Harvest Start",
+      "harvestEnd": "Harvest End",
+      "area": "Area (ha)",
+      "yieldPerHa": "Expected Yield/ha",
+      "yieldUnit": "Unit",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional notes...",
+      "update": "Update",
+      "create": "Create"
+    }
+  },
+  "production": {
+    "cropCycles": {
+      "pageTitle": "Crop Cycles"
+    },
+    "harvests": {
+      "title": "Harvests",
+      "loading": "Loading harvests...",
+      "deleteConfirm": "Are you sure you want to delete this harvest?",
+      "deleteError": "Error deleting harvest",
+      "searchPlaceholder": "Search by crop, parcel, farm...",
+      "filters": "Filters",
+      "export": "Export",
+      "newHarvest": "New Harvest",
+      "harvestsCount": "{{count}} harvest recorded",
+      "harvestsCount_plural": "{{count}} harvests recorded",
+      "filterLabels": {
+        "allStatuses": "All statuses"
+      },
+      "statuses": {
+        "stored": "Stored",
+        "in_delivery": "In delivery",
+        "delivered": "Delivered",
+        "sold": "Sold",
+        "spoiled": "Spoiled"
+      },
+      "emptyState": {
+        "modifySearch": "Try modifying your search",
+        "startFirst": "Start by recording your first harvest"
+      },
+      "noResults": "No results found",
+      "noHarvests": "No harvests recorded",
+      "csvHeaders": {
+        "date": "Date",
+        "parcel": "Parcel",
+        "crop": "Crop",
+        "quantity": "Quantity",
+        "unit": "Unit",
+        "quality": "Quality",
+        "destination": "Destination",
+        "status": "Status"
+      }
+    },
+    "intelligence": {
+      "pageTitle": "Production Intelligence",
+      "subtitle": "Yield tracking, forecasts, and performance benchmarks",
+      "loadingOrganization": "Loading organization..."
+    },
+    "qualityControl": {
+      "pageTitle": "Quality Control",
+      "subtitle": "Manage quality inspections and control processes",
+      "breadcrumbLabel": "Quality Control",
+      "title": "Quality Control",
+      "moduleTitle": "Quality Control Module",
+      "moduleDescription": "Manage quality inspections and control processes",
+      "underDevelopment": "The quality control module is currently under development.",
+      "loadingOrganization": "Loading organization...",
+      "plannedFeaturesTitle": "Planned Features:",
+      "featureChecklists": "Quality inspection checklists for reception batches",
+      "featureDefectDetection": "Visual defect detection and recording",
+      "featureGrades": "Grade assignment (Extra, A, B, C, etc.)",
+      "featureMetrics": "Quality metrics tracking over time",
+      "featureNonConformity": "Non-conformity reporting",
+      "featureWorkflow": "Batch acceptance/rejection workflow",
+      "featureCertificates": "Quality certificates generation",
+      "noteLabel": "Note",
+      "noteMessage": "Quality data can already be recorded in the Reception Batch form. This dedicated page will provide advanced quality control workflows and analytics.",
+      "plannedFeatures": {
+        "title": "Planned Features:",
+        "inspectionChecklists": "Quality inspection checklists for reception batches",
+        "defectDetection": "Visual defect detection and recording",
+        "gradeAssignment": "Grade assignment (Extra, A, B, C, etc.)",
+        "metricsTracking": "Quality metrics tracking over time",
+        "nonConformityReporting": "Non-conformity reporting",
+        "acceptanceWorkflow": "Batch acceptance/rejection workflow",
+        "certificatesGeneration": "Quality certificates generation"
+      },
+      "note": {
+        "label": "Note",
+        "message": "Quality data can already be recorded in the Reception Batch form. This dedicated page will provide advanced quality control workflows and analytics."
+      }
+    },
+    "satelliteAnalysis": {
+      "title": "Satellite Analysis",
+      "subtitle": "Analyze vegetation health and crop conditions using satellite imagery",
+      "proFeatureTitle": "Satellite Analysis - Professional Feature",
+      "proFeatureDescription": "Unlock powerful satellite imagery analysis to monitor crop health, vegetation indices (NDVI, NDWI), and get data-driven insights for precision agriculture.",
+      "featureRealtime": "Real-time satellite imagery analysis",
+      "featureVegetation": "Vegetation health monitoring (NDVI, NDWI, EVI)",
+      "featureHistorical": "Historical trends and time-series analysis",
+      "upgradeButton": "Upgrade to Professional",
+      "noFarmTitle": "No Farm Selected",
+      "noFarmMessage": "Please select a farm to access satellite analysis features.",
+      "currentFarmLabel": "Current Farm",
+      "parcelsAvailable": "{{count}} parcel available for analysis",
+      "parcelsAvailable_plural": "{{count}} parcels available for analysis",
+      "selectParcelTitle": "Select Parcel for Analysis",
+      "loadingParcels": "Loading parcels...",
+      "noParcelsTitle": "No parcels found for this farm.",
+      "noParcelsMessage": "Add parcels with defined boundaries to enable satellite analysis.",
+      "areaLabel": "Area",
+      "soilLabel": "Soil",
+      "irrigationLabel": "Irrigation",
+      "hectares": "hectares",
+      "boundaryDefined": "Boundary defined",
+      "noBoundary": "No boundary data",
+      "vegetationIndicesTitle": "Vegetation Indices Analysis",
+      "loadingAnalysisTools": "Loading analysis tools...",
+      "historicalTrendsTitle": "Historical Trends",
+      "loadingHistoricalData": "Loading historical data...",
+      "analysisSummaryTitle": "Analysis Summary",
+      "latestResultsTitle": "Latest Results",
+      "parcelInfoTitle": "Parcel Information",
+      "nameLabel": "Name",
+      "soilTypeLabel": "Soil Type",
+      "boundaryRequiredTitle": "Boundary Data Required",
+      "boundaryRequiredMessage": "The selected parcel \"{{parcelName}}\" doesn't have boundary coordinates defined. Boundary data is required for satellite analysis."
+    }
+  },
+  "workforce": {
+    "tasks": {
+      "title": "Task Management",
+      "subtitle": "Plan and track agricultural tasks",
+      "breadcrumb": "Tasks",
+      "loading": "Loading...",
+      "list": "List",
+      "calendar": "Calendar",
+      "navigationLabel": "Tasks navigation",
+      "calendarPage": {
+        "loading": "Loading calendar...",
+        "title": "Task Calendar",
+        "noTasks": "No tasks scheduled",
+        "view": "View"
+      },
+      "listPage": {
+        "loading": "Loading tasks...",
+        "title": "Tasks",
+        "noTasks": "No tasks found"
+      }
+    },
+    "employees": {
+      "loadingOrganization": "Loading organization..."
+    },
+    "pieceWork": {
+      "selectFarm": "Please select a farm to view piece-work records",
+      "title": "Piece-Work Records",
+      "subtitle": "Track work completed by units (trees, boxes, kg, etc.)",
+      "filtersLabel": "Filters:",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "paymentStatus": "Payment Status",
+      "statusAll": "All Statuses",
+      "statusPending": "Pending",
+      "statusApproved": "Approved",
+      "statusPaid": "Paid",
+      "statusDisputed": "Disputed",
+      "thisMonth": "This Month",
+      "statsTotalRecords": "Total Records",
+      "statsPending": "Pending",
+      "statsTotalAmount": "Total Amount",
+      "statsWorkers": "Workers"
+    }
   },
   "tasks": {
     "title": "Task Management",
@@ -3315,6 +4376,93 @@
     "emptyState": {
       "modifySearch": "Try modifying your search",
       "startFirst": "Start by recording your first harvest"
+    },
+    "form": {
+      "title": {
+        "new": "New Harvest",
+        "edit": "Edit Harvest",
+        "subtitle": "Record your harvest details"
+      },
+      "sections": {
+        "location": "Location",
+        "harvestDetails": "Harvest Details",
+        "quality": "Quality",
+        "storageAndDestination": "Storage & Destination"
+      },
+      "fields": {
+        "farm": "Farm",
+        "parcel": "Parcel",
+        "harvestDate": "Harvest Date",
+        "quantity": "Quantity Harvested",
+        "unit": "Unit",
+        "qualityGrade": "Quality Grade",
+        "qualityScore": "Quality Score (1-10)",
+        "warehouse": "Warehouse / Storage Location",
+        "intendedFor": "Intended Destination",
+        "storageLocation": "Specific Location (optional)",
+        "status": "Status",
+        "expectedPricePerUnit": "Estimated Unit Price (MAD)",
+        "notes": "Notes / Observations"
+      },
+      "units": {
+        "kg": "Kilograms (kg)",
+        "tons": "Tons",
+        "units": "Units",
+        "boxes": "Boxes",
+        "crates": "Crates",
+        "liters": "Liters"
+      },
+      "qualityGrades": {
+        "extra": "Extra (Premium)",
+        "a": "Category A",
+        "first": "First Choice",
+        "b": "Category B",
+        "second": "Second Choice",
+        "c": "Category C",
+        "third": "Third Choice"
+      },
+      "statuses": {
+        "stored": "Stored",
+        "inDelivery": "In Delivery",
+        "delivered": "Delivered",
+        "sold": "Sold",
+        "spoiled": "Spoiled"
+      },
+      "intendedFor": {
+        "market": "Local Market",
+        "storage": "Storage",
+        "processing": "Processing",
+        "export": "Export",
+        "directClient": "Direct Client"
+      },
+      "placeholders": {
+        "selectFarm": "Select a farm",
+        "selectParcel": "Select a parcel",
+        "selectFarmFirst": "Select a farm first",
+        "quantity": "0",
+        "unspecified": "Unspecified",
+        "qualityScore": "Ex: 8",
+        "selectWarehouse": "Select a warehouse",
+        "storageLocation": "Ex: Aisle 3, Shelf B2, Cold Room 2",
+        "price": "Ex: 15.00",
+        "notes": "Add observations about the harvest, weather conditions, problems encountered..."
+      },
+      "messages": {
+        "cropNotSpecified": "Crop not specified",
+        "variety": "Variety",
+        "temperatureControlled": "Temperature Controlled",
+        "humidityControlled": "Humidity Controlled",
+        "capacity": "Capacity",
+        "estimatedRevenue": "Estimated Revenue"
+      },
+      "validation": {
+        "saveError": "Error saving"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "save": "Save Harvest",
+        "update": "Update"
+      }
     }
   },
   "utilities": {
@@ -3324,9 +4472,104 @@
     "loadingDashboard": "Loading dashboard..."
   },
   "receptionBatches": {
-    "title": "Reception Batch Management",
-    "subtitle": "Traceability of reception and quality control of harvests",
-    "loading": "Loading organization..."
+    "title": "Reception Batches",
+    "subtitle": "Track harvest reception and quality control",
+    "loading": "Loading reception batches...",
+    "list": {
+      "title": "Reception Batches",
+      "subtitle": "{{count}} batches found",
+      "subtitleEmpty": "Track harvest reception and quality control",
+      "create": "New Reception Batch",
+      "search": "Search by batch code, producer, or notes...",
+      "filters": {
+        "allStatuses": "All Statuses",
+        "allDecisions": "All Decisions",
+        "status": {
+          "received": "Received",
+          "qualityChecked": "Quality Checked",
+          "decisionMade": "Decision Made",
+          "processed": "Processed",
+          "cancelled": "Cancelled"
+        },
+        "decision": {
+          "pending": "Pending",
+          "directSale": "Direct Sale",
+          "storage": "Storage",
+          "transformation": "Transformation",
+          "rejected": "Rejected"
+        }
+      },
+      "table": {
+        "batchCode": "Batch Code",
+        "receptionDate": "Reception Date",
+        "parcel": "Parcel",
+        "weight": "Weight",
+        "quality": "Quality",
+        "decision": "Decision",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "stats": {
+        "totalBatches": "Total Batches",
+        "allTime": "All time",
+        "totalWeight": "Total Weight",
+        "received": "Received",
+        "avgQuality": "Avg Quality",
+        "outOf": "Out of {{max}}",
+        "pendingDecisions": "Pending Decisions",
+        "awaitingDecision": "Awaiting decision"
+      },
+      "empty": {
+        "title": "No reception batches found",
+        "searchTitle": "No matching reception batches found",
+        "description": "Create your first reception batch to track harvest quality control",
+        "searchDescription": "Try adjusting your search criteria"
+      },
+      "mobile": {
+        "empty": "No reception batches found",
+        "searchEmpty": "No matching batches found"
+      },
+      "actions": {
+        "viewDetails": "View Details",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancelBatch": "Cancel Batch"
+      },
+      "decisions": {
+        "directSale": "Direct Sale",
+        "pending": "Pending",
+        "storage": "Storage",
+        "transformation": "Transformation",
+        "rejected": "Rejected"
+      },
+      "statuses": {
+        "received": "Received",
+        "qualityChecked": "Quality Checked",
+        "decisionMade": "Decision Made",
+        "processed": "Processed",
+        "cancelled": "Cancelled"
+      },
+      "quality": {
+        "notGraded": "Not graded",
+        "outOf": "/{{max}}"
+      },
+      "toasts": {
+        "cancelSuccess": "Reception batch cancelled",
+        "deleteSuccess": "Reception batch deleted",
+        "cancelFailed": "Failed to cancel batch: {{message}}",
+        "deleteFailed": "Failed to delete batch: {{message}}"
+      },
+      "confirm": {
+        "cancelTitle": "Cancel Reception Batch",
+        "cancelDescription": "This will mark the batch as cancelled. This action cannot be undone.",
+        "deleteTitle": "Delete Reception Batch",
+        "deleteDescription": "This will permanently delete the batch. Only batches in \"Received\" status can be deleted.",
+        "confirmButton": "{{action}}",
+        "cancelButton": "Cancel",
+        "cancelAction": "Cancel Batch",
+        "deleteAction": "Delete Batch"
+      }
+    }
   },
   "analyses": {
     "title": "Soil, Plant and Water Analyses",
@@ -3604,6 +4847,18 @@
       "grandTotal": "Grand Total",
       "outstanding": "Outstanding",
       "remarks": "Remarks"
+    },
+    "chat": {
+      "title": "AI Assistant",
+      "subtitle": "Ask questions about your farm, workers, accounting, and more",
+      "placeholder": "Ask about your farm, workers, accounting, inventory...",
+      "welcome": "Hello! I'm your AgriTech assistant. How can I help you today?",
+      "listening": "Listening...",
+      "voiceNotSupported": "Voice input is not supported in this browser",
+      "clear": "Clear",
+      "send": "Send",
+      "error": "Error sending message",
+      "retry": "Retry"
     }
   }
 }

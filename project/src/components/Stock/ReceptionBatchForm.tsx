@@ -38,6 +38,7 @@ import {
 import {
   useCreateReceptionBatch,
   useUpdateReceptionBatch,
+  useUpdateQualityControl,
 } from '@/hooks/useReceptionBatches';
 import { useParcelsWithDetails } from '@/hooks/useParcelsWithDetails';
 import { useAssignableUsers } from '@/hooks/useAssignableUsers';
@@ -103,6 +104,7 @@ export default function ReceptionBatchForm({
   const { currentOrganization, user } = useAuth();
   const createBatch = useCreateReceptionBatch();
   const updateBatch = useUpdateReceptionBatch();
+  const updateQualityControl = useUpdateQualityControl();
   const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
   const { data: parcels = [], isLoading: parcelsLoading } = useParcelsWithDetails();
   const { data: assignableUsers = [] } = useAssignableUsers(currentOrganization?.id || null);
@@ -270,7 +272,8 @@ export default function ReceptionBatchForm({
     }
 
     try {
-      const input: CreateReceptionBatchDto = {
+      // Step 1: Create/update reception batch with basic data only
+      const basicInput: CreateReceptionBatchDto = {
         warehouse_id: data.warehouse_id,
         harvest_id: data.harvest_id,
         parcel_id: data.parcel_id,
@@ -282,25 +285,53 @@ export default function ReceptionBatchForm({
         weight_unit: data.weight_unit,
         quantity: data.quantity,
         quantity_unit: data.quantity_unit,
-        quality_grade: data.quality_grade,
-        quality_score: data.quality_score,
-        quality_notes: data.quality_notes,
-        humidity_percentage: data.humidity_percentage,
-        maturity_level: data.maturity_level,
-        temperature: data.temperature,
-        moisture_content: data.moisture_content,
         received_by: data.received_by,
         producer_name: data.producer_name,
         supplier_id: data.supplier_id,
       };
 
+      let batchId: string;
+
       if (isEditMode && batchToEdit?.id) {
-        await updateBatch.mutateAsync({ batchId: batchToEdit.id, data: input });
-        toast.success('Lot de réception mis à jour avec succès');
+        await updateBatch.mutateAsync({ batchId: batchToEdit.id, data: basicInput });
+        batchId = batchToEdit.id;
       } else {
-        await createBatch.mutateAsync(input);
-        toast.success('Lot de réception créé avec succès');
+        const result = await createBatch.mutateAsync(basicInput);
+        batchId = result.id;
       }
+
+      // Step 2: If quality control data is provided, update it separately
+      const hasQualityData =
+        data.quality_grade ||
+        data.quality_score ||
+        data.quality_notes ||
+        data.humidity_percentage !== undefined ||
+        data.maturity_level ||
+        data.temperature !== undefined ||
+        data.moisture_content !== undefined;
+
+      if (hasQualityData) {
+        try {
+          await updateQualityControl.mutateAsync({
+            batchId,
+            data: {
+              quality_grade: data.quality_grade || 'A',
+              quality_score: data.quality_score || 5,
+              quality_notes: data.quality_notes,
+              humidity_percentage: data.humidity_percentage,
+              maturity_level: data.maturity_level,
+              temperature: data.temperature,
+              moisture_content: data.moisture_content,
+            },
+          });
+        } catch (qcError: any) {
+          // Log quality control error but don't fail the entire operation
+          console.warn('Quality control update failed:', qcError);
+          toast.warning('Lot créé mais contrôle qualité non enregistré');
+        }
+      }
+
+      toast.success(isEditMode ? 'Lot de réception mis à jour avec succès' : 'Lot de réception créé avec succès');
       onOpenChange(false);
       form.reset();
     } catch (error: any) {

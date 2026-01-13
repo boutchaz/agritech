@@ -81,12 +81,12 @@ function WorkerDetailPage() {
         payment_id: paymentId,
         payment_method: 'cash',
       });
-      toast.success(t('workers.payments.processSuccess', 'Payment marked as paid'));
+      toast.success(t('workers.payments.processSuccess'));
       queryClient.invalidateQueries({ queryKey: ['worker-payments', workerId] });
       queryClient.invalidateQueries({ queryKey: ['worker-stats', currentOrganization.id, workerId] });
     } catch (error) {
       console.error('Failed to process payment:', error);
-      toast.error(t('workers.payments.processError', 'Failed to process payment'));
+      toast.error(t('workers.payments.processError'));
     } finally {
       setProcessingPaymentId(null);
     }
@@ -438,7 +438,7 @@ function WorkerDetailPage() {
                           {t('workers.payments.method')}
                         </th>
                         <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                          Actions
+                          {t('workers.payments.actions')}
                         </th>
                       </tr>
                     </thead>
@@ -480,7 +480,7 @@ function WorkerDetailPage() {
                                 ) : (
                                   <>
                                     <Check className="h-4 w-4 mr-1" />
-                                    {t('workers.payments.markAsPaid', 'Mark as Paid')}
+                                    {t('workers.payments.markAsPaid')}
                                   </>
                                 )}
                               </Button>
@@ -544,7 +544,7 @@ function WorkerDetailPage() {
                           </td>
                           <td className="py-3 px-4">
                             <Badge className={getPaymentStatusColor(record.status)}>
-                              {record.status}
+                              {t(`workers.workRecordStatuses.${record.status}`) || record.status}
                             </Badge>
                           </td>
                         </tr>
@@ -575,7 +575,7 @@ function WorkerDetailPage() {
                     <p>{t('workers.detail.noSettlements')}</p>
                     {worker.worker_type !== 'metayage' && (
                       <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">
-                        {t('workers.detail.settlementsOnlyForMetayage', 'Les règlements sont uniquement disponibles pour les travailleurs en métayage')}
+                        {t('workers.detail.settlementsOnlyForMetayage')}
                       </p>
                     )}
                   </div>
@@ -620,7 +620,7 @@ function WorkerDetailPage() {
                             </td>
                             <td className="py-3 px-4">
                               <Badge className={getPaymentStatusColor(settlement.payment_status)}>
-                                {settlement.payment_status}
+                                {t(`workers.settlementStatuses.${settlement.payment_status}`) || settlement.payment_status}
                               </Badge>
                             </td>
                           </tr>

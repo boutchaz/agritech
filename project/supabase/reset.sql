@@ -2,153 +2,289 @@
 -- DATABASE RESET SCRIPT
 -- =====================================================
 -- This script completely resets the database by:
--- 1. Dropping all tables, views, functions, types, sequences
--- 2. Clearing auth.users (optional - commented out for safety)
+-- 1. Dropping all tables, views, functions, types, sequences, triggers
+-- 2. Clearing storage buckets
+-- 3. Resetting sequences
+-- 4. Clearing auth.users (optional - commented out for safety)
 -- =====================================================
 -- WARNING: This will DELETE ALL DATA permanently!
 -- =====================================================
 
--- Disable triggers temporarily
+BEGIN;
+
+-- Disable triggers temporarily to avoid cascade issues
 SET session_replication_role = 'replica';
 
 -- =====================================================
--- 1. DROP ALL TABLES (excluding PostGIS system tables)
+-- 1. DROP ALL TABLES (excluding system tables)
 -- =====================================================
 DO $$
 DECLARE
     r RECORD;
-    postgis_tables TEXT[] := ARRAY[
+    system_tables TEXT[] := ARRAY[
         'spatial_ref_sys',
         'geography_columns',
         'geometry_columns',
         'raster_columns',
-        'raster_overviews'
+        'raster_overviews',
+        'schema_migrations'
     ];
 BEGIN
-    -- Drop all tables in public schema, excluding PostGIS system tables
+    RAISE NOTICE '=== Dropping all tables ===';
+
+    -- Drop all tables in public schema, excluding system tables
     FOR r IN (
-        SELECT tablename 
-        FROM pg_tables 
+        SELECT tablename
+        FROM pg_tables
         WHERE schemaname = 'public'
-        AND tablename != ALL(postgis_tables)
+        AND tablename != ALL(system_tables)
+        ORDER BY tablename
     ) LOOP
-        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
-        RAISE NOTICE 'Dropped table: %', r.tablename;
+        BEGIN
+            EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+            RAISE NOTICE 'Dropped table: %', r.tablename;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not drop table % - %', r.tablename, SQLERRM;
+        END;
     END LOOP;
+
+    RAISE NOTICE 'Total tables dropped: %', (SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public');
 END $$;
 
 -- =====================================================
--- 2. DROP ALL VIEWS (excluding PostGIS system views)
+-- 2. DROP ALL VIEWS (excluding system views)
 -- =====================================================
 DO $$
 DECLARE
     r RECORD;
-    postgis_views TEXT[] := ARRAY[
+    system_views TEXT[] := ARRAY[
         'geography_columns',
         'geometry_columns',
         'raster_columns',
         'raster_overviews'
     ];
 BEGIN
+    RAISE NOTICE '=== Dropping all views ===';
+
     FOR r IN (
-        SELECT viewname 
-        FROM pg_views 
+        SELECT viewname
+        FROM pg_views
         WHERE schemaname = 'public'
-        AND viewname != ALL(postgis_views)
+        AND viewname != ALL(system_views)
+        ORDER BY viewname
     ) LOOP
         BEGIN
             EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.viewname) || ' CASCADE';
             RAISE NOTICE 'Dropped view: %', r.viewname;
         EXCEPTION WHEN OTHERS THEN
-            -- Skip views that can't be dropped (e.g., PostGIS system views)
-            RAISE NOTICE 'Skipped view: % (may be PostGIS system view)', r.viewname;
+            RAISE NOTICE 'Warning: Could not drop view % - %', r.viewname, SQLERRM;
         END;
     END LOOP;
 END $$;
 
 -- =====================================================
--- 3. DROP ALL FUNCTIONS (excluding PostGIS functions)
+-- 3. DROP ALL MATERIALIZED VIEWS
 -- =====================================================
 DO $$
 DECLARE
     r RECORD;
 BEGIN
+    RAISE NOTICE '=== Dropping all materialized views ===';
+
     FOR r IN (
-        SELECT proname, oidvectortypes(proargtypes) as argtypes
-        FROM pg_proc
-        INNER JOIN pg_namespace ns ON (pg_proc.pronamespace = ns.oid)
-        WHERE ns.nspname = 'public'
-        -- Exclude PostGIS functions (they're in the postgis schema but may appear here)
-        AND proname NOT LIKE 'st_%'
-        AND proname NOT LIKE 'postgis_%'
-        AND proname NOT LIKE 'addgeometrycolumn%'
-        AND proname NOT LIKE 'dropgeometrycolumn%'
+        SELECT matviewname
+        FROM pg_matviews
+        WHERE schemaname = 'public'
+        ORDER BY matviewname
     ) LOOP
         BEGIN
-            EXECUTE 'DROP FUNCTION IF EXISTS public.' || quote_ident(r.proname) || '(' || r.argtypes || ') CASCADE';
-            RAISE NOTICE 'Dropped function: %', r.proname;
+            EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.' || quote_ident(r.matviewname) || ' CASCADE';
+            RAISE NOTICE 'Dropped materialized view: %', r.matviewname;
         EXCEPTION WHEN OTHERS THEN
-            -- Skip functions that can't be dropped (e.g., PostGIS functions)
-            RAISE NOTICE 'Skipped function: % (may be PostGIS system function)', r.proname;
+            RAISE NOTICE 'Warning: Could not drop materialized view % - %', r.matviewname, SQLERRM;
         END;
     END LOOP;
 END $$;
 
 -- =====================================================
--- 4. DROP ALL TYPES/ENUMS
+-- 4. DROP ALL FUNCTIONS (excluding system functions)
 -- =====================================================
 DO $$
 DECLARE
     r RECORD;
 BEGIN
+    RAISE NOTICE '=== Dropping all functions ===';
+
     FOR r IN (
-        SELECT typname 
-        FROM pg_type 
-        WHERE typnamespace = 'public'::regnamespace 
-        AND typtype = 'e'
+        SELECT
+            p.proname as func_name,
+            pg_get_function_arguments(p.oid) as args,
+            ns.nspname as schema_name
+        FROM pg_proc p
+        INNER JOIN pg_namespace ns ON (p.pronamespace = ns.oid)
+        WHERE ns.nspname IN ('public')
+        -- Exclude system functions
+        AND p.prokind = 'f'  -- normal functions only (not aggregates, windows, etc)
+        AND p.proname NOT LIKE 'pg_%'
+        AND p.proname NOT LIKE 'st_%'  -- PostGIS functions start with st_
+        AND p.proname NOT LIKE 'postgis_%'
+        ORDER BY p.proname
     ) LOOP
-        EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
-        RAISE NOTICE 'Dropped type: %', r.typname;
+        BEGIN
+            EXECUTE 'DROP FUNCTION IF EXISTS ' || r.schema_name || '.' || quote_ident(r.func_name) || '(' || r.args || ') CASCADE';
+            RAISE NOTICE 'Dropped function: %', r.func_name;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not drop function % - %', r.func_name, SQLERRM;
+        END;
     END LOOP;
 END $$;
 
 -- =====================================================
--- 5. DROP ALL SEQUENCES
+-- 5. DROP ALL TRIGGERS
 -- =====================================================
 DO $$
 DECLARE
     r RECORD;
 BEGIN
-    FOR r IN (SELECT sequencename FROM pg_sequences WHERE schemaname = 'public') LOOP
-        EXECUTE 'DROP SEQUENCE IF EXISTS public.' || quote_ident(r.sequencename) || ' CASCADE';
-        RAISE NOTICE 'Dropped sequence: %', r.sequencename;
+    RAISE NOTICE '=== Dropping all triggers ===';
+
+    FOR r IN (
+        SELECT
+            trigger_name,
+            event_object_table as table_name
+        FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+        ORDER BY trigger_name
+    ) LOOP
+        BEGIN
+            EXECUTE 'DROP TRIGGER IF EXISTS ' || quote_ident(r.trigger_name) || ' ON public.' || quote_ident(r.table_name) || ' CASCADE';
+            RAISE NOTICE 'Dropped trigger: % on %', r.trigger_name, r.table_name;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not drop trigger % - %', r.trigger_name, SQLERRM;
+        END;
     END LOOP;
 END $$;
 
 -- =====================================================
--- 6. CLEAR AUTH USERS (OPTIONAL - DANGEROUS!)
+-- 6. DROP ALL TYPES/ENUMS (excluding system types)
+-- =====================================================
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    RAISE NOTICE '=== Dropping all custom types ===';
+
+    FOR r IN (
+        SELECT typname
+        FROM pg_type
+        WHERE typnamespace = 'public'::regnamespace
+        AND typtype = 'e'  -- enums only
+        ORDER BY typname
+    ) LOOP
+        BEGIN
+            EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
+            RAISE NOTICE 'Dropped type: %', r.typname;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not drop type % - %', r.typname, SQLERRM;
+        END;
+    END LOOP;
+END $$;
+
+-- =====================================================
+-- 7. DROP ALL SEQUENCES
+-- =====================================================
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    RAISE NOTICE '=== Dropping all sequences ===';
+
+    FOR r IN (
+        SELECT sequencename
+        FROM pg_sequences
+        WHERE schemaname = 'public'
+        ORDER BY sequencename
+    ) LOOP
+        BEGIN
+            EXECUTE 'DROP SEQUENCE IF EXISTS public.' || quote_ident(r.sequencename) || ' CASCADE';
+            RAISE NOTICE 'Dropped sequence: %', r.sequencename;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not drop sequence % - %', r.sequencename, SQLERRM;
+        END;
+    END LOOP;
+END $$;
+
+-- =====================================================
+-- 8. DROP SUPABASE-SPECIFIC OBJECTS
+-- =====================================================
+DO $$
+BEGIN
+    RAISE NOTICE '=== Dropping Supabase-specific objects ===';
+
+    -- Drop storage buckets (if any exist in public schema)
+    -- Note: These are typically in the storage schema, but checking just in case
+    BEGIN
+        DROP TABLE IF EXISTS public.storage.buckets CASCADE;
+        DROP TABLE IF EXISTS public.storage.objects CASCADE;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'No storage tables found in public schema';
+    END;
+END $$;
+
+-- =====================================================
+-- 9. VERIFY CLEANUP
+-- =====================================================
+DO $$
+DECLARE
+    table_count INTEGER;
+    view_count INTEGER;
+    func_count INTEGER;
+    type_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO table_count FROM pg_tables WHERE schemaname = 'public';
+    SELECT COUNT(*) INTO view_count FROM pg_views WHERE schemaname = 'public';
+    SELECT COUNT(*) INTO func_count FROM pg_proc p JOIN pg_namespace ns ON p.pronamespace = ns.oid WHERE ns.nspname = 'public' AND p.prokind = 'f';
+    SELECT COUNT(*) INTO type_count FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e';
+
+    RAISE NOTICE '';
+    RAISE NOTICE '=== Cleanup Verification ===';
+    RAISE NOTICE 'Remaining tables: % (should be 0 or only system tables)', table_count;
+    RAISE NOTICE 'Remaining views: % (should be 0)', view_count;
+    RAISE NOTICE 'Remaining functions: % (should be 0)', func_count;
+    RAISE NOTICE 'Remaining types: % (should be 0)', type_count;
+END $$;
+
+-- =====================================================
+-- 10. CLEAR AUTH USERS (OPTIONAL - DANGEROUS!)
 -- =====================================================
 -- Uncomment the line below ONLY if you want to delete all user accounts
+-- WARNING: This cannot be undone!
 -- TRUNCATE auth.users CASCADE;
+-- TRUNCATE auth.identities CASCADE;
 
 -- Re-enable triggers
 SET session_replication_role = 'origin';
 
+COMMIT;
+
 -- =====================================================
--- 7. VACUUM TO CLEAN UP (OPTIONAL - Run separately)
+-- 11. VACUUM TO CLEAN UP (OPTIONAL)
 -- =====================================================
 -- NOTE: VACUUM cannot run inside a transaction block
 -- If you want to run VACUUM, execute it separately after this script:
--- VACUUM FULL;
+-- VACUUM FULL ANALYZE;
 
 -- =====================================================
 -- RESET COMPLETE
 -- =====================================================
 -- Next steps:
 -- 1. Run the main schema: psql -f migrations/00000000000000_schema.sql
--- 2. Run additional migrations: psql -f migrations/202*.sql
--- 3. Run seed data: psql -f seed/01_roles.sql, etc.
+-- 2. Run any additional seed data: psql -f seed/*.sql
+-- 3. Verify the schema is correct
 -- =====================================================
 
-SELECT 'Database reset complete! All tables, functions, types, and sequences have been dropped.' as result;
-
+SELECT '================================================================================' as separator;
+SELECT 'Database reset complete!' as status;
+SELECT 'All tables, functions, types, sequences, triggers, and views have been dropped.' as details;
+SELECT 'Next: Run migrations/00000000000000_schema.sql to recreate the schema.' as next_step;
+SELECT '================================================================================' as separator;

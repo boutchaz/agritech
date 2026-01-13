@@ -67,6 +67,7 @@ import type {
 } from '@/types/reception';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface ReceptionBatchListProps {
   onCreateClick: () => void;
@@ -105,9 +106,27 @@ export default function ReceptionBatchList({
   onViewClick,
   onEditClick,
 }: ReceptionBatchListProps) {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [filterStatus, setFilterStatus] = useState<ReceptionBatchStatus | 'all'>('all');
   const [filterDecision, setFilterDecision] = useState<ReceptionDecision | 'all'>('all');
+
+  // Helper functions to get translated labels
+  const getDecisionLabel = (decision: ReceptionDecision) => {
+    return t(`receptionBatches.list.decisions.${decision === 'direct_sale' ? 'directSale' : decision}`);
+  };
+
+  const getStatusLabel = (status: ReceptionBatchStatus) => {
+    const statusMap: Record<ReceptionBatchStatus, string> = {
+      received: 'received',
+      quality_checked: 'qualityChecked',
+      decision_made: 'decisionMade',
+      processed: 'processed',
+      cancelled: 'cancelled'
+    };
+    return t(`receptionBatches.list.statuses.${statusMap[status]}`);
+  };
+
   const [confirmAction, setConfirmAction] = useState<{
     batch: ReceptionBatch;
     action: 'cancel' | 'delete';
@@ -137,20 +156,20 @@ export default function ReceptionBatchList({
   const handleCancel = async (batchId: string) => {
     try {
       await cancelBatch.mutateAsync(batchId);
-      toast.success('Reception batch cancelled');
+      toast.success(t('receptionBatches.list.toasts.cancelSuccess'));
       setConfirmAction(null);
     } catch (error: any) {
-      toast.error(`Failed to cancel batch: ${error.message}`);
+      toast.error(t('receptionBatches.list.toasts.cancelFailed', { message: error.message }));
     }
   };
 
   const handleDelete = async (batchId: string) => {
     try {
       await deleteBatch.mutateAsync(batchId);
-      toast.success('Reception batch deleted');
+      toast.success(t('receptionBatches.list.toasts.deleteSuccess'));
       setConfirmAction(null);
     } catch (error: any) {
-      toast.error(`Failed to delete batch: ${error.message}`);
+      toast.error(t('receptionBatches.list.toasts.deleteFailed', { message: error.message }));
     }
   };
 
@@ -158,7 +177,7 @@ export default function ReceptionBatchList({
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">Loading reception batches...</span>
+        <span className="ml-3 text-gray-600">{t('receptionBatches.loading')}</span>
       </div>
     );
   }
@@ -167,14 +186,16 @@ export default function ReceptionBatchList({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Reception Batches</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{t('receptionBatches.list.title')}</h2>
           <p className="text-gray-600">
-            {totalItems > 0 ? `${totalItems} batches found` : 'Track harvest reception and quality control'}
+            {totalItems > 0
+              ? t('receptionBatches.list.subtitle', { count: totalItems })
+              : t('receptionBatches.list.subtitleEmpty')}
           </p>
         </div>
         <Button onClick={onCreateClick} className="w-full sm:w-auto justify-center">
           <Plus className="w-4 h-4 mr-2" />
-          New Reception Batch
+          {t('receptionBatches.list.create')}
         </Button>
       </div>
 
@@ -184,20 +205,20 @@ export default function ReceptionBatchList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Total Batches
+                {t('receptionBatches.list.stats.totalBatches')}
               </CardTitle>
               <Package className="w-4 h-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total_batches}</div>
-              <p className="text-xs text-gray-500 mt-1">All time</p>
+              <p className="text-xs text-gray-500 mt-1">{t('receptionBatches.list.stats.allTime')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Total Weight
+                {t('receptionBatches.list.stats.totalWeight')}
               </CardTitle>
               <TrendingUp className="w-4 h-4 text-green-600" />
             </CardHeader>
@@ -205,14 +226,14 @@ export default function ReceptionBatchList({
               <div className="text-2xl font-bold">
                 {stats.total_weight.toFixed(0)} kg
               </div>
-              <p className="text-xs text-gray-500 mt-1">Received</p>
+              <p className="text-xs text-gray-500 mt-1">{t('receptionBatches.list.stats.received')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Avg Quality
+                {t('receptionBatches.list.stats.avgQuality')}
               </CardTitle>
               <ClipboardCheck className="w-4 h-4 text-purple-600" />
             </CardHeader>
@@ -220,20 +241,20 @@ export default function ReceptionBatchList({
               <div className="text-2xl font-bold">
                 {stats.average_quality_score?.toFixed(1) || 'N/A'}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Out of 10</p>
+              <p className="text-xs text-gray-500 mt-1">{t('receptionBatches.list.stats.outOf', { max: 10 })}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Pending Decisions
+                {t('receptionBatches.list.stats.pendingDecisions')}
               </CardTitle>
               <AlertTriangle className="w-4 h-4 text-orange-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.by_decision.pending}</div>
-              <p className="text-xs text-gray-500 mt-1">Awaiting decision</p>
+              <p className="text-xs text-gray-500 mt-1">{t('receptionBatches.list.stats.awaitingDecision')}</p>
             </CardContent>
           </Card>
         </div>
@@ -246,7 +267,7 @@ export default function ReceptionBatchList({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by batch code, producer, or notes..."
+                placeholder={t('receptionBatches.list.search')}
                 value={tableState.search}
                 onChange={(e) => tableState.setSearch(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
@@ -267,15 +288,15 @@ export default function ReceptionBatchList({
             onValueChange={(value) => setFilterStatus(value as ReceptionBatchStatus | 'all')}
           >
             <SelectTrigger>
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder={t('receptionBatches.list.filters.allStatuses')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="quality_checked">Quality Checked</SelectItem>
-              <SelectItem value="decision_made">Decision Made</SelectItem>
-              <SelectItem value="processed">Processed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">{t('receptionBatches.list.filters.allStatuses')}</SelectItem>
+              <SelectItem value="received">{t('receptionBatches.list.filters.status.received')}</SelectItem>
+              <SelectItem value="quality_checked">{t('receptionBatches.list.filters.status.qualityChecked')}</SelectItem>
+              <SelectItem value="decision_made">{t('receptionBatches.list.filters.status.decisionMade')}</SelectItem>
+              <SelectItem value="processed">{t('receptionBatches.list.filters.status.processed')}</SelectItem>
+              <SelectItem value="cancelled">{t('receptionBatches.list.filters.status.cancelled')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -284,15 +305,15 @@ export default function ReceptionBatchList({
             onValueChange={(value) => setFilterDecision(value as ReceptionDecision | 'all')}
           >
             <SelectTrigger>
-              <SelectValue placeholder="All Decisions" />
+              <SelectValue placeholder={t('receptionBatches.list.filters.allDecisions')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Decisions</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="storage">Storage</SelectItem>
-              <SelectItem value="direct_sale">Direct Sale</SelectItem>
-              <SelectItem value="transformation">Transformation</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="all">{t('receptionBatches.list.filters.allDecisions')}</SelectItem>
+              <SelectItem value="pending">{t('receptionBatches.list.filters.decision.pending')}</SelectItem>
+              <SelectItem value="storage">{t('receptionBatches.list.filters.decision.storage')}</SelectItem>
+              <SelectItem value="direct_sale">{t('receptionBatches.list.filters.decision.directSale')}</SelectItem>
+              <SelectItem value="transformation">{t('receptionBatches.list.filters.decision.transformation')}</SelectItem>
+              <SelectItem value="rejected">{t('receptionBatches.list.filters.decision.rejected')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -304,14 +325,14 @@ export default function ReceptionBatchList({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Batch Code</TableHead>
-                <TableHead>Reception Date</TableHead>
-                <TableHead>Parcel</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Quality</TableHead>
-                <TableHead>Decision</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('receptionBatches.list.table.batchCode')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.receptionDate')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.parcel')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.weight')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.quality')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.decision')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.status')}</TableHead>
+                <TableHead className="text-right">{t('receptionBatches.list.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -319,9 +340,9 @@ export default function ReceptionBatchList({
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                     <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>{tableState.search ? 'No matching reception batches found' : 'No reception batches found'}</p>
+                    <p>{tableState.search ? t('receptionBatches.list.empty.searchTitle') : t('receptionBatches.list.empty.title')}</p>
                     <p className="text-sm mt-1">
-                      {tableState.search ? 'Try adjusting your search criteria' : 'Create your first reception batch to track harvest quality control'}
+                      {tableState.search ? t('receptionBatches.list.empty.searchDescription') : t('receptionBatches.list.empty.description')}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -355,30 +376,22 @@ export default function ReceptionBatchList({
                           </Badge>
                           {batch.quality_score && (
                             <span className="text-sm text-gray-600">
-                              {batch.quality_score}/10
+                              {batch.quality_score}{t('receptionBatches.list.quality.outOf', { max: 10 })}
                             </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400">Not graded</span>
+                        <span className="text-gray-400">{t('receptionBatches.list.quality.notGraded')}</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge className={DECISION_COLORS[batch.decision]}>
-                        {batch.decision === 'direct_sale'
-                          ? 'Direct Sale'
-                          : batch.decision.charAt(0).toUpperCase() +
-                            batch.decision.slice(1)}
+                        {getDecisionLabel(batch.decision)}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={STATUS_COLORS[batch.status]}>
-                        {batch.status === 'quality_checked'
-                          ? 'Quality Checked'
-                          : batch.status === 'decision_made'
-                          ? 'Decision Made'
-                          : batch.status.charAt(0).toUpperCase() +
-                            batch.status.slice(1)}
+                        {getStatusLabel(batch.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -391,14 +404,14 @@ export default function ReceptionBatchList({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onViewClick(batch)}>
                             <Eye className="w-4 h-4 mr-2" />
-                            View Details
+                            {t('receptionBatches.list.actions.viewDetails')}
                           </DropdownMenuItem>
 
                           {batch.status === 'received' && onEditClick && (
                             <>
                               <DropdownMenuItem onClick={() => onEditClick(batch)}>
                                 <Edit className="w-4 h-4 mr-2" />
-                                Modifier
+                                {t('receptionBatches.list.actions.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -408,7 +421,7 @@ export default function ReceptionBatchList({
                                 className="text-red-600"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
+                                {t('receptionBatches.list.actions.delete')}
                               </DropdownMenuItem>
                             </>
                           )}
@@ -424,7 +437,7 @@ export default function ReceptionBatchList({
                                   className="text-orange-600"
                                 >
                                   <XCircle className="w-4 h-4 mr-2" />
-                                  Cancel Batch
+                                  {t('receptionBatches.list.actions.cancelBatch')}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -442,7 +455,7 @@ export default function ReceptionBatchList({
           {batches.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-              <p>{tableState.search ? 'No matching batches found' : 'No reception batches found'}</p>
+              <p>{tableState.search ? t('receptionBatches.list.mobile.searchEmpty') : t('receptionBatches.list.mobile.empty')}</p>
             </div>
           ) : (
             batches.map((batch) => (
@@ -468,13 +481,13 @@ export default function ReceptionBatchList({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => onViewClick(batch)}>
                         <Eye className="w-4 h-4 mr-2" />
-                        View Details
+                        {t('receptionBatches.list.actions.viewDetails')}
                       </DropdownMenuItem>
                       {batch.status === 'received' && onEditClick && (
                         <>
                           <DropdownMenuItem onClick={() => onEditClick(batch)}>
                             <Edit className="w-4 h-4 mr-2" />
-                            Modifier
+                            {t('receptionBatches.list.actions.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -484,7 +497,7 @@ export default function ReceptionBatchList({
                             className="text-red-600"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
+                            {t('receptionBatches.list.actions.delete')}
                           </DropdownMenuItem>
                         </>
                       )}
@@ -498,7 +511,7 @@ export default function ReceptionBatchList({
                             className="text-orange-600"
                           >
                             <XCircle className="w-4 h-4 mr-2" />
-                            Cancel Batch
+                            {t('receptionBatches.list.actions.cancelBatch')}
                           </DropdownMenuItem>
                         </>
                       )}
@@ -511,17 +524,10 @@ export default function ReceptionBatchList({
                     {batch.weight.toFixed(2)} {batch.weight_unit}
                   </Badge>
                   <Badge className={STATUS_COLORS[batch.status]}>
-                    {batch.status === 'quality_checked'
-                      ? 'Quality Checked'
-                      : batch.status === 'decision_made'
-                      ? 'Decision Made'
-                      : batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
+                    {getStatusLabel(batch.status)}
                   </Badge>
                   <Badge className={DECISION_COLORS[batch.decision]}>
-                    {batch.decision === 'direct_sale'
-                      ? 'Direct Sale'
-                      : batch.decision.charAt(0).toUpperCase() +
-                        batch.decision.slice(1)}
+                    {getDecisionLabel(batch.decision)}
                   </Badge>
                   {batch.quality_grade && (
                     <Badge className={QUALITY_GRADE_COLORS[batch.quality_grade]}>
@@ -554,18 +560,14 @@ export default function ReceptionBatchList({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {confirmAction.action === 'cancel'
-                  ? 'Cancel Reception Batch'
-                  : 'Delete Reception Batch'}
+                {t(`receptionBatches.list.confirm.${confirmAction.action}Title`)}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {confirmAction.action === 'cancel'
-                  ? 'This will mark the batch as cancelled. This action cannot be undone.'
-                  : 'This will permanently delete the batch. Only batches in "received" status can be deleted.'}
+                {t(`receptionBatches.list.confirm.${confirmAction.action}Description`)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('receptionBatches.list.confirm.cancelButton')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   const { batch, action } = confirmAction;
@@ -578,7 +580,7 @@ export default function ReceptionBatchList({
                     : 'bg-orange-600 hover:bg-orange-700'
                 }
               >
-                {confirmAction.action === 'cancel' ? 'Cancel Batch' : 'Delete Batch'}
+                {t(`receptionBatches.list.confirm.${confirmAction.action}Action`)}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

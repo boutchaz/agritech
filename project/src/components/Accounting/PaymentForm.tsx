@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -12,13 +13,13 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { Loader2 } from 'lucide-react';
 
-const paymentSchema = z.object({
+const getPaymentSchema = (t: (key: string) => string) => z.object({
   payment_type: z.enum(['receive', 'pay']),
   party_type: z.enum(['customer', 'supplier']).nullable().optional(),
   party_id: z.string().nullable().optional(),
-  party_name: z.string().min(1, 'Party name is required'),
-  payment_date: z.string().min(1, 'Payment date is required'),
-  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+  party_name: z.string().min(1, t('accounting.payments.form.validation.partyNameRequired')),
+  payment_date: z.string().min(1, t('accounting.payments.form.validation.paymentDateRequired')),
+  amount: z.coerce.number().min(0.01, t('accounting.payments.form.validation.amountMin')),
   payment_method: z.enum(['cash', 'bank_transfer', 'check', 'mobile_money']),
   bank_account_id: z.string().nullable().optional(),
   reference_number: z.string().nullable().optional(),
@@ -26,7 +27,7 @@ const paymentSchema = z.object({
   remarks: z.string().nullable().optional(),
 });
 
-type PaymentFormData = z.infer<typeof paymentSchema>;
+type PaymentFormData = z.infer<ReturnType<typeof getPaymentSchema>>;
 
 interface PaymentFormProps {
   payment?: Payment;
@@ -35,13 +36,14 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, onCancel }) => {
+  const { t } = useTranslation();
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const { data: customers = [] } = useCustomers();
   const { data: suppliers = [] } = useSuppliers();
 
   const form = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
+    resolver: zodResolver(getPaymentSchema(t)),
     defaultValues: payment ? {
       payment_type: payment.payment_type as 'receive' | 'pay',
       party_type: payment.party_type as 'customer' | 'supplier' | null,
@@ -88,7 +90,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       }
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to save payment:', error);
+      console.error(t('accounting.payments.form.errors.saveFailed'), error);
     }
   };
 
@@ -99,14 +101,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="grid grid-cols-2 gap-4">
         {/* Payment Type */}
         <div>
-          <Label htmlFor="payment_type">Payment Type</Label>
+          <Label htmlFor="payment_type">{t('accounting.payments.form.fields.paymentType')}</Label>
           <NativeSelect
             id="payment_type"
             {...form.register('payment_type')}
             disabled={!!payment}
           >
-            <option value="receive">Payment Received</option>
-            <option value="pay">Payment Made</option>
+            <option value="receive">{t('accounting.payments.form.paymentTypes.received')}</option>
+            <option value="pay">{t('accounting.payments.form.paymentTypes.made')}</option>
           </NativeSelect>
           {form.formState.errors.payment_type && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_type.message}</p>
@@ -115,7 +117,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
         {/* Payment Date */}
         <div>
-          <Label htmlFor="payment_date">Payment Date</Label>
+          <Label htmlFor="payment_date">{t('accounting.payments.form.fields.paymentDate')}</Label>
           <Input
             id="payment_date"
             type="date"
@@ -130,13 +132,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       {/* Party Selection */}
       <div>
         <Label htmlFor="party_id">
-          {watchPaymentType === 'receive' ? 'Customer' : 'Supplier'} (Optional)
+          {watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer') : t('accounting.payments.form.fields.supplier')} ({t('accounting.payments.form.fields.optional')})
         </Label>
         <NativeSelect
           id="party_id"
           {...form.register('party_id')}
         >
-          <option value="">-- Select {watchPaymentType === 'receive' ? 'Customer' : 'Supplier'} --</option>
+          <option value="">-- {t('accounting.payments.form.actions.select')} {watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer') : t('accounting.payments.form.fields.supplier')} --</option>
           {(watchPaymentType === 'receive' ? customers : suppliers).map((party) => (
             <option key={party.id} value={party.id}>
               {party.name}
@@ -147,11 +149,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
       {/* Party Name (manual entry if no party selected) */}
       <div>
-        <Label htmlFor="party_name">Party Name</Label>
+        <Label htmlFor="party_name">{t('accounting.payments.form.fields.partyName')}</Label>
         <Input
           id="party_name"
           {...form.register('party_name')}
-          placeholder={`Enter ${watchPaymentType === 'receive' ? 'customer' : 'supplier'} name`}
+          placeholder={`${t('accounting.payments.form.actions.enter')} ${watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer').toLowerCase() : t('accounting.payments.form.fields.supplier').toLowerCase()} ${t('accounting.payments.form.fields.name').toLowerCase()}`}
           disabled={!!watchPartyId}
         />
         {form.formState.errors.party_name && (
@@ -162,7 +164,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="grid grid-cols-2 gap-4">
         {/* Amount */}
         <div>
-          <Label htmlFor="amount">Amount (MAD)</Label>
+          <Label htmlFor="amount">{t('accounting.payments.form.fields.amount')} (MAD)</Label>
           <Input
             id="amount"
             type="number"
@@ -176,15 +178,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
         {/* Payment Method */}
         <div>
-          <Label htmlFor="payment_method">Payment Method</Label>
+          <Label htmlFor="payment_method">{t('accounting.payments.form.fields.paymentMethod')}</Label>
           <NativeSelect
             id="payment_method"
             {...form.register('payment_method')}
           >
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="check">Check</option>
-            <option value="mobile_money">Mobile Money</option>
+            <option value="cash">{t('accounting.payments.form.methods.cash')}</option>
+            <option value="bank_transfer">{t('accounting.payments.form.methods.bankTransfer')}</option>
+            <option value="check">{t('accounting.payments.form.methods.check')}</option>
+            <option value="mobile_money">{t('accounting.payments.form.methods.mobileMoney')}</option>
           </NativeSelect>
           {form.formState.errors.payment_method && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_method.message}</p>
@@ -194,21 +196,21 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
       {/* Reference Number */}
       <div>
-        <Label htmlFor="reference_number">Reference Number (Optional)</Label>
+        <Label htmlFor="reference_number">{t('accounting.payments.form.fields.referenceNumber')} ({t('accounting.payments.form.fields.optional')})</Label>
         <Input
           id="reference_number"
           {...form.register('reference_number')}
-          placeholder="Check number, transaction ID, etc."
+          placeholder={t('accounting.payments.form.placeholders.referenceNumber')}
         />
       </div>
 
       {/* Remarks */}
       <div>
-        <Label htmlFor="remarks">Remarks (Optional)</Label>
+        <Label htmlFor="remarks">{t('accounting.payments.form.fields.remarks')} ({t('accounting.payments.form.fields.optional')})</Label>
         <Textarea
           id="remarks"
           {...form.register('remarks')}
-          placeholder="Additional notes about this payment"
+          placeholder={t('accounting.payments.form.placeholders.remarks')}
           rows={3}
         />
       </div>
@@ -216,14 +218,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       {/* Status (for editing only) */}
       {payment && (
         <div>
-          <Label htmlFor="status">Status</Label>
+          <Label htmlFor="status">{t('accounting.payments.form.fields.status')}</Label>
           <NativeSelect
             id="status"
             {...form.register('status')}
           >
-            <option value="draft">Draft</option>
-            <option value="submitted">Submitted</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="draft">{t('accounting.payments.form.statuses.draft')}</option>
+            <option value="submitted">{t('accounting.payments.form.statuses.submitted')}</option>
+            <option value="cancelled">{t('accounting.payments.form.statuses.cancelled')}</option>
           </NativeSelect>
         </div>
       )}
@@ -232,12 +234,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="flex justify-end gap-2 pt-4 border-t">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-            Cancel
+            {t('accounting.payments.form.buttons.cancel')}
           </Button>
         )}
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {payment ? 'Update Payment' : 'Create Payment'}
+          {payment ? t('accounting.payments.form.buttons.update') : t('accounting.payments.form.buttons.create')}
         </Button>
       </div>
     </form>

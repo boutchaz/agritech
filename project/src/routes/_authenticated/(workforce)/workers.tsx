@@ -181,7 +181,7 @@ function WorkersPage() {
                   <TabsTrigger value="calculator" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4" data-tour="worker-payments">
                     <Calculator className="w-4 h-4 flex-shrink-0" />
                     <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
-                    <span className="xs:hidden sm:hidden">{t('nav.calculator', 'Calculator')}</span>
+                    <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
                   </TabsTrigger>
                 </TabsList>
 

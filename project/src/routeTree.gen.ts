@@ -37,6 +37,7 @@ import { Route as AuthenticatedinventoryStockRouteImport } from './routes/_authe
 import { Route as AuthenticatedinventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/reception-batches'
 import { Route as AuthenticatedinventoryInventoryRouteImport } from './routes/_authenticated/(inventory)/inventory'
 import { Route as AuthenticatedcoreDashboardRouteImport } from './routes/_authenticated/(core)/dashboard'
+import { Route as AuthenticatedcoreChatRouteImport } from './routes/_authenticated/(core)/chat'
 import { Route as AuthenticatedcoreAnalyticsRouteImport } from './routes/_authenticated/(core)/analytics'
 import { Route as AuthenticatedaccountingAccountingRouteImport } from './routes/_authenticated/(accounting)/accounting'
 import { Route as publicOnboardingSelectTrialRouteImport } from './routes/(public)/onboarding/select-trial'
@@ -267,6 +268,11 @@ const AuthenticatedcoreDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedcoreChatRoute = AuthenticatedcoreChatRouteImport.update({
+  id: '/(core)/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedcoreAnalyticsRoute =
   AuthenticatedcoreAnalyticsRouteImport.update({
     id: '/(core)/analytics',
@@ -711,6 +717,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
   '/accounting': typeof AuthenticatedaccountingAccountingRouteWithChildren
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
+  '/chat': typeof AuthenticatedcoreChatRoute
   '/dashboard': typeof AuthenticatedcoreDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
@@ -811,6 +818,7 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
+  '/chat': typeof AuthenticatedcoreChatRoute
   '/dashboard': typeof AuthenticatedcoreDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
@@ -910,6 +918,7 @@ export interface FileRoutesById {
   '/(public)/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
   '/_authenticated/(accounting)/accounting': typeof AuthenticatedaccountingAccountingRouteWithChildren
   '/_authenticated/(core)/analytics': typeof AuthenticatedcoreAnalyticsRoute
+  '/_authenticated/(core)/chat': typeof AuthenticatedcoreChatRoute
   '/_authenticated/(core)/dashboard': typeof AuthenticatedcoreDashboardRoute
   '/_authenticated/(inventory)/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/_authenticated/(inventory)/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
@@ -1013,6 +1022,7 @@ export interface FileRouteTypes {
     | '/onboarding/select-trial'
     | '/accounting'
     | '/analytics'
+    | '/chat'
     | '/dashboard'
     | '/inventory'
     | '/reception-batches'
@@ -1113,6 +1123,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/onboarding/select-trial'
     | '/analytics'
+    | '/chat'
     | '/dashboard'
     | '/inventory'
     | '/reception-batches'
@@ -1211,6 +1222,7 @@ export interface FileRouteTypes {
     | '/(public)/onboarding/select-trial'
     | '/_authenticated/(accounting)/accounting'
     | '/_authenticated/(core)/analytics'
+    | '/_authenticated/(core)/chat'
     | '/_authenticated/(core)/dashboard'
     | '/_authenticated/(inventory)/inventory'
     | '/_authenticated/(inventory)/reception-batches'
@@ -1512,6 +1524,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedcoreDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(core)/chat': {
+      id: '/_authenticated/(core)/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedcoreChatRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(core)/analytics': {
@@ -2297,6 +2316,7 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
+  AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
   AuthenticatedcoreDashboardRoute: typeof AuthenticatedcoreDashboardRoute
   AuthenticatedinventoryInventoryRoute: typeof AuthenticatedinventoryInventoryRouteWithChildren
   AuthenticatedinventoryReceptionBatchesRoute: typeof AuthenticatedinventoryReceptionBatchesRoute
@@ -2333,6 +2353,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedaccountingAccountingRoute:
     AuthenticatedaccountingAccountingRouteWithChildren,
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
+  AuthenticatedcoreChatRoute: AuthenticatedcoreChatRoute,
   AuthenticatedcoreDashboardRoute: AuthenticatedcoreDashboardRoute,
   AuthenticatedinventoryInventoryRoute:
     AuthenticatedinventoryInventoryRouteWithChildren,

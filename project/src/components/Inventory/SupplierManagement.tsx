@@ -127,7 +127,7 @@ export default function SupplierManagement() {
       setShowDeleteDialog(false);
       setSupplierToDelete(null);
     } catch (error: any) {
-      toast.error(`Failed to delete supplier: ${error.message}`);
+      toast.error(t('suppliers.deleteFailed', { error: error.message }));
     } finally {
       setIsDeleting(false);
     }
@@ -167,7 +167,8 @@ export default function SupplierManagement() {
       setShowForm(false);
       resetForm();
     } catch (error: any) {
-      toast.error(`Failed to ${selectedSupplier ? 'update' : 'create'} supplier: ${error.message}`);
+      const action = selectedSupplier ? 'update' : 'create';
+      toast.error(t(`suppliers.${action}Failed`, { error: error.message }));
     } finally {
       setIsSubmitting(false);
     }
@@ -199,10 +200,10 @@ export default function SupplierManagement() {
       {error ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-700">
           <p className="text-red-600 dark:text-red-400 mb-4">
-            Error loading suppliers: {error instanceof Error ? error.message : 'Unknown error'}
+            {t('suppliers.loadError', { error: error instanceof Error ? error.message : t('suppliers.unknownError') })}
           </p>
           <Button onClick={() => refetch()}>
-            {t('app.retry', 'Retry')}
+            {t('app.retry')}
           </Button>
         </div>
       ) : isLoading ? (

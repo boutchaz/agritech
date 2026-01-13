@@ -76,7 +76,7 @@ const AppContent: React.FC = () => {
     const invoiceActivity = invoices.slice(0, 3).map(inv => ({
       id: inv.id,
       type: inv.invoice_type,
-      description: `${inv.invoice_type === 'sales' ? 'Sales' : 'Purchase'} Invoice ${inv.invoice_number} ${inv.status === 'draft' ? 'created' : 'submitted'}`,
+      description: `${inv.invoice_type === 'sales' ? t('accountingModule.dashboard.activity.salesInvoice') : t('accountingModule.dashboard.activity.purchaseInvoice')} ${inv.invoice_number} ${inv.status === 'draft' ? t('accountingModule.dashboard.activity.created') : t('accountingModule.dashboard.activity.submitted')}`,
       amount: `${inv.currency_code} ${Number(inv.grand_total).toLocaleString('fr-FR')}`,
       time: new Date(inv.created_at).toLocaleDateString('fr-FR'),
       date: new Date(inv.created_at),
@@ -85,7 +85,7 @@ const AppContent: React.FC = () => {
     const paymentActivity = payments.slice(0, 3).map(pay => ({
       id: pay.id,
       type: pay.payment_type,
-      description: `Payment ${pay.payment_type === 'received' ? 'received from' : 'paid to'} ${pay.party_name}`,
+      description: `${pay.payment_type === 'received' ? t('accountingModule.dashboard.activity.paymentReceived') : t('accountingModule.dashboard.activity.paymentMade')} ${pay.party_name}`,
       amount: `${currencySymbol} ${Number(pay.amount).toLocaleString('fr-FR')}`,
       time: new Date(pay.created_at).toLocaleDateString('fr-FR'),
       date: new Date(pay.created_at),

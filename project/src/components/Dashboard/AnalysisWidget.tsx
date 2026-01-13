@@ -137,7 +137,7 @@ const AnalysisWidget: React.FC = () => {
   };
 
   const handleViewAnalyses = () => {
-    navigate({ to: '/analyses' });
+    navigate({ to: '/analytics' });
   };
 
   const getActiveColor = () => {
