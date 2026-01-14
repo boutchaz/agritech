@@ -13307,12 +13307,13 @@ BEGIN
     v_old_data := to_jsonb(OLD);
     v_new_data := to_jsonb(NEW);
 
-    -- Detect changed fields
+    -- Detect changed fields by comparing JSONB objects
+    -- Get keys where values are different
     SELECT ARRAY_AGG(KEY) INTO v_changed_fields
     FROM (
       SELECT KEY
       FROM jsonb_each_text(v_old_data)
-      WHERE jsonb_each_text.value IS DISTINCT FROM (SELECT jsonb_each_text(v_new_data -> KEY))
+      WHERE v_old_data->>KEY IS DISTINCT FROM v_new_data->>KEY
     ) changed;
 
     IF v_changed_fields IS NOT NULL AND array_length(v_changed_fields, 1) > 0 THEN
