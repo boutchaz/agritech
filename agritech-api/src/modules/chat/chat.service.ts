@@ -355,7 +355,7 @@ export class ChatService {
     // Get farms
     const { data: farms } = await client
       .from('farms')
-      .select('id, name, location, total_area')
+      .select('id, name, location, size, size_unit, is_active, status')
       .eq('organization_id', organizationId)
       .eq('is_active', true);
 
@@ -388,7 +388,7 @@ export class ChatService {
         farms?.map((f: any) => ({
           id: f.id,
           name: f.name,
-          area: f.total_area,
+          area: f.size || 0,
         })) || [],
       parcels_count: parcels?.length || 0,
       parcels:
@@ -457,10 +457,10 @@ export class ChatService {
     client: any,
     organizationId: string,
   ): Promise<AccountingContext> {
-    // Get chart of accounts summary
+    // Get chart of accounts summary - FIXED: account_name → name
     const { data: accounts } = await client
       .from('accounts')
-      .select('id, account_name, account_type, balance')
+      .select('id, name, account_type')
       .eq('organization_id', organizationId)
       .limit(50);
 
@@ -478,9 +478,9 @@ export class ChatService {
       .order('invoice_date', { ascending: false })
       .limit(30);
 
-    // Get recent payments
+    // Get recent payments - FIXED: payments → accounting_payments
     const { data: payments } = await client
-      .from('payments')
+      .from('accounting_payments')
       .select('id, payment_date, amount, payment_method, status')
       .eq('organization_id', organizationId)
       .gte(
@@ -490,12 +490,12 @@ export class ChatService {
       .order('payment_date', { ascending: false })
       .limit(20);
 
-    // Get fiscal year
+    // Get fiscal year - FIXED: is_active → is_current
     const { data: fiscalYear } = await client
       .from('fiscal_years')
       .select('*')
       .eq('organization_id', organizationId)
-      .eq('is_active', true)
+      .eq('is_current', true)
       .maybeSingle();
 
     return {
@@ -503,9 +503,9 @@ export class ChatService {
       accounts:
         accounts?.map((a: any) => ({
           id: a.id,
-          name: a.account_name,
+          name: a.name,
           type: a.account_type,
-          balance: a.balance || 0,
+          balance: 0, // Balance is calculated, not stored
         })) || [],
       recent_invoices_count: invoices?.length || 0,
       invoices:
@@ -538,11 +538,12 @@ export class ChatService {
     client: any,
     organizationId: string,
   ): Promise<InventoryContext> {
+    // FIXED: item_name, item_code, stock_uom (removed current_stock as it's calculated)
     const { data: items } = await client
       .from('items')
-      .select('id, item_name, item_code, current_stock, unit')
+      .select('id, item_name, item_code, default_unit')
       .eq('organization_id', organizationId)
-      .order('current_stock', { ascending: false })
+      .eq('is_active', true)
       .limit(50);
 
     const { data: warehouses } = await client
@@ -553,7 +554,7 @@ export class ChatService {
 
     const { data: stockEntries } = await client
       .from('stock_entries')
-      .select('id, entry_type, entry_date, notes')
+      .select('id, entry_type, entry_date')
       .eq('organization_id', organizationId)
       .gte(
         'entry_date',
@@ -569,8 +570,8 @@ export class ChatService {
           id: i.id,
           name: i.item_name,
           code: i.item_code,
-          stock: i.current_stock,
-          unit: i.unit,
+          stock: 0, // Stock is calculated from stock_entries, not stored
+          unit: i.default_unit,
         })) || [],
       warehouses_count: warehouses?.length || 0,
       warehouses:
@@ -587,11 +588,10 @@ export class ChatService {
     client: any,
     organizationId: string,
   ): Promise<ProductionContext> {
+    // FIXED: Removed crop_type (table has crop_id instead), added more accurate columns
     const { data: harvests } = await client
       .from('harvest_records')
-      .select(
-        'id, harvest_date, crop_type, quantity, unit, quality_grade, status',
-      )
+      .select('id, harvest_date, quantity, unit, quality_grade, status')
       .eq('organization_id', organizationId)
       .gte(
         'harvest_date',
@@ -600,15 +600,16 @@ export class ChatService {
       .order('harvest_date', { ascending: false })
       .limit(30);
 
+    // FIXED: quality_control → quality_inspections
     const { data: qualityChecks } = await client
-      .from('quality_control')
+      .from('quality_inspections')
       .select('*')
       .eq('organization_id', organizationId)
       .gte(
-        'check_date',
+        'inspection_date',
         new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
       )
-      .order('check_date', { ascending: false })
+      .order('inspection_date', { ascending: false })
       .limit(20);
 
     const { data: deliveries } = await client
@@ -627,7 +628,7 @@ export class ChatService {
       harvests:
         harvests?.map((h: any) => ({
           date: h.harvest_date,
-          crop: h.crop_type,
+          crop: 'N/A', // Crop info requires join with crops table
           quantity: `${h.quantity} ${h.unit}`,
           quality: h.quality_grade || 'N/A',
           status: h.status,
