@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
@@ -106,11 +106,20 @@ const TOUR_CONFIGS: TourInfo[] = [
 
 export const TourHelpButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { startTour, isTourCompleted, resetTour, resetAllTours, isRunning } = useTour();
+  const { startTour, isTourCompleted, resetTour, resetAllTours, isRunning, dismissedTours } = useTour();
 
-  const tours = useMemo(() => 
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const tours = useMemo(() =>
     TOUR_CONFIGS.map(tour => ({
       ...tour,
       title: t(tour.titleKey),
@@ -119,7 +128,8 @@ export const TourHelpButton: React.FC = () => {
     [t]
   );
 
-  if (!user) {
+  // Hide completely on mobile or if no user or if tour is running
+  if (!user || isMobile || isRunning) {
     return null;
   }
 
@@ -136,10 +146,6 @@ export const TourHelpButton: React.FC = () => {
   const handleResetAll = async () => {
     await resetAllTours();
   };
-
-  if (isRunning) {
-    return null;
-  }
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">

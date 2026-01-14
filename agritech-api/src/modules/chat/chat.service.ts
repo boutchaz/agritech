@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { ZaiProvider } from './providers/zai.provider';
 import { ZaiTTSProvider, TTSRequest } from './providers/zai-tts.provider';
+import { WeatherProvider, WeatherForecast } from './providers/weather.provider';
 import { SendMessageDto, ChatResponseDto } from './dto';
 
 interface OrganizationContext {
@@ -178,6 +179,14 @@ interface SatelliteWeatherContext {
     dry_spells_count: number;
     frost_days: number;
   } | null;
+  weather_forecast: {
+    parcels: Array<{
+      parcel_id: string;
+      parcel_name: string;
+      forecasts: WeatherForecast[];
+    }>;
+    available: boolean;
+  };
 }
 
 interface SoilAnalysisContext {
@@ -246,6 +255,7 @@ export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly zaiProvider: ZaiProvider;
   private readonly zaiTTSProvider: ZaiTTSProvider;
+  private readonly weatherProvider: WeatherProvider;
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -254,6 +264,7 @@ export class ChatService {
   ) {
     this.zaiProvider = new ZaiProvider(configService);
     this.zaiTTSProvider = ttsProvider;
+    this.weatherProvider = new WeatherProvider(configService);
   }
 
   private async verifyOrganizationAccess(
@@ -379,8 +390,9 @@ export class ChatService {
   ): Promise<BuiltContext> {
     const client = this.databaseService.getAdminClient();
 
-    // Analyze query to determine which context to load (optimization)
-    const contextNeeds = this.analyzeQueryContext(query);
+    // Analyze query using AI to determine which context to load (supports multilingual)
+    // Falls back to regex if AI fails
+    const contextNeeds = await this.analyzeQueryContextWithAI(query);
 
     // Get current date and season
     const now = new Date();
@@ -459,6 +471,143 @@ export class ChatService {
     };
   }
 
+  /**
+   * Analyze query context using AI to understand intent in any language
+   * Falls back to regex-based analysis if AI fails
+   */
+  private async analyzeQueryContextWithAI(
+    query: string,
+  ): Promise<ContextNeeds> {
+    try {
+      const systemPrompt = `You are a context analyzer for an agricultural management system. 
+Analyze the user's query and determine which data modules are relevant. The query may be in any language (English, French, Arabic, etc.).
+
+Available modules with detailed descriptions:
+
+1. **farm**: Farms, parcels, crops, fields, irrigation systems, structures, land, agricultural properties
+   - Keywords (EN): farm, farms, parcel, parcels, crop, crops, field, fields, land, irrigation, structure, structures, agricultural property
+   - Keywords (FR): ferme, fermes, parcelle, parcelles, culture, cultures, champ, champs, terrain, irrigation, structure
+   - Keywords (AR): مزرعة, مزارع, قطعة, قطع, محصول, محاصيل, حقل, حقول, أرض, ري, هيكل
+   - Examples: "How many farms?", "كم عدد المزارع", "Combien de fermes", "What crops are planted?", "Show me my parcels"
+
+2. **worker**: Workers, employees, tasks, labor, wages, salaries, workforce, staff, day laborers, piece work
+   - Keywords (EN): worker, workers, employee, employees, staff, labor, labour, task, tasks, wage, wages, salary, salaries, workforce, hiring, worker management
+   - Keywords (FR): travailleur, travailleurs, employé, employés, personnel, main-d'œuvre, tâche, tâches, salaire, salaires, embauche
+   - Keywords (AR): عامل, عمال, موظف, موظفون, موظفين, مهمة, مهام, راتب, رواتب, أجور
+   - Examples: "How many workers?", "List my employees", "Show worker tasks", "What are the wages?"
+
+3. **accounting**: Invoices, payments, expenses, revenue, profit, cost, fiscal year, taxes, financial records, chart of accounts, journal entries
+   - Keywords (EN): invoice, invoices, payment, payments, expense, expenses, revenue, profit, cost, costs, fiscal, tax, taxes, accounting, financial, budget, journal, account
+   - Keywords (FR): facture, factures, paiement, paiements, dépense, dépenses, revenu, profit, coût, coûts, fiscal, taxe, taxes, comptabilité, financier, budget, journal
+   - Keywords (AR): فاتورة, فواتير, دفعة, دفعات, مصروف, مصروفات, إيراد, ربح, تكلفة, تكاليف, ضريبة, ضرائب, محاسبة, مالي, ميزانية
+   - Examples: "Show invoices", "What are my expenses?", "Revenue this month", "Tax payments"
+
+4. **inventory**: Stock, warehouse, items, products, materials, reception, supplies, inventory management, stock entries
+   - Keywords (EN): stock, inventory, warehouse, warehouses, item, items, product, products, material, materials, reception, supply, supplies, stock entry, stock entries
+   - Keywords (FR): stock, inventaire, entrepôt, entrepôts, article, articles, produit, produits, matériel, réception, approvisionnement
+   - Keywords (AR): مخزون, مستودع, مستودعات, عنصر, عناصر, منتج, منتجات, مادة, مواد, استقبال, إمداد
+   - Examples: "What's in stock?", "Show inventory", "Warehouse items", "Stock levels"
+
+5. **production**: Harvests, yields, quality control, deliveries, production data, crop cycles, harvest records
+   - Keywords (EN): harvest, harvests, yield, yields, production, quality control, delivery, deliveries, crop cycle, crop cycles, harvest record
+   - Keywords (FR): récolte, récoltes, rendement, rendements, production, contrôle qualité, livraison, livraisons, cycle de culture
+   - Keywords (AR): حصاد, حصاد, محصول, محاصيل, إنتاج, مراقبة الجودة, تسليم, تسليمات, دورة المحاصيل
+   - Examples: "Harvest records", "Production yield", "Quality control results", "Crop cycles"
+
+6. **supplierCustomer**: Suppliers, customers, vendors, clients, orders, quotes, purchases, sales, sales orders
+   - Keywords (EN): supplier, suppliers, customer, customers, vendor, vendors, client, clients, order, orders, quote, quotes, purchase, purchases, sale, sales
+   - Keywords (FR): fournisseur, fournisseurs, client, clients, vendeur, vendeurs, commande, commandes, devis, achat, achats, vente, ventes
+   - Keywords (AR): مورد, موردون, عميل, عملاء, بائع, بائعون, طلب, طلبات, عرض أسعار, شراء, مشتريات, بيع, مبيعات
+   - Examples: "List suppliers", "Customer orders", "Sales this month", "Purchase orders"
+
+7. **satellite**: Satellite imagery, NDVI, NDMI, NDRE, GCI, SAVI, vegetation indices, remote sensing, satellite analysis
+   - Keywords (EN): satellite, NDVI, NDMI, NDRE, GCI, SAVI, vegetation index, indices, remote sensing, satellite imagery, satellite analysis
+   - Keywords (FR): satellite, NDVI, NDMI, NDRE, GCI, SAVI, indice de végétation, télédétection, imagerie satellite
+   - Keywords (AR): قمر صناعي, NDVI, NDMI, NDRE, مؤشر الغطاء النباتي, الاستشعار عن بعد, تحليل الأقمار الصناعية
+   - Examples: "Show NDVI", "Satellite analysis", "Vegetation health", "Remote sensing data"
+
+8. **weather**: Weather data, forecasts, temperature, rain, precipitation, climate, frost, storms, humidity, wind
+   - Keywords (EN): weather, forecast, forecasts, temperature, rain, precipitation, climate, frost, storm, storms, humidity, wind, sunny, cloudy
+   - Keywords (FR): météo, prévision, prévisions, température, pluie, précipitation, climat, gel, tempête, humidité, vent, ensoleillé, nuageux
+   - Keywords (AR): طقس, توقعات, درجة الحرارة, مطر, هطول, مناخ, صقيع, عاصفة, رطوبة, رياح, مشمس, غائم
+   - Examples: "Weather forecast", "What's the temperature?", "Rain tomorrow", "ما هو الطقس غدا؟"
+
+9. **soil**: Soil analysis, nutrients, fertilizer, pH, organic matter, texture, soil quality, soil testing
+   - Keywords (EN): soil, nutrient, nutrients, fertilizer, fertiliser, pH, organic matter, texture, soil analysis, soil quality, soil test
+   - Keywords (FR): sol, nutriment, nutriments, engrais, pH, matière organique, texture, analyse du sol, qualité du sol
+   - Keywords (AR): تربة, مغذيات, سماد, أسمدة, pH, مادة عضوية, قوام, تحليل التربة, جودة التربة
+   - Examples: "Soil analysis", "Nutrient levels", "pH of soil", "Fertilizer needs"
+
+10. **alerts**: Performance alerts, warnings, problems, issues, underperforming areas, critical situations, performance issues
+    - Keywords (EN): alert, alerts, warning, warnings, problem, problems, issue, issues, underperforming, critical, deviation, performance issue
+    - Keywords (FR): alerte, alertes, avertissement, avertissements, problème, problèmes, critique, déviation, problème de performance
+    - Keywords (AR): تنبيه, تنبيهات, تحذير, تحذيرات, مشكلة, مشاكل, حرج, انحراف, مشكلة الأداء
+    - Examples: "Show alerts", "Performance issues", "Critical problems", "Underperforming areas"
+
+11. **forecast**: Yield forecasts, predictions, expected outcomes, upcoming events, benchmarks, yield predictions
+    - Keywords (EN): forecast, forecasts, prediction, predictions, expected, upcoming, yield forecast, benchmark, benchmarks
+    - Keywords (FR): prévision, prévisions, prédiction, prédictions, attendu, à venir, prévision de rendement, référence
+    - Keywords (AR): توقعات, تنبؤ, تنبؤات, متوقع, قادم, توقعات المحصول, معيار
+    - Examples: "Yield forecast", "Expected harvest", "Production predictions", "Benchmarks"
+
+Return ONLY a valid JSON object with boolean values for each module.
+Example: {"farm": true, "worker": false, "accounting": false, "inventory": false, "production": false, "supplierCustomer": false, "satellite": false, "weather": false, "soil": false, "alerts": false, "forecast": false}
+
+Do not include any explanation, only the JSON object.`;
+
+      const userPrompt = `Query: "${query}"
+
+Determine which modules are relevant based on the query's intent and content. Return only valid JSON.`;
+
+      // Use low temperature for consistent JSON output and limit tokens
+      const response = await this.zaiProvider.generate({
+        systemPrompt,
+        userPrompt,
+        config: {
+          provider: 'zai' as any,
+          model: 'GLM-4.5-Flash',
+          temperature: 0.1,
+          maxTokens: 200,
+        },
+      });
+
+      // Parse JSON response
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Validate and return with defaults for missing fields
+        return {
+          farm: parsed.farm === true,
+          worker: parsed.worker === true,
+          accounting: parsed.accounting === true,
+          inventory: parsed.inventory === true,
+          production: parsed.production === true,
+          supplierCustomer: parsed.supplierCustomer === true,
+          satellite: parsed.satellite === true,
+          weather: parsed.weather === true,
+          soil: parsed.soil === true,
+          alerts: parsed.alerts === true,
+          forecast: parsed.forecast === true,
+        };
+      }
+
+      // If JSON parsing fails, fall back to regex
+      this.logger.warn('Failed to parse AI context analysis JSON, falling back to regex');
+      return this.analyzeQueryContext(query);
+    } catch (error) {
+      // On any error, fall back to regex-based analysis
+      this.logger.warn(
+        `AI context analysis failed: ${error.message}, falling back to regex`,
+      );
+      return this.analyzeQueryContext(query);
+    }
+  }
+
+  /**
+   * Fallback regex-based query context analysis
+   * Used when AI analysis fails or is unavailable
+   */
   private analyzeQueryContext(query: string): ContextNeeds {
     const lowerQuery = query.toLowerCase();
     return {
@@ -484,7 +633,7 @@ export class ChatService {
       satellite: /satellite|ndvi|ndmi|ndre|gci|savi|vegetation|health|stress|remote|sensing/.test(
         lowerQuery,
       ),
-      weather: /weather|rain|temperature|frost|climate|precipitation|dry|spell/.test(
+      weather: /weather|rain|temperature|frost|climate|precipitation|dry|spell|forecast|tomorrow|sunny|cloudy|wind|humidity|storm/.test(
         lowerQuery,
       ),
       soil: /soil|nutrient|fertilizer|ph|analysis|organic|matter|texture/.test(
@@ -935,6 +1084,10 @@ export class ChatService {
         latest_indices: [],
         trends: [],
         weather_summary: null,
+        weather_forecast: {
+          parcels: [],
+          available: false,
+        },
       };
     }
 
@@ -1032,10 +1185,55 @@ export class ChatService {
     // For now, return null and let the AI know weather data needs to be fetched
     const weatherSummary = null;
 
+    // Fetch weather forecast for each parcel
+    let weatherForecast = {
+      parcels: [] as Array<{ parcel_id: string; parcel_name: string; forecasts: WeatherForecast[] }>,
+      available: false,
+    };
+
+    if (this.weatherProvider.isConfigured()) {
+      try {
+        const forecastPromises = parcels.map(async (parcel: any) => {
+          try {
+            if (!parcel.boundary || parcel.boundary.length === 0) {
+              return null;
+            }
+
+            // Ensure coordinates are in WGS84
+            const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
+            const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
+
+            // Get 5-day forecast
+            const forecastData = await this.weatherProvider.getForecast(latitude, longitude, 5);
+
+            return {
+              parcel_id: parcel.id,
+              parcel_name: parcel.name || 'Unknown',
+              forecasts: forecastData.forecasts,
+            };
+          } catch (error) {
+            this.logger.warn(`Failed to fetch forecast for parcel ${parcel.id}: ${error.message}`);
+            return null;
+          }
+        });
+
+        const forecastResults = await Promise.all(forecastPromises);
+        weatherForecast = {
+          parcels: forecastResults.filter(Boolean),
+          available: forecastResults.some(Boolean),
+        };
+
+        this.logger.log(`Fetched weather forecast for ${weatherForecast.parcels.length} parcels`);
+      } catch (error) {
+        this.logger.warn(`Failed to fetch weather forecasts: ${error.message}`);
+      }
+    }
+
     return {
       latest_indices: latestIndices as any,
       trends: trends as any,
       weather_summary: weatherSummary,
+      weather_forecast: weatherForecast,
     };
   }
 
@@ -1360,7 +1558,12 @@ Avg Temp: ${context.satelliteWeather.weather_summary.avg_temp_min.toFixed(1)}°C
 Precipitation: ${context.satelliteWeather.weather_summary.precipitation_total.toFixed(1)} mm
 Dry Spells: ${context.satelliteWeather.weather_summary.dry_spells_count}
 Frost Days: ${context.satelliteWeather.weather_summary.frost_days}
-` : 'Weather data not available. Consider fetching weather data for better recommendations.'}
+` : 'Weather summary not available.'}
+
+Weather Forecast: ${context.satelliteWeather.weather_forecast?.available ? context.satelliteWeather.weather_forecast.parcels.map(p => `
+${p.parcel_name}:
+${p.forecasts.slice(0, 3).map(f => `  ${f.date}: ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}`).join('\n')}
+`).join('') : 'Weather forecast not available.'}
 ` : 'No satellite/weather data available.'}
 
 ====================================================

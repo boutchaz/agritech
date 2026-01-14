@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
 import { supabase } from '@/lib/supabase';
 
 export type TourId = 
@@ -25,6 +26,7 @@ export type TourId =
 
 interface TourState {
   completedTours: TourId[];
+  dismissedTours: TourId[];
   currentTour: TourId | null;
   isRunning: boolean;
   stepIndex: number;
@@ -34,9 +36,12 @@ interface TourContextValue {
   startTour: (tourId: TourId) => void;
   endTour: () => void;
   completedTours: TourId[];
+  dismissedTours: TourId[];
   isRunning: boolean;
   currentTour: TourId | null;
   isTourCompleted: (tourId: TourId) => boolean;
+  isTourDismissed: (tourId: TourId) => boolean;
+  dismissTour: (tourId: TourId) => Promise<void>;
   resetTour: (tourId: TourId) => Promise<void>;
   resetAllTours: () => Promise<void>;
 }
@@ -44,6 +49,7 @@ interface TourContextValue {
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
 const TOUR_STORAGE_KEY = 'agritech_completed_tours';
+const DISMISSED_TOURS_KEY = 'agritech_dismissed_tours';
 
 const TOUR_ROUTES: Record<TourId, string> = {
   'welcome': '/dashboard',
@@ -66,7 +72,7 @@ const TOUR_ROUTES: Record<TourId, string> = {
 const tourStyles = {
   options: {
     primaryColor: '#059669',
-    zIndex: 10000,
+    zIndex: 9999,
     arrowColor: '#fff',
     backgroundColor: '#fff',
     overlayColor: 'rgba(0, 0, 0, 0.5)',
@@ -92,6 +98,8 @@ const tourStyles = {
 // Custom Tooltip component for translated step counter
 interface CustomTooltipProps extends TooltipRenderProps {
   t: TFunction;
+  onDismiss?: (tourId: TourId) => void;
+  currentTourId?: TourId | null;
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({
@@ -106,18 +114,31 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   tooltipProps,
   isLastStep,
   t,
+  onDismiss,
+  currentTourId,
 }) => {
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  // Detect mobile for responsive styling
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
     <div
       {...tooltipProps}
       style={{
         backgroundColor: '#fff',
-        borderRadius: '0.75rem',
+        borderRadius: isMobile ? '0.5rem' : '0.75rem',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        maxWidth: 'min(420px, calc(100vw - 2rem))',
+        maxWidth: isMobile ? 'calc(100vw - 2rem)' : 'min(420px, calc(100vw - 2rem))',
         width: '100%',
-        padding: '0.875rem',
+        padding: isMobile ? '0.75rem' : '0.875rem',
         margin: '0 auto',
+        ...(isMobile && {
+          position: 'fixed',
+          bottom: '1rem',
+          left: '1rem',
+          right: '1rem',
+          maxWidth: 'none',
+        }),
       }}
     >
       {step.title && (
@@ -169,6 +190,12 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
             )}
             <button
               {...skipProps}
+              onClick={(e) => {
+                if (dontShowAgain && onDismiss && currentTourId) {
+                  onDismiss(currentTourId);
+                }
+                skipProps.onClick(e);
+              }}
               style={{
                 padding: '0.5rem 0.75rem',
                 backgroundColor: 'transparent',
@@ -216,6 +243,28 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
             )}
           </div>
         </div>
+        {/* Don't show again checkbox */}
+        {!isLastStep && (
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.8rem',
+            color: '#6b7280',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}>
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              style={{
+                cursor: 'pointer',
+              }}
+            />
+            {t('tour.buttons.dontShowAgain', "Don't show this tour again")}
+          </label>
+        )}
       </div>
     </div>
   );
@@ -667,8 +716,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { hasFeature } = useExperienceLevel();
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
+    dismissedTours: [],
     currentTour: null,
     isRunning: false,
     stepIndex: 0,
@@ -683,11 +734,19 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const loadCompletedTours = async () => {
     if (!user) {
       const stored = localStorage.getItem(TOUR_STORAGE_KEY);
+      const dismissedStored = localStorage.getItem(DISMISSED_TOURS_KEY);
       if (stored) {
         try {
           setTourState(prev => ({ ...prev, completedTours: JSON.parse(stored) }));
         } catch {
           console.error('Failed to parse stored tours');
+        }
+      }
+      if (dismissedStored) {
+        try {
+          setTourState(prev => ({ ...prev, dismissedTours: JSON.parse(dismissedStored) }));
+        } catch {
+          console.error('Failed to parse stored dismissed tours');
         }
       }
       return;
@@ -696,12 +755,15 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     try {
       const { data } = await supabase
         .from('user_profiles')
-        .select('completed_tours')
+        .select('completed_tours, dismissed_tours')
         .eq('id', user.id)
         .single();
 
       if (data?.completed_tours) {
         setTourState(prev => ({ ...prev, completedTours: data.completed_tours as TourId[] }));
+      }
+      if (data?.dismissed_tours) {
+        setTourState(prev => ({ ...prev, dismissedTours: data.dismissed_tours as TourId[] }));
       }
     } catch (error) {
       console.error('Failed to load completed tours:', error);
@@ -719,6 +781,21 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           .eq('id', user.id);
       } catch (error) {
         console.error('Failed to save completed tours:', error);
+      }
+    }
+  };
+
+  const saveDismissedTours = async (tours: TourId[]) => {
+    localStorage.setItem(DISMISSED_TOURS_KEY, JSON.stringify(tours));
+
+    if (user) {
+      try {
+        await supabase
+          .from('user_profiles')
+          .update({ dismissed_tours: tours })
+          .eq('id', user.id);
+      } catch (error) {
+        console.error('Failed to save dismissed tours:', error);
       }
     }
   };
@@ -800,6 +877,18 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     return tourState.completedTours.includes(tourId);
   }, [tourState.completedTours]);
 
+  const isTourDismissed = useCallback((tourId: TourId) => {
+    return tourState.dismissedTours.includes(tourId);
+  }, [tourState.dismissedTours]);
+
+  const dismissTour = useCallback(async (tourId: TourId) => {
+    if (tourState.dismissedTours.includes(tourId)) return;
+    const newDismissed = [...tourState.dismissedTours, tourId];
+    setTourState(prev => ({ ...prev, dismissedTours: newDismissed }));
+    await saveDismissedTours(newDismissed);
+    endTour();
+  }, [tourState.dismissedTours, endTour]);
+
   const resetTour = useCallback(async (tourId: TourId) => {
     const newCompletedTours = tourState.completedTours.filter(t => t !== tourId);
     setTourState(prev => ({ ...prev, completedTours: newCompletedTours }));
@@ -819,9 +908,12 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         startTour,
         endTour,
         completedTours: tourState.completedTours,
+        dismissedTours: tourState.dismissedTours,
         isRunning: tourState.isRunning,
         currentTour: tourState.currentTour,
         isTourCompleted,
+        isTourDismissed,
+        dismissTour,
         resetTour,
         resetAllTours,
       }}
@@ -838,7 +930,14 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         disableOverlayClose
         callback={handleJoyrideCallback}
         styles={tourStyles}
-        tooltipComponent={(props) => <CustomTooltip {...props} t={t} />}
+        tooltipComponent={(props) => (
+          <CustomTooltip
+            {...props}
+            t={t}
+            onDismiss={dismissTour}
+            currentTourId={tourState.currentTour}
+          />
+        )}
         floaterProps={{
           hideArrow: false,
         }}
@@ -856,14 +955,20 @@ export const useTour = (): TourContextValue => {
 };
 
 export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
-  const { startTour, isTourCompleted, isRunning } = useTour();
+  const { startTour, isTourCompleted, isRunning, dismissedTours } = useTour();
+  const { hasFeature } = useExperienceLevel();
 
   useEffect(() => {
-    if (!isTourCompleted(tourId) && !isRunning) {
+    // Only auto-start if:
+    // 1. Tour not completed
+    // 2. Tour not dismissed
+    // 3. Not already running
+    // 4. User has enabledGuidedTours feature (basic level only)
+    if (!isTourCompleted(tourId) && !dismissedTours.includes(tourId) && !isRunning && hasFeature('enableGuidedTours')) {
       const timer = setTimeout(() => {
         startTour(tourId);
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [tourId, startTour, isTourCompleted, isRunning, delay]);
+  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature]);
 };
