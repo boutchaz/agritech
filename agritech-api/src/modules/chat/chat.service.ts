@@ -190,7 +190,7 @@ export class ChatService {
         userPrompt,
         config: {
           provider: 'zai' as any,
-          model: 'glm-4.7',
+          model: 'GLM-4.5-Flash',
           temperature: 0.7,
           maxTokens: 8192,
         },
@@ -200,7 +200,7 @@ export class ChatService {
       if (shouldSaveHistory) {
         await this.saveMessage(userId, organizationId, 'assistant', response.content, dto.language, {
           provider: 'zai',
-          model: 'glm-4.7',
+          model: response.model,
           tokensUsed: response.tokensUsed,
         });
       }
@@ -210,7 +210,7 @@ export class ChatService {
         context_summary: this.summarizeContext(context),
         metadata: {
           provider: 'zai',
-          model: 'glm-4.7',
+          model: response.model,
           tokensUsed: response.tokensUsed,
           timestamp: response.generatedAt,
         },

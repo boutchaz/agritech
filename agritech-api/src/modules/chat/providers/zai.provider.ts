@@ -13,7 +13,7 @@ import {
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-  private readonly defaultModel = 'glm-4-plus';
+  private readonly defaultModel = 'GLM-4.5-Flash';
 
   constructor(configService: ConfigService) {
     super(configService, 'zai' as AIProvider);
@@ -36,13 +36,18 @@ export class ZaiProvider extends BaseAIProvider {
         throw new Error('Invalid Z.ai API key format');
       }
 
+      const nowInSeconds = Math.floor(Date.now() / 1000);
       const payload = {
         api_key: id,
-        exp: Date.now() + 3600 * 1000, // 1 hour expiration
-        timestamp: Date.now(),
+        exp: nowInSeconds + 3600, // 1 hour expiration (in SECONDS)
+        timestamp: nowInSeconds,   // Z.ai requires this in SECONDS
       };
 
-      return jwt.sign(payload, secret, { algorithm: 'HS256' });
+      // Z.ai requires sign_type: 'SIGN' in JWT header
+      return jwt.sign(payload, secret, { 
+        algorithm: 'HS256',
+        header: { alg: 'HS256', sign_type: 'SIGN' }
+      } as jwt.SignOptions);
     } catch (error) {
       this.logger.error('Failed to generate Z.ai token', error);
       return apiKey;
