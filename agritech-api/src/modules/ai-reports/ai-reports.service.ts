@@ -683,11 +683,11 @@ export class AIReportsService {
         try {
           if (parcel.boundary && parcel.boundary.length > 0) {
             // Ensure coordinates are in WGS84
-            const wgs84Boundary = this.ensureWGS84(parcel.boundary);
-            const { lat, lon } = this.calculateCentroid(wgs84Boundary);
+            const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
+            const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
 
             // Fetch weather forecast (this could be stored or just validated)
-            await this.weatherProvider.getForecast(lat, lon, 5);
+            await this.weatherProvider.getForecast(latitude, longitude, 5);
             fetched.push('weather');
             this.logger.log(`Successfully fetched weather data for parcel ${parcelId}`);
           } else {
@@ -715,39 +715,6 @@ export class AIReportsService {
     };
   }
 
-  /**
-   * Ensure coordinates are in WGS84 format
-   */
-  private ensureWGS84(boundary: number[][]): number[][] {
-    const firstCoord = boundary[0];
-    if (Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90) {
-      // Convert from Web Mercator to WGS84
-      return boundary.map(([x, y]) => {
-        const lon = (x / 20037508.34) * 180;
-        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
-        return [lon, lat];
-      });
-    }
-    return boundary;
-  }
-
-  /**
-   * Calculate centroid from boundary coordinates
-   */
-  private calculateCentroid(
-    boundary: number[][],
-  ): { lat: number; lon: number } {
-    let sumLat = 0;
-    let sumLon = 0;
-    boundary.forEach(([lon, lat]) => {
-      sumLat += lat;
-      sumLon += lon;
-    });
-    return {
-      lat: sumLat / boundary.length,
-      lon: sumLon / boundary.length,
-    };
-  }
 
   /**
    * Legacy calibration method (kept for backward compatibility)
