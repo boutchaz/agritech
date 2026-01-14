@@ -44,7 +44,7 @@ const ChatPage: React.FC = () => {
       />
 
       <div className="p-3 sm:p-4 lg:p-6">
-        <div className="max-w-4xl mx-auto h-[calc(100vh-14rem)]">
+        <div className="max-w-4xl mx-auto" style={{ height: 'calc(100vh - 12rem)' }}>
           <ChatInterface />
         </div>
       </div>
