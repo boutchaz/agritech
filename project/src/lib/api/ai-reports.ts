@@ -137,6 +137,59 @@ interface BackendAIReportResponse {
   };
 }
 
+export interface CalibrationStatus {
+  status: 'ready' | 'warning' | 'blocked';
+  accuracy: number;
+  missingData: string[];
+  recommendations: string[];
+  lastValidated: string;
+  nextAutoRefresh?: string;
+  satellite: {
+    status: 'available' | 'stale' | 'missing';
+    imageCount: number;
+    latestDate: string | null;
+    ageDays: number | null;
+    cloudCoverage: number | null;
+    isValid: boolean;
+  };
+  weather: {
+    status: 'available' | 'incomplete' | 'missing';
+    completeness: number;
+    latestDate: string | null;
+    ageHours: number | null;
+    isValid: boolean;
+  };
+  soil: {
+    present: boolean;
+    latestDate: string | null;
+    ageDays: number | null;
+    isValid: boolean;
+  };
+  water: {
+    present: boolean;
+    latestDate: string | null;
+    ageDays: number | null;
+    isValid: boolean;
+  };
+  plant: {
+    present: boolean;
+    latestDate: string | null;
+    ageDays: number | null;
+    isValid: boolean;
+  };
+}
+
+export interface CalibrateRequest {
+  forceRefetch?: boolean;
+  autoFetch?: boolean;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface FetchDataRequest {
+  dataSources: ('satellite' | 'weather')[];
+}
+
 export const aiReportsApi = {
   async getProviders(organizationId?: string): Promise<AIProviderInfo[]> {
     return apiClient.get(`${BASE_URL}/providers`, {}, organizationId);
@@ -153,6 +206,35 @@ export const aiReportsApi = {
     if (endDate) params.append('end_date', endDate);
     const query = params.toString() ? `?${params}` : '';
     return apiClient.get(`${BASE_URL}/data-availability/${parcelId}${query}`, {}, organizationId);
+  },
+
+  async getCalibrationStatus(
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+    organizationId?: string,
+  ): Promise<CalibrationStatus> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const query = params.toString() ? `?${params}` : '';
+    return apiClient.get(`${BASE_URL}/parcels/${parcelId}/calibration-status${query}`, {}, organizationId);
+  },
+
+  async calibrate(
+    parcelId: string,
+    request: CalibrateRequest,
+    organizationId?: string,
+  ): Promise<CalibrationStatus> {
+    return apiClient.post(`${BASE_URL}/parcels/${parcelId}/calibrate`, request, {}, organizationId);
+  },
+
+  async fetchData(
+    parcelId: string,
+    request: FetchDataRequest,
+    organizationId?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return apiClient.post(`${BASE_URL}/parcels/${parcelId}/fetch-data`, request, {}, organizationId);
   },
 
   async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportResponse> {

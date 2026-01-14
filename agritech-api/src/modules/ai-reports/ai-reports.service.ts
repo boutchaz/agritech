@@ -19,7 +19,7 @@ import {
   AIProviderConfig,
   IAIProvider,
 } from './interfaces';
-import { GenerateAIReportDto, AIProviderInfoDto } from './dto';
+import { GenerateAIReportDto, AIProviderInfoDto, CalibrationStatusDto, CalibrateRequestDto, FetchDataRequestDto } from './dto';
 import {
   AGRICULTURAL_EXPERT_SYSTEM_PROMPT,
   buildUserPrompt,
@@ -343,15 +343,15 @@ export class AIReportsService {
   }
 
   /**
-   * Calibrate parcel data - check freshness and trigger refresh if needed
-   * This ensures we're always using the most recent data for AI reports
+   * Validate analysis data - comprehensive calibration and validation
+   * Returns detailed status with accuracy scoring and recommendations
    */
-  private async calibrateParcelData(
+  async validateAnalysis(
     organizationId: string,
     parcelId: string,
     startDate?: string,
     endDate?: string,
-  ): Promise<void> {
+  ): Promise<CalibrationStatusDto> {
     const supabase = this.databaseService.getAdminClient();
     const now = new Date();
     const defaultEndDate = endDate || now.toISOString().split('T')[0];
@@ -359,38 +359,118 @@ export class AIReportsService {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const defaultStartDate = startDate || sixMonthsAgo.toISOString().split('T')[0];
 
-    this.logger.log(`Calibrating data for parcel ${parcelId}`);
+    this.logger.log(`Validating data for parcel ${parcelId} (${defaultStartDate} to ${defaultEndDate})`);
 
-    // Check satellite data freshness (should be within last 7 days for latest data)
+    // Get parcel info for boundary
+    const { data: parcel } = await supabase
+      .from('parcels')
+      .select('id, boundary')
+      .eq('id', parcelId)
+      .single();
+
+    // ===== PHASE 1: SATELLITE DATA VALIDATION =====
+    const { data: satelliteData } = await supabase
+      .from('satellite_indices_data')
+      .select('date, cloud_coverage_percentage')
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .order('date', { ascending: false });
+
     const { data: latestSatellite } = await supabase
       .from('satellite_indices_data')
-      .select('date')
+      .select('date, cloud_coverage_percentage')
       .eq('parcel_id', parcelId)
       .order('date', { ascending: false })
       .limit(1)
       .maybeSingle();
 
+    const satelliteImageCount = satelliteData?.length || 0;
     const daysSinceLastSatellite = latestSatellite?.date
-      ? Math.floor(
-          (now.getTime() - new Date(latestSatellite.date).getTime()) /
-            (1000 * 60 * 60 * 24),
-        )
-      : Infinity;
-
-    // Check if we need recent satellite data (within date range)
+      ? Math.floor((now.getTime() - new Date(latestSatellite.date).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+    
     const endDateObj = new Date(defaultEndDate);
-    const daysSinceEndDate = Math.floor(
-      (now.getTime() - endDateObj.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const daysSinceEndDate = Math.floor((now.getTime() - endDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate average cloud coverage
+    const avgCloudCoverage = satelliteData && satelliteData.length > 0
+      ? satelliteData.reduce((sum, d) => sum + (d.cloud_coverage_percentage || 0), 0) / satelliteData.length
+      : null;
 
-    // If end date is recent (within 7 days) and satellite data is stale (>7 days old), log warning
-    if (daysSinceEndDate <= 7 && daysSinceLastSatellite > 7) {
-      this.logger.warn(
-        `Satellite data is stale (${daysSinceLastSatellite} days old). Latest data: ${latestSatellite?.date || 'none'}. Consider refreshing satellite indices.`,
-      );
+    const satelliteStatus: 'available' | 'stale' | 'missing' = 
+      satelliteImageCount === 0 ? 'missing' :
+      daysSinceLastSatellite !== null && daysSinceLastSatellite > 7 && daysSinceEndDate <= 7 ? 'stale' :
+      'available';
+
+    const satelliteValid = satelliteImageCount >= 2 && 
+      (avgCloudCoverage === null || avgCloudCoverage <= 10) &&
+      satelliteStatus !== 'missing';
+
+    // ===== PHASE 2: WEATHER DATA VALIDATION =====
+    let weatherStatus: 'available' | 'incomplete' | 'missing' = 'missing';
+    let weatherCompleteness = 0;
+    let weatherLatestDate: string | null = null;
+    let weatherAgeHours: number | null = null;
+
+    if (parcel?.boundary && Array.isArray(parcel.boundary) && parcel.boundary.length > 0) {
+      try {
+        // Calculate centroid
+        const coords = parcel.boundary as number[][];
+        const firstCoord = coords[0];
+        const isWebMercator = Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90;
+        
+        let sumLat = 0, sumLon = 0;
+        coords.forEach(([x, y]) => {
+          if (isWebMercator) {
+            const lon = (x / 20037508.34) * 180;
+            const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+            sumLon += lon;
+            sumLat += lat;
+          } else {
+            sumLon += x;
+            sumLat += y;
+          }
+        });
+
+        const latitude = sumLat / coords.length;
+        const longitude = sumLon / coords.length;
+
+        // Fetch weather data
+        const params = new URLSearchParams({
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          start_date: defaultStartDate,
+          end_date: defaultEndDate,
+          daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum',
+          timezone: 'auto',
+        });
+
+        const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?${params}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.daily && data.daily.time) {
+            const totalDays = Math.ceil((endDateObj.getTime() - new Date(defaultStartDate).getTime()) / (1000 * 60 * 60 * 24));
+            const availableDays = data.daily.time.length;
+            weatherCompleteness = totalDays > 0 ? (availableDays / totalDays) * 100 : 0;
+            weatherLatestDate = data.daily.time[data.daily.time.length - 1] || null;
+            
+            if (weatherLatestDate) {
+              const latestDate = new Date(weatherLatestDate);
+              weatherAgeHours = Math.floor((now.getTime() - latestDate.getTime()) / (1000 * 60 * 60));
+            }
+
+            weatherStatus = weatherCompleteness >= 80 ? 'available' : 'incomplete';
+          }
+        }
+      } catch (error) {
+        this.logger.warn(`Weather data fetch failed: ${error.message}`);
+      }
     }
 
-    // Check analysis freshness
+    const weatherValid = weatherStatus === 'available' && weatherCompleteness >= 80;
+
+    // ===== PHASE 3: OPTIONAL DATA VALIDATION =====
     const { data: latestSoil } = await supabase
       .from('analyses')
       .select('analysis_date')
@@ -418,49 +498,167 @@ export class AIReportsService {
       .limit(1)
       .maybeSingle();
 
-    // Check if analyses are older than recommended (soil: 6 months, water: 3 months, plant: 3 months)
-    const checkAnalysisAge = (
-      analysis: { analysis_date: string } | null,
-      type: string,
-      maxAgeMonths: number,
-    ) => {
-      if (!analysis?.analysis_date) {
-        this.logger.warn(`No ${type} analysis found for parcel ${parcelId}`);
-        return;
-      }
-
-      const analysisDate = new Date(analysis.analysis_date);
-      const monthsSinceAnalysis =
-        (now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
-
-      if (monthsSinceAnalysis > maxAgeMonths) {
-        this.logger.warn(
-          `${type} analysis is ${monthsSinceAnalysis.toFixed(1)} months old (max recommended: ${maxAgeMonths} months). Date: ${analysis.analysis_date}`,
-        );
-      }
+    const calculateAgeDays = (date: string | null): number | null => {
+      if (!date) return null;
+      return Math.floor((now.getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
     };
 
-    checkAnalysisAge(latestSoil, 'Soil', 6);
-    checkAnalysisAge(latestWater, 'Water', 3);
-    checkAnalysisAge(latestPlant, 'Plant', 3);
+    const soilAgeDays = calculateAgeDays(latestSoil?.analysis_date || null);
+    const waterAgeDays = calculateAgeDays(latestWater?.analysis_date || null);
+    const plantAgeDays = calculateAgeDays(latestPlant?.analysis_date || null);
 
-    // Ensure we have data within the requested date range
-    const { count: satelliteCount } = await supabase
-      .from('satellite_indices_data')
-      .select('*', { count: 'exact', head: true })
-      .eq('parcel_id', parcelId)
-      .gte('date', defaultStartDate)
-      .lte('date', defaultEndDate);
+    const soilValid = latestSoil && soilAgeDays !== null && soilAgeDays < 365;
+    const waterValid = latestWater && waterAgeDays !== null && waterAgeDays < 365;
+    const plantValid = latestPlant && plantAgeDays !== null && plantAgeDays < 180;
 
-    if (satelliteCount === 0) {
-      this.logger.warn(
-        `No satellite data found for parcel ${parcelId} in date range ${defaultStartDate} to ${defaultEndDate}`,
-      );
+    // ===== PHASE 4: ACCURACY SCORING =====
+    let accuracy = 0;
+    if (satelliteValid && weatherValid) {
+      accuracy = 50; // Base score for critical data
+      if (soilValid) accuracy += 15;
+      if (waterValid) accuracy += 15;
+      if (plantValid) accuracy += 20;
+    } else if (satelliteValid || weatherValid) {
+      accuracy = 25; // Partial critical data
     }
 
-    this.logger.log(
-      `Data calibration complete. Satellite: ${daysSinceLastSatellite === Infinity ? 'none' : `${daysSinceLastSatellite} days old`}, Soil: ${latestSoil?.analysis_date || 'none'}, Water: ${latestWater?.analysis_date || 'none'}, Plant: ${latestPlant?.analysis_date || 'none'}`,
+    // ===== PHASE 5: STATUS DETERMINATION =====
+    let status: 'ready' | 'warning' | 'blocked' = 'ready';
+    const missingData: string[] = [];
+    const recommendations: string[] = [];
+
+    if (!satelliteValid) {
+      if (satelliteImageCount < 2) {
+        missingData.push('satellite');
+        recommendations.push('Fetch at least 2 satellite images for accurate analysis');
+      } else if (satelliteStatus === 'stale') {
+        recommendations.push('Satellite data is stale (>7 days). Consider refreshing.');
+      }
+    }
+
+    if (!weatherValid) {
+      if (weatherStatus === 'missing') {
+        missingData.push('weather');
+        recommendations.push('Weather data is missing. Fetch weather data for the analysis period.');
+      } else if (weatherCompleteness < 80) {
+        recommendations.push(`Weather data is incomplete (${weatherCompleteness.toFixed(0)}%). Fetch missing dates.`);
+      }
+    }
+
+    if (!soilValid && !latestSoil) {
+      recommendations.push('Add soil analysis for better accuracy (recommended)');
+    } else if (soilAgeDays !== null && soilAgeDays >= 365) {
+      recommendations.push('Soil analysis is outdated (>1 year). Consider updating.');
+    }
+
+    if (!waterValid && !latestWater) {
+      recommendations.push('Add water analysis for better accuracy (recommended)');
+    } else if (waterAgeDays !== null && waterAgeDays >= 365) {
+      recommendations.push('Water analysis is outdated (>1 year). Consider updating.');
+    }
+
+    if (!plantValid && !latestPlant) {
+      recommendations.push('Add plant analysis for better accuracy (recommended)');
+    } else if (plantAgeDays !== null && plantAgeDays >= 180) {
+      recommendations.push('Plant analysis is outdated (>6 months). Consider updating.');
+    }
+
+    // Determine final status
+    if (!satelliteValid || !weatherValid) {
+      status = 'blocked';
+    } else if (accuracy < 75 || recommendations.length > 0) {
+      status = 'warning';
+    }
+
+    // Calculate next auto-refresh (7 days from now)
+    const nextAutoRefresh = new Date(now);
+    nextAutoRefresh.setDate(nextAutoRefresh.getDate() + 7);
+
+    return {
+      status,
+      accuracy,
+      missingData,
+      recommendations,
+      lastValidated: now.toISOString(),
+      nextAutoRefresh: nextAutoRefresh.toISOString(),
+      satellite: {
+        status: satelliteStatus,
+        imageCount: satelliteImageCount,
+        latestDate: latestSatellite?.date || null,
+        ageDays: daysSinceLastSatellite,
+        cloudCoverage: avgCloudCoverage,
+        isValid: satelliteValid,
+      },
+      weather: {
+        status: weatherStatus,
+        completeness: weatherCompleteness,
+        latestDate: weatherLatestDate,
+        ageHours: weatherAgeHours,
+        isValid: weatherValid,
+      },
+      soil: {
+        present: !!latestSoil,
+        latestDate: latestSoil?.analysis_date || null,
+        ageDays: soilAgeDays,
+        isValid: soilValid,
+      },
+      water: {
+        present: !!latestWater,
+        latestDate: latestWater?.analysis_date || null,
+        ageDays: waterAgeDays,
+        isValid: waterValid,
+      },
+      plant: {
+        present: !!latestPlant,
+        latestDate: latestPlant?.analysis_date || null,
+        ageDays: plantAgeDays,
+        isValid: plantValid,
+      },
+    };
+  }
+
+  /**
+   * Recalibrate data - force refresh and re-validation
+   */
+  async recalibrate(
+    organizationId: string,
+    parcelId: string,
+    dto: CalibrateRequestDto,
+  ): Promise<CalibrationStatusDto> {
+    this.logger.log(`Recalibrating data for parcel ${parcelId} (force: ${dto.forceRefetch}, autoFetch: ${dto.autoFetch})`);
+
+    // If force refresh, we could invalidate cache here
+    // For now, just re-run validation
+    const status = await this.validateAnalysis(
+      organizationId,
+      parcelId,
+      dto.startDate,
+      dto.endDate,
     );
+
+    // Auto-fetch missing data if enabled
+    if (dto.autoFetch && status.missingData.length > 0) {
+      // TODO: Trigger satellite/weather fetch based on missingData
+      this.logger.log(`Auto-fetch enabled for missing data: ${status.missingData.join(', ')}`);
+    }
+
+    return status;
+  }
+
+  /**
+   * Legacy calibration method (kept for backward compatibility)
+   * Now calls validateAnalysis internally
+   */
+  private async calibrateParcelData(
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<void> {
+    const status = await this.validateAnalysis(organizationId, parcelId, startDate, endDate);
+    if (status.status === 'blocked') {
+      this.logger.warn(`Analysis blocked due to missing critical data: ${status.missingData.join(', ')}`);
+    }
   }
 
   private async aggregateParcelData(
@@ -536,6 +734,57 @@ export class AIReportsService {
       .lte('date', defaultEndDate)
       .order('date', { ascending: true });
 
+    // Fetch tasks/operations
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('date, type, description')
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .order('date', { ascending: false })
+      .limit(50);
+
+    // Fetch recent harvests (last 2 years for context)
+    const twoYearsAgo = new Date(now);
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const { data: harvests } = await supabase
+      .from('harvest_records')
+      .select('harvest_date, quantity, unit, quality_grade, quality_score')
+      .eq('parcel_id', parcelId)
+      .gte('harvest_date', twoYearsAgo.toISOString().split('T')[0])
+      .order('harvest_date', { ascending: false })
+      .limit(20);
+
+    // Fetch active crop cycle
+    const { data: cropCycle } = await supabase
+      .from('crop_cycles')
+      .select('*')
+      .eq('parcel_id', parcelId)
+      .in('status', ['planned', 'land_prep', 'growing', 'harvesting'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Fetch yield history (last 3 years)
+    const threeYearsAgo = new Date(now);
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    const { data: yieldHistory } = await supabase
+      .from('yield_history')
+      .select('season, year, yield_per_hectare, quality_grade, performance_rating')
+      .eq('parcel_id', parcelId)
+      .gte('year', threeYearsAgo.getFullYear())
+      .order('year', { ascending: false })
+      .order('season', { ascending: false });
+
+    // Fetch active performance alerts
+    const { data: performanceAlerts } = await supabase
+      .from('performance_alerts')
+      .select('alert_type, severity, description, created_at')
+      .eq('parcel_id', parcelId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
     // Build aggregated response
     return this.buildAggregatedData(
       parcel,
@@ -543,6 +792,11 @@ export class AIReportsService {
       waterAnalyses?.[0],
       plantAnalyses?.[0],
       satelliteData || [],
+      tasks || [],
+      harvests || [],
+      cropCycle || null,
+      yieldHistory || [],
+      performanceAlerts || [],
       defaultStartDate,
       defaultEndDate,
     );
@@ -554,6 +808,11 @@ export class AIReportsService {
     waterAnalysis: any,
     plantAnalysis: any,
     satelliteData: any[],
+    tasks: any[],
+    harvests: any[],
+    cropCycle: any | null,
+    yieldHistory: any[],
+    performanceAlerts: any[],
     startDate: string,
     endDate: string,
   ): Promise<AggregatedParcelData> {
@@ -685,6 +944,47 @@ export class AIReportsService {
           ),
       },
       weather: await this.fetchWeatherData(parcel.boundary, startDate, endDate),
+      tasks: tasks.map((t) => ({
+        date: t.date,
+        type: t.type,
+        description: t.description,
+      })),
+      harvests: harvests.map((h) => ({
+        date: h.harvest_date,
+        quantity: h.quantity,
+        unit: h.unit,
+        qualityGrade: h.quality_grade,
+        qualityScore: h.quality_score,
+      })),
+      cropCycle: cropCycle
+        ? {
+            cycleName: cropCycle.cycle_name || cropCycle.cycle_code,
+            status: cropCycle.status,
+            plantingDate: cropCycle.planting_date,
+            expectedHarvestStart: cropCycle.expected_harvest_start,
+            expectedHarvestEnd: cropCycle.expected_harvest_end,
+            actualHarvestStart: cropCycle.actual_harvest_start,
+            actualHarvestEnd: cropCycle.actual_harvest_end,
+            expectedYieldPerHa: cropCycle.expected_yield_per_ha,
+            actualYieldPerHa: cropCycle.actual_yield_per_ha,
+            totalCosts: cropCycle.total_costs,
+            totalRevenue: cropCycle.total_revenue,
+            netProfit: cropCycle.net_profit,
+          }
+        : undefined,
+      yieldHistory: yieldHistory.map((yh) => ({
+        season: yh.season,
+        year: yh.year,
+        yieldPerHa: yh.yield_per_hectare,
+        qualityGrade: yh.quality_grade,
+        performanceRating: yh.performance_rating,
+      })),
+      performanceAlerts: performanceAlerts.map((pa) => ({
+        type: pa.alert_type,
+        severity: pa.severity,
+        description: pa.description,
+        date: pa.created_at,
+      })),
     };
   }
 
