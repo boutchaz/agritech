@@ -156,6 +156,8 @@ export interface AIReportSections {
     title: string;
     description: string;
     timing?: string;
+    estimatedCost?: string;
+    expectedROI?: string;
   }>;
   riskAlerts: Array<{
     severity: 'critical' | 'warning' | 'info';
