@@ -5,6 +5,7 @@ export enum AIProviderType {
   OPENAI = 'openai',
   GEMINI = 'gemini',
   GROQ = 'groq',
+  ZAI = 'zai',
 }
 
 export class UpsertAIProviderDto {

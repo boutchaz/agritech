@@ -11,6 +11,7 @@ import { DatabaseService } from '../database/database.service';
 import { OpenAIProvider } from './providers/openai.provider';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
+import { ZaiProvider } from './providers/zai.provider';
 import {
   AIProvider,
   AggregatedParcelData,
@@ -37,6 +38,7 @@ export class AIReportsService {
     private readonly openaiProvider: OpenAIProvider,
     private readonly geminiProvider: GeminiProvider,
     private readonly groqProvider: GroqProvider,
+    private readonly zaiProvider: ZaiProvider,
     @Inject(forwardRef(() => OrganizationAISettingsService))
     private readonly aiSettingsService: OrganizationAISettingsService,
   ) {
@@ -44,6 +46,7 @@ export class AIReportsService {
     this.providers.set(AIProvider.OPENAI, openaiProvider);
     this.providers.set(AIProvider.GEMINI, geminiProvider);
     this.providers.set(AIProvider.GROQ, groqProvider);
+    this.providers.set(AIProvider.ZAI, zaiProvider);
   }
 
   async generateReport(organizationId: string, userId: string, dto: GenerateAIReportDto) {
@@ -70,6 +73,9 @@ export class AIReportsService {
       case AIProvider.GROQ:
         envApiKey = this.configService.get<string>('GROQ_API_KEY');
         break;
+      case AIProvider.ZAI:
+        envApiKey = this.configService.get<string>('ZAI_API_KEY');
+        break;
     }
 
     const effectiveApiKey = apiKey || envApiKey;
@@ -89,7 +95,15 @@ export class AIReportsService {
     // Set the API key on the provider for this request
     provider.setApiKey(effectiveApiKey);
 
-    // 2. Aggregate all data sources
+    // 2. Calibrate and refresh data if needed
+    await this.calibrateParcelData(
+      organizationId,
+      dto.parcel_id,
+      dto.data_start_date,
+      dto.data_end_date,
+    );
+
+    // 3. Aggregate all data sources (after calibration)
     const aggregatedData = await this.aggregateParcelData(
       organizationId,
       dto.parcel_id,
@@ -97,11 +111,11 @@ export class AIReportsService {
       dto.data_end_date,
     );
 
-    // 3. Build prompts
+    // 4. Build prompts
     const systemPrompt = AGRICULTURAL_EXPERT_SYSTEM_PROMPT;
     const userPrompt = buildUserPrompt(aggregatedData, dto.language || 'fr');
 
-    // 4. Generate AI response
+    // 5. Generate AI response
     const config: AIProviderConfig = {
       provider: dto.provider,
       model: dto.model,
@@ -290,7 +304,15 @@ export class AIReportsService {
       this.providers.get(AIProvider.GROQ)?.validateConfig() ||
       false;
 
-    return [
+    // Z.ai (Platform AI) is always available if system API key is configured
+    // It's the default platform AI service, so we check system config first
+    const zaiAvailable =
+      this.providers.get(AIProvider.ZAI)?.validateConfig() ||
+      orgSettings.get(AIProviderType.ZAI) ||
+      false;
+
+    // Return providers with Platform AI (zai) first if available
+    const providersList = [
       {
         provider: AIProvider.OPENAI,
         available: openaiAvailable,
@@ -307,6 +329,138 @@ export class AIReportsService {
         name: 'Groq (LLaMA)',
       },
     ];
+
+    // Add Platform AI first if available, otherwise don't include it
+    if (zaiAvailable) {
+      providersList.unshift({
+        provider: AIProvider.ZAI,
+        available: zaiAvailable,
+        name: 'Platform AI',
+      });
+    }
+
+    return providersList;
+  }
+
+  /**
+   * Calibrate parcel data - check freshness and trigger refresh if needed
+   * This ensures we're always using the most recent data for AI reports
+   */
+  private async calibrateParcelData(
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const now = new Date();
+    const defaultEndDate = endDate || now.toISOString().split('T')[0];
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const defaultStartDate = startDate || sixMonthsAgo.toISOString().split('T')[0];
+
+    this.logger.log(`Calibrating data for parcel ${parcelId}`);
+
+    // Check satellite data freshness (should be within last 7 days for latest data)
+    const { data: latestSatellite } = await supabase
+      .from('satellite_indices_data')
+      .select('date')
+      .eq('parcel_id', parcelId)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const daysSinceLastSatellite = latestSatellite?.date
+      ? Math.floor(
+          (now.getTime() - new Date(latestSatellite.date).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : Infinity;
+
+    // Check if we need recent satellite data (within date range)
+    const endDateObj = new Date(defaultEndDate);
+    const daysSinceEndDate = Math.floor(
+      (now.getTime() - endDateObj.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // If end date is recent (within 7 days) and satellite data is stale (>7 days old), log warning
+    if (daysSinceEndDate <= 7 && daysSinceLastSatellite > 7) {
+      this.logger.warn(
+        `Satellite data is stale (${daysSinceLastSatellite} days old). Latest data: ${latestSatellite?.date || 'none'}. Consider refreshing satellite indices.`,
+      );
+    }
+
+    // Check analysis freshness
+    const { data: latestSoil } = await supabase
+      .from('analyses')
+      .select('analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'soil')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: latestWater } = await supabase
+      .from('analyses')
+      .select('analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'water')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: latestPlant } = await supabase
+      .from('analyses')
+      .select('analysis_date')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'plant')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Check if analyses are older than recommended (soil: 6 months, water: 3 months, plant: 3 months)
+    const checkAnalysisAge = (
+      analysis: { analysis_date: string } | null,
+      type: string,
+      maxAgeMonths: number,
+    ) => {
+      if (!analysis?.analysis_date) {
+        this.logger.warn(`No ${type} analysis found for parcel ${parcelId}`);
+        return;
+      }
+
+      const analysisDate = new Date(analysis.analysis_date);
+      const monthsSinceAnalysis =
+        (now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+
+      if (monthsSinceAnalysis > maxAgeMonths) {
+        this.logger.warn(
+          `${type} analysis is ${monthsSinceAnalysis.toFixed(1)} months old (max recommended: ${maxAgeMonths} months). Date: ${analysis.analysis_date}`,
+        );
+      }
+    };
+
+    checkAnalysisAge(latestSoil, 'Soil', 6);
+    checkAnalysisAge(latestWater, 'Water', 3);
+    checkAnalysisAge(latestPlant, 'Plant', 3);
+
+    // Ensure we have data within the requested date range
+    const { count: satelliteCount } = await supabase
+      .from('satellite_indices_data')
+      .select('*', { count: 'exact', head: true })
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate);
+
+    if (satelliteCount === 0) {
+      this.logger.warn(
+        `No satellite data found for parcel ${parcelId} in date range ${defaultStartDate} to ${defaultEndDate}`,
+      );
+    }
+
+    this.logger.log(
+      `Data calibration complete. Satellite: ${daysSinceLastSatellite === Infinity ? 'none' : `${daysSinceLastSatellite} days old`}, Soil: ${latestSoil?.analysis_date || 'none'}, Water: ${latestWater?.analysis_date || 'none'}, Plant: ${latestPlant?.analysis_date || 'none'}`,
+    );
   }
 
   private async aggregateParcelData(

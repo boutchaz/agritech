@@ -13,6 +13,7 @@ const providerIcons: Record<string, React.ReactNode> = {
   openai: <Bot className="w-6 h-6" />,
   gemini: <Sparkles className="w-6 h-6" />,
   groq: <Bot className="w-6 h-6" />,
+  zai: <Bot className="w-6 h-6" />,
 };
 
 const providerLabels: Record<string, { name: string; description: string }> = {
@@ -28,6 +29,10 @@ const providerLabels: Record<string, { name: string; description: string }> = {
     name: 'Groq',
     description: 'IA ultra-rapide avec Llama',
   },
+  zai: {
+    name: 'Platform AI',
+    description: 'Intelligence artificielle de la plateforme',
+  },
 };
 
 const defaultProviderInfo = {
@@ -41,13 +46,16 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
   onSelect,
   disabled = false,
 }) => {
+  // Filter out zai if not available, but keep it if available (it's our platform AI)
+  const displayProviders = providers.filter((p) => p.provider !== 'zai' || p.available);
+  
   return (
     <div className="space-y-3">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Fournisseur IA
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {providers.map((provider) => {
+        {displayProviders.map((provider) => {
           const isSelected = selectedProvider === provider.provider;
           const isAvailable = provider.available;
           const info = providerLabels[provider.provider] || defaultProviderInfo;

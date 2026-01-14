@@ -91,46 +91,84 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  // Stop voice input when sending
+  useEffect(() => {
+    if (isSending && isListening) {
+      stopListening();
+    }
+  }, [isSending, isListening, stopListening]);
 
+  const handleSend = () => {
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isSending) {
+      console.log('Cannot send:', { trimmedInput, isSending });
+      return;
+    }
+
+    // Stop voice input if it's active
+    if (isListening) {
+      console.log('Stopping voice input before sending');
+      stopListening();
+    }
+
+    proceedWithSend(trimmedInput);
+  };
+
+  const proceedWithSend = (messageText: string) => {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: messageText,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    const currentInput = input;
-    setInput('');
+    setInput(''); // Clear input immediately
 
-    sendMessage(
-      { query: currentInput, language: currentLanguage, save_history: true },
-      {
-        onSuccess: (data) => {
-          const assistantMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: data.response,
-            timestamp: new Date(data.metadata.timestamp),
-          };
-          setMessages((prev) => [...prev, assistantMessage]);
+    console.log('Sending message:', messageText);
+
+    try {
+      sendMessage(
+        { query: messageText, language: currentLanguage, save_history: true },
+        {
+          onSuccess: (data) => {
+            console.log('Message sent successfully:', data);
+            const assistantMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: data.response,
+              timestamp: new Date(data.metadata.timestamp),
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          },
+          onError: (error: any) => {
+            console.error('Chat error:', error);
+            const errorMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `Error: ${error?.message || 'Failed to send message. Please try again.'}`,
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+            // Restore the input if there was an error
+            setInput(messageText);
+          },
         },
-        onError: (error) => {
-          const errorMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: `Error: ${error.message}`,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        },
-      },
-    );
+      );
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error?.message || 'Failed to send message. Please try again.'}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setInput(messageText);
+    }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -254,12 +292,12 @@ export function ChatInterface() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder={t(
                 'chat.placeholder',
                 'Ask about your farm, workers, accounting, inventory...',
               )}
-              disabled={isSending}
+              disabled={isSending || isListening}
               className="pr-24"
             />
             {isSupported && (
@@ -275,7 +313,15 @@ export function ChatInterface() {
               </Button>
             )}
           </div>
-          <Button onClick={handleSend} disabled={isSending || !input.trim()} type="button">
+          <Button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSend();
+            }} 
+            disabled={isSending || !input.trim() || isListening} 
+            type="button"
+          >
             {isSending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (

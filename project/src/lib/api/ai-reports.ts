@@ -2,7 +2,7 @@ import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/ai-reports';
 
-export type AIProvider = 'openai' | 'gemini' | 'groq';
+export type AIProvider = 'openai' | 'gemini' | 'groq' | 'zai';
 
 export interface DataAvailabilityResponse {
   parcel: {
