@@ -7,6 +7,7 @@ import { useSendMessage, useChatHistory, useClearChatHistory } from '@/hooks/use
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { Send, Mic, MicOff, Loader2, Trash2, Bot, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ChatMessage {
   id: string;
@@ -16,10 +17,14 @@ interface ChatMessage {
 }
 
 export function ChatInterface() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { data: history, isLoading: isLoadingHistory } = useChatHistory();
   const { mutate: clearHistory } = useClearChatHistory();
+  
+  // Get current language, defaulting to 'en' if not 'fr' or 'ar'
+  const currentLanguage = i18n.language === 'fr' ? 'fr' : i18n.language === 'ar' ? 'ar' : 'en';
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -44,12 +49,39 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (history?.messages) {
-      setMessages(
-        history.messages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-      );
+      const historyMessages = history.messages.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }));
+      
+      // Merge with local messages to avoid losing optimistic updates
+      setMessages((prev) => {
+        // If we have local messages that aren't in history yet (optimistic updates),
+        // keep them and merge with history
+        if (prev.length > 0 && historyMessages.length > 0) {
+          // Match by content and approximate timestamp (within 5 seconds) since IDs differ
+          const localMessagesNotInHistory = prev.filter((localMsg) => {
+            const isInHistory = historyMessages.some((h) => {
+              const timeDiff = Math.abs(
+                localMsg.timestamp.getTime() - h.timestamp.getTime()
+              );
+              return (
+                h.content === localMsg.content &&
+                h.role === localMsg.role &&
+                timeDiff < 5000 // Within 5 seconds
+              );
+            });
+            return !isInHistory;
+          });
+          // Combine history with any local messages that haven't been saved yet
+          return [...historyMessages, ...localMessagesNotInHistory];
+        }
+        // If history is empty and we have local messages, keep local (they're being saved)
+        if (historyMessages.length === 0 && prev.length > 0) {
+          return prev;
+        }
+        return historyMessages;
+      });
     }
   }, [history]);
 
@@ -74,7 +106,7 @@ export function ChatInterface() {
     setInput('');
 
     sendMessage(
-      { query: currentInput, language: 'en' },
+      { query: currentInput, language: currentLanguage, save_history: true },
       {
         onSuccess: (data) => {
           const assistantMessage: ChatMessage = {

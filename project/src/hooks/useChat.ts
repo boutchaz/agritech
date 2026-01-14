@@ -17,8 +17,12 @@ export function useSendMessage() {
       return chatApi.sendMessage(data, currentOrganization.id);
     },
     onSuccess: () => {
-      // Invalidate chat history query
+      // Invalidate and refetch chat history query immediately
       queryClient.invalidateQueries({
+        queryKey: ['chat-history', currentOrganization?.id],
+      });
+      // Also refetch to ensure we get the latest messages
+      queryClient.refetchQueries({
         queryKey: ['chat-history', currentOrganization?.id],
       });
     },
@@ -35,7 +39,8 @@ export function useChatHistory(limit = 20) {
     queryKey: ['chat-history', currentOrganization?.id, limit],
     queryFn: () => chatApi.getHistory(currentOrganization?.id, limit),
     enabled: !!currentOrganization?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always refetch when invalidated
+    refetchOnWindowFocus: true,
   });
 }
 
