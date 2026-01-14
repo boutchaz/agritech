@@ -67,9 +67,17 @@ export function useClearChatHistory() {
       }
       return chatApi.clearHistory(currentOrganization.id);
     },
-    onSuccess: () => {
-      // Invalidate chat history query
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Remove the query data immediately to clear cache
+      queryClient.removeQueries({
+        queryKey: ['chat-history', currentOrganization?.id],
+      });
+      // Invalidate and refetch chat history query to ensure it's cleared from backend
+      await queryClient.invalidateQueries({
+        queryKey: ['chat-history', currentOrganization?.id],
+      });
+      // Force refetch to get the empty result from backend
+      await queryClient.refetchQueries({
         queryKey: ['chat-history', currentOrganization?.id],
       });
     },
