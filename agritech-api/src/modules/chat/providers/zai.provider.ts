@@ -12,7 +12,7 @@ import {
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://api.z.ai/api/paas/v4/chat/completions';
-  private readonly defaultModel = 'glm-4.7';
+  private readonly defaultModel = 'glm-4-plus';
 
   constructor(configService: ConfigService) {
     super(configService, 'zai' as AIProvider);
