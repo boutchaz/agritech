@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
+import * as jwt from 'jsonwebtoken';
 import { BaseAIProvider } from '../../ai-reports/providers/base-ai.provider';
 import {
   AIGenerationRequest,
@@ -11,7 +12,7 @@ import {
 @Injectable()
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
-  private readonly apiUrl = 'https://api.z.ai/api/paas/v4/chat/completions';
+  private readonly apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
   private readonly defaultModel = 'glm-4-plus';
 
   constructor(configService: ConfigService) {
@@ -20,14 +21,39 @@ export class ZaiProvider extends BaseAIProvider {
   }
 
   private getEffectiveApiKey(): string {
-    return this.dynamicApiKey || this.envApiKey;
+    const apiKey = this.dynamicApiKey || this.envApiKey;
+    return this.generateZaiToken(apiKey);
+  }
+
+  /**
+   * Generate Z.ai JWT token from API key
+   * API key format: id.secret
+   */
+  private generateZaiToken(apiKey: string): string {
+    try {
+      const [id, secret] = apiKey.split('.');
+      if (!id || !secret) {
+        throw new Error('Invalid Z.ai API key format');
+      }
+
+      const payload = {
+        api_key: id,
+        exp: Date.now() + 3600 * 1000, // 1 hour expiration
+        timestamp: Date.now(),
+      };
+
+      return jwt.sign(payload, secret, { algorithm: 'HS256' });
+    } catch (error) {
+      this.logger.error('Failed to generate Z.ai token', error);
+      return apiKey;
+    }
   }
 
   validateConfig(): boolean {
-    const apiKey = this.getEffectiveApiKey();
-    const isValid = !!apiKey && apiKey.length > 0;
+    const apiKey = this.dynamicApiKey || this.envApiKey;
+    const isValid = !!apiKey && apiKey.includes('.') && apiKey.split('.').length === 2;
     if (!isValid) {
-      this.logger.warn('Z.ai API key not configured');
+      this.logger.warn('Z.ai API key not configured or invalid format (expected: id.secret)');
     }
     return isValid;
   }
