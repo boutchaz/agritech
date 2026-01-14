@@ -87,6 +87,44 @@ export interface AggregatedParcelData {
     type: string;
     description?: string;
   }>;
+
+  harvests?: Array<{
+    date: string;
+    quantity: number;
+    unit: string;
+    qualityGrade?: string;
+    qualityScore?: number;
+  }>;
+
+  cropCycle?: {
+    cycleName: string;
+    status: string;
+    plantingDate?: string;
+    expectedHarvestStart?: string;
+    expectedHarvestEnd?: string;
+    actualHarvestStart?: string;
+    actualHarvestEnd?: string;
+    expectedYieldPerHa?: number;
+    actualYieldPerHa?: number;
+    totalCosts?: number;
+    totalRevenue?: number;
+    netProfit?: number;
+  };
+
+  yieldHistory?: Array<{
+    season: string;
+    year: number;
+    yieldPerHa: number;
+    qualityGrade?: string;
+    performanceRating?: string;
+  }>;
+
+  performanceAlerts?: Array<{
+    type: string;
+    severity: string;
+    description: string;
+    date: string;
+  }>;
 }
 
 export interface AIReportSections {
@@ -130,5 +168,15 @@ export interface AIReportSections {
     action: string;
     deadline?: string;
     estimatedImpact: string;
+  }>;
+  seasonalPlanning?: {
+    upcomingSeason?: string;
+    preparationNeeded?: string[];
+    optimizationOpportunities?: string;
+  };
+  insights?: Array<{
+    type: 'trend' | 'anomaly' | 'opportunity' | 'warning';
+    title: string;
+    description: string;
   }>;
 }

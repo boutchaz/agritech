@@ -17,7 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AIReportsService } from './ai-reports.service';
-import { GenerateAIReportDto } from './dto';
+import { GenerateAIReportDto, CalibrateRequestDto, FetchDataRequestDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -64,6 +64,60 @@ export class AIReportsController {
     );
   }
 
+  @Get('parcels/:parcelId/calibration-status')
+  @ApiOperation({ summary: 'Get calibration status for a parcel' })
+  @ApiResponse({
+    status: 200,
+    description: 'Calibration status retrieved successfully',
+  })
+  async getCalibrationStatus(
+    @Headers('x-organization-id') organizationId: string,
+    @Param('parcelId') parcelId: string,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.aiReportsService.validateAnalysis(organizationId, parcelId, startDate, endDate);
+  }
+
+  @Post('parcels/:parcelId/calibrate')
+  @ApiOperation({ summary: 'Trigger calibration and validation for a parcel' })
+  @ApiResponse({
+    status: 200,
+    description: 'Calibration completed successfully',
+  })
+  async calibrate(
+    @Headers('x-organization-id') organizationId: string,
+    @Param('parcelId') parcelId: string,
+    @Body() dto: CalibrateRequestDto,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.aiReportsService.recalibrate(organizationId, parcelId, dto);
+  }
+
+  @Post('parcels/:parcelId/fetch-data')
+  @ApiOperation({ summary: 'Manually trigger data fetching for specified sources' })
+  @ApiResponse({
+    status: 200,
+    description: 'Data fetch initiated',
+  })
+  async fetchData(
+    @Headers('x-organization-id') organizationId: string,
+    @Param('parcelId') parcelId: string,
+    @Body() dto: FetchDataRequestDto,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    // TODO: Implement data fetching logic
+    // This will trigger satellite/weather data fetching based on dataSources
+    return { success: true, message: `Data fetch initiated for: ${dto.dataSources.join(', ')}` };
+  }
+
   @Post('generate')
   @ApiOperation({
     summary: 'Generate an AI-powered parcel report',
@@ -94,6 +148,20 @@ export class AIReportsController {
     const userId = req.user?.id || req.user?.sub;
     if (!userId) {
       throw new BadRequestException('User ID not found in token');
+    }
+
+    // Validate data before generating report
+    const calibrationStatus = await this.aiReportsService.validateAnalysis(
+      organizationId,
+      dto.parcel_id,
+      dto.data_start_date,
+      dto.data_end_date,
+    );
+
+    if (calibrationStatus.status === 'blocked') {
+      throw new BadRequestException(
+        `Analysis cannot proceed: Missing critical data (${calibrationStatus.missingData.join(', ')}). Please recalibrate and fetch missing data.`,
+      );
     }
 
     return this.aiReportsService.generateReport(organizationId, userId, dto);

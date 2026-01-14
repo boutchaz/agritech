@@ -1,26 +1,50 @@
 import { AggregatedParcelData } from '../interfaces';
 
-export const AGRICULTURAL_EXPERT_SYSTEM_PROMPT = `You are an expert agricultural consultant with deep expertise in:
-- Soil science and fertility management
-- Plant nutrition and health diagnostics
-- Precision agriculture and remote sensing interpretation
-- Mediterranean/North African crop management (particularly olive trees, fruit trees, cereals, vegetables)
-- Irrigation and water management
-- Integrated pest management
+export const AGRICULTURAL_EXPERT_SYSTEM_PROMPT = `You are a world-class agricultural consultant and agronomist with 30+ years of field experience. Your expertise spans:
 
-You analyze agricultural data and provide:
-1. Clear, actionable recommendations
-2. Data-driven health assessments with quantitative scores
-3. Risk identification with concrete mitigation strategies
-4. Prioritized action items with timing guidance
+CORE EXPERTISE:
+- Advanced soil science, fertility management, and soil health restoration
+- Plant nutrition, deficiency diagnosis, and precision fertilization
+- Precision agriculture, remote sensing interpretation, and satellite imagery analysis
+- Mediterranean/North African agriculture (olive trees, fruit trees, cereals, vegetables, vineyards)
+- Irrigation optimization, water stress management, and drought mitigation
+- Integrated pest and disease management (IPM/IDM)
+- Crop phenology, growth stages, and seasonal management
+- Yield optimization, quality improvement, and economic sustainability
+- Climate adaptation and weather risk management
 
-IMPORTANT RULES:
-- Always respond with valid JSON matching the exact schema provided
-- Use professional agricultural terminology while remaining accessible
-- Base all recommendations on the provided data - do not make assumptions beyond what the data shows
-- When data is missing or "N/A", acknowledge it and provide general best practices
-- Prioritize recommendations based on urgency and impact on yield
-- Consider seasonal factors and timing for all recommendations`;
+ANALYTICAL APPROACH:
+You provide farmers with:
+1. **Deep Insights**: Not just data summaries, but meaningful interpretations that connect dots between satellite trends, soil health, weather patterns, and farm operations
+2. **Actionable Recommendations**: Specific, prioritized actions with dosages, timing, methods, and expected outcomes
+3. **Predictive Analysis**: Forecast potential issues before they become problems, based on current conditions and historical patterns
+4. **Comparative Analysis**: Benchmark current performance against historical data, regional averages, and optimal conditions
+5. **Economic Context**: Cost-benefit analysis, ROI projections, and economic impact of recommendations
+6. **Risk Assessment**: Identify risks early with severity levels and concrete mitigation strategies
+7. **Seasonal Planning**: Forward-looking guidance for upcoming seasons based on current conditions
+
+CRITICAL PRINCIPLES:
+- **Data-Driven**: Base ALL conclusions on provided data. When data is missing, clearly state limitations and provide general best practices
+- **Context-Aware**: Always interpret satellite indices in context of:
+  * Recent farm operations (tasks, applications, pruning, etc.)
+  * Phenological stage of the crop
+  * Weather patterns and climate conditions
+  * Historical performance and trends
+- **Farmer-Focused**: Write for farmers, not academics. Use clear language, practical examples, and focus on what matters: yield, quality, and profitability
+- **Action-Oriented**: Every insight should lead to a specific action. Avoid generic advice.
+- **Prioritized**: Rank recommendations by urgency (critical issues first) and impact (highest ROI first)
+- **Timing-Sensitive**: Consider seasonal timing, crop stage, and weather forecasts for all recommendations
+- **Holistic**: Connect soil health, water management, nutrition, and pest control as an integrated system
+
+OUTPUT REQUIREMENTS:
+- Always respond with valid JSON matching the exact schema
+- Provide quantitative assessments with scores and percentages where possible
+- Include specific dosages, application rates, and timing windows
+- Reference specific data points when making conclusions
+- Flag any assumptions or limitations in data quality
+- Minimum 5-7 recommendations covering all critical areas
+- Minimum 3-5 action items with clear deadlines
+- Include cost estimates and ROI projections where applicable`;
 
 export function buildUserPrompt(
   data: AggregatedParcelData,
@@ -163,59 +187,141 @@ Period: ${data.weather.period.start} → ${data.weather.period.end}
 - Frost days: ${data.weather.frostDays}
 
 ====================================================
-6. REQUIRED OUTPUT — STRICT JSON
+${data.harvests && data.harvests.length > 0 ? `7. HARVEST HISTORY & PERFORMANCE` : ''}
+====================================================
+${data.harvests && data.harvests.length > 0 ? `
+Recent harvests provide context for current performance:
+${data.harvests.slice(0, 10).map((h: any) => `
+- ${h.date}: ${h.quantity} ${h.unit}${h.qualityGrade ? ` (Quality: ${h.qualityGrade})` : ''}${h.qualityScore ? ` [Score: ${h.qualityScore}/10]` : ''}
+`).join('')}
+
+Use this to:
+- Compare current vegetation indices with past harvest quality
+- Identify trends in yield and quality over time
+- Assess if current management practices are improving or declining
+` : 'No recent harvest data available.'}
+
+${data.yieldHistory && data.yieldHistory.length > 0 ? `
+Historical Yield Performance (for comparison):
+${data.yieldHistory.map((yh: any) => `
+- ${yh.year} ${yh.season}: ${yh.yieldPerHa?.toFixed(1) || 'N/A'} kg/ha${yh.qualityGrade ? ` (Quality: ${yh.qualityGrade})` : ''}${yh.performanceRating ? ` [Rating: ${yh.performanceRating}]` : ''}
+`).join('')}
+
+Analyze:
+- Year-over-year trends in yield
+- Seasonal variations and patterns
+- Performance ratings and what they indicate
+- How current conditions compare to historical averages
+` : ''}
+
+${data.cropCycle ? `
+====================================================
+8. CURRENT CROP CYCLE STATUS
+====================================================
+Cycle: ${data.cropCycle.cycleName}
+Status: ${data.cropCycle.status}
+${data.cropCycle.plantingDate ? `Planting Date: ${data.cropCycle.plantingDate}` : ''}
+${data.cropCycle.expectedHarvestStart ? `Expected Harvest: ${data.cropCycle.expectedHarvestStart} to ${data.cropCycle.expectedHarvestEnd || 'TBD'}` : ''}
+${data.cropCycle.actualHarvestStart ? `Actual Harvest: ${data.cropCycle.actualHarvestStart} to ${data.cropCycle.actualHarvestEnd || 'Ongoing'}` : ''}
+${data.cropCycle.expectedYieldPerHa ? `Expected Yield: ${data.cropCycle.expectedYieldPerHa.toFixed(1)} kg/ha` : ''}
+${data.cropCycle.actualYieldPerHa ? `Actual Yield: ${data.cropCycle.actualYieldPerHa.toFixed(1)} kg/ha` : ''}
+${data.cropCycle.totalCosts !== undefined ? `Total Costs: ${data.cropCycle.totalCosts.toFixed(2)}` : ''}
+${data.cropCycle.totalRevenue !== undefined ? `Total Revenue: ${data.cropCycle.totalRevenue.toFixed(2)}` : ''}
+${data.cropCycle.netProfit !== undefined ? `Net Profit: ${data.cropCycle.netProfit.toFixed(2)}` : ''}
+
+Use this to:
+- Assess if current cycle is on track vs expectations
+- Identify economic performance and ROI
+- Provide context for recommendations (e.g., if behind schedule, prioritize actions)
+` : ''}
+
+${data.performanceAlerts && data.performanceAlerts.length > 0 ? `
+====================================================
+9. ACTIVE PERFORMANCE ALERTS
+====================================================
+${data.performanceAlerts.map((pa: any) => `
+- [${pa.severity.toUpperCase()}] ${pa.type}: ${pa.description} (${new Date(pa.date).toLocaleDateString()})
+`).join('')}
+
+These alerts indicate areas requiring immediate attention. Address them in your recommendations.
+` : ''}
+
+====================================================
+10. REQUIRED OUTPUT — STRICT JSON
 ====================================================
 Return a JSON object with this EXACT structure (all fields required):
 {
-  "executiveSummary": "2-3 sentence summary of parcel status and key points",
-  "phenologicalStage": "Current phenological stage of the crop/trees",
+  "executiveSummary": "3-4 sentence comprehensive summary covering: current status, key findings, performance trends, and critical actions needed",
+  "phenologicalStage": "Current phenological stage with specific timing and what this means for management",
   "dataConfidence": {
     "satelliteDataStatus": "good|partial|limited",
-    "comment": "Brief comment on data quality and reliability"
+    "comment": "Detailed comment on data quality, completeness, and reliability for decision-making"
   },
   "healthAssessment": {
-    "overallScore": <number 0-100, based on all available data>,
-    "soilHealth": "Soil health assessment in 1-2 sentences",
-    "vegetationHealth": "Vegetation health assessment in 1-2 sentences",
-    "waterStatus": "Water status assessment in 1-2 sentences"
+    "overallScore": <number 0-100, calculated from all factors>,
+    "soilHealth": "Detailed soil health assessment (2-3 sentences) with specific issues and strengths",
+    "vegetationHealth": "Detailed vegetation health assessment (2-3 sentences) with NDVI/NDMI interpretation",
+    "waterStatus": "Detailed water status assessment (2-3 sentences) including stress levels and irrigation adequacy"
   },
   "detailedAnalysis": {
-    "taskImpactAnalysis": "Analysis of how recent tasks affected the parcel...",
-    "satelliteInterpretation": "Interpretation of satellite data in context of tasks and phenology...",
-    "soilAndNutrition": "Soil and nutrition analysis...",
-    "irrigationAndWaterStress": "Irrigation and water stress analysis...",
-    "climateImpact": "Climate impact analysis..."
+    "taskImpactAnalysis": "Deep analysis (3-4 sentences) of how recent operations affected the parcel, with specific examples",
+    "satelliteInterpretation": "Comprehensive interpretation (4-5 sentences) connecting satellite trends to phenology, tasks, weather, and historical performance",
+    "soilAndNutrition": "Detailed analysis (3-4 sentences) of soil fertility, nutrient balance, deficiencies, and optimization opportunities",
+    "irrigationAndWaterStress": "Detailed analysis (3-4 sentences) of water management, stress indicators, and irrigation efficiency",
+    "climateImpact": "Detailed analysis (3-4 sentences) of how weather patterns affected crop development and what to expect",
+    "yieldPerformance": "${data.yieldHistory && data.yieldHistory.length > 0 ? 'Comparative analysis (3-4 sentences) of yield trends, performance vs historical averages, and factors affecting productivity' : 'N/A - No historical yield data available'}",
+    "economicOutlook": "${data.cropCycle ? 'Economic analysis (2-3 sentences) of current cycle performance, ROI, cost efficiency, and profitability projections' : 'N/A - No crop cycle data available'}"
   },
   "recommendations": [
     {
       "priority": "high|medium|low",
-      "category": "irrigation|fertilization|soil|pruning|plant-health|general",
-      "title": "Short recommendation title",
-      "description": "Detailed description with specific dosages and methods",
-      "timing": "When to apply (season, month, or conditions)"
+      "category": "irrigation|fertilization|soil|pruning|plant-health|pest-control|general",
+      "title": "Specific, actionable recommendation title",
+      "description": "Detailed description (3-4 sentences) with: specific dosages/rates, application methods, expected outcomes, and why this is important now",
+      "timing": "Specific timing window (e.g., 'Within 2 weeks', 'Before flowering', 'During dormancy')",
+      "estimatedCost": "Estimated cost per hectare or total cost if applicable",
+      "expectedROI": "Expected return on investment or yield/quality improvement percentage if applicable"
     }
   ],
   "riskAlerts": [
     {
       "severity": "critical|warning|info",
-      "type": "Risk type (e.g., Water stress, Deficiency, Salinity)",
-      "description": "Description of identified risk",
-      "mitigationSteps": ["Action 1", "Action 2"]
+      "type": "Specific risk type (e.g., 'Water Stress', 'Nutrient Deficiency', 'Disease Risk', 'Yield Decline')",
+      "description": "Detailed description (2-3 sentences) of the risk, its causes, and potential impact",
+      "mitigationSteps": ["Specific action 1 with timing", "Specific action 2 with timing", "Monitoring action"]
     }
   ],
   "actionItems": [
     {
       "priority": 1,
-      "action": "Specific action to take",
-      "deadline": "Suggested deadline",
-      "estimatedImpact": "Expected impact on yield/quality"
+      "action": "Very specific action to take (e.g., 'Apply 50kg/ha NPK 15-15-15 fertilizer via fertigation')",
+      "deadline": "Specific deadline (e.g., 'Within 7 days', 'Before March 15', 'During next irrigation cycle')",
+      "estimatedImpact": "Quantified expected impact (e.g., 'Expected 15-20% yield increase', 'Should improve NDVI by 0.1-0.15 points', 'May prevent 30% quality loss')"
+    }
+  ],
+  "seasonalPlanning": {
+    "upcomingSeason": "Analysis of what to expect in the upcoming season based on current conditions",
+    "preparationNeeded": "Specific preparation actions needed before next season (2-3 items)",
+    "optimizationOpportunities": "Opportunities to optimize next cycle based on current learnings"
+  },
+  "insights": [
+    {
+      "type": "trend|anomaly|opportunity|warning",
+      "title": "Insight title",
+      "description": "Deep insight (2-3 sentences) connecting multiple data points to reveal something not immediately obvious"
     }
   ]
 }
 
-IMPORTANT:
-- Do NOT recommend actions already performed recently
-- Interpret satellite data in light of farm tasks
-- Minimum 3 recommendations and 3 action items
-- All text content must be in ${language === 'fr' ? 'French' : 'English'}`;
+CRITICAL REQUIREMENTS:
+- Minimum 5-7 recommendations covering: irrigation, fertilization, soil health, pest/disease management, and optimization
+- Minimum 3-5 action items with specific deadlines and quantified impacts
+- Minimum 3-4 insights that reveal non-obvious connections between data points
+- Include cost estimates and ROI projections for major recommendations
+- Compare current performance to historical data when available
+- Do NOT recommend actions already performed recently (check task history)
+- Interpret satellite data in context of: tasks, phenology, weather, and historical performance
+- Provide specific dosages, rates, and application methods - avoid generic advice
+- All text content must be in ${language === 'fr' ? 'French' : 'English'}
+- Be farmer-focused: prioritize yield, quality, and profitability in all recommendations`;
 }

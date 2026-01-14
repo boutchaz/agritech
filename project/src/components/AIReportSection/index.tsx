@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, Sparkles, Loader, AlertCircle, Calendar } from 'lucide-react';
-import { useAIProviders, useGenerateAIReport } from '../../hooks/useAIReports';
+import { useAIProviders, useGenerateAIReport, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportResponse } from '../../lib/api/ai-reports';
 import { AIProviderSelector } from './AIProviderSelector';
+import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
 
@@ -24,6 +25,9 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
 
   const { data: providers, isLoading: loadingProviders, error: providersError } = useAIProviders();
   const generateMutation = useGenerateAIReport();
+  const { data: calibrationStatus } = useCalibrationStatus(parcelId, dateRange.start, dateRange.end);
+  const calibrateMutation = useCalibrate();
+  const fetchDataMutation = useFetchData();
 
   // Auto-select Platform AI (zai) as default if available
   useEffect(() => {
@@ -165,10 +169,46 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
               </div>
             </div>
 
+            {/* Calibration Status Panel */}
+            {calibrationStatus && (
+              <CalibrationStatusPanel
+                status={calibrationStatus}
+                onRecalibrate={async () => {
+                  try {
+                    await calibrateMutation.mutateAsync({
+                      parcelId,
+                      request: {
+                        startDate: dateRange.start,
+                        endDate: dateRange.end,
+                        autoFetch: true,
+                      },
+                    });
+                  } catch (error) {
+                    console.error('Recalibration failed:', error);
+                  }
+                }}
+                onFetchData={async (sources) => {
+                  try {
+                    await fetchDataMutation.mutateAsync({
+                      parcelId,
+                      request: { dataSources: sources as ('satellite' | 'weather')[] },
+                    });
+                  } catch (error) {
+                    console.error('Data fetch failed:', error);
+                  }
+                }}
+                isLoading={calibrateMutation.isPending || fetchDataMutation.isPending}
+              />
+            )}
+
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={!selectedProvider || generateMutation.isPending}
+              disabled={
+                !selectedProvider ||
+                generateMutation.isPending ||
+                calibrationStatus?.status === 'blocked'
+              }
               className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {generateMutation.isPending ? (
@@ -183,6 +223,12 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
                 </>
               )}
             </button>
+
+            {calibrationStatus?.status === 'blocked' && (
+              <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
+                Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.
+              </p>
+            )}
 
             {/* Generation Error */}
             {generateMutation.isError && (

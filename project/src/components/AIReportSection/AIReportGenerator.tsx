@@ -15,7 +15,8 @@ import { AIProviderSelector } from './AIProviderSelector';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
 import { DataAvailabilityPreview } from './DataAvailabilityPreview';
-import { useAIProviders, useGenerateAIReport } from '../../hooks/useAIReports';
+import { CalibrationStatusPanel } from './CalibrationStatusPanel';
+import { useAIProviders, useGenerateAIReport, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 
 interface AIReportGeneratorProps {
@@ -46,6 +47,13 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   const { data: providers = [], isLoading: loadingProviders } = useAIProviders();
   const generateMutation = useGenerateAIReport();
+  const { data: calibrationStatus, isLoading: isLoadingCalibration } = useCalibrationStatus(
+    parcelId,
+    dateRange.start,
+    dateRange.end,
+  );
+  const calibrateMutation = useCalibrate();
+  const fetchDataMutation = useFetchData();
 
   // Auto-select Platform AI (zai) as default if available
   useEffect(() => {
@@ -219,7 +227,39 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Data Availability Preview */}
+          {/* Calibration Status Panel */}
+          {calibrationStatus && (
+            <CalibrationStatusPanel
+              status={calibrationStatus}
+              onRecalibrate={async () => {
+                try {
+                  await calibrateMutation.mutateAsync({
+                    parcelId,
+                    request: {
+                      startDate: dateRange.start,
+                      endDate: dateRange.end,
+                      autoFetch: true,
+                    },
+                  });
+                } catch (error) {
+                  console.error('Recalibration failed:', error);
+                }
+              }}
+              onFetchData={async (sources) => {
+                try {
+                  await fetchDataMutation.mutateAsync({
+                    parcelId,
+                    request: { dataSources: sources as ('satellite' | 'weather')[] },
+                  });
+                } catch (error) {
+                  console.error('Data fetch failed:', error);
+                }
+              }}
+              isLoading={calibrateMutation.isPending || fetchDataMutation.isPending}
+            />
+          )}
+
+          {/* Legacy Data Availability Preview (can be removed or kept for reference) */}
           <DataAvailabilityPreview
             parcelId={parcelId}
             startDate={dateRange.start}
@@ -245,7 +285,11 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={!selectedProvider || generateMutation.isPending}
+            disabled={
+              !selectedProvider ||
+              generateMutation.isPending ||
+              calibrationStatus?.status === 'blocked'
+            }
             className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-green-600 to-blue-600 text-white font-medium rounded-xl hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {generateMutation.isPending ? (
@@ -260,6 +304,14 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               </>
             )}
           </button>
+          {calibrationStatus?.status === 'blocked' && (
+            <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
+              {t(
+                'calibration.blocked',
+                'Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.',
+              )}
+            </p>
+          )}
 
           {generateMutation.isPending && (
             <div className="text-center">

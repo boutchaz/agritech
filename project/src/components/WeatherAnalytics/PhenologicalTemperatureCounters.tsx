@@ -295,7 +295,7 @@ const cropPhenologicalConfig: Record<string, PhenologicalStage[]> = {
         {
           name: 'Cold Hours',
           nameKey: 'phenological.coldHours',
-          description: 'Hours below 10°C',
+          description: 'Hours below 7°C',
           descriptionKey: 'phenological.coldHoursGeneralDesc',
           threshold: 7,
           comparison: 'below',
@@ -410,6 +410,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   const getFilteredDataForStage = (stageKey: string, stageIndex: number): TemperatureDataPoint[] => {
     const dateRange = stageDateRanges[stageKey];
 
+    // Use custom stage range if set
     if (dateRange?.enabled && dateRange.startDate && dateRange.endDate) {
       return temperatureData.filter(day => {
         try {
@@ -424,7 +425,22 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
       });
     }
 
-    // Return all data if no custom range is set
+    // Use parent component's date range if available
+    if (startDate && endDate) {
+      return temperatureData.filter(day => {
+        try {
+          const dayDate = parseISO(day.date);
+          return isWithinInterval(dayDate, {
+            start: startOfDay(parseISO(startDate)),
+            end: endOfDay(parseISO(endDate))
+          });
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    // Return all data only if no date range is specified
     return temperatureData;
   };
 
@@ -499,11 +515,22 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
 
     phenologicalStages.forEach((stage, stageIndex) => {
       const filteredData = getFilteredDataForStage(stage.nameKey, stageIndex);
-      results[stage.nameKey] = calculateCountersForData(filteredData, stage);
+      const counters = calculateCountersForData(filteredData, stage);
+      const totalHours = filteredData.length * 24;
+
+      // Validate: Log warnings if counters exceed total hours (impossible values)
+      Object.entries(counters).forEach(([key, value]) => {
+        if (value > totalHours && totalHours > 0) {
+          console.warn(`[Temperature Validation] ${key}: ${value} hours exceeds period total of ${totalHours} hours (${filteredData.length} days)`);
+          console.warn(`  This indicates either: 1) Data spans wrong period, 2) Sinusoidal model issue, or 3) Data corruption`);
+        }
+      });
+
+      results[stage.nameKey] = counters;
     });
 
     return results;
-  }, [temperatureData, phenologicalStages, stageDateRanges]);
+  }, [temperatureData, phenologicalStages, stageDateRanges, startDate, endDate]);
 
   // Get the number of days in the filtered data for a stage
   const getDaysInPeriod = (stageKey: string, stageIndex: number): number => {
@@ -635,13 +662,21 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
                 const count = stageCounters[key] || 0;
                 const daysInPeriod = getDaysInPeriod(stageKey, stageIndex);
                 const totalPossibleHours = getTotalPossibleHours(stageKey, stageIndex);
-                const percentage = totalPossibleHours > 0 ? Math.round((count / totalPossibleHours) * 100) : 0;
+                const rawPercentage = totalPossibleHours > 0 ? (count / totalPossibleHours) * 100 : 0;
                 const equivalentDays = Math.round(count / 24 * 10) / 10; // 1 decimal place
+
+                // Cap percentage at 100% for display, but show >100% if it exceeds
+                const percentageDisplay = rawPercentage > 100
+                  ? `>100`
+                  : Math.round(rawPercentage).toString();
+
+                // Add warning if percentage exceeds 100% (data issue)
+                const isOverLimit = rawPercentage > 100;
 
                 return (
                   <div
                     key={thresholdIndex}
-                    className={`${threshold.bgColor} rounded-xl p-4 border border-gray-100 dark:border-gray-700`}
+                    className={`${threshold.bgColor} rounded-xl p-4 border ${isOverLimit ? 'border-red-300 dark:border-red-700' : 'border-gray-100 dark:border-gray-700'}`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className={`${threshold.color}`}>
@@ -662,13 +697,18 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
                       <span>≈ {equivalentDays} {t('phenological.equivalentDays', 'jours équiv.')}</span>
                       <span className="text-gray-300 dark:text-gray-600">|</span>
-                      <span className={`font-medium ${percentage >= 50 ? threshold.color : ''}`}>
-                        {percentage}%
+                      <span className={`font-medium ${rawPercentage >= 50 ? threshold.color : ''} ${isOverLimit ? 'text-red-600 dark:text-red-400' : ''}`}>
+                        {percentageDisplay}%
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {t('phenological.outOf', 'sur')} {daysInPeriod} {t('phenological.daysOfData', 'jours de données')}
                     </p>
+                    {isOverLimit && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1 font-medium">
+                        ⚠️ {t('phenological.exceedsPeriod', 'Dépasse la période d\'analyse')}
+                      </p>
+                    )}
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">
                       {t(threshold.nameKey, threshold.name)}
                     </p>

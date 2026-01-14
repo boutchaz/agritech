@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/MultiTenantAuthProvider';
-import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo, type DataAvailabilityResponse } from '../lib/api/ai-reports';
+import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo, type DataAvailabilityResponse, type CalibrationStatus, type CalibrateRequest, type FetchDataRequest } from '../lib/api/ai-reports';
 
 /**
  * Hook to fetch available AI providers
@@ -55,4 +55,65 @@ export function useDataAvailability(parcelId: string, startDate?: string, endDat
   });
 }
 
-export type { AIReportResponse, AIProviderInfo, GenerateAIReportDto, DataAvailabilityResponse };
+/**
+ * Hook to get calibration status for a parcel
+ */
+export function useCalibrationStatus(parcelId: string, startDate?: string, endDate?: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['calibration-status', parcelId, startDate, endDate],
+    queryFn: () => aiReportsApi.getCalibrationStatus(parcelId, startDate, endDate, currentOrganization?.id),
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
+/**
+ * Hook to trigger calibration
+ */
+export function useCalibrate() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ parcelId, request }: { parcelId: string; request: CalibrateRequest }): Promise<CalibrationStatus> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return aiReportsApi.calibrate(parcelId, request, currentOrganization.id);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['calibration-status', variables.parcelId],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to fetch missing data
+ */
+export function useFetchData() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ parcelId, request }: { parcelId: string; request: FetchDataRequest }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return aiReportsApi.fetchData(parcelId, request, currentOrganization.id);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['calibration-status', variables.parcelId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['satellite-indices-cache', variables.parcelId],
+      });
+    },
+  });
+}
+
+export type { AIReportResponse, AIProviderInfo, GenerateAIReportDto, DataAvailabilityResponse, CalibrationStatus, CalibrateRequest, FetchDataRequest };
