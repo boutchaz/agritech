@@ -103,7 +103,7 @@ export class AIReportsController {
   @ApiOperation({ summary: 'Manually trigger data fetching for specified sources' })
   @ApiResponse({
     status: 200,
-    description: 'Data fetch initiated',
+    description: 'Data fetch completed',
   })
   async fetchData(
     @Headers('x-organization-id') organizationId: string,
@@ -113,9 +113,7 @@ export class AIReportsController {
     if (!organizationId) {
       throw new BadRequestException('Organization ID is required');
     }
-    // TODO: Implement data fetching logic
-    // This will trigger satellite/weather data fetching based on dataSources
-    return { success: true, message: `Data fetch initiated for: ${dto.dataSources.join(', ')}` };
+    return this.aiReportsService.fetchData(organizationId, parcelId, dto);
   }
 
   @Post('generate')

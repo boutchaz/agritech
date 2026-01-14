@@ -390,8 +390,8 @@ export class ChatService {
   ): Promise<BuiltContext> {
     const client = this.databaseService.getAdminClient();
 
-    // Analyze query using AI to determine which context to load (supports multilingual)
-    // Falls back to regex if AI fails
+    // Analyze query using AI to route to correct agents/modules (supports all languages)
+    // This is the ONLY routing method - no regex/string matching
     const contextNeeds = await this.analyzeQueryContextWithAI(query);
 
     // Get current date and season
@@ -472,17 +472,20 @@ export class ChatService {
   }
 
   /**
-   * Analyze query context using AI to understand intent in any language
-   * Falls back to regex-based analysis if AI fails
+   * Analyze query context using AI to understand intent and route to correct agents/modules
+   * This is the ONLY method used - no regex/string matching
+   * Supports all languages (Arabic, French, English, etc.)
    */
   private async analyzeQueryContextWithAI(
     query: string,
   ): Promise<ContextNeeds> {
     try {
-      const systemPrompt = `You are a context analyzer for an agricultural management system. 
-Analyze the user's query and determine which data modules are relevant. The query may be in any language (English, French, Arabic, etc.).
+      const systemPrompt = `You are an intelligent query router for an agricultural management system. 
+Your task is to analyze the user's query (which may be in ANY language: English, French, Arabic, etc.) and determine which data modules/agents need to be activated to answer the query.
 
-Available modules with detailed descriptions:
+Think of this as routing the query to specialized agents. Each agent has access to specific data:
+
+AVAILABLE AGENTS/MODULES:
 
 1. **farm**: Farms, parcels, crops, fields, irrigation systems, structures, land, agricultural properties
    - Keywords (EN): farm, farms, parcel, parcels, crop, crops, field, fields, land, irrigation, structure, structures, agricultural property
@@ -550,8 +553,16 @@ Available modules with detailed descriptions:
     - Keywords (AR): توقعات, تنبؤ, تنبؤات, متوقع, قادم, توقعات المحصول, معيار
     - Examples: "Yield forecast", "Expected harvest", "Production predictions", "Benchmarks"
 
-Return ONLY a valid JSON object with boolean values for each module.
-Example: {"farm": true, "worker": false, "accounting": false, "inventory": false, "production": false, "supplierCustomer": false, "satellite": false, "weather": false, "soil": false, "alerts": false, "forecast": false}
+ROUTING INSTRUCTIONS:
+- Understand the query's INTENT, not just keywords
+- Consider context: "my farms" = farm agent, "my workers" = worker agent
+- Support ALL languages: Arabic queries like "كم عدد المزارع" should route to farm agent
+- Be intelligent: "will it rain tomorrow" needs weather agent, "show me invoices" needs accounting agent
+- Route to multiple agents if the query needs data from multiple sources
+- If unsure, err on the side of including more agents (better to have data than miss it)
+
+Return ONLY a valid JSON object with boolean values for each agent.
+Example: {"farm": true, "worker": false, "accounting": false, "inventory": false, "production": false, "supplierCustomer": false, "satellite": false, "weather": true, "soil": false, "alerts": false, "forecast": false}
 
 Do not include any explanation, only the JSON object.`;
 
@@ -592,60 +603,42 @@ Determine which modules are relevant based on the query's intent and content. Re
         };
       }
 
-      // If JSON parsing fails, fall back to regex
-      this.logger.warn('Failed to parse AI context analysis JSON, falling back to regex');
-      return this.analyzeQueryContext(query);
+      // If JSON parsing fails, return default (all false) and log error
+      this.logger.error('Failed to parse AI context analysis JSON. Response:', response.content);
+      // Return minimal context - only organization (always loaded)
+      return {
+        farm: false,
+        worker: false,
+        accounting: false,
+        inventory: false,
+        production: false,
+        supplierCustomer: false,
+        satellite: false,
+        weather: false,
+        soil: false,
+        alerts: false,
+        forecast: false,
+      };
     } catch (error) {
-      // On any error, fall back to regex-based analysis
-      this.logger.warn(
-        `AI context analysis failed: ${error.message}, falling back to regex`,
+      // On any error, log and return default (no regex fallback)
+      this.logger.error(
+        `AI context analysis failed: ${error.message}. Using default (no modules).`,
       );
-      return this.analyzeQueryContext(query);
+      // Return minimal context - only organization (always loaded)
+      return {
+        farm: false,
+        worker: false,
+        accounting: false,
+        inventory: false,
+        production: false,
+        supplierCustomer: false,
+        satellite: false,
+        weather: false,
+        soil: false,
+        alerts: false,
+        forecast: false,
+      };
     }
-  }
-
-  /**
-   * Fallback regex-based query context analysis
-   * Used when AI analysis fails or is unavailable
-   */
-  private analyzeQueryContext(query: string): ContextNeeds {
-    const lowerQuery = query.toLowerCase();
-    return {
-      farm: /farm|parcel|crop|field|plant|irrigation|harvest|structure/.test(
-        lowerQuery,
-      ),
-      worker: /worker|employee|labor|task|assignment|wage|salary|work/.test(
-        lowerQuery,
-      ),
-      accounting:
-        /account|invoice|payment|journal|expense|revenue|profit|cost|fiscal|tax/.test(
-          lowerQuery,
-        ),
-      inventory:
-        /stock|inventory|warehouse|item|product|material|reception/.test(
-          lowerQuery,
-        ),
-      production: /production|harvest|yield|quality|delivery/.test(lowerQuery),
-      supplierCustomer:
-        /supplier|customer|vendor|client|order|quote|purchase|sale/.test(
-          lowerQuery,
-        ),
-      satellite: /satellite|ndvi|ndmi|ndre|gci|savi|vegetation|health|stress|remote|sensing/.test(
-        lowerQuery,
-      ),
-      weather: /weather|rain|temperature|frost|climate|precipitation|dry|spell|forecast|tomorrow|sunny|cloudy|wind|humidity|storm/.test(
-        lowerQuery,
-      ),
-      soil: /soil|nutrient|fertilizer|ph|analysis|organic|matter|texture/.test(
-        lowerQuery,
-      ),
-      alerts: /alert|problem|issue|underperforming|warning|critical|deviation/.test(
-        lowerQuery,
-      ),
-      forecast: /forecast|prediction|expected|upcoming|yield|benchmark/.test(
-        lowerQuery,
-      ),
-    };
   }
 
   private async getOrganizationContext(
@@ -1503,11 +1496,38 @@ Determine which modules are relevant based on the query's intent and content. Re
         ? 'الرد باللغة العربية.'
         : 'Respond in English.';
 
+    // Check if weather forecast is available (no string matching - AI already routed to weather agent)
+    const hasWeatherForecast = context.satelliteWeather?.weather_forecast?.available && 
+                               context.satelliteWeather.weather_forecast.parcels.length > 0;
+    
+    // Determine if this is a weather query by checking if weather context was loaded
+    // (AI routing already determined this, so we just check if weather data exists)
+    const isWeatherQuery = context.satelliteWeather !== null && hasWeatherForecast;
+
     const conversationContext = conversationHistory.length > 0
       ? `\n====================================================\nCONVERSATION HISTORY\n====================================================\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n\n')}\n`
       : '';
 
-    return `${langInstruction}
+    // Add weather forecast emphasis if query is about weather
+    const weatherEmphasis = isWeatherQuery && hasWeatherForecast 
+      ? `\n\n⚠️ IMPORTANT: The user is asking about weather/forecast. You MUST use the "Weather Forecast (Next 5 Days)" data provided below to answer their question. The forecast includes:
+- Tomorrow's weather (labeled as "Tomorrow")
+- Precipitation amounts in mm
+- Rain probability percentages
+- Temperature ranges
+- Weather descriptions
+
+If the user asks "will it rain tomorrow", check the "Tomorrow" forecast entry for precipitation > 0mm or rain probability > 0%. Answer directly based on this data.`
+      : isWeatherQuery && !hasWeatherForecast
+      ? `\n\n⚠️ NOTE: The user is asking about weather, but weather forecast data is not available. This could be because:
+- OpenWeatherMap API key is not configured (set OPENWEATHER_API_KEY environment variable)
+- Parcels don't have boundary coordinates configured
+- Weather API is temporarily unavailable
+
+Inform the user about this limitation and suggest they configure the weather API or check parcel boundaries.`
+      : '';
+
+    return `${langInstruction}${weatherEmphasis}
 
 Current Date: ${context.currentDate}
 Current Season: ${context.currentSeason}${conversationContext}
@@ -1560,10 +1580,17 @@ Dry Spells: ${context.satelliteWeather.weather_summary.dry_spells_count}
 Frost Days: ${context.satelliteWeather.weather_summary.frost_days}
 ` : 'Weather summary not available.'}
 
-Weather Forecast: ${context.satelliteWeather.weather_forecast?.available ? context.satelliteWeather.weather_forecast.parcels.map(p => `
-${p.parcel_name}:
-${p.forecasts.slice(0, 3).map(f => `  ${f.date}: ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}`).join('\n')}
-`).join('') : 'Weather forecast not available.'}
+Weather Forecast (Next 5 Days):
+${context.satelliteWeather.weather_forecast?.available && context.satelliteWeather.weather_forecast.parcels.length > 0 ? context.satelliteWeather.weather_forecast.parcels.map(p => `
+**${p.parcel_name}** (Parcel ID: ${p.parcel_id}):
+${p.forecasts.map((f, idx) => {
+  const forecastDate = new Date(f.date);
+  const today = new Date();
+  const isTomorrow = forecastDate.toDateString() === new Date(today.getTime() + 24 * 60 * 60 * 1000).toDateString();
+  const dayLabel = idx === 0 ? 'Today' : isTomorrow ? 'Tomorrow' : `Day ${idx + 1}`;
+  return `  ${dayLabel} (${f.date}): ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}${f.humidity !== undefined ? `, Humidity: ${f.humidity}%` : ''}${f.windSpeed !== undefined ? `, Wind: ${f.windSpeed} km/h` : ''}`;
+}).join('\n')}
+`).join('\n') : 'Weather forecast not available. Make sure parcels have boundary coordinates configured and OpenWeatherMap API key is set.'}
 ` : 'No satellite/weather data available.'}
 
 ====================================================
