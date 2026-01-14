@@ -90,14 +90,16 @@ export class ZaiTTSProvider {
     try {
       // Z.ai GLM-TTS API endpoint
       // Available voices: "tongtong", "xiaochen", "chuichui", "jam", "kazi", "douji", "luodo"
+      // "jam" and "kazi" tend to sound more natural for multilingual content
+      const defaultVoice = request.voice || 'jam'; // Use 'jam' as default (more natural)
       const response = await axios.post(
         this.apiUrl,
         {
           model: this.defaultModel,
           input: request.text,
-          voice: request.voice || 'tongtong', // Default voice
-          speed: request.speed || 1.0, // Range: 0.5 to 2.0
-          volume: 5, // Range: 0 to 10
+          voice: defaultVoice,
+          speed: request.speed || 0.95, // Slightly slower for more natural speech (0.5 to 2.0)
+          volume: 6, // Slightly higher volume for clarity (0 to 10)
           response_format: 'wav', // or 'mp3', 'opus'
           stream: false,
         },
