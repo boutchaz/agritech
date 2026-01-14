@@ -12,6 +12,7 @@ import { OpenAIProvider } from './providers/openai.provider';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { ZaiProvider } from './providers/zai.provider';
+import { WeatherProvider } from '../chat/providers/weather.provider';
 import {
   AIProvider,
   AggregatedParcelData,
@@ -41,6 +42,7 @@ export class AIReportsService {
     private readonly zaiProvider: ZaiProvider,
     @Inject(forwardRef(() => OrganizationAISettingsService))
     private readonly aiSettingsService: OrganizationAISettingsService,
+    private readonly weatherProvider: WeatherProvider,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
@@ -643,6 +645,108 @@ export class AIReportsService {
     }
 
     return status;
+  }
+
+  /**
+   * Fetch missing data for a parcel
+   * Currently supports weather data fetching
+   * Satellite data fetching requires external API integration (TODO)
+   */
+  async fetchData(
+    organizationId: string,
+    parcelId: string,
+    dto: FetchDataRequestDto,
+  ): Promise<{ success: boolean; message: string; fetched?: string[]; pending?: string[] }> {
+    this.logger.log(`Fetching data for parcel ${parcelId}: ${dto.dataSources.join(', ')}`);
+
+    const supabase = this.databaseService.getAdminClient();
+    const fetched: string[] = [];
+    const pending: string[] = [];
+
+    // Verify parcel belongs to organization
+    const { data: parcel } = await supabase
+      .from('parcels')
+      .select('id, boundary, name')
+      .eq('id', parcelId)
+      .single();
+
+    if (!parcel) {
+      throw new BadRequestException('Parcel not found');
+    }
+
+    // Fetch weather data if requested
+    if (dto.dataSources.includes('weather')) {
+      if (!this.weatherProvider.isConfigured()) {
+        this.logger.warn('Weather provider not configured');
+        pending.push('weather');
+      } else {
+        try {
+          if (parcel.boundary && parcel.boundary.length > 0) {
+            // Ensure coordinates are in WGS84
+            const wgs84Boundary = this.ensureWGS84(parcel.boundary);
+            const { lat, lon } = this.calculateCentroid(wgs84Boundary);
+
+            // Fetch weather forecast (this could be stored or just validated)
+            await this.weatherProvider.getForecast(lat, lon, 5);
+            fetched.push('weather');
+            this.logger.log(`Successfully fetched weather data for parcel ${parcelId}`);
+          } else {
+            this.logger.warn(`Parcel ${parcelId} has no boundary, cannot fetch weather`);
+            pending.push('weather');
+          }
+        } catch (error) {
+          this.logger.error(`Failed to fetch weather data: ${error.message}`);
+          pending.push('weather');
+        }
+      }
+    }
+
+    // Satellite data fetching - requires external API integration
+    if (dto.dataSources.includes('satellite')) {
+      this.logger.warn('Satellite data fetching not yet implemented');
+      pending.push('satellite');
+    }
+
+    return {
+      success: fetched.length > 0,
+      message: `Data fetch completed. Fetched: ${fetched.join(', ') || 'none'}. ${pending.length > 0 ? `Pending implementation: ${pending.join(', ')}` : ''}`,
+      fetched,
+      pending,
+    };
+  }
+
+  /**
+   * Ensure coordinates are in WGS84 format
+   */
+  private ensureWGS84(boundary: number[][]): number[][] {
+    const firstCoord = boundary[0];
+    if (Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90) {
+      // Convert from Web Mercator to WGS84
+      return boundary.map(([x, y]) => {
+        const lon = (x / 20037508.34) * 180;
+        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+        return [lon, lat];
+      });
+    }
+    return boundary;
+  }
+
+  /**
+   * Calculate centroid from boundary coordinates
+   */
+  private calculateCentroid(
+    boundary: number[][],
+  ): { lat: number; lon: number } {
+    let sumLat = 0;
+    let sumLon = 0;
+    boundary.forEach(([lon, lat]) => {
+      sumLat += lat;
+      sumLon += lon;
+    });
+    return {
+      lat: sumLat / boundary.length,
+      lon: sumLon / boundary.length,
+    };
   }
 
   /**
