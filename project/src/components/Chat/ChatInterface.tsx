@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -43,14 +43,28 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [voiceMode, setVoiceMode] = useState(false); // Live voice chat mode
 
-  // Browser TTS (fallback)
+  // Select best voice for language (Z.ai voices: tongtong, xiaochen, chuichui, jam, kazi, douji, luodo)
+  // jam and kazi tend to sound more natural for multilingual content
+  const selectedVoice = useMemo(() => {
+    // Use more natural-sounding voices
+    if (currentLanguage === 'ar') return 'kazi'; // Better for Arabic
+    if (currentLanguage === 'fr') return 'jam'; // Better for French
+    return 'jam'; // Default to jam for English and others (more natural)
+  }, [currentLanguage]);
+
+  // Browser TTS (primary for better quality in some languages)
   const browserTTS = useTextToSpeech({
     language: currentLanguage === 'fr' ? 'fr-FR' : currentLanguage === 'ar' ? 'ar-SA' : 'en-US',
+    rate: 0.95, // Slightly slower for more natural speech
+    pitch: 1.0,
+    volume: 1.0,
   });
 
-  // Z.ai TTS (preferred)
+  // Z.ai TTS (fallback if browser TTS not available or for specific use cases)
   const zaiTTS = useZaiTTS({
     language: currentLanguage,
+    voice: selectedVoice,
+    speed: 0.95, // Slightly slower for more natural speech
     onError: (error) => {
       console.error('Z.ai TTS error:', error);
       // Fallback to browser TTS on error
@@ -190,12 +204,15 @@ export function ChatInterface() {
             };
             setMessages((prev) => [...prev, assistantMessage]);
             
-            // In voice mode, restart listening after response
+            // In voice mode, restart listening after response finishes playing
             if (voiceMode && !isListening) {
+              // Wait for TTS to finish before restarting listening
+              const restartDelay = browserTTS.isSpeaking || zaiTTS.isPlaying ? 2000 : 1000;
               setTimeout(() => {
                 resetTranscript();
+                lastSentTranscriptRef.current = '';
                 startListening();
-              }, 1000); // Small delay to allow TTS to start
+              }, restartDelay);
             }
           },
           onError: (error: any) => {
@@ -215,6 +232,7 @@ export function ChatInterface() {
             if (voiceMode && !isListening) {
               setTimeout(() => {
                 resetTranscript();
+                lastSentTranscriptRef.current = '';
                 startListening();
               }, 1000);
             }
@@ -237,6 +255,7 @@ export function ChatInterface() {
       if (voiceMode && !isListening) {
         setTimeout(() => {
           resetTranscript();
+          lastSentTranscriptRef.current = '';
           startListening();
         }, 1000);
       }
@@ -266,46 +285,78 @@ export function ChatInterface() {
       // Enable voice mode: start listening automatically
       resetTranscript();
       setInput('');
-      startListening();
+      lastSentTranscriptRef.current = '';
+      lastPlayedMessageIdRef.current = '';
+      // Small delay to ensure state is reset
+      setTimeout(() => {
+        startListening();
+      }, 100);
     } else {
-      // Disable voice mode: stop listening
+      // Disable voice mode: stop listening and TTS
       stopListening();
       resetTranscript();
+      browserTTS.stop();
+      zaiTTS.stop();
+      lastSentTranscriptRef.current = '';
+      lastPlayedMessageIdRef.current = '';
     }
   };
+
+  // Track last sent transcript to avoid duplicate sends
+  const lastSentTranscriptRef = useRef<string>('');
 
   // Auto-send in voice mode when speech ends and we have text
   useEffect(() => {
     if (voiceMode && !isListening && transcript.trim() && !isSending) {
       const trimmedTranscript = transcript.trim();
-      if (trimmedTranscript.length > 0) {
-        // Auto-send the transcript
-        proceedWithSend(trimmedTranscript);
-        resetTranscript();
-        setInput('');
+      // Only send if we have text and it's different from what we last sent
+      if (trimmedTranscript.length > 0 && trimmedTranscript !== lastSentTranscriptRef.current) {
+        lastSentTranscriptRef.current = trimmedTranscript;
+        // Small delay to ensure speech recognition is fully complete
+        const sendTimer = setTimeout(() => {
+          proceedWithSend(trimmedTranscript);
+          resetTranscript();
+          setInput('');
+          lastSentTranscriptRef.current = '';
+        }, 500);
+        return () => clearTimeout(sendTimer);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceMode, isListening, transcript, isSending, resetTranscript, proceedWithSend]);
 
+  // Track last played message to avoid replaying
+  const lastPlayedMessageIdRef = useRef<string>('');
+
   // Auto-play AI response in voice mode
   useEffect(() => {
     if (voiceMode && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant' && lastMessage.content) {
+      if (
+        lastMessage.role === 'assistant' &&
+        lastMessage.content &&
+        lastMessage.id !== lastPlayedMessageIdRef.current
+      ) {
+        lastPlayedMessageIdRef.current = lastMessage.id;
         // Auto-play the AI response with TTS
         const playResponse = async () => {
           try {
-            await zaiTTS.play(lastMessage.content);
+            // Prefer browser TTS for better quality, fallback to Z.ai
+            if (browserTTS.isSupported) {
+              browserTTS.speak(lastMessage.content);
+            } else {
+              await zaiTTS.play(lastMessage.content);
+            }
           } catch (error) {
-            // Fallback to browser TTS
+            console.error('TTS error:', error);
+            // Final fallback to browser TTS if Z.ai fails
             if (browserTTS.isSupported) {
               browserTTS.speak(lastMessage.content);
             }
           }
         };
         // Small delay to ensure message is fully rendered
-        const timer = setTimeout(playResponse, 500);
+        const timer = setTimeout(playResponse, 800);
         return () => clearTimeout(timer);
       }
     }
@@ -409,10 +460,15 @@ export function ChatInterface() {
                           <button
                             onClick={async () => {
                               try {
-                                // Try Z.ai TTS first
-                                await zaiTTS.play(message.content);
+                                // Prefer browser TTS for better quality, fallback to Z.ai
+                                if (browserTTS.isSupported) {
+                                  browserTTS.speak(message.content);
+                                } else {
+                                  await zaiTTS.play(message.content);
+                                }
                               } catch (error) {
-                                // Fallback to browser TTS
+                                console.error('TTS error:', error);
+                                // Final fallback
                                 if (browserTTS.isSupported) {
                                   browserTTS.speak(message.content);
                                 }
