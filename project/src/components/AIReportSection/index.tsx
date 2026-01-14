@@ -6,6 +6,10 @@ import { AIProviderSelector } from './AIProviderSelector';
 import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../MultiTenantAuthProvider';
+import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
+import { productionIntelligenceApi } from '../../lib/api/production-intelligence';
 
 interface AIReportSectionProps {
   parcelId: string;
@@ -28,6 +32,92 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
   const { data: calibrationStatus } = useCalibrationStatus(parcelId, dateRange.start, dateRange.end);
   const calibrateMutation = useCalibrate();
   const fetchDataMutation = useFetchData();
+  const { currentOrganization } = useAuth();
+
+  // Fetch satellite time series data for charts
+  const { data: satelliteTimeSeries } = useQuery({
+    queryKey: ['satellite-time-series-chart', parcelId, dateRange.start, dateRange.end],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !parcelId) return [];
+      
+      try {
+        const ndviData = await satelliteIndicesApi.getAll(
+          {
+            parcel_id: parcelId,
+            index_name: 'NDVI',
+            date_from: dateRange.start,
+            date_to: dateRange.end,
+          },
+          currentOrganization.id
+        );
+        
+        const ndmiData = await satelliteIndicesApi.getAll(
+          {
+            parcel_id: parcelId,
+            index_name: 'NDMI',
+            date_from: dateRange.start,
+            date_to: dateRange.end,
+          },
+          currentOrganization.id
+        );
+
+        // Merge data by date
+        const dataMap = new Map<string, { date: string; ndvi?: number; ndmi?: number }>();
+        
+        (Array.isArray(ndviData) ? ndviData : []).forEach((item: any) => {
+          const date = item.date?.split('T')[0] || item.date;
+          if (!dataMap.has(date)) {
+            dataMap.set(date, { date });
+          }
+          dataMap.get(date)!.ndvi = item.mean_value;
+        });
+        
+        (Array.isArray(ndmiData) ? ndmiData : []).forEach((item: any) => {
+          const date = item.date?.split('T')[0] || item.date;
+          if (!dataMap.has(date)) {
+            dataMap.set(date, { date });
+          }
+          dataMap.get(date)!.ndmi = item.mean_value;
+        });
+
+        return Array.from(dataMap.values()).sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+      } catch (error) {
+        console.error('Failed to fetch satellite time series:', error);
+        return [];
+      }
+    },
+    enabled: !!currentOrganization?.id && !!parcelId && !!generatedReport,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch yield history for charts
+  const { data: yieldHistory } = useQuery({
+    queryKey: ['yield-history-chart', parcelId],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !parcelId) return [];
+      
+      try {
+        const response = await productionIntelligenceApi.getYieldHistory(
+          { parcel_id: parcelId },
+          currentOrganization.id
+        );
+        
+        const data = Array.isArray(response) ? response : [];
+        return data.slice(0, 10).map((item: any) => ({
+          season: item.harvest_season || '',
+          year: new Date(item.harvest_date || item.created_at || Date.now()).getFullYear(),
+          yieldPerHa: item.actual_yield_per_hectare || 0,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch yield history:', error);
+        return [];
+      }
+    },
+    enabled: !!currentOrganization?.id && !!parcelId && !!generatedReport,
+    staleTime: 10 * 60 * 1000,
+  });
 
   // Auto-select Platform AI (zai) as default if available
   useEffect(() => {
@@ -266,6 +356,8 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
             <AIReportPreview
               sections={generatedReport.sections}
               generatedAt={generatedReport.generated_at}
+              satelliteTimeSeries={satelliteTimeSeries}
+              yieldHistory={yieldHistory}
             />
           </div>
         )}

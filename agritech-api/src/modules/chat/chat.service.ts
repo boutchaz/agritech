@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { ZaiProvider } from './providers/zai.provider';
+import { ZaiTTSProvider, TTSRequest } from './providers/zai-tts.provider';
 import { SendMessageDto, ChatResponseDto } from './dto';
 
 interface OrganizationContext {
@@ -244,12 +245,15 @@ interface ProductionIntelligenceContext {
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly zaiProvider: ZaiProvider;
+  private readonly zaiTTSProvider: ZaiTTSProvider;
 
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService,
+    private readonly ttsProvider: ZaiTTSProvider,
   ) {
     this.zaiProvider = new ZaiProvider(configService);
+    this.zaiTTSProvider = ttsProvider;
   }
 
   private async verifyOrganizationAccess(
@@ -1546,6 +1550,25 @@ When providing recommendations:
         metadata: msg.metadata,
       })),
       total: count || 0,
+    };
+  }
+
+  /**
+   * Convert text to speech using Z.ai TTS
+   */
+  async textToSpeech(
+    organizationId: string,
+    request: TTSRequest,
+  ): Promise<{ audio: Buffer; contentType: string }> {
+    // Get Z.ai API key from organization settings or environment
+    const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
+    this.zaiTTSProvider.setApiKey(apiKey);
+
+    const ttsResponse = await this.zaiTTSProvider.textToSpeech(request);
+
+    return {
+      audio: ttsResponse.audio,
+      contentType: ttsResponse.contentType,
     };
   }
 

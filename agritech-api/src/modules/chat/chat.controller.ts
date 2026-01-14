@@ -21,6 +21,8 @@ import {
 import { ChatService } from './chat.service';
 import { SendMessageDto, ChatResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Res } from '@nestjs/common';
+import { Response } from 'express';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -148,5 +150,53 @@ export class ChatController {
     }
 
     return this.chatService.clearConversationHistory(userId, organizationId);
+  }
+
+  @Post('tts')
+  @ApiOperation({
+    summary: 'Convert text to speech',
+    description: 'Generate audio from text using Z.ai GLM-TTS',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Audio generated successfully',
+    content: {
+      'audio/mpeg': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  async textToSpeech(
+    @Req() req,
+    @Param('organizationId') organizationId: string,
+    @Body() body: { text: string; language?: string; voice?: string; speed?: number },
+    @Res() res: Response,
+  ) {
+    if (!body.text || body.text.trim().length === 0) {
+      throw new BadRequestException('Text is required');
+    }
+
+    try {
+      const ttsResponse = await this.chatService.textToSpeech(organizationId, {
+        text: body.text,
+        language: body.language || 'fr',
+        voice: body.voice,
+        speed: body.speed,
+      });
+
+      res.setHeader('Content-Type', ttsResponse.contentType);
+      res.setHeader('Content-Length', ttsResponse.audio.length.toString());
+      res.send(ttsResponse.audio);
+    } catch (error) {
+      this.chatService['logger'].error(`TTS error: ${error.message}`);
+      throw new BadRequestException(`Failed to generate speech: ${error.message}`);
+    }
   }
 }

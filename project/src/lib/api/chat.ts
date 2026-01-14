@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import { getApiHeaders } from '../api-client';
 
 const BASE_URL = '/api/v1';
 
@@ -78,10 +79,46 @@ export const chatApi = {
     if (!organizationId) {
       throw new Error('Organization ID is required');
     }
-    return apiClient.delete_(
+    return apiClient.delete(
       `${BASE_URL}/organizations/${organizationId}/chat/history`,
       {},
       organizationId,
     );
+  },
+
+  async textToSpeech(
+    text: string,
+    language?: string,
+    voice?: string,
+    speed?: number,
+    organizationId?: string,
+  ): Promise<Blob> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+
+    // Get auth headers
+    const headers = await getApiHeaders(organizationId);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    const response = await fetch(
+      `${API_URL}/api/v1/organizations/${organizationId}/chat/tts`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ text, language, voice, speed }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'TTS request failed' }));
+      throw new Error(error.message || 'Failed to generate speech');
+    }
+
+    return response.blob();
   },
 };
