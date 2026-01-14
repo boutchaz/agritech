@@ -33,7 +33,7 @@ export class ChatController {
   @ApiOperation({
     summary: 'Send chat message and get AI response',
     description:
-      'Queries all modules and provides intelligent responses using Z.ai GLM-4.7 model',
+      'Queries all modules and provides intelligent responses using Z.ai GLM-4.5-Flash model',
   })
   @ApiParam({
     name: 'organizationId',
