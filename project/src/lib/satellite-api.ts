@@ -312,20 +312,59 @@ class SatelliteAPIClient {
 
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}/api${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`API Error: ${response.status} - ${error}`);
+    console.log(`[SatelliteAPI] Request: ${options.method || 'GET'} ${url}`);
+
+    // Add timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        signal: controller.signal,
+        ...options,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[SatelliteAPI] Error response:`, {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+
+        // Provide more helpful error messages
+        if (response.status === 404) {
+          throw new Error('Satellite data service endpoint not found. The service may be temporarily unavailable.');
+        } else if (response.status >= 500) {
+          throw new Error('Satellite data service is experiencing issues. Please try again later.');
+        } else if (response.status === 400) {
+          throw new Error(`Invalid request: ${errorText}`);
+        } else {
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const data = await response.json();
+      console.log(`[SatelliteAPI] Response received:`, endpoint);
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`[SatelliteAPI] Request timeout: ${url}`);
+        throw new Error('Request timed out. The satellite imagery calculation is taking too long. Try a smaller area or shorter date range.');
+      }
+
+      console.error(`[SatelliteAPI] Request failed:`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   // Health check
@@ -341,6 +380,13 @@ class SatelliteAPIClient {
       cloud_buffer_meters: 300,    // Default 300m buffer
       ...request
     };
+
+    console.log('[SatelliteAPI] calculateIndices request:', {
+      dateRange: requestWithDefaults.date_range,
+      indices: requestWithDefaults.indices,
+      cloudCoverage: requestWithDefaults.cloud_coverage,
+      scale: requestWithDefaults.scale
+    });
 
     return this.request('/indices/calculate', {
       method: 'POST',
@@ -599,6 +645,10 @@ export const satelliteApi = new SatelliteAPIClient();
 
 // Utility functions
 export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry => {
+  if (!boundary || boundary.length < 3) {
+    throw new Error('Invalid boundary: must have at least 3 coordinates');
+  }
+
   // Convert boundary coordinates to WGS84 if needed
   const convertedBoundary = boundary.map(coord => {
     const [x, y] = coord;
@@ -623,6 +673,21 @@ export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry 
       convertedBoundary.push([first[0], first[1]]);
     }
   }
+
+  // Validate the converted coordinates
+  const firstCoord = convertedBoundary[0];
+  if (Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90) {
+    console.error('[convertBoundaryToGeoJSON] Invalid coordinates after conversion:', {
+      original: boundary[0],
+      converted: firstCoord
+    });
+    throw new Error(`Invalid coordinates: [${firstCoord[0]}, ${firstCoord[1]}]. Longitude must be between -180 and 180, latitude between -90 and 90.`);
+  }
+
+  console.log('[convertBoundaryToGeoJSON] Converted boundary:', {
+    points: convertedBoundary.length,
+    sample: [convertedBoundary[0], convertedBoundary[Math.floor(convertedBoundary.length / 2)]]
+  });
 
   return {
     type: 'Polygon',

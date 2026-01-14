@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/Input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSendMessage, useChatHistory, useClearChatHistory } from '@/hooks/useChat';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
-import { Send, Mic, MicOff, Loader2, Trash2, Bot, User } from 'lucide-react';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { useZaiTTS } from '@/hooks/useZaiTTS';
+import { Send, Mic, MicOff, Loader2, Trash2, Bot, User, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -42,6 +44,23 @@ export function ChatInterface() {
     language: 'en-US',
     onTranscript: (text) => {
       setInput((prev) => prev + text);
+    },
+  });
+
+  // Browser TTS (fallback)
+  const browserTTS = useTextToSpeech({
+    language: currentLanguage === 'fr' ? 'fr-FR' : currentLanguage === 'ar' ? 'ar-SA' : 'en-US',
+  });
+
+  // Z.ai TTS (preferred)
+  const zaiTTS = useZaiTTS({
+    language: currentLanguage,
+    onError: (error) => {
+      console.error('Z.ai TTS error:', error);
+      // Fallback to browser TTS on error
+      if (browserTTS.isSupported) {
+        browserTTS.speak(messages[messages.length - 1]?.content || '');
+      }
     },
   });
 
@@ -241,12 +260,54 @@ export function ChatInterface() {
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.content}
-                  </p>
-                  <span className="text-xs opacity-70 mt-1 block">
-                    {message.timestamp.toLocaleTimeString()}
-                  </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
+                      <span className="text-xs opacity-70 mt-1 block">
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    {message.role === 'assistant' && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {(zaiTTS.isGenerating || zaiTTS.isPlaying || browserTTS.isSpeaking) && (
+                          <button
+                            onClick={() => {
+                              zaiTTS.stop();
+                              browserTTS.stop();
+                            }}
+                            className="p-1.5 rounded hover:bg-muted/50 transition-colors"
+                            title={t('chat.stopAudio', 'Stop audio')}
+                          >
+                            <VolumeX className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        )}
+                        {!zaiTTS.isGenerating && !zaiTTS.isPlaying && !browserTTS.isSpeaking && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Try Z.ai TTS first
+                                await zaiTTS.play(message.content);
+                              } catch (error) {
+                                // Fallback to browser TTS
+                                if (browserTTS.isSupported) {
+                                  browserTTS.speak(message.content);
+                                }
+                              }
+                            }}
+                            className="p-1.5 rounded hover:bg-muted/50 transition-colors"
+                            title={t('chat.playAudio', 'Play audio')}
+                          >
+                            <Volume2 className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        )}
+                        {(zaiTTS.isGenerating || browserTTS.isSpeaking) && (
+                          <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {message.role === 'user' && (
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">

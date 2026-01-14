@@ -10,12 +10,21 @@ import {
   Target,
   CheckCircle,
   Clock,
+  BarChart3,
 } from 'lucide-react';
 import type { AIReportSections } from '../../lib/api/ai-reports';
+import { AIReportCharts } from './AIReportCharts';
 
 interface AIReportPreviewProps {
   sections: AIReportSections;
   generatedAt: string;
+  satelliteTimeSeries?: Array<{ date: string; ndvi?: number; ndmi?: number }>;
+  yieldHistory?: Array<{ season: string; year: number; yieldPerHa: number }>;
+  weatherData?: {
+    period: { start: string; end: string };
+    temperatureSummary: { avgMin: number; avgMax: number; avgMean: number };
+    precipitationTotal: number;
+  };
 }
 
 interface CollapsibleSectionProps {
@@ -85,7 +94,11 @@ const priorityStyles = {
 export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
   sections,
   generatedAt,
+  satelliteTimeSeries,
+  yieldHistory,
+  weatherData,
 }) => {
+  const [showCharts, setShowCharts] = useState(true);
   const healthScore = sections.healthAssessment?.overallScore ?? 0;
   const healthColor =
     healthScore >= 70
@@ -329,6 +342,22 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
                 </div>
               ))}
           </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Visual Charts Section */}
+      {(satelliteTimeSeries || yieldHistory || sections.recommendations || sections.riskAlerts) && (
+        <CollapsibleSection
+          title="Visualisations & Graphiques"
+          icon={<BarChart3 className="w-5 h-5 text-purple-600" />}
+          defaultOpen={true}
+        >
+          <AIReportCharts
+            sections={sections}
+            satelliteTimeSeries={satelliteTimeSeries}
+            yieldHistory={yieldHistory}
+            weatherData={weatherData}
+          />
         </CollapsibleSection>
       )}
     </div>
