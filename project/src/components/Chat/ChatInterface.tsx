@@ -119,8 +119,8 @@ export function ChatInterface() {
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between py-3">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between py-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <Bot className="w-5 h-5" />
           {t('chat.title', 'AI Assistant')}
@@ -136,9 +136,9 @@ export function ChatInterface() {
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0">
+      <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0 overflow-hidden">
         {/* Messages Area */}
-        <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 pr-4 min-h-0" ref={scrollRef}>
           <div className="space-y-4">
             {messages.length === 0 && !isLoadingHistory && (
               <div className="text-center text-muted-foreground py-8">
