@@ -14,7 +14,13 @@ export function useSendMessage() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return chatApi.sendMessage(data, currentOrganization.id);
+      try {
+        const response = await chatApi.sendMessage(data, currentOrganization.id);
+        return response;
+      } catch (error: any) {
+        console.error('Chat API error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       // Invalidate and refetch chat history query immediately
@@ -25,6 +31,9 @@ export function useSendMessage() {
       queryClient.refetchQueries({
         queryKey: ['chat-history', currentOrganization?.id],
       });
+    },
+    onError: (error: any) => {
+      console.error('Chat mutation error:', error);
     },
   });
 }

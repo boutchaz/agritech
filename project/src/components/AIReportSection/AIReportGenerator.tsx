@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bot,
   Loader2,
@@ -46,6 +46,22 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   const { data: providers = [], isLoading: loadingProviders } = useAIProviders();
   const generateMutation = useGenerateAIReport();
+
+  // Auto-select Platform AI (zai) as default if available
+  useEffect(() => {
+    if (providers.length > 0 && !selectedProvider) {
+      const platformAI = providers.find((p) => p.provider === 'zai' && p.available);
+      if (platformAI) {
+        setSelectedProvider('zai');
+      } else {
+        // Fallback to first available provider
+        const firstAvailable = providers.find((p) => p.available);
+        if (firstAvailable) {
+          setSelectedProvider(firstAvailable.provider);
+        }
+      }
+    }
+  }, [providers, selectedProvider]);
 
   const handleGenerate = async () => {
     if (!selectedProvider) return;

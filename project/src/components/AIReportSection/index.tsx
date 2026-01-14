@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bot, Sparkles, Loader, AlertCircle, Calendar } from 'lucide-react';
 import { useAIProviders, useGenerateAIReport } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportResponse } from '../../lib/api/ai-reports';
@@ -24,6 +24,22 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
 
   const { data: providers, isLoading: loadingProviders, error: providersError } = useAIProviders();
   const generateMutation = useGenerateAIReport();
+
+  // Auto-select Platform AI (zai) as default if available
+  useEffect(() => {
+    if (providers && !selectedProvider) {
+      const platformAI = providers.find((p) => p.provider === 'zai' && p.available);
+      if (platformAI) {
+        setSelectedProvider('zai');
+      } else {
+        // Fallback to first available provider
+        const firstAvailable = providers.find((p) => p.available);
+        if (firstAvailable) {
+          setSelectedProvider(firstAvailable.provider);
+        }
+      }
+    }
+  }, [providers, selectedProvider]);
 
   const handleGenerate = async () => {
     if (!selectedProvider) return;

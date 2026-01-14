@@ -123,6 +123,7 @@ const MapComponent: React.FC<MapProps> = ({
   const [parcelName, setParcelName] = useState('');
   const [tempBoundary, setTempBoundary] = useState<number[][]>([]);
   const [showParcelForm, setShowParcelForm] = useState(false);
+  const [isParcelFormDialogOpen, setIsParcelFormDialogOpen] = useState(false);
   const [parcelDetails, setParcelDetails] = useState({
     soil_type: '',
     area: 0,
@@ -914,6 +915,7 @@ const MapComponent: React.FC<MapProps> = ({
             // If editing an existing parcel, skip name dialog and go directly to form
             if (editingParcelId) {
               setShowParcelForm(true);
+              setIsParcelFormDialogOpen(true);
             } else {
               setShowNameDialog(true);
             }
@@ -1263,6 +1265,7 @@ const MapComponent: React.FC<MapProps> = ({
     // Reset state
     setShowNameDialog(false);
     setShowParcelForm(false);
+    setIsParcelFormDialogOpen(false);
     setParcelName('');
     setTempBoundary([]);
     setParcelDetails({
@@ -1372,6 +1375,7 @@ const MapComponent: React.FC<MapProps> = ({
     if (parcelName) {
       setShowNameDialog(false);
       setShowParcelForm(true);
+      setIsParcelFormDialogOpen(true);
     }
   };
 
@@ -1478,7 +1482,7 @@ const MapComponent: React.FC<MapProps> = ({
             </div>
           )}
 
-          <Dialog open={!!(farmId && enableDrawing && showParcelForm)} onOpenChange={(open) => {
+          <Dialog open={isParcelFormDialogOpen} onOpenChange={(open) => {
             if (!open) {
               cleanupDrawingState();
             }
@@ -1924,7 +1928,7 @@ const MapComponent: React.FC<MapProps> = ({
             </div>
 
             {/* Search Box */}
-            {showSearchBox && !showNameDialog && !showParcelForm && (
+            {showSearchBox && !showNameDialog && !showParcelForm && !isParcelFormDialogOpen && (
               <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-80 z-30">
                 <div className="flex items-center space-x-2 mb-3">
                   <input
@@ -1983,7 +1987,7 @@ const MapComponent: React.FC<MapProps> = ({
             )}
           </div>
 
-          {farmId && enableDrawing && !showNameDialog && !showParcelForm && (
+          {farmId && enableDrawing && !showNameDialog && !showParcelForm && !isParcelFormDialogOpen && (
             <div className="absolute top-4 left-4 space-y-3 z-10">
               <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">

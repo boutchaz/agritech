@@ -111,7 +111,7 @@ export class EncryptionService {
   /**
    * Validates that a string looks like a valid API key format
    */
-  validateApiKeyFormat(apiKey: string, provider: 'openai' | 'gemini' | 'groq'): boolean {
+  validateApiKeyFormat(apiKey: string, provider: 'openai' | 'gemini' | 'groq' | 'zai'): boolean {
     if (!apiKey || apiKey.trim().length === 0) {
       return false;
     }
@@ -126,6 +126,9 @@ export class EncryptionService {
       case 'groq':
         // Groq keys start with 'gsk_' and are typically 56 characters
         return apiKey.startsWith('gsk_') && apiKey.length >= 40;
+      case 'zai':
+        // Z.ai API keys are in format: id.secret (two parts separated by dot)
+        return apiKey.includes('.') && apiKey.split('.').length === 2 && apiKey.length >= 20;
       default:
         return apiKey.length >= 20;
     }
