@@ -8,12 +8,14 @@ import { GroqProvider } from './providers/groq.provider';
 import { ZaiProvider } from './providers/zai.provider';
 import { DatabaseModule } from '../database/database.module';
 import { OrganizationAISettingsModule } from '../organization-ai-settings/organization-ai-settings.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
     DatabaseModule,
     ConfigModule,
     forwardRef(() => OrganizationAISettingsModule),
+    ChatModule, // Import ChatModule to access WeatherProvider
   ],
   controllers: [AIReportsController],
   providers: [AIReportsService, OpenAIProvider, GeminiProvider, GroqProvider, ZaiProvider],

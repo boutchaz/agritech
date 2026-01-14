@@ -255,16 +255,15 @@ export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly zaiProvider: ZaiProvider;
   private readonly zaiTTSProvider: ZaiTTSProvider;
-  private readonly weatherProvider: WeatherProvider;
 
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService,
     private readonly ttsProvider: ZaiTTSProvider,
+    private readonly weatherProvider: WeatherProvider,
   ) {
     this.zaiProvider = new ZaiProvider(configService);
     this.zaiTTSProvider = ttsProvider;
-    this.weatherProvider = new WeatherProvider(configService);
   }
 
   private async verifyOrganizationAccess(
