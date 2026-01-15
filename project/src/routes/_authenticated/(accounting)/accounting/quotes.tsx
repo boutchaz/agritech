@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
 import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -73,7 +74,7 @@ const AppContent: React.FC = () => {
       // Get current session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert(t('quotes.pdf.signInRequired'));
+        toast.error(t('quotes.pdf.signInRequired'));
         return;
       }
 
@@ -101,7 +102,7 @@ const AppContent: React.FC = () => {
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
 
-        alert(t('quotes.pdf.htmlFallback'));
+        toast.info(t('quotes.pdf.htmlFallback'));
       } else {
         // Got PDF directly
         const blob = await response.blob();
@@ -116,7 +117,7 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert(`${t('quotes.pdf.downloadFailed')}: ${error instanceof Error ? error.message : t('quotes.error.unknown')}`);
+      toast.error(`${t('quotes.pdf.downloadFailed')}: ${error instanceof Error ? error.message : t('quotes.error.unknown')}`);
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Save, X, TreeDeciduous, Sprout, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from './MultiTenantAuthProvider';
 import { useTreeCategories, usePlantationTypes } from '../hooks/useTreeManagement';
 
@@ -64,7 +65,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         setNewCategoryName('');
         onDataChange?.();
       } catch (error: any) {
-        alert('Error adding category: ' + error.message);
+        toast.error('Error adding category: ' + error.message);
       }
     }
   };
@@ -75,7 +76,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         await deleteCategory(categoryId);
         onDataChange?.();
       } catch (error: any) {
-        alert('Error deleting category: ' + error.message);
+        toast.error('Error deleting category: ' + error.message);
       }
     }
   };
@@ -94,7 +95,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
       setEditingCategory(null);
       onDataChange?.();
     } catch (error: any) {
-      alert('Error updating category: ' + error.message);
+      toast.error('Error updating category: ' + error.message);
     }
   };
 
@@ -105,7 +106,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         setNewTreeName('');
         onDataChange?.();
       } catch (error: any) {
-        alert('Error adding tree: ' + error.message);
+        toast.error('Error adding tree: ' + error.message);
       }
     }
   };
@@ -115,7 +116,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
       await deleteTree(treeId);
       onDataChange?.();
     } catch (error: any) {
-      alert('Error deleting tree: ' + error.message);
+      toast.error('Error deleting tree: ' + error.message);
     }
   };
 
@@ -130,7 +131,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
       setEditingTree(null);
       onDataChange?.();
     } catch (error: any) {
-      alert('Error updating tree: ' + error.message);
+      toast.error('Error updating tree: ' + error.message);
     }
   };
 
@@ -146,7 +147,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         setNewPlantationType({ type: '', spacing: '', treesPerHa: 0 });
         onDataChange?.();
       } catch (error: any) {
-        alert('Error adding plantation type: ' + error.message);
+        toast.error('Error adding plantation type: ' + error.message);
       }
     }
   };
@@ -157,7 +158,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         await deletePlantationType(id);
         onDataChange?.();
       } catch (error: any) {
-        alert('Error deleting plantation type: ' + error.message);
+        toast.error('Error deleting plantation type: ' + error.message);
       }
     }
   };
@@ -185,7 +186,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
       setEditingPlantation(null);
       onDataChange?.();
     } catch (error: any) {
-      alert('Error updating plantation type: ' + error.message);
+      toast.error('Error updating plantation type: ' + error.message);
     }
   };
 

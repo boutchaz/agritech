@@ -151,6 +151,7 @@ export function usePendingAIReportJobs() {
     enabled: !!currentOrganization?.id,
     staleTime: 1000 * 10,
     refetchInterval: 1000 * 30,
+    refetchOnWindowFocus: false, // Disable to prevent breaking polling logic on tab switch
   });
 }
 

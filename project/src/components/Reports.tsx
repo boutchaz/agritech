@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Module } from '../types';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { reportsApi, ReportCategory, ReportType, ReportTypeInfo } from '../lib/api/reports';
@@ -42,7 +43,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
 
   const handleDownloadReport = async (reportType: ReportType, reportName: string) => {
     if (!currentOrganization?.id) {
-      alert('No organization selected');
+      toast.error('No organization selected');
       return;
     }
 
@@ -63,7 +64,7 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
       downloadCSV(csv, `${reportName}-${endDate.toISOString().split('T')[0]}.csv`);
     } catch (err: any) {
       console.error('Error generating report:', err);
-      alert(err.message || 'Failed to generate report');
+      toast.error(err.message || 'Failed to generate report');
     }
   };
 

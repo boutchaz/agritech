@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Info, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useWorkers, useCreateMetayageSettlement } from '../../hooks/useWorkers';
 import { calculateMetayageShare } from '../../types/workers';
 import type { CalculationBasis } from '../../types/workers';
@@ -57,7 +58,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
   const handleSaveSettlement = async () => {
     if (!selectedWorkerId || !grossRevenue || !periodStart || !periodEnd) {
-      alert(t('workers.metayage.validation.fillAllRequired'));
+      toast.error(t('workers.metayage.validation.fillAllRequired'));
       return;
     }
 
@@ -87,10 +88,10 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
       setNotes('');
 
       onSuccess?.();
-      alert(t('workers.metayage.validation.settlementSaved'));
+      toast.success(t('workers.metayage.validation.settlementSaved'));
     } catch (error) {
       console.error('Error saving settlement:', error);
-      alert(t('workers.metayage.validation.saveError'));
+      toast.error(t('workers.metayage.validation.saveError'));
     }
   };
 

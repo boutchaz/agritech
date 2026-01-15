@@ -150,7 +150,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
         URL.revokeObjectURL(url);
 
         // Show info that this is HTML version
-        alert('Le rapport a été téléchargé au format HTML. Pour une version PDF, veuillez contacter l\'administrateur.');
+        toast.info('Le rapport a été téléchargé au format HTML. Pour une version PDF, veuillez contacter l\'administrateur.');
         return;
       }
 
@@ -158,7 +158,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
       throw new Error('Aucun contenu de rapport disponible');
     } catch (err: any) {
       console.error('Error downloading report:', err);
-      alert(err.message || 'Erreur lors du téléchargement du rapport');
+      toast.error(err.message || 'Erreur lors du téléchargement du rapport');
     }
   };
 

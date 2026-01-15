@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer } from 'lucide-react';
+import { toast } from 'sonner';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { TimeSeriesResponse, IndexCalculationResponse, ExportFormat } from '../services/satelliteIndicesService';
 import TimeSeriesChart, { TemperatureDataPoint } from './TimeSeriesChart';
@@ -91,7 +92,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const handleCalculateCurrentIndices = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      alert('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
+      toast.error('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
       return;
     }
 
@@ -111,7 +112,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const handleGetTimeSeries = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      alert('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
+      toast.error('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
       return;
     }
 
@@ -156,7 +157,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const handleExportMap = async (format: ImageExportFormat = 'GeoTIFF') => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      alert('Cette parcelle n\'a pas de limites géographiques définies.');
+      toast.error('Cette parcelle n\'a pas de limites géographiques définies.');
       return;
     }
 
@@ -196,7 +197,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const handleExportData = async (format: DataExportFormat) => {
     if (!timeSeriesData) {
-      alert('Veuillez d\'abord charger les données de la série temporelle.');
+      toast.warning('Veuillez d\'abord charger les données de la série temporelle.');
       return;
     }
 
@@ -247,7 +248,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       } else {
         // Maximum 5 indices for performance
         if (prev.length >= 5) {
-          alert('Maximum 5 indices peuvent être affichés simultanément');
+          toast.warning('Maximum 5 indices peuvent être affichés simultanément');
           return prev;
         }
         return [...prev, index];

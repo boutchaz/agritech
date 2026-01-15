@@ -5,6 +5,7 @@ import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useAnalyses } from '@/hooks/useAnalyses'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
 import { FlaskRound as Flask, Plus, Leaf, Droplets, X, FileText, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 import SoilAnalysisForm from '@/components/Analysis/SoilAnalysisForm'
 import PlantAnalysisForm from '@/components/Analysis/PlantAnalysisForm'
 import WaterAnalysisForm from '@/components/Analysis/WaterAnalysisForm'
@@ -75,7 +76,7 @@ const ParcelSoilAnalysis = () => {
       }
     } catch (error) {
       console.error('Error saving soil analysis:', error);
-      alert(t('parcels.analyse.saveError'));
+      toast.error(t('parcels.analyse.saveError'));
     }
   };
 
@@ -102,7 +103,7 @@ const ParcelSoilAnalysis = () => {
       }
     } catch (error) {
       console.error('Error saving plant analysis:', error);
-      alert(t('parcels.analyse.plantSaveError'));
+      toast.error(t('parcels.analyse.plantSaveError'));
     }
   };
 
@@ -129,7 +130,7 @@ const ParcelSoilAnalysis = () => {
       }
     } catch (error) {
       console.error('Error saving water analysis:', error);
-      alert(t('parcels.analyse.waterSaveError'));
+      toast.error(t('parcels.analyse.waterSaveError'));
     }
   };
 
@@ -146,7 +147,7 @@ const ParcelSoilAnalysis = () => {
         }
       } catch (error) {
         console.error('Error deleting analysis:', error);
-        alert(t('parcels.analyse.deleteError'));
+        toast.error(t('parcels.analyse.deleteError'));
       }
     }
   };

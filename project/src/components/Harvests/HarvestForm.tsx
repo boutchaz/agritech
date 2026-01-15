@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Wheat, Calendar, Star, MapPin, TrendingUp, Warehouse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useAuth } from '../MultiTenantAuthProvider';
 import { useFarms, useParcelsByFarm } from '../../hooks/useParcelsQuery';
 import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
@@ -125,7 +126,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
       }
       onClose();
     } catch (_error) {
-      alert(t('harvests.form.validation.saveError'));
+      toast.error(t('harvests.form.validation.saveError'));
     }
   };
 

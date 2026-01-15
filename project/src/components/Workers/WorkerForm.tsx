@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, UserPlus, AlertCircle, X, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { Worker, WorkerFormData } from '../../types/workers';
 import {
   WORKER_TYPE_OPTIONS,
@@ -268,13 +269,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
           if (!result.success) {
             console.error('Failed to grant platform access:', result.error);
-            alert(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${result.error}`);
+            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${result.error}`);
           } else {
-            alert(result.message || t('workers.form.success.workerCreatedWithAccess'));
+            toast.success(result.message || t('workers.form.success.workerCreatedWithAccess'));
           }
         } catch (error) {
           console.error('Error granting platform access:', error);
-          alert(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
+          toast.error(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
         } finally {
           setPlatformAccessLoading(false);
         }

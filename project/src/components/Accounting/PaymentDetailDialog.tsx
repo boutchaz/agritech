@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
         onOpenChange(false);
       } catch (error) {
         console.error('Failed to delete payment:', error);
-        alert(t('dialogs.paymentDetail.deleteFailed'));
+        toast.error(t('dialogs.paymentDetail.deleteFailed'));
       }
     }
   };

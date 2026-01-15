@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, FileText, Trash2, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import SoilAnalysisForm from './SoilAnalysisForm';
 import CSVBulkUpload from './SoilAnalysis/CSVBulkUpload';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
@@ -73,7 +74,7 @@ const SoilAnalysisPage: React.FC = () => {
 
   const handleSave = async (data: SoilAnalysis) => {
     if (!selectedParcelId) {
-      alert('Veuillez sélectionner une parcelle avant d\'ajouter une analyse de sol.');
+      toast.error('Veuillez sélectionner une parcelle avant d\'ajouter une analyse de sol.');
       return;
     }
 
@@ -82,7 +83,7 @@ const SoilAnalysisPage: React.FC = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Error saving soil analysis:', err);
-      alert('Erreur lors de l\'enregistrement de l\'analyse de sol.');
+      toast.error('Erreur lors de l\'enregistrement de l\'analyse de sol.');
     }
   };
 
