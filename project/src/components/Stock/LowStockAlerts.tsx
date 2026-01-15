@@ -102,7 +102,7 @@ export default function LowStockAlerts({
                       {t('stock.lowStockAlerts.currentStock', 'Current Stock')}:
                     </span>
                     <span className="font-medium text-amber-700 dark:text-amber-400">
-                      {item.total_quantity.toFixed(3)} {item.default_unit}
+                      {parseFloat(item.total_quantity.toFixed(3))} {item.default_unit}
                     </span>
                   </div>
 
@@ -142,7 +142,7 @@ export default function LowStockAlerts({
                               {farmStock.farm_name && ` (${farmStock.farm_name})`}:
                             </span>{' '}
                             <span className={farmStock.is_low_stock ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
-                              {farmStock.total_quantity.toFixed(3)} {item.default_unit}
+                              {parseFloat(farmStock.total_quantity.toFixed(3))} {item.default_unit}
                             </span>
                           </div>
                         ))}
