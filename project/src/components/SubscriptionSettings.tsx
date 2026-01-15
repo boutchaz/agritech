@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
 import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
@@ -62,7 +63,7 @@ const SubscriptionSettings: React.FC = () => {
     }
 
     if (!currentOrganization?.id) {
-      alert(t('subscription.errors.noOrganization'));
+      toast.error(t('subscription.errors.noOrganization'));
       return;
     }
 
@@ -72,7 +73,7 @@ const SubscriptionSettings: React.FC = () => {
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Failed to get checkout URL:', error);
-      alert(t('subscription.errors.checkoutFailed'));
+      toast.error(t('subscription.errors.checkoutFailed'));
     }
   };
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { demoDataApi, ExportData } from '@/lib/api/demo-data';
 import {
   AlertTriangle,
@@ -150,7 +151,7 @@ function DangerZonePage() {
           setImportData(data);
           setShowImportConfirm(true);
         } catch {
-          alert('Fichier JSON invalide');
+          toast.error('Fichier JSON invalide');
           setImportFile(null);
         }
       };

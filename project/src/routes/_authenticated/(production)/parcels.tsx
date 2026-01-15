@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -115,7 +116,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       await deleteParcelMutation.mutateAsync(parcelId);
     } catch (error) {
       console.error('Error deleting parcel:', error);
-      alert(t('parcels.deleteError'));
+      toast.error(t('parcels.deleteError'));
     }
   };
 
@@ -126,7 +127,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       setShowEditDialog(false);
     } catch (error) {
       console.error('Error updating parcel:', error);
-      alert(t('parcels.updateError'));
+      toast.error(t('parcels.updateError'));
     }
   };
 
@@ -140,7 +141,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       console.log('Navigation successful');
     } catch (error) {
       console.error('Navigation error:', error);
-      alert(`Error navigating to parcel: ${error}`);
+      toast.error(`Error navigating to parcel: ${error}`);
     }
   };
 

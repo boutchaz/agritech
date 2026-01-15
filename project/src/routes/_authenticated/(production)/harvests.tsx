@@ -13,6 +13,7 @@ import HarvestDetailsModal from '@/components/Harvests/HarvestDetailsModal';
 import HarvestStatistics from '@/components/Harvests/HarvestStatistics';
 import type { HarvestSummary } from '@/types/harvests';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { useServerTableState, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 
 function HarvestsPage() {
@@ -67,7 +68,7 @@ function HarvestsPage() {
       });
     } catch (error) {
       console.error('Error deleting harvest:', error);
-      alert(t('harvests.deleteError'));
+      toast.error(t('harvests.deleteError'));
     }
   };
 

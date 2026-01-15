@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useAuth } from './MultiTenantAuthProvider';
 import type { AnalysisType } from '../types/analysis';
 import { Select } from './ui/Select';
@@ -52,7 +53,7 @@ const AnalysisPage: React.FC = () => {
 
   const handleSaveSoil = async (values: SoilAnalysisFormValues) => {
     if (!selectedParcelId) {
-      alert(t('analysis.alerts.selectParcel'));
+      toast.error(t('analysis.alerts.selectParcel'));
       return;
     }
 
@@ -71,7 +72,7 @@ const AnalysisPage: React.FC = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Error saving analysis:', err);
-      alert(t('analysis.alerts.saveError'));
+      toast.error(t('analysis.alerts.saveError'));
     }
   };
 
@@ -84,7 +85,7 @@ const AnalysisPage: React.FC = () => {
       await deleteAnalysisMutation.mutateAsync(id);
     } catch (err) {
       console.error('Error deleting analysis:', err);
-      alert(t('analysis.alerts.deleteError'));
+      toast.error(t('analysis.alerts.deleteError'));
     }
   };
 

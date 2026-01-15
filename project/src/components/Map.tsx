@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { toast } from 'sonner';
 
 interface MapProps {
   center: [number, number];
@@ -633,7 +634,7 @@ const MapComponent: React.FC<MapProps> = ({
     } catch (error) {
       console.error('Location error:', error);
       setLocationPermission('denied');
-      alert(error instanceof Error ? error.message : 'Could not get your location');
+      toast.error(error instanceof Error ? error.message : 'Could not get your location');
       try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {
         // Ignore localStorage errors
       }
@@ -904,7 +905,7 @@ const MapComponent: React.FC<MapProps> = ({
             const validation = ParcelAutomation.validateBoundary(boundary);
             if (!validation.valid) {
               feature.setStyle(parcelStyles.error);
-              alert(`Erreur de dessin: ${validation.errors.join(', ')}`);
+              toast.error(`Erreur de dessin: ${validation.errors.join(', ')}`);
               vectorSource.removeFeature(feature);
               return;
             }
@@ -1367,7 +1368,7 @@ const MapComponent: React.FC<MapProps> = ({
       }
     } catch (error) {
       console.error('Error saving parcel:', error);
-      alert(`Erreur lors de ${editingParcelId ? 'la mise à jour' : 'la création'} de la parcelle: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(`Erreur lors de ${editingParcelId ? 'la mise à jour' : 'la création'} de la parcelle: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   };
 

@@ -5,6 +5,7 @@ import { Edit, Leaf, MapPin, Plus, Sprout, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { z } from 'zod';
 import {
   calculatePlantCount,
@@ -200,7 +201,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       setEditingParcel(null);
     },
     onError: (error: Error) => {
-      alert(t('app.error') + ': ' + (error.message || ''));
+      toast.error(t('app.error') + ': ' + (error.message || ''));
     }
   });
 
@@ -232,7 +233,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         errorMessage += `: ${error.message}`;
       }
       
-      alert(errorMessage);
+      toast.error(errorMessage);
       // Don't close dialog on error so user can try again or see the error
     }
   });

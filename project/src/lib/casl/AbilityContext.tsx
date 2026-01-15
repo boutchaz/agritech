@@ -52,8 +52,9 @@ export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 60 * 1000, // Refetch every minute
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Build ability based on user context
