@@ -190,6 +190,20 @@ export interface FetchDataRequest {
   dataSources: ('satellite' | 'weather')[];
 }
 
+export type AIReportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface AIReportJob {
+  job_id: string;
+  status: AIReportJobStatus;
+  progress: number;
+  error_message?: string;
+  report_id?: string;
+  result?: BackendAIReportResponse;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
 export const aiReportsApi = {
   async getProviders(organizationId?: string): Promise<AIProviderInfo[]> {
     return apiClient.get(`${BASE_URL}/providers`, {}, organizationId);
@@ -237,10 +251,25 @@ export const aiReportsApi = {
     return apiClient.post(`${BASE_URL}/parcels/${parcelId}/fetch-data`, request, {}, organizationId);
   },
 
-  async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportResponse> {
-    const response: BackendAIReportResponse = await apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
+  async generateReport(data: GenerateAIReportDto, organizationId?: string): Promise<AIReportJob> {
+    return apiClient.post(`${BASE_URL}/generate`, data, {}, organizationId);
+  },
 
-    // Map backend response to frontend expected format
+  async getJobStatus(jobId: string, organizationId?: string): Promise<AIReportJob> {
+    return apiClient.get(`${BASE_URL}/jobs/${jobId}`, {}, organizationId);
+  },
+
+  async listJobs(organizationId?: string, status?: string, limit?: number): Promise<{ jobs: AIReportJob[] }> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (limit) params.append('limit', String(limit));
+    const query = params.toString() ? `?${params}` : '';
+    return apiClient.get(`${BASE_URL}/jobs${query}`, {}, organizationId);
+  },
+
+  mapJobResultToReport(job: AIReportJob): AIReportResponse | null {
+    if (job.status !== 'completed' || !job.result) return null;
+    const response = job.result;
     return {
       id: response.report.id,
       parcel_id: response.report.parcel_id,
