@@ -1449,4 +1449,132 @@ export class AIReportsService {
 
     return data;
   }
+
+  async createReportJob(organizationId: string, userId: string, dto: GenerateAIReportDto) {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: job, error } = await supabase
+      .from('ai_report_jobs')
+      .insert({
+        organization_id: organizationId,
+        user_id: userId,
+        parcel_id: dto.parcel_id,
+        provider: dto.provider,
+        model: dto.model,
+        language: dto.language || 'fr',
+        data_start_date: dto.data_start_date,
+        data_end_date: dto.data_end_date,
+        status: 'pending',
+        progress: 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create job: ${error.message}`);
+      throw new InternalServerErrorException('Failed to create report job');
+    }
+
+    this.processJobInBackground(job.id, organizationId, userId, dto);
+
+    return {
+      job_id: job.id,
+      status: job.status,
+      progress: job.progress,
+      created_at: job.created_at,
+    };
+  }
+
+  private async processJobInBackground(
+    jobId: string,
+    organizationId: string,
+    userId: string,
+    dto: GenerateAIReportDto,
+  ) {
+    const supabase = this.databaseService.getAdminClient();
+
+    try {
+      await supabase
+        .from('ai_report_jobs')
+        .update({ status: 'processing', started_at: new Date().toISOString(), progress: 10 })
+        .eq('id', jobId);
+
+      const result = await this.generateReport(organizationId, userId, dto);
+
+      await supabase
+        .from('ai_report_jobs')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          progress: 100,
+          report_id: result.report?.id,
+          result: result,
+        })
+        .eq('id', jobId);
+
+      this.logger.log(`Job ${jobId} completed successfully`);
+    } catch (error) {
+      this.logger.error(`Job ${jobId} failed: ${error.message}`);
+
+      await supabase
+        .from('ai_report_jobs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error.message,
+        })
+        .eq('id', jobId);
+    }
+  }
+
+  async getJobStatus(organizationId: string, jobId: string) {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: job, error } = await supabase
+      .from('ai_report_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error || !job) {
+      throw new BadRequestException('Job not found');
+    }
+
+    return {
+      job_id: job.id,
+      status: job.status,
+      progress: job.progress,
+      error_message: job.error_message,
+      report_id: job.report_id,
+      result: job.result,
+      created_at: job.created_at,
+      started_at: job.started_at,
+      completed_at: job.completed_at,
+    };
+  }
+
+  async listJobs(organizationId: string, status?: string, limit: number = 10) {
+    const supabase = this.databaseService.getAdminClient();
+
+    let query = supabase
+      .from('ai_report_jobs')
+      .select('id, parcel_id, provider, status, progress, created_at, completed_at, error_message')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data: jobs, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to list jobs: ${error.message}`);
+      throw new InternalServerErrorException('Failed to list jobs');
+    }
+
+    return { jobs };
+  }
 }

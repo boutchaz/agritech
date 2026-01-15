@@ -16,7 +16,7 @@ import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
 import { DataAvailabilityPreview } from './DataAvailabilityPreview';
 import { CalibrationStatusPanel } from './CalibrationStatusPanel';
-import { useAIProviders, useGenerateAIReport, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
+import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 
 interface AIReportGeneratorProps {
@@ -43,6 +43,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
       end: end.toISOString().split('T')[0],
     };
   });
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [generatedReport, setGeneratedReport] = useState<{
     sections: AIReportSections;
     generatedAt: string;
@@ -51,6 +52,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   const { data: providers = [], isLoading: loadingProviders } = useAIProviders();
   const generateMutation = useGenerateAIReport();
+  const { job, report, isProcessing, isFailed, isCompleted } = useAIReportJob(currentJobId);
   const { data: calibrationStatus, isLoading: isLoadingCalibration } = useCalibrationStatus(
     parcelId,
     dateRange.start,
@@ -75,11 +77,22 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     }
   }, [providers, selectedProvider]);
 
+  useEffect(() => {
+    if (isCompleted && report) {
+      setGeneratedReport({
+        sections: report.sections,
+        generatedAt: report.generated_at,
+        provider: report.provider,
+      });
+      setCurrentJobId(null);
+    }
+  }, [isCompleted, report]);
+
   const handleGenerate = async () => {
     if (!selectedProvider) return;
 
     try {
-      const result = await generateMutation.mutateAsync({
+      const jobResult = await generateMutation.mutateAsync({
         parcel_id: parcelId,
         provider: selectedProvider,
         data_start_date: dateRange.start,
@@ -87,20 +100,19 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
         language: 'fr',
       });
 
-      setGeneratedReport({
-        sections: result.sections,
-        generatedAt: result.generated_at,
-        provider: result.provider,
-      });
+      setCurrentJobId(jobResult.job_id);
     } catch (error) {
-      console.error('Failed to generate AI report:', error);
+      console.error('Failed to start AI report generation:', error);
     }
   };
 
   const handleRegenerate = () => {
     setGeneratedReport(null);
+    setCurrentJobId(null);
     handleGenerate();
   };
+
+  const isGenerating = generateMutation.isPending || isProcessing;
 
   const handleAddAnalysis = (type: 'soil' | 'water' | 'plant') => {
     navigate({
@@ -220,7 +232,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             providers={providers}
             selectedProvider={selectedProvider}
             onSelect={setSelectedProvider}
-            disabled={generateMutation.isPending}
+            disabled={isGenerating}
           />
 
           {/* Date Range */}
@@ -242,7 +254,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                       setDateRange((prev) => ({ ...prev, start: e.target.value }))
                     }
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    disabled={generateMutation.isPending}
+                    disabled={isGenerating}
                   />
                 </div>
               </div>
@@ -259,7 +271,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                       setDateRange((prev) => ({ ...prev, end: e.target.value }))
                     }
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    disabled={generateMutation.isPending}
+                    disabled={isGenerating}
                   />
                 </div>
               </div>
@@ -308,7 +320,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
           />
 
           {/* Error Display */}
-          {generateMutation.isError && (
+          {(generateMutation.isError || isFailed) && (
             <div className="flex items-start p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
               <div>
@@ -316,7 +328,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                   {t('aiReport.errorTitle', 'Erreur de génération')}
                 </p>
                 <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                  {(generateMutation.error as Error)?.message ||
+                  {job?.error_message || (generateMutation.error as Error)?.message ||
                     t('aiReport.errorGeneric', 'Une erreur est survenue. Veuillez réessayer.')}
                 </p>
               </div>
@@ -328,12 +340,12 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             onClick={handleGenerate}
             disabled={
               !selectedProvider ||
-              generateMutation.isPending ||
+              isGenerating ||
               calibrationStatus?.status === 'blocked'
             }
             className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-green-600 to-blue-600 text-white font-medium rounded-xl hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
-            {generateMutation.isPending ? (
+            {isGenerating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span>{t('aiReport.generating', 'Analyse en cours...')}</span>
@@ -354,15 +366,22 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             </p>
           )}
 
-          {generateMutation.isPending && (
-            <div className="text-center">
+          {isGenerating && (
+            <div className="text-center space-y-3">
+              {job && (
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-blue-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${job.progress}%` }}
+                  />
+                </div>
+              )}
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t(
-                  'aiReport.generatingHint',
-                  'L\'IA analyse vos données satellites, analyses de sol et autres informations...'
-                )}
+                {job?.status === 'pending' && t('aiReport.statusPending', 'Préparation de l\'analyse...')}
+                {job?.status === 'processing' && t('aiReport.statusProcessing', 'L\'IA analyse vos données...')}
+                {!job && t('aiReport.generatingHint', 'L\'IA analyse vos données satellites, analyses de sol et autres informations...')}
               </p>
-              <div className="mt-3 flex justify-center space-x-1">
+              <div className="flex justify-center space-x-1">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></span>
@@ -387,11 +406,11 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleRegenerate}
-                disabled={generateMutation.isPending}
+                disabled={isGenerating}
                 className="flex items-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`w-4 h-4 ${generateMutation.isPending ? 'animate-spin' : ''}`}
+                  className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`}
                 />
                 <span>{t('aiReport.regenerate', 'Régénérer')}</span>
               </button>

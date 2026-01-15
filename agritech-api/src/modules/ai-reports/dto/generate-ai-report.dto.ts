@@ -50,3 +50,39 @@ export class AIProviderInfoDto {
   @ApiProperty()
   name: string;
 }
+
+export enum AIReportJobStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+}
+
+export class AIReportJobResponseDto {
+  @ApiProperty({ description: 'Job ID for tracking' })
+  job_id: string;
+
+  @ApiProperty({ enum: AIReportJobStatus, description: 'Current job status' })
+  status: AIReportJobStatus;
+
+  @ApiProperty({ description: 'Progress percentage (0-100)' })
+  progress: number;
+
+  @ApiPropertyOptional({ description: 'Error message if failed' })
+  error_message?: string;
+
+  @ApiPropertyOptional({ description: 'Report ID when completed' })
+  report_id?: string;
+
+  @ApiPropertyOptional({ description: 'Full report result when completed' })
+  result?: any;
+
+  @ApiProperty({ description: 'Job creation timestamp' })
+  created_at: string;
+
+  @ApiPropertyOptional({ description: 'Processing start timestamp' })
+  started_at?: string;
+
+  @ApiPropertyOptional({ description: 'Completion timestamp' })
+  completed_at?: string;
+}

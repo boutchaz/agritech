@@ -17,7 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AIReportsService } from './ai-reports.service';
-import { GenerateAIReportDto, CalibrateRequestDto, FetchDataRequestDto } from './dto';
+import { GenerateAIReportDto, CalibrateRequestDto, FetchDataRequestDto, AIReportJobResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -118,21 +118,18 @@ export class AIReportsController {
 
   @Post('generate')
   @ApiOperation({
-    summary: 'Generate an AI-powered parcel report',
+    summary: 'Start async AI report generation',
     description:
-      'Aggregates soil, water, satellite, and weather data to generate comprehensive AI analysis',
+      'Starts background AI report generation. Returns job ID immediately for polling.',
   })
   @ApiResponse({
-    status: 201,
-    description: 'Report generated successfully',
+    status: 202,
+    description: 'Job created successfully',
+    type: AIReportJobResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid request or AI provider not configured',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'AI generation failed',
   })
   async generateReport(
     @Req() req,
@@ -148,7 +145,6 @@ export class AIReportsController {
       throw new BadRequestException('User ID not found in token');
     }
 
-    // Validate data before generating report
     const calibrationStatus = await this.aiReportsService.validateAnalysis(
       organizationId,
       dto.parcel_id,
@@ -162,6 +158,40 @@ export class AIReportsController {
       );
     }
 
-    return this.aiReportsService.generateReport(organizationId, userId, dto);
+    return this.aiReportsService.createReportJob(organizationId, userId, dto);
+  }
+
+  @Get('jobs/:jobId')
+  @ApiOperation({ summary: 'Get AI report job status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Job status retrieved',
+    type: AIReportJobResponseDto,
+  })
+  async getJobStatus(
+    @Headers('x-organization-id') organizationId: string,
+    @Param('jobId') jobId: string,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.aiReportsService.getJobStatus(organizationId, jobId);
+  }
+
+  @Get('jobs')
+  @ApiOperation({ summary: 'List recent AI report jobs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Jobs retrieved',
+  })
+  async listJobs(
+    @Headers('x-organization-id') organizationId: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: number,
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required');
+    }
+    return this.aiReportsService.listJobs(organizationId, status, limit || 10);
   }
 }
