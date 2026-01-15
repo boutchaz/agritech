@@ -3,6 +3,7 @@ import { authSupabase } from '../lib/auth-supabase';
 import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
 import type { UserProfile, Farm } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 
 // Query keys
 export const authKeys = {
@@ -110,18 +111,56 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
         // API returns { success: true, farms: [...], total: ... }
         if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
           const farmsData = (data as { farms: any[] }).farms;
+
+          // Fetch all parcels for this organization to calculate total_area per farm
+          let parcelsByFarm: Record<string, { totalArea: number }> = {};
+          try {
+            const parcelsResult = await apiClient.get<{ success: boolean; parcels: any[] }>(
+              `/api/v1/parcels?organization_id=${organizationId}`,
+              {},
+              organizationId
+            );
+            if (parcelsResult?.parcels) {
+              parcelsByFarm = parcelsResult.parcels.reduce((acc: Record<string, { totalArea: number }>, parcel: any) => {
+                const farmId = parcel.farm_id;
+                if (!farmId) return acc;
+                if (!acc[farmId]) {
+                  acc[farmId] = { totalArea: 0 };
+                }
+                // Use calculated_area if available, otherwise fall back to area
+                const parcelArea = parcel.calculated_area ?? parcel.area ?? 0;
+                acc[farmId].totalArea += parcelArea;
+                return acc;
+              }, {});
+            }
+          } catch (error) {
+            console.warn('Could not fetch parcels for farm area calculation:', error);
+          }
+
           // Map farm_id and farm_name to id and name for compatibility
-          return farmsData.map((farm: any) => ({
-            id: farm.farm_id || farm.id,
-            name: farm.farm_name || farm.name,
-            location: farm.farm_location || farm.location,
-            size: farm.farm_size || farm.size,
-            size_unit: farm.size_unit,
-            manager_name: farm.manager_name,
-            organization_id: organizationId,
-            created_at: farm.created_at,
-            updated_at: farm.updated_at,
-          })) as Farm[];
+          return farmsData.map((farm: any) => {
+            const farmId = farm.farm_id || farm.id;
+            const parcelsData = parcelsByFarm[farmId];
+            const farmSize = farm.farm_size ?? farm.size;
+
+            // If farm size is not set or 0, use the calculated area from parcels
+            const totalArea = (!farmSize || farmSize === 0) && parcelsData
+              ? parseFloat(parcelsData.totalArea.toFixed(2))
+              : farmSize;
+
+            return {
+              id: farmId,
+              name: farm.farm_name || farm.name,
+              location: farm.farm_location || farm.location,
+              size: farmSize,
+              size_unit: farm.size_unit,
+              manager_name: farm.manager_name,
+              organization_id: organizationId,
+              created_at: farm.created_at,
+              updated_at: farm.updated_at,
+              total_area: totalArea, // Add calculated or provided area
+            } as Farm & { total_area?: number };
+          });
         }
         // Fallback for direct array response
         return Array.isArray(data) ? data : [];

@@ -25,6 +25,9 @@ import {
 import type { StockMovementFilters } from '@/types/stock-entries';
 import { MOVEMENT_TYPE_COLORS } from '@/types/stock-entries';
 import { Badge } from '@/components/ui/badge';
+import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
+import { useCurrency } from '@/hooks/useCurrency';
+import { useTranslation } from 'react-i18next';
 
 // Lazy load chart components
 const LineChart = lazy(() =>
@@ -53,10 +56,15 @@ const ResponsiveContainer = lazy(() =>
 
 export default function StockReportsDashboard() {
   const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [filters, setFilters] = useState<StockMovementFilters>({});
 
   const { data: movements = [], isLoading } = useStockMovements(filters);
+  const { data: lowStockItems = [], isLoading: isLoadingLowStock } = useFarmStockLevels({
+    low_stock_only: true,
+  });
 
   // Calculate date filter
   const getDateFilter = () => {
@@ -351,12 +359,61 @@ export default function StockReportsDashboard() {
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-orange-600" />
                   Low Stock Items
+                  {lowStockItems.length > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {lowStockItems.length}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500 text-center py-8">
-                  No low stock items at the moment
-                </p>
+                {isLoadingLowStock ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : lowStockItems.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">
+                    No low stock items at the moment
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {lowStockItems.slice(0, 5).map((item) => (
+                      <div
+                        key={item.item_id}
+                        className="p-3 border border-orange-200 dark:border-orange-800 rounded-lg bg-orange-50 dark:bg-orange-900/10"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium text-sm">{item.item_name}</h4>
+                            <p className="text-xs text-gray-500">{item.item_code}</p>
+                          </div>
+                          <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Current Stock:</span>
+                          <span className="font-medium text-orange-700">
+                            {parseFloat(item.total_quantity.toFixed(3))} {item.default_unit}
+                          </span>
+                        </div>
+                        {item.minimum_stock_level && (
+                          <div className="flex items-center justify-between text-sm mt-1">
+                            <span className="text-gray-600">Minimum Level:</span>
+                            <span className="font-medium">{item.minimum_stock_level} {item.default_unit}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-sm mt-1">
+                          <span className="text-gray-600">Total Value:</span>
+                          <span className="font-medium">{formatCurrency(item.total_value)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {lowStockItems.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center pt-2">
+                        And {lowStockItems.length - 5} more items...
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
