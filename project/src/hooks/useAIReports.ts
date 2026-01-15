@@ -87,21 +87,23 @@ export function useAIReportJob(jobId: string | null) {
           filter: `id=eq.${jobId}`,
         },
         (payload) => {
-          const updated = payload.new as AIReportJob;
-          setJob({
-            job_id: updated.job_id || (payload.new as { id: string }).id,
-            status: updated.status,
-            progress: updated.progress,
-            error_message: updated.error_message,
-            report_id: updated.report_id,
-            result: updated.result,
-            created_at: updated.created_at,
-            started_at: updated.started_at,
-            completed_at: updated.completed_at,
-          });
+          const row = payload.new as Record<string, unknown>;
+          const updatedJob: AIReportJob = {
+            job_id: (row.id as string) || jobId,
+            status: row.status as AIReportJobStatus,
+            progress: (row.progress as number) || 0,
+            error_message: row.error_message as string | undefined,
+            report_id: row.report_id as string | undefined,
+            result: row.result as AIReportJob['result'],
+            created_at: row.created_at as string,
+            started_at: row.started_at as string | undefined,
+            completed_at: row.completed_at as string | undefined,
+          };
+          setJob(updatedJob);
 
-          if (updated.status === 'completed') {
+          if (updatedJob.status === 'completed') {
             queryClient.invalidateQueries({ queryKey: ['parcel-reports'] });
+            queryClient.invalidateQueries({ queryKey: ['ai-report-jobs'] });
           }
         }
       )
@@ -124,6 +126,23 @@ export function useAIReportJob(jobId: string | null) {
     isProcessing: job?.status === 'processing' || job?.status === 'pending',
     refetch: fetchJobStatus,
   };
+}
+
+export function usePendingAIReportJobs() {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['ai-report-jobs', 'pending', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return { jobs: [] };
+      const pending = await aiReportsApi.listJobs(currentOrganization.id, 'pending', 10);
+      const processing = await aiReportsApi.listJobs(currentOrganization.id, 'processing', 10);
+      return { jobs: [...pending.jobs, ...processing.jobs] };
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 1000 * 10,
+    refetchInterval: 1000 * 30,
+  });
 }
 
 export function useDataAvailability(parcelId: string, startDate?: string, endDate?: string) {
