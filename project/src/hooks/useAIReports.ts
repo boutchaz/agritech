@@ -109,19 +109,34 @@ export function useAIReportJob(jobId: string | null) {
       )
       .subscribe();
 
-    const pollInterval = setInterval(() => {
-      if (job?.status === 'completed' || job?.status === 'failed') {
-        clearInterval(pollInterval);
-        return;
-      }
-      fetchJobStatus();
-    }, 3000);
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    
+    const startPolling = () => {
+      pollInterval = setInterval(async () => {
+        try {
+          const jobData = await aiReportsApi.getJobStatus(jobId, currentOrganization?.id);
+          setJob(jobData);
+          
+          if (jobData.status === 'completed' || jobData.status === 'failed') {
+            if (pollInterval) clearInterval(pollInterval);
+            if (jobData.status === 'completed') {
+              queryClient.invalidateQueries({ queryKey: ['parcel-reports'] });
+              queryClient.invalidateQueries({ queryKey: ['ai-report-jobs'] });
+            }
+          }
+        } catch {
+          // Fallback polling - realtime subscription handles primary updates
+        }
+      }, 3000);
+    };
+    
+    startPolling();
 
     return () => {
       authSupabase.removeChannel(channel);
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [jobId, fetchJobStatus, queryClient, job?.status]);
+  }, [jobId, currentOrganization?.id, queryClient]);
 
   const report = job ? aiReportsApi.mapJobResultToReport(job) : null;
 
