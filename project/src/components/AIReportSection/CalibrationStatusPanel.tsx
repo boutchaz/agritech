@@ -1,8 +1,9 @@
 import React from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Settings, Plus } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Settings, Plus, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
+import { Link } from '@tanstack/react-router';
 
 export interface CalibrationStatus {
   status: 'ready' | 'warning' | 'blocked';
@@ -48,6 +49,7 @@ export interface CalibrationStatus {
 
 interface CalibrationStatusPanelProps {
   status: CalibrationStatus;
+  parcelId: string;
   onRecalibrate: () => void;
   onFetchData?: (sources: string[]) => void;
   onAddAnalysis?: (type: 'soil' | 'water' | 'plant') => void;
@@ -56,6 +58,7 @@ interface CalibrationStatusPanelProps {
 
 export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
   status,
+  parcelId,
   onRecalibrate,
   onFetchData,
   onAddAnalysis,
@@ -120,6 +123,7 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
           </CardTitle>
           <div className="flex gap-2">
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={onRecalibrate}
@@ -166,8 +170,19 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                     </span>
                   )}
                 </div>
+                {status.satellite.imageCount > 0 && (
+                  <Link
+                    to="/parcels/$parcelId/satellite"
+                    params={{ parcelId }}
+                    className="mt-2 inline-flex items-center text-sm text-green-600 dark:text-green-400 hover:underline"
+                  >
+                    <Satellite className="w-3 h-3 mr-1" />
+                    {t('calibration.viewSatelliteData', 'View detailed satellite imagery')}
+                  </Link>
+                )}
                 {!status.satellite.isValid && onFetchData && (
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     className="mt-2"
@@ -208,6 +223,7 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                 </div>
                 {!status.weather.isValid && onFetchData && (
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     className="mt-2"
@@ -248,6 +264,7 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                 </div>
                 {!status.soil.present && onAddAnalysis && (
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => onAddAnalysis('soil')}
@@ -280,6 +297,7 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                 </div>
                 {!status.water.present && onAddAnalysis && (
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => onAddAnalysis('water')}
@@ -312,6 +330,7 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                 </div>
                 {!status.plant.present && onAddAnalysis && (
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => onAddAnalysis('plant')}

@@ -18,12 +18,14 @@ interface ParcelReportGeneratorProps {
   parcelId: string;
   parcelName: string;
   parcelData: any;
+  searchParams?: any;
 }
 
 const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   parcelId,
   parcelName: _parcelName,
-  parcelData
+  parcelData,
+  searchParams
 }) => {
   const _queryClient = useQueryClient();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
@@ -188,7 +190,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   return (
     <div className="space-y-6">
       {/* AI Report Section */}
-      <AIReportGenerator parcelId={parcelId} parcelName={parcelData?.name || 'Parcelle'} />
+      <AIReportGenerator parcelId={parcelId} parcelName={parcelData?.name || 'Parcelle'} searchParams={searchParams} />
 
       {/* Divider */}
       <div className="relative">

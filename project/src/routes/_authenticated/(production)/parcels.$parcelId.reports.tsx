@@ -9,6 +9,7 @@ const ParcelReportGenerator = lazy(() => import('../../../components/ParcelRepor
 const ParcelReportsPage = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
+  const search = Route.useSearch();
   const { data: parcel, isLoading } = useParcelById(parcelId);
 
   if (isLoading) {
@@ -35,6 +36,7 @@ const ParcelReportsPage = () => {
           parcelId={parcel.id}
           parcelName={parcel.name}
           parcelData={parcel}
+          searchParams={search}
         />
       </Suspense>
     </div>
