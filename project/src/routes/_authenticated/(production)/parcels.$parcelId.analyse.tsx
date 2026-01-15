@@ -1,9 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useAnalyses } from '@/hooks/useAnalyses'
-import { FlaskRound as Flask, Plus, Leaf, Droplets, X } from 'lucide-react'
+import { useCalibrationStatus } from '@/hooks/useAIReports'
+import { FlaskRound as Flask, Plus, Leaf, Droplets, X, FileText, TrendingUp } from 'lucide-react'
 import SoilAnalysisForm from '@/components/Analysis/SoilAnalysisForm'
 import PlantAnalysisForm from '@/components/Analysis/PlantAnalysisForm'
 import WaterAnalysisForm from '@/components/Analysis/WaterAnalysisForm'
@@ -11,14 +12,26 @@ import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, Water
 
 const ParcelSoilAnalysis = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { parcelId } = Route.useParams();
   const search = Route.useSearch();
   const { data: parcel, isLoading } = useParcelById(parcelId);
+  const { data: calibrationStatus } = useCalibrationStatus(parcelId);
   const [analysisTab, setAnalysisTab] = useState<AnalysisType>(search.type || 'soil');
   const [showForm, setShowForm] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedFormType, setSelectedFormType] = useState<AnalysisType | null>(null);
-  
+
+  const returnTo = (search as any).returnTo || 'stay';
+
+  // Auto-show form if type is specified in search params (from calibration panel)
+  useEffect(() => {
+    if (search.type && !showForm && !selectedFormType) {
+      setSelectedFormType(search.type as AnalysisType);
+      setShowForm(true);
+    }
+  }, [search.type]);
+
   // Fetch real analyses data
   const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil');
   const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant');
@@ -49,7 +62,17 @@ const ParcelSoilAnalysis = () => {
       await addSoilAnalysis(parcelId, 'soil', analysisDate, data, laboratory, notes);
       setShowForm(false);
       setSelectedFormType(null);
-      setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
+
+      // Navigate back to reports after successful save
+      if (returnTo === 'reports') {
+        navigate({
+          to: '/parcels/$parcelId/reports',
+          params: { parcelId },
+          search: { autoRecalibrate: true },
+        });
+      } else {
+        setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
+      }
     } catch (error) {
       console.error('Error saving soil analysis:', error);
       alert(t('parcels.analyse.saveError'));
@@ -66,7 +89,17 @@ const ParcelSoilAnalysis = () => {
       await addPlantAnalysis(parcelId, 'plant', analysisDate, data, laboratory, notes);
       setShowForm(false);
       setSelectedFormType(null);
-      setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
+
+      // Navigate back to reports after successful save
+      if (returnTo === 'reports') {
+        navigate({
+          to: '/parcels/$parcelId/reports',
+          params: { parcelId },
+          search: { autoRecalibrate: true },
+        });
+      } else {
+        setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
+      }
     } catch (error) {
       console.error('Error saving plant analysis:', error);
       alert(t('parcels.analyse.plantSaveError'));
@@ -83,7 +116,17 @@ const ParcelSoilAnalysis = () => {
       await addWaterAnalysis(parcelId, 'water', analysisDate, data, laboratory, notes);
       setShowForm(false);
       setSelectedFormType(null);
-      setAnalysisTab('water'); // Switch to water tab to show the new analysis
+
+      // Navigate back to reports after successful save
+      if (returnTo === 'reports') {
+        navigate({
+          to: '/parcels/$parcelId/reports',
+          params: { parcelId },
+          search: { autoRecalibrate: true },
+        });
+      } else {
+        setAnalysisTab('water'); // Switch to water tab to show the new analysis
+      }
     } catch (error) {
       console.error('Error saving water analysis:', error);
       alert(t('parcels.analyse.waterSaveError'));
@@ -250,6 +293,80 @@ const ParcelSoilAnalysis = () => {
           <span>{t('parcels.analyse.newAnalysis')}</span>
         </button>
       </div>
+
+      {/* Calibration Status Banner */}
+      {calibrationStatus && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${
+                calibrationStatus.accuracy >= 75
+                  ? 'bg-green-100 dark:bg-green-900/30'
+                  : calibrationStatus.accuracy >= 50
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                  : 'bg-red-100 dark:bg-red-900/30'
+              }`}>
+                <TrendingUp className={`w-5 h-5 ${
+                  calibrationStatus.accuracy >= 75
+                    ? 'text-green-600 dark:text-green-400'
+                    : calibrationStatus.accuracy >= 50
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {t('parcels.analyse.calibrationAccuracy', 'Calibration Accuracy')}: {calibrationStatus.accuracy}%
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {calibrationStatus.recommendations.length > 0
+                    ? calibrationStatus.recommendations[0]
+                    : t('parcels.analyse.allGood', 'All data sources available')
+                  }
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/parcels/$parcelId/reports"
+              params={{ parcelId }}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="text-sm font-medium">{t('parcels.analyse.generateReport', 'Generate AI Report')}</span>
+            </Link>
+          </div>
+
+          {/* Missing Analyses Indicator */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+              {t('parcels.analyse.missingData', 'Missing analyses for better accuracy')}:
+            </p>
+            <div className="flex gap-2">
+              {!calibrationStatus.soil.present && (
+                <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs rounded">
+                  {t('parcels.analyse.tabs.soil')}
+                </span>
+              )}
+              {!calibrationStatus.water.present && (
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded">
+                  {t('parcels.analyse.tabs.water')}
+                </span>
+              )}
+              {!calibrationStatus.plant.present && (
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">
+                  {t('parcels.analyse.tabs.plant')}
+                </span>
+              )}
+              {calibrationStatus.soil.present && calibrationStatus.water.present && calibrationStatus.plant.present && (
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">
+                  {t('parcels.analyse.allComplete', 'All analyses complete')}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Analysis Type Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex border-b border-gray-200 dark:border-gray-700">

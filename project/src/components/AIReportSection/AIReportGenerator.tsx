@@ -10,7 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { AIProviderSelector } from './AIProviderSelector';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
@@ -22,14 +22,18 @@ import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 interface AIReportGeneratorProps {
   parcelId: string;
   parcelName: string;
+  searchParams?: any;
 }
 
 export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
   parcelId,
   parcelName,
+  searchParams,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
+  const autoRecalibrate = searchParams?.autoRecalibrate === true;
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
     const end = new Date();
     const start = new Date();
@@ -97,6 +101,41 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     setGeneratedReport(null);
     handleGenerate();
   };
+
+  const handleAddAnalysis = (type: 'soil' | 'water' | 'plant') => {
+    navigate({
+      to: '/parcels/$parcelId/analyse',
+      params: { parcelId },
+      search: { type, returnTo: 'reports' },
+    });
+  };
+
+  // Auto-recalibrate when returning from analysis tab
+  useEffect(() => {
+    if (autoRecalibrate && calibrationStatus) {
+      const recalibrate = async () => {
+        try {
+          await calibrateMutation.mutateAsync({
+            parcelId,
+            request: {
+              startDate: dateRange.start,
+              endDate: dateRange.end,
+              autoFetch: false,
+            },
+          });
+          // Clear the autoRecalibrate flag
+          navigate({
+            to: '/parcels/$parcelId/reports',
+            params: { parcelId },
+            search: (prev) => ({ ...prev, autoRecalibrate: undefined }),
+          });
+        } catch (error) {
+          console.error('Auto-recalibration failed:', error);
+        }
+      };
+      recalibrate();
+    }
+  }, [autoRecalibrate]);
 
   if (loadingProviders) {
     return (
@@ -231,6 +270,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
           {calibrationStatus && (
             <CalibrationStatusPanel
               status={calibrationStatus}
+              parcelId={parcelId}
               onRecalibrate={async () => {
                 try {
                   await calibrateMutation.mutateAsync({
@@ -255,6 +295,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                   console.error('Data fetch failed:', error);
                 }
               }}
+              onAddAnalysis={handleAddAnalysis}
               isLoading={calibrateMutation.isPending || fetchDataMutation.isPending}
             />
           )}

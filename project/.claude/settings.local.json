@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(grep:*)",
+      "Bash(for file in src/modules/account-mappings/account-mappings.service.spec.ts src/modules/accounts/accounts.service.spec.ts src/modules/admin/admin.service.spec.ts src/modules/cost-centers/cost-centers.service.spec.ts src/modules/fiscal-years/fiscal-years.service.spec.ts src/modules/harvests/harvests.service.spec.ts src/modules/parcels/parcels.service.spec.ts src/modules/piece-work/piece-work.service.spec.ts src/modules/production-intelligence/production-intelligence.service.spec.ts src/modules/reception-batches/reception-batches.service.spec.ts src/modules/stock-entries/stock-entries.service.spec.ts src/modules/suppliers/suppliers.service.spec.ts src/modules/tasks/tasks.service.spec.ts src/modules/taxes/taxes.service.spec.ts src/modules/warehouses/warehouses.service.spec.ts src/modules/workers/workers.service.spec.ts)",
+      "Bash(do sed:*)",
+      "Bash(done:*)",
+      "Bash(npm test:*)",
+      "Bash(for file in src/modules/auth/auth.service.spec.ts src/modules/admin/admin.service.spec.ts src/modules/taxes/taxes.service.spec.ts src/modules/quality-control/quality-control.service.spec.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 60 npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(timeout 120 npm test:*)",
+      "Bash(timeout:*)",
+      "Bash(tee:*)",
+      "Bash(if:*)",
+      "Bash(then cat /var/folders/2p/xpfml3n03lgql1zz7cf713m0000gn/T/claude/-Users-boutchaz-Documents-CodeLovers-agritech-project/tasks/bcace3a.output)",
+      "Bash(else:*)",
+      "Bash(fi)",
+      "Bash(NODE_ENV=test npx jest:*)"
+    ]
+  }
+}

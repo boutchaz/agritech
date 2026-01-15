@@ -686,10 +686,58 @@ export class AIReportsService {
             const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
             const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
 
-            // Fetch weather forecast (this could be stored or just validated)
-            await this.weatherProvider.getForecast(latitude, longitude, 5);
-            fetched.push('weather');
-            this.logger.log(`Successfully fetched weather data for parcel ${parcelId}`);
+            // Fetch historical weather data using Open-Meteo Archive API
+            // Get the date range (default to last 6 months if not provided)
+            const now = new Date();
+            const endDate = now.toISOString().split('T')[0];
+            const sixMonthsAgo = new Date(now);
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            const startDate = sixMonthsAgo.toISOString().split('T')[0];
+
+            const params = new URLSearchParams({
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+              start_date: startDate,
+              end_date: endDate,
+              daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum,relative_humidity_2m',
+              timezone: 'auto',
+            });
+
+            const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?${params}`);
+            if (response.ok) {
+              const weatherData = await response.json();
+              if (weatherData.daily && weatherData.daily.time && weatherData.daily.time.length > 0) {
+                // Store weather data for each day
+                for (let i = 0; i < weatherData.daily.time.length; i++) {
+                  const date = weatherData.daily.time[i];
+                  await supabase
+                    .from('weather_data')
+                    .upsert({
+                      parcel_id: parcelId,
+                      date: date,
+                      latitude,
+                      longitude,
+                      temperature_min: weatherData.daily.temperature_2m_min[i],
+                      temperature_mean: weatherData.daily.temperature_2m_mean[i],
+                      temperature_max: weatherData.daily.temperature_2m_max[i],
+                      precipitation_sum: weatherData.daily.precipitation_sum[i],
+                      relative_humidity_2m: weatherData.daily.relative_humidity_2m?.[i] || null,
+                      data_source: 'open-meteo-archive',
+                      fetched_at: now.toISOString()
+                    }, {
+                      onConflict: 'parcel_id,date'
+                    });
+                }
+                fetched.push('weather');
+                this.logger.log(`Successfully stored ${weatherData.daily.time.length} days of weather data for parcel ${parcelId}`);
+              } else {
+                this.logger.warn('Weather API returned no data');
+                pending.push('weather');
+              }
+            } else {
+              this.logger.warn(`Weather API error: ${response.statusText}`);
+              pending.push('weather');
+            }
           } else {
             this.logger.warn(`Parcel ${parcelId} has no boundary, cannot fetch weather`);
             pending.push('weather');
@@ -701,10 +749,140 @@ export class AIReportsService {
       }
     }
 
-    // Satellite data fetching - requires external API integration
+    // Satellite data fetching - integrate with satellite API service
     if (dto.dataSources.includes('satellite')) {
-      this.logger.warn('Satellite data fetching not yet implemented');
-      pending.push('satellite');
+      try {
+        // Get the satellite API URL from config
+        const satelliteApiUrl = this.configService.get<string>('SATELLITE_SERVICE_URL') ||
+                               this.configService.get<string>('VITE_BACKEND_SERVICE_URL') ||
+                               'http://localhost:8001';
+
+        // Get the parcel's farm to get organization context
+        const { data: parcelWithFarm } = await supabase
+          .from('parcels')
+          .select('farms!inner(organization_id)')
+          .eq('id', parcelId)
+          .single();
+
+        if (!parcelWithFarm || !parcelWithFarm.farms) {
+          throw new Error('Parcel farm not found');
+        }
+
+        const orgId = (parcelWithFarm as any).farms.organization_id;
+
+        // Convert boundary to GeoJSON if available
+        let geometry = undefined;
+        if (parcel.boundary && parcel.boundary.length > 0) {
+          // Convert Web Mercator to WGS84 if needed
+          const coords = parcel.boundary as number[][];
+          const firstCoord = coords[0];
+          const isWebMercator = Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90;
+
+          const wgs84Coords = coords.map(([x, y]) => {
+            if (isWebMercator) {
+              const lon = (x / 20037508.34) * 180;
+              const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+              return [lon, lat];
+            }
+            return [x, y];
+          });
+
+          // Ensure polygon is closed
+          if (wgs84Coords.length > 0) {
+            const first = wgs84Coords[0];
+            const last = wgs84Coords[wgs84Coords.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+              wgs84Coords.push([first[0], first[1]]);
+            }
+          }
+
+          geometry = {
+            type: 'Polygon',
+            coordinates: [wgs84Coords]
+          };
+        }
+
+        // Prepare the satellite API request
+        const now = new Date();
+        const sixMonthsAgo = new Date(now);
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const requestBody = {
+          aoi: {
+            geometry: geometry || {
+              type: 'Polygon',
+              coordinates: [[
+                [-7.0926, 31.7917], // Default fallback coords
+                [-7.0926, 31.8],
+                [-7.1, 31.8],
+                [-7.1, 31.7917],
+                [-7.0926, 31.7917]
+              ]]
+            },
+            name: parcel.name
+          },
+          date_range: {
+            start_date: sixMonthsAgo.toISOString().split('T')[0],
+            end_date: now.toISOString().split('T')[0]
+          },
+          indices: ['NDVI', 'NDMI', 'NDRE'],
+          cloud_coverage: 20
+        };
+
+        this.logger.log(`Calling satellite API at ${satelliteApiUrl}/api/indices/calculate`);
+
+        // Call satellite API
+        const response = await fetch(`${satelliteApiUrl}/api/indices/calculate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-organization-id': orgId
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Satellite API error: ${response.status} - ${errorText}`);
+        }
+
+        const satelliteData = await response.json();
+        this.logger.log(`Satellite API returned ${satelliteData.indices?.length || 0} indices`);
+
+        // Store satellite indices in database
+        if (satelliteData.indices && Array.isArray(satelliteData.indices)) {
+          for (const indexResult of satelliteData.indices) {
+            try {
+              await supabase
+                .from('satellite_indices_data')
+                .upsert({
+                  parcel_id: parcelId,
+                  organization_id: orgId,
+                  date: satelliteData.date || new Date().toISOString().split('T')[0],
+                  index_name: indexResult.index,
+                  mean_value: indexResult.value,
+                  cloud_coverage_percentage: satelliteData.cloud_coverage || 0,
+                  metadata: {
+                    source: 'ai-reports-fetch',
+                    aoi_name: parcel.name
+                  }
+                }, {
+                  onConflict: 'parcel_id,date,index_name'
+                });
+            } catch (err) {
+              this.logger.warn(`Failed to store satellite index ${indexResult.index}: ${err.message}`);
+            }
+          }
+          fetched.push('satellite');
+          this.logger.log(`Successfully stored ${satelliteData.indices.length} satellite indices for parcel ${parcelId}`);
+        } else {
+          this.logger.warn('Satellite API returned no indices');
+          pending.push('satellite');
+        }
+      } catch (error) {
+        this.logger.error(`Failed to fetch satellite data: ${error.message}`);
+        pending.push('satellite');
+      }
     }
 
     return {

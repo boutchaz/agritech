@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { analysesApi } from '../lib/api/analyses';
 import type {
   Analysis,
@@ -12,6 +13,7 @@ import type {
 type AnalysisData = SoilAnalysisData | PlantAnalysisData | WaterAnalysisData;
 
 export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisType, queryType: 'parcel' | 'farm' = 'parcel') {
+  const queryClient = useQueryClient();
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +62,12 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
       });
 
       setAnalyses(prev => [newAnalysis, ...prev]);
+
+      // Invalidate calibration status after adding analysis
+      queryClient.invalidateQueries({
+        queryKey: ['calibration-status', parcelId],
+      });
+
       return newAnalysis;
     } catch (err) {
       console.error('Error adding analysis:', err);
