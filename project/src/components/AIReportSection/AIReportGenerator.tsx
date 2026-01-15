@@ -16,8 +16,51 @@ import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
 import { DataAvailabilityPreview } from './DataAvailabilityPreview';
 import { CalibrationStatusPanel } from './CalibrationStatusPanel';
-import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
+import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStatus, useCalibrate, useFetchData, usePendingAIReportJobs } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
+
+const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({ onSelectJob }) => {
+  const { t } = useTranslation();
+  const { data, isLoading } = usePendingAIReportJobs();
+  
+  if (isLoading || !data?.jobs?.length) return null;
+  
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+        <span className="font-medium text-blue-800 dark:text-blue-300">
+          {t('aiReport.pendingJobs', 'Reports en cours de génération')}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {data.jobs.map((job) => (
+          <button
+            key={job.job_id}
+            onClick={() => onSelectJob(job.job_id)}
+            className="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-blue-100 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                {job.status === 'pending' ? t('aiReport.statusPending', 'En attente...') : t('aiReport.statusProcessing', 'Analyse en cours...')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div 
+                  className="bg-blue-500 h-1.5 rounded-full transition-all"
+                  style={{ width: `${job.progress}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500">{job.progress}%</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 interface AIReportGeneratorProps {
   parcelId: string;
@@ -206,6 +249,9 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Pending Jobs Banner */}
+      <PendingJobsBanner onSelectJob={(jobId) => setCurrentJobId(jobId)} />
+
       {/* Header */}
       <div className="flex items-center space-x-3">
         <div className="p-3 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl shadow-lg">
