@@ -106,7 +106,7 @@ export default function FarmStockLevels({
                   {t('stock.farmStockLevels.totalStock', 'Total Stock')}:
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {totalQuantity.toFixed(3)} {stockLevels[0]?.default_unit || ''}
+                  {parseFloat(totalQuantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
@@ -145,7 +145,7 @@ export default function FarmStockLevels({
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {warehouseStock.total_quantity.toFixed(3)} {stockLevels[0]?.default_unit || ''}
+                        {parseFloat(warehouseStock.total_quantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatCurrency(warehouseStock.total_value)}

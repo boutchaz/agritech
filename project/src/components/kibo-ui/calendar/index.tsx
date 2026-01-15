@@ -189,9 +189,10 @@ const OutOfBoundsDay = ({ day }: OutOfBoundsDayProps) => (
 export type CalendarBodyProps = {
   features: Feature[];
   children: (props: { feature: Feature }) => ReactNode;
+  onDateClick?: (date: Date) => void;
 };
 
-export const CalendarBody = ({ features, children }: CalendarBodyProps) => {
+export const CalendarBody = ({ features, children, onDateClick }: CalendarBodyProps) => {
   const [month] = useCalendarMonth();
   const [year] = useCalendarYear();
   const { startDay } = useContext(CalendarContext);
@@ -270,11 +271,16 @@ export const CalendarBody = ({ features, children }: CalendarBodyProps) => {
 
   for (let day = 1; day <= daysInMonth; day++) {
     const featuresForDay = featuresByDay[day] || [];
+    const dayDate = new Date(year, month, day);
 
     days.push(
       <div
-        className="relative flex h-full w-full flex-col gap-1 p-1 text-muted-foreground text-xs"
+        className={cn(
+          "relative flex h-full w-full flex-col gap-1 p-1 text-muted-foreground text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
+          onDateClick && "cursor-pointer"
+        )}
         key={day}
+        onClick={() => onDateClick?.(dayDate)}
       >
         {day}
         <div>

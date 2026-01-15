@@ -181,12 +181,13 @@ const CalendarContent: React.FC<{
 
             {/* Calendar Grid */}
             <CalendarHeader className="mb-2" />
-            <CalendarBody features={features}>
+            <CalendarBody features={features} onDateClick={_handleDateClick}>
               {({ feature }) => (
                 <div
                   key={feature.id}
                   className="cursor-pointer hover:opacity-80"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     // Get the task from the feature
                     const task = (feature as Feature & { _task: Task })._task;
                     if (task) {
