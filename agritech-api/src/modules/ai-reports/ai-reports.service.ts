@@ -1492,13 +1492,49 @@ export class AIReportsService {
     dto: GenerateAIReportDto,
   ) {
     const supabase = this.databaseService.getAdminClient();
+    const JOB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes max for entire job
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isCompleted = false;
+
+    const markJobFailed = async (errorMessage: string) => {
+      if (isCompleted) return;
+      isCompleted = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      try {
+        await supabase
+          .from('ai_report_jobs')
+          .update({ 
+            status: 'failed', 
+            completed_at: new Date().toISOString(), 
+            error_message: errorMessage 
+          })
+          .eq('id', jobId);
+      } catch (updateError) {
+        this.logger.error(`Failed to update job ${jobId} status: ${updateError.message}`);
+      }
+    };
 
     const updateProgress = async (progress: number, status: string = 'processing') => {
-      await supabase
-        .from('ai_report_jobs')
-        .update({ status, progress, ...(status === 'processing' && progress === 10 ? { started_at: new Date().toISOString() } : {}) })
-        .eq('id', jobId);
+      if (isCompleted) return;
+      try {
+        await supabase
+          .from('ai_report_jobs')
+          .update({ 
+            status, 
+            progress, 
+            ...(status === 'processing' && progress === 10 ? { started_at: new Date().toISOString() } : {}) 
+          })
+          .eq('id', jobId);
+      } catch (error) {
+        this.logger.warn(`Failed to update progress for job ${jobId}: ${error.message}`);
+      }
     };
+
+    timeoutId = setTimeout(async () => {
+      this.logger.error(`Job ${jobId} timed out after ${JOB_TIMEOUT_MS / 1000}s`);
+      await markJobFailed('Job timed out. The AI analysis took too long. Please try again.');
+    }, JOB_TIMEOUT_MS);
 
     try {
       await updateProgress(10, 'processing');
@@ -1533,7 +1569,15 @@ export class AIReportsService {
 
       await updateProgress(70);
       const config: AIProviderConfig = { provider: dto.provider, model: dto.model, temperature: 0.7, maxTokens: 16384 };
+      
+      this.logger.log(`Job ${jobId}: Starting AI generation with ${dto.provider}`);
       const response = await provider.generate({ systemPrompt, userPrompt, config });
+      this.logger.log(`Job ${jobId}: AI generation completed`);
+
+      if (isCompleted) {
+        this.logger.warn(`Job ${jobId} already marked as completed/failed, skipping result storage`);
+        return;
+      }
 
       await updateProgress(90);
       const reportSections = this.parseAIResponse(response.content);
@@ -1552,6 +1596,9 @@ export class AIReportsService {
         },
       };
 
+      if (timeoutId) clearTimeout(timeoutId);
+      isCompleted = true;
+
       await supabase
         .from('ai_report_jobs')
         .update({ status: 'completed', completed_at: new Date().toISOString(), progress: 100, report_id: storedReport?.id, result })
@@ -1559,12 +1606,8 @@ export class AIReportsService {
 
       this.logger.log(`Job ${jobId} completed successfully`);
     } catch (error) {
-      this.logger.error(`Job ${jobId} failed: ${error.message}`);
-
-      await supabase
-        .from('ai_report_jobs')
-        .update({ status: 'failed', completed_at: new Date().toISOString(), error_message: error.message })
-        .eq('id', jobId);
+      this.logger.error(`Job ${jobId} failed: ${error.message}`, error.stack);
+      await markJobFailed(error.message || 'Unknown error occurred during AI report generation');
     }
   }
 
@@ -1598,6 +1641,8 @@ export class AIReportsService {
   async listJobs(organizationId: string, status?: string, limit: number = 10) {
     const supabase = this.databaseService.getAdminClient();
 
+    await this.cleanupStuckJobs(organizationId);
+
     let query = supabase
       .from('ai_report_jobs')
       .select('id, parcel_id, provider, status, progress, created_at, completed_at, error_message')
@@ -1617,5 +1662,45 @@ export class AIReportsService {
     }
 
     return { jobs };
+  }
+
+  private async cleanupStuckJobs(organizationId: string): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const STUCK_THRESHOLD_MS = 5 * 60 * 1000;
+    const cutoffTime = new Date(Date.now() - STUCK_THRESHOLD_MS).toISOString();
+
+    try {
+      const { data: stuckJobs, error: fetchError } = await supabase
+        .from('ai_report_jobs')
+        .select('id, status, started_at, created_at')
+        .eq('organization_id', organizationId)
+        .in('status', ['pending', 'processing'])
+        .or(`started_at.lt.${cutoffTime},and(started_at.is.null,created_at.lt.${cutoffTime})`);
+
+      if (fetchError) {
+        this.logger.warn(`Failed to fetch stuck jobs: ${fetchError.message}`);
+        return;
+      }
+
+      if (stuckJobs && stuckJobs.length > 0) {
+        const stuckIds = stuckJobs.map(j => j.id);
+        this.logger.warn(`Found ${stuckIds.length} stuck jobs, marking as failed: ${stuckIds.join(', ')}`);
+
+        const { error: updateError } = await supabase
+          .from('ai_report_jobs')
+          .update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_message: 'Job timed out. The analysis took too long and was automatically cancelled.',
+          })
+          .in('id', stuckIds);
+
+        if (updateError) {
+          this.logger.error(`Failed to update stuck jobs: ${updateError.message}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error cleaning up stuck jobs: ${error.message}`);
+    }
   }
 }

@@ -7,13 +7,16 @@ import {
   AlertCircle,
   Plus,
   Loader,
-  Calendar
+  Calendar,
+  Eye,
+  X,
+  Bot,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { generateParcelReport } from '../lib/edge-functions-api';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
-import { AIReportGenerator } from './AIReportSection';
+import { AIReportGenerator, AIReportPreview, AIReportExport } from './AIReportSection';
 
 interface ParcelReportGeneratorProps {
   parcelId: string;
@@ -33,6 +36,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewingAIReport, setViewingAIReport] = useState<GeneratedReport | null>(null);
 
   // Default templates
   const defaultTemplates: ReportTemplate[] = [
@@ -116,12 +120,21 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
     }
   });
 
+  const isAIReport = (report: GeneratedReport): boolean => {
+    return report.metadata?.type === 'ai_report' && !!report.metadata?.sections;
+  };
+
+  const handleViewAIReport = (report: GeneratedReport) => {
+    if (isAIReport(report)) {
+      setViewingAIReport(report);
+    }
+  };
+
   const downloadReport = async (reportId: string) => {
     try {
       const report = reports.find(r => r.id === reportId);
       if (!report) throw new Error('Report not found');
 
-      // If file_url exists, download from storage
       if (report.file_url) {
         const { supabase } = await import('../lib/supabase');
         const { data, error } = await supabase.storage
@@ -139,7 +152,6 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
         return;
       }
 
-      // Generate HTML from metadata and download as HTML (fallback)
       if (report.metadata?.html_content) {
         const blob = new Blob([report.metadata.html_content], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -149,12 +161,16 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
         a.click();
         URL.revokeObjectURL(url);
 
-        // Show info that this is HTML version
-        toast.info('Le rapport a été téléchargé au format HTML. Pour une version PDF, veuillez contacter l\'administrateur.');
+        toast.info('Le rapport a été téléchargé au format HTML.');
         return;
       }
 
-      // If no content available, show error
+      if (isAIReport(report)) {
+        handleViewAIReport(report);
+        toast.info('Utilisez le bouton "Exporter" dans la vue du rapport pour télécharger.');
+        return;
+      }
+
       throw new Error('Aucun contenu de rapport disponible');
     } catch (err: any) {
       console.error('Error downloading report:', err);
@@ -290,11 +306,22 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                 className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-green-500 transition-colors"
               >
                 <div className="flex items-start space-x-3 flex-1">
-                  {getStatusIcon(report.status)}
+                  {isAIReport(report) ? (
+                    <Bot className="w-5 h-5 text-blue-600" />
+                  ) : (
+                    getStatusIcon(report.status)
+                  )}
                   <div className="flex-1 min-w-0">
-                    <h6 className="font-medium text-gray-900 dark:text-white truncate">
-                      {report.title}
-                    </h6>
+                    <div className="flex items-center gap-2">
+                      <h6 className="font-medium text-gray-900 dark:text-white truncate">
+                        {report.title}
+                      </h6>
+                      {isAIReport(report) && (
+                        <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded">
+                          IA
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
                       <span className="flex items-center space-x-1">
                         <Calendar className="w-3 h-3" />
@@ -314,19 +341,67 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                 </div>
 
                 {report.status === 'completed' && (
-                  <button
-                    onClick={() => downloadReport(report.id)}
-                    className="ml-4 p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                    title="Télécharger le rapport"
-                  >
-                    <Download className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    {isAIReport(report) && (
+                      <button
+                        onClick={() => handleViewAIReport(report)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Voir le rapport IA"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => downloadReport(report.id)}
+                      className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                      title="Télécharger le rapport"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {viewingAIReport && viewingAIReport.metadata?.sections && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
+          <div className="min-h-screen px-4 py-8">
+            <div className="relative max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 rounded-t-2xl">
+                <div className="flex items-center gap-3">
+                  <Bot className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {viewingAIReport.title}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  <AIReportExport
+                    sections={viewingAIReport.metadata.sections}
+                    parcelName={parcelData?.name || 'Parcelle'}
+                    generatedAt={viewingAIReport.generated_at}
+                    provider={viewingAIReport.metadata.provider || 'unknown'}
+                  />
+                  <button
+                    onClick={() => setViewingAIReport(null)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 max-h-[80vh] overflow-y-auto">
+                <AIReportPreview
+                  sections={viewingAIReport.metadata.sections}
+                  generatedAt={viewingAIReport.generated_at}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
