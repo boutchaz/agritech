@@ -8,6 +8,7 @@ import {
   Sparkles,
   Settings,
   ArrowRight,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -92,6 +93,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     generatedAt: string;
     provider: string;
   } | null>(null);
+  const [showFullPreview, setShowFullPreview] = useState(false);
 
   const { data: providers = [], isLoading: loadingProviders } = useAIProviders();
   const generateMutation = useGenerateAIReport();
@@ -446,7 +448,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               <Bot className="w-4 h-4" />
               <span>
                 {t('aiReport.generatedWith', 'Généré avec')}{' '}
-                {generatedReport.provider === 'openai' ? 'OpenAI GPT-4' : 'Google Gemini'}
+                {generatedReport.provider === 'openai' ? 'OpenAI GPT-4' : generatedReport.provider === 'zai' ? 'Platform AI (GLM-4.5)' : 'Google Gemini'}
               </span>
             </div>
             <div className="flex items-center space-x-3">
@@ -465,6 +467,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 parcelName={parcelName}
                 generatedAt={generatedReport.generatedAt}
                 provider={generatedReport.provider}
+                onPreview={() => setShowFullPreview(true)}
               />
             </div>
           </div>
@@ -475,6 +478,41 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               sections={generatedReport.sections}
               generatedAt={generatedReport.generatedAt}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Full Preview Modal */}
+      {showFullPreview && generatedReport && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
+          <div className="min-h-screen px-4 py-8">
+            <div className="relative max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 rounded-t-2xl">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {t('aiReport.fullPreview', 'Rapport IA Complet')} - {parcelName}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <AIReportExport
+                    sections={generatedReport.sections}
+                    parcelName={parcelName}
+                    generatedAt={generatedReport.generatedAt}
+                    provider={generatedReport.provider}
+                  />
+                  <button
+                    onClick={() => setShowFullPreview(false)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 max-h-[80vh] overflow-y-auto">
+                <AIReportPreview
+                  sections={generatedReport.sections}
+                  generatedAt={generatedReport.generatedAt}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}

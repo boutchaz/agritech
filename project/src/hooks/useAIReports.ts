@@ -109,10 +109,19 @@ export function useAIReportJob(jobId: string | null) {
       )
       .subscribe();
 
+    const pollInterval = setInterval(() => {
+      if (job?.status === 'completed' || job?.status === 'failed') {
+        clearInterval(pollInterval);
+        return;
+      }
+      fetchJobStatus();
+    }, 3000);
+
     return () => {
       authSupabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
-  }, [jobId, fetchJobStatus, queryClient]);
+  }, [jobId, fetchJobStatus, queryClient, job?.status]);
 
   const report = job ? aiReportsApi.mapJobResultToReport(job) : null;
 

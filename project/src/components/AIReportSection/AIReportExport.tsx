@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Download, Loader, FileText, FileIcon } from 'lucide-react';
+import { Download, Loader, FileText, FileIcon, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { AIReportSections } from '../../lib/api/ai-reports';
 
 interface AIReportExportProps {
-  sections: AIReportSections;
+  sections: AIReportSections | null | undefined;
   parcelName: string;
   generatedAt: string;
   provider: string;
+  onPreview?: () => void;
 }
 
 export const AIReportExport: React.FC<AIReportExportProps> = ({
@@ -18,18 +20,28 @@ export const AIReportExport: React.FC<AIReportExportProps> = ({
   parcelName,
   generatedAt,
   provider,
+  onPreview,
 }) => {
   const { t } = useTranslation();
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingDOCX, setIsExportingDOCX] = useState(false);
 
-  const formattedDate = new Date(generatedAt).toLocaleDateString('fr-FR', {
+  const validateSections = (): boolean => {
+    if (!sections || !sections.executiveSummary || !sections.healthAssessment) {
+      toast.error(t('aiReports.export.noContent', 'Aucun contenu de rapport disponible'));
+      return false;
+    }
+    return true;
+  };
+
+  const formattedDate = new Date(generatedAt || new Date()).toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
   const exportToPDF = async () => {
+    if (!validateSections()) return;
     setIsExportingPDF(true);
     try {
       const doc = new jsPDF();
@@ -118,15 +130,17 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
 
       const fileName = `rapport-ia-${parcelName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
+      toast.success(t('aiReports.export.successPDF', 'Rapport PDF téléchargé avec succès'));
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert(t('aiReports.export.errorPDF', 'Erreur lors de l\'export du rapport PDF'));
+      toast.error(t('aiReports.export.errorPDF', 'Erreur lors de l\'export du rapport PDF'));
     } finally {
       setIsExportingPDF(false);
     }
   };
 
   const exportToDOCX = async () => {
+    if (!validateSections()) return;
     setIsExportingDOCX(true);
     try {
       const docChildren: Paragraph[] = [];
@@ -225,21 +239,35 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
       const blob = await Packer.toBlob(doc);
       const fileName = `rapport-ia-${parcelName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.docx`;
       saveAs(blob, fileName);
+      toast.success(t('aiReports.export.successDOCX', 'Rapport Word téléchargé avec succès'));
     } catch (error) {
       console.error('Error exporting DOCX:', error);
-      alert(t('aiReports.export.errorDOCX', 'Erreur lors de l\'export du rapport DOCX'));
+      toast.error(t('aiReports.export.errorDOCX', 'Erreur lors de l\'export du rapport DOCX'));
     } finally {
       setIsExportingDOCX(false);
     }
   };
 
   const isExporting = isExportingPDF || isExportingDOCX;
+  const hasContent = sections && sections.executiveSummary && sections.healthAssessment;
 
   return (
     <div className="flex items-center gap-2">
+      {onPreview && (
+        <button
+          onClick={onPreview}
+          disabled={!hasContent}
+          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={t('aiReports.export.preview', 'Aperçu complet')}
+        >
+          <Eye className="w-4 h-4" />
+          <span>{t('aiReports.export.previewButton', 'Aperçu')}</span>
+        </button>
+      )}
+
       <button
         onClick={exportToPDF}
-        disabled={isExporting}
+        disabled={isExporting || !hasContent}
         className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title={t('aiReports.export.exportPDF', 'Exporter en PDF')}
       >
@@ -258,7 +286,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
 
       <button
         onClick={exportToDOCX}
-        disabled={isExporting}
+        disabled={isExporting || !hasContent}
         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title={t('aiReports.export.exportDOCX', 'Exporter en Word')}
       >

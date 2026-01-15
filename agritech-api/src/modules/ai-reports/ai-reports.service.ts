@@ -1493,23 +1493,68 @@ export class AIReportsService {
   ) {
     const supabase = this.databaseService.getAdminClient();
 
-    try {
+    const updateProgress = async (progress: number, status: string = 'processing') => {
       await supabase
         .from('ai_report_jobs')
-        .update({ status: 'processing', started_at: new Date().toISOString(), progress: 10 })
+        .update({ status, progress, ...(status === 'processing' && progress === 10 ? { started_at: new Date().toISOString() } : {}) })
         .eq('id', jobId);
+    };
 
-      const result = await this.generateReport(organizationId, userId, dto);
+    try {
+      await updateProgress(10, 'processing');
+
+      await updateProgress(20);
+      const providerType = dto.provider as unknown as AIProviderType;
+      const apiKey = await this.aiSettingsService.getDecryptedApiKey(organizationId, providerType);
+      
+      let envApiKey: string | undefined;
+      switch (dto.provider) {
+        case AIProvider.OPENAI: envApiKey = this.configService.get<string>('OPENAI_API_KEY'); break;
+        case AIProvider.GEMINI: envApiKey = this.configService.get<string>('GOOGLE_AI_API_KEY'); break;
+        case AIProvider.GROQ: envApiKey = this.configService.get<string>('GROQ_API_KEY'); break;
+        case AIProvider.ZAI: envApiKey = this.configService.get<string>('ZAI_API_KEY'); break;
+      }
+      const effectiveApiKey = apiKey || envApiKey;
+      if (!effectiveApiKey) throw new BadRequestException(`AI provider ${dto.provider} is not configured.`);
+
+      const provider = this.providers.get(dto.provider);
+      if (!provider) throw new BadRequestException(`Unknown AI provider: ${dto.provider}`);
+      provider.setApiKey(effectiveApiKey);
+
+      await updateProgress(30);
+      await this.calibrateParcelData(organizationId, dto.parcel_id, dto.data_start_date, dto.data_end_date);
+
+      await updateProgress(50);
+      const aggregatedData = await this.aggregateParcelData(organizationId, dto.parcel_id, dto.data_start_date, dto.data_end_date);
+
+      await updateProgress(60);
+      const systemPrompt = AGRICULTURAL_EXPERT_SYSTEM_PROMPT;
+      const userPrompt = buildUserPrompt(aggregatedData, dto.language || 'fr');
+
+      await updateProgress(70);
+      const config: AIProviderConfig = { provider: dto.provider, model: dto.model, temperature: 0.7, maxTokens: 16384 };
+      const response = await provider.generate({ systemPrompt, userPrompt, config });
+
+      await updateProgress(90);
+      const reportSections = this.parseAIResponse(response.content);
+      const storedReport = await this.storeReport(organizationId, userId, dto.parcel_id, dto.provider, reportSections, aggregatedData);
+
+      const result = {
+        success: true,
+        report: storedReport,
+        sections: reportSections,
+        metadata: {
+          provider: response.provider,
+          model: response.model,
+          tokensUsed: response.tokensUsed,
+          generatedAt: response.generatedAt,
+          dataRange: { start: dto.data_start_date, end: dto.data_end_date },
+        },
+      };
 
       await supabase
         .from('ai_report_jobs')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          progress: 100,
-          report_id: result.report?.id,
-          result: result,
-        })
+        .update({ status: 'completed', completed_at: new Date().toISOString(), progress: 100, report_id: storedReport?.id, result })
         .eq('id', jobId);
 
       this.logger.log(`Job ${jobId} completed successfully`);
@@ -1518,11 +1563,7 @@ export class AIReportsService {
 
       await supabase
         .from('ai_report_jobs')
-        .update({
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          error_message: error.message,
-        })
+        .update({ status: 'failed', completed_at: new Date().toISOString(), error_message: error.message })
         .eq('id', jobId);
     }
   }

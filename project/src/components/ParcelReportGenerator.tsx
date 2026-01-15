@@ -10,6 +10,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { generateParcelReport } from '../lib/edge-functions-api';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
 import { AIReportGenerator } from './AIReportSection';
