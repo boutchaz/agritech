@@ -11,9 +11,15 @@ import {
   CheckCircle,
   Clock,
   BarChart3,
+  Database,
+  Eye,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { AIReportSections } from '../../lib/api/ai-reports';
 import { AIReportCharts } from './AIReportCharts';
+import { SourceDataPanel, SourceDataBadge } from './SourceDataPanel';
+import { DataTransparencyModal } from './DataTransparencyModal';
+import type { SourceDataMetadata } from '@/lib/api/source-data';
 
 interface AIReportPreviewProps {
   sections: AIReportSections;
@@ -25,6 +31,9 @@ interface AIReportPreviewProps {
     temperatureSummary: { avgMin: number; avgMax: number; avgMean: number };
     precipitationTotal: number;
   };
+  sourceDataMetadata?: SourceDataMetadata | null;
+  onRefreshSourceData?: (sources: string[]) => void;
+  isRefreshingSourceData?: boolean;
 }
 
 interface CollapsibleSectionProps {
@@ -97,8 +106,13 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
   satelliteTimeSeries,
   yieldHistory,
   weatherData,
+  sourceDataMetadata,
+  onRefreshSourceData,
+  isRefreshingSourceData = false,
 }) => {
+  const { t } = useTranslation();
   const [showCharts, setShowCharts] = useState(true);
+  const [showDataTransparencyModal, setShowDataTransparencyModal] = useState(false);
   const healthScore = sections.healthAssessment?.overallScore ?? 0;
   const healthColor =
     healthScore >= 70
@@ -109,10 +123,10 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header with timestamp */}
+      {/* Header with timestamp and source data badge */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <span>
-          Généré le{' '}
+          {t('aiReport.generatedOn', 'Généré le')}{' '}
           {new Date(generatedAt).toLocaleDateString('fr-FR', {
             year: 'numeric',
             month: 'long',
@@ -121,7 +135,38 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
             minute: '2-digit',
           })}
         </span>
+        {sourceDataMetadata && (
+          <SourceDataBadge
+            metadata={sourceDataMetadata}
+            onClick={() => setShowDataTransparencyModal(true)}
+          />
+        )}
       </div>
+
+      {/* Source Data Panel - Collapsible section showing data transparency */}
+      {sourceDataMetadata && (
+        <CollapsibleSection
+          title={t('dataTransparency.sourceDataTitle', 'Source Data Transparency')}
+          icon={<Database className="w-5 h-5 text-blue-600" />}
+          defaultOpen={false}
+        >
+          <SourceDataPanel
+            metadata={sourceDataMetadata}
+            onViewDetails={() => setShowDataTransparencyModal(true)}
+            onRefreshData={onRefreshSourceData}
+            isRefreshing={isRefreshingSourceData}
+          />
+        </CollapsibleSection>
+      )}
+
+      {/* Data Transparency Modal */}
+      <DataTransparencyModal
+        open={showDataTransparencyModal}
+        onOpenChange={setShowDataTransparencyModal}
+        metadata={sourceDataMetadata || null}
+        onRefreshData={onRefreshSourceData}
+        isRefreshing={isRefreshingSourceData}
+      />
 
       {/* Executive Summary */}
       <CollapsibleSection

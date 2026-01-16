@@ -3959,7 +3959,108 @@
       "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
       "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
       "addAnalysis": "Ajouter"
-    }
+    },
+    "generatedOn": "Généré le"
+  },
+  "dataTransparency": {
+    "modalTitle": "Transparence des Données Sources",
+    "modalDescription": "Consultez et vérifiez les sources de données utilisées pour générer ce rapport IA.",
+    "loading": "Chargement des données sources...",
+    "notAvailable": "N/D",
+    "panelTitle": "Données Sources",
+    "sourceDataTitle": "Transparence des Données Sources",
+    "dataPoints": "points de données",
+    "sources": "sources",
+    "viewDetails": "Voir les détails",
+    "refreshData": "Actualiser les données",
+    "refreshStale": "Actualiser les données obsolètes",
+    "staleDataDetected": "Données Obsolètes Détectées",
+    "staleDataDescription": "Certaines sources de données nécessitent une actualisation pour une meilleure précision.",
+    "analysisDateRange": "Période d'analyse",
+    "totalDataPoints": "Total des Points de Données",
+    "acrossSources": "À travers {{count}} sources de données",
+    "sufficiencyLabel": "Suffisance des Données",
+    "warnings": "Avertissements et Alertes",
+    "andMoreWarnings": "Et {{count}} autres avertissements...",
+    "includedSources": "Sources Incluses",
+    "excludedSources": "Sources Exclues",
+    "noDataAvailable": "Aucune donnée disponible pour cette source",
+    "tabs": {
+      "overview": "Aperçu",
+      "sources": "Sources de Données",
+      "rawData": "Données Brutes",
+      "audit": "Piste d'Audit"
+    },
+    "freshness": {
+      "fresh": "Récent",
+      "aging": "Vieillissant",
+      "stale": "Obsolète",
+      "unknown": "Inconnu",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "daysAgo": "Il y a {{days}} jours",
+      "weeksAgo": "Il y a {{weeks}} semaine(s)",
+      "monthsAgo": "Il y a {{months}} mois",
+      "yearsAgo": "Il y a {{years}} an(s)"
+    },
+    "sufficiency": {
+      "sufficient": "Suffisant",
+      "minimal": "Minimal",
+      "insufficient": "Insuffisant"
+    },
+    "thresholds": {
+      "minimum": "Minimum",
+      "recommended": "Recommandé",
+      "optimal": "Optimal"
+    },
+    "sources": {
+      "satellite": "Données Satellites",
+      "weather": "Données Météo",
+      "soil": "Analyse de Sol",
+      "water": "Analyse d'Eau",
+      "plant": "Analyse Végétale"
+    },
+    "satellite": {
+      "indices": "Indices",
+      "avgCloudCoverage": "Couverture Nuageuse Moyenne",
+      "provider": "Fournisseur"
+    },
+    "weather": {
+      "completeness": "Complétude des Données",
+      "temperatureRange": "Plage de Température",
+      "totalPrecipitation": "Précipitation Totale"
+    },
+    "analysis": {
+      "labReference": "Référence Labo",
+      "parameter": "Paramètre",
+      "value": "Valeur",
+      "status": "Statut",
+      "andMore": "Et {{count}} autres paramètres..."
+    },
+    "rawData": {
+      "selectSource": "Sélectionner une source",
+      "readOnlyNotice": "Ces données sont en lecture seule et ne peuvent pas être modifiées.",
+      "noData": "Aucune donnée brute disponible pour cette source.",
+      "showing": "Affichage {{from}}-{{to}} sur {{total}}",
+      "previous": "Précédent",
+      "next": "Suivant"
+    },
+    "audit": {
+      "processingTimeline": "Chronologie du Traitement",
+      "dataFetched": "Données Récupérées",
+      "processingStarted": "Traitement Démarré",
+      "processingCompleted": "Traitement Terminé",
+      "processingDuration": "Durée du Traitement",
+      "dataVersion": "Version des Données",
+      "reportMetadata": "Métadonnées du Rapport",
+      "reportId": "ID du Rapport",
+      "parcelId": "ID de la Parcelle",
+      "generatedAt": "Généré le",
+      "parcelName": "Nom de la Parcelle"
+    },
+    "dateRangeStart": "Début de la Période",
+    "dateRangeEnd": "Fin de la Période",
+    "lastUpdated": "Dernière Mise à Jour"
   },
   "aiSettings": {
     "title": "Fournisseurs IA",
