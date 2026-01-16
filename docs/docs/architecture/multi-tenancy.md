@@ -7,6 +7,10 @@ description: Detailed explanation of the multi-tenant architecture, role hierarc
 
 The AgriTech Platform is built with a robust multi-tenant architecture that enables multiple organizations to use the platform while maintaining complete data isolation and security. This document explains the hierarchy, role-based access control, and implementation details.
 
+## Security Audit
+
+See [Data Segregation Security Audit](./data-segregation-audit.md) for current findings, remediation, and tests.
+
 ## Tenant Hierarchy
 
 The platform uses a four-level hierarchy to organize agricultural data:
