@@ -217,10 +217,30 @@ export function ChatInterface() {
           },
           onError: (error: any) => {
             console.error('Chat error:', error);
+            
+            // Provide more helpful error messages
+            let errorContent = '';
+            const errorMsg = error?.message || 'Failed to send message';
+            
+            if (errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+              errorContent = `I'm having trouble connecting to the server. This could be due to:
+- Network connectivity issues
+- The API server may be temporarily unavailable
+- Please check your internet connection and try again
+
+If the problem persists, please contact support.`;
+            } else if (errorMsg.includes('Z.ai API') || errorMsg.includes('API key')) {
+              errorContent = `The AI service is currently unavailable. This is likely a configuration issue on the server side. Please contact support if this problem persists.`;
+            } else if (errorMsg.includes('Organization ID')) {
+              errorContent = `There's an issue with your organization settings. Please refresh the page and try again.`;
+            } else {
+              errorContent = `I encountered an error: ${errorMsg}. Please try again, or contact support if the problem continues.`;
+            }
+            
             const errorMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',
-              content: `Error: ${error?.message || 'Failed to send message. Please try again.'}`,
+              content: errorContent,
               timestamp: new Date(),
             };
             setMessages((prev) => [...prev, errorMessage]);
@@ -241,10 +261,30 @@ export function ChatInterface() {
       );
     } catch (error: any) {
       console.error('Failed to send message:', error);
+      
+      // Provide more helpful error messages
+      let errorContent = '';
+      const errorMsg = error?.message || 'Failed to send message';
+      
+      if (errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+        errorContent = `I'm having trouble connecting to the server. This could be due to:
+- Network connectivity issues
+- The API server may be temporarily unavailable
+- Please check your internet connection and try again
+
+If the problem persists, please contact support.`;
+      } else if (errorMsg.includes('Z.ai API') || errorMsg.includes('API key')) {
+        errorContent = `The AI service is currently unavailable. This is likely a configuration issue on the server side. Please contact support if this problem persists.`;
+      } else if (errorMsg.includes('Organization ID')) {
+        errorContent = `There's an issue with your organization settings. Please refresh the page and try again.`;
+      } else {
+        errorContent = `I encountered an error: ${errorMsg}. Please try again, or contact support if the problem continues.`;
+      }
+      
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Error: ${error?.message || 'Failed to send message. Please try again.'}`,
+        content: errorContent,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

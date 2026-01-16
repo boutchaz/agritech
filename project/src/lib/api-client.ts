@@ -86,12 +86,36 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      message: response.statusText,
-      error: 'Unknown error',
-      statusCode: response.status
-    }));
-    throw new Error(error.message || error.error || 'API request failed');
+    let error;
+    try {
+      error = await response.json();
+    } catch {
+      // If response is not JSON, create a meaningful error based on status
+      if (response.status === 0 || response.status >= 500) {
+        throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
+      } else if (response.status === 401) {
+        throw new Error('Authentication failed. Please refresh the page and try again.');
+      } else if (response.status === 403) {
+        throw new Error('Access denied. You may not have permission to perform this action.');
+      } else if (response.status === 404) {
+        throw new Error('The requested resource was not found.');
+      } else {
+        error = {
+          message: response.statusText || 'API request failed',
+          error: 'Unknown error',
+          statusCode: response.status
+        };
+      }
+    }
+    
+    const errorMessage = error?.message || error?.error || 'API request failed';
+    
+    // Provide more helpful error messages for common issues
+    if (errorMessage.includes('Connection error') || response.status === 0) {
+      throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
+    }
+    
+    throw new Error(errorMessage);
   }
 
   return response.json();
