@@ -4141,7 +4141,108 @@
       "cannotGenerate": "Satellite and weather data are required to generate a report.",
       "lowCoverageWarning": "The AI report will be less accurate with limited data. Add analyses for better results.",
       "addAnalysis": "Add"
-    }
+    },
+    "generatedOn": "Generated on"
+  },
+  "dataTransparency": {
+    "modalTitle": "Source Data Transparency",
+    "modalDescription": "View and verify the data sources used to generate this AI report.",
+    "loading": "Loading source data...",
+    "notAvailable": "N/A",
+    "panelTitle": "Source Data",
+    "sourceDataTitle": "Source Data Transparency",
+    "dataPoints": "data points",
+    "sources": "sources",
+    "viewDetails": "View Details",
+    "refreshData": "Refresh Data",
+    "refreshStale": "Refresh Stale Data",
+    "staleDataDetected": "Stale Data Detected",
+    "staleDataDescription": "Some data sources need refreshing for better accuracy.",
+    "analysisDateRange": "Analysis Period",
+    "totalDataPoints": "Total Data Points",
+    "acrossSources": "Across {{count}} data sources",
+    "sufficiencyLabel": "Data Sufficiency",
+    "warnings": "Warnings & Alerts",
+    "andMoreWarnings": "And {{count}} more warnings...",
+    "includedSources": "Included Sources",
+    "excludedSources": "Excluded Sources",
+    "noDataAvailable": "No data available for this source",
+    "tabs": {
+      "overview": "Overview",
+      "sources": "Data Sources",
+      "rawData": "Raw Data",
+      "audit": "Audit Trail"
+    },
+    "freshness": {
+      "fresh": "Fresh",
+      "aging": "Aging",
+      "stale": "Stale",
+      "unknown": "Unknown",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{{days}} days ago",
+      "weeksAgo": "{{weeks}} week(s) ago",
+      "monthsAgo": "{{months}} month(s) ago",
+      "yearsAgo": "{{years}} year(s) ago"
+    },
+    "sufficiency": {
+      "sufficient": "Sufficient",
+      "minimal": "Minimal",
+      "insufficient": "Insufficient"
+    },
+    "thresholds": {
+      "minimum": "Minimum",
+      "recommended": "Recommended",
+      "optimal": "Optimal"
+    },
+    "sources": {
+      "satellite": "Satellite Data",
+      "weather": "Weather Data",
+      "soil": "Soil Analysis",
+      "water": "Water Analysis",
+      "plant": "Plant Analysis"
+    },
+    "satellite": {
+      "indices": "Indices",
+      "avgCloudCoverage": "Average Cloud Coverage",
+      "provider": "Provider"
+    },
+    "weather": {
+      "completeness": "Data Completeness",
+      "temperatureRange": "Temperature Range",
+      "totalPrecipitation": "Total Precipitation"
+    },
+    "analysis": {
+      "labReference": "Lab Reference",
+      "parameter": "Parameter",
+      "value": "Value",
+      "status": "Status",
+      "andMore": "And {{count}} more parameters..."
+    },
+    "rawData": {
+      "selectSource": "Select source",
+      "readOnlyNotice": "This data is read-only and cannot be modified.",
+      "noData": "No raw data available for this source.",
+      "showing": "Showing {{from}}-{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "audit": {
+      "processingTimeline": "Processing Timeline",
+      "dataFetched": "Data Fetched",
+      "processingStarted": "Processing Started",
+      "processingCompleted": "Processing Completed",
+      "processingDuration": "Processing Duration",
+      "dataVersion": "Data Version",
+      "reportMetadata": "Report Metadata",
+      "reportId": "Report ID",
+      "parcelId": "Parcel ID",
+      "generatedAt": "Generated At",
+      "parcelName": "Parcel Name"
+    },
+    "dateRangeStart": "Date Range Start",
+    "dateRangeEnd": "Date Range End",
+    "lastUpdated": "Last Updated"
   },
   "aiSettings": {
     "title": "AI Providers",

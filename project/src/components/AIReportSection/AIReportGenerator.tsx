@@ -18,6 +18,7 @@ import { AIReportExport } from './AIReportExport';
 import { DataAvailabilityPreview } from './DataAvailabilityPreview';
 import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStatus, useCalibrate, useFetchData, usePendingAIReportJobs } from '../../hooks/useAIReports';
+import { useSourceDataFromCalibration, useRefreshSourceData } from '../../hooks/useSourceDataMetadata';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 
 const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({ onSelectJob }) => {
@@ -105,6 +106,17 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
   );
   const calibrateMutation = useCalibrate();
   const fetchDataMutation = useFetchData();
+  const refreshSourceDataMutation = useRefreshSourceData();
+
+  // Build source data metadata from calibration status
+  const sourceDataMetadata = useSourceDataFromCalibration(
+    parcelId,
+    parcelName,
+    dateRange.start,
+    dateRange.end,
+    calibrationStatus || null,
+    generatedReport ? undefined : undefined // Will use report ID when available
+  );
 
   // Auto-select Platform AI (zai) as default if available
   useEffect(() => {
@@ -477,6 +489,16 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             <AIReportPreview
               sections={generatedReport.sections}
               generatedAt={generatedReport.generatedAt}
+              sourceDataMetadata={sourceDataMetadata}
+              onRefreshSourceData={(sources) => {
+                refreshSourceDataMutation.mutate({
+                  parcelId,
+                  sources: sources.filter((s): s is 'satellite' | 'weather' =>
+                    ['satellite', 'weather'].includes(s)
+                  ),
+                });
+              }}
+              isRefreshingSourceData={refreshSourceDataMutation.isPending}
             />
           </div>
         </div>
@@ -510,6 +532,16 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 <AIReportPreview
                   sections={generatedReport.sections}
                   generatedAt={generatedReport.generatedAt}
+                  sourceDataMetadata={sourceDataMetadata}
+                  onRefreshSourceData={(sources) => {
+                    refreshSourceDataMutation.mutate({
+                      parcelId,
+                      sources: sources.filter((s): s is 'satellite' | 'weather' =>
+                        ['satellite', 'weather'].includes(s)
+                      ),
+                    });
+                  }}
+                  isRefreshingSourceData={refreshSourceDataMutation.isPending}
                 />
               </div>
             </div>
