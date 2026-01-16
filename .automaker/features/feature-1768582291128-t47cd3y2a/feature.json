@@ -1,0 +1,35 @@
+{
+  "category": "Uncategorized",
+  "description": "for critical modules I need to write and fix test I want to achieve 80% test coverage\nall the tests are failing because when registering a new user we select trial but on starting onboarding it's not implmented correctly\nfix onboarding and redirect to dashboard not live-dashboard\n",
+  "title": "Implement critical module testing for 80% coverage",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "none",
+  "reasoningEffort": "none",
+  "branchName": "feature/develop-1768582287363-o754",
+  "priority": 1,
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "dependencies": [],
+  "workMode": "custom",
+  "titleGenerating": false,
+  "status": "in_progress",
+  "id": "feature-1768582291128-t47cd3y2a",
+  "descriptionHistory": [
+    {
+      "description": "for critical modules I need to write and fix test I want to achieve 80% test coverage",
+      "timestamp": "2026-01-16T16:51:31.193Z",
+      "source": "initial"
+    },
+    {
+      "description": "for critical modules I need to write and fix test I want to achieve 80% test coverage\nall the tests are failing because when registering a new user we select trial but on starting onboarding it's not implmented correctly\nfix onboarding and redirect to dashboard not live-dashboard\n",
+      "timestamp": "2026-01-16T17:10:33.290Z",
+      "source": "edit"
+    }
+  ],
+  "startedAt": "2026-01-16T16:51:31.171Z",
+  "updatedAt": "2026-01-16T16:51:31.543Z"
+}

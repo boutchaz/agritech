@@ -1,28 +1,21 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
 import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
-import { supabase } from '@/lib/supabase';
+import {
+  tourPreferencesApi,
+  retryTourApiCall,
+  TOUR_API_CONFIG,
+  type TourId as ApiTourId,
+  type TourPreferences
+} from '@/lib/api/tour-preferences';
 
-export type TourId = 
-  | 'welcome'
-  | 'full-app'
-  | 'dashboard'
-  | 'farm-management'
-  | 'parcels'
-  | 'tasks'
-  | 'workers'
-  | 'inventory'
-  | 'harvests'
-  | 'infrastructure'
-  | 'billing'
-  | 'accounting'
-  | 'satellite'
-  | 'reports'
-  | 'settings';
+export type TourId = ApiTourId;
+
+type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
 interface TourState {
   completedTours: TourId[];
@@ -30,6 +23,9 @@ interface TourState {
   currentTour: TourId | null;
   isRunning: boolean;
   stepIndex: number;
+  isLoading: boolean;
+  syncStatus: SyncStatus;
+  lastSyncError: string | null;
 }
 
 interface TourContextValue {
@@ -44,12 +40,19 @@ interface TourContextValue {
   dismissTour: (tourId: TourId) => Promise<void>;
   resetTour: (tourId: TourId) => Promise<void>;
   resetAllTours: () => Promise<void>;
+  // New properties for sync status
+  isLoading: boolean;
+  syncStatus: SyncStatus;
+  lastSyncError: string | null;
+  refetchPreferences: () => Promise<void>;
 }
 
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
+// LocalStorage keys for fallback/offline support
 const TOUR_STORAGE_KEY = 'agritech_completed_tours';
 const DISMISSED_TOURS_KEY = 'agritech_dismissed_tours';
+const LAST_SYNC_KEY = 'agritech_tours_last_sync';
 
 const TOUR_ROUTES: Record<TourId, string> = {
   'welcome': '/dashboard',
@@ -142,11 +145,11 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
       }}
     >
       {step.title && (
-        <h4 style={{ 
-          fontSize: '1.125rem', 
-          fontWeight: 600, 
-          color: '#059669', 
-          marginBottom: '0.5rem' 
+        <h4 style={{
+          fontSize: '1.125rem',
+          fontWeight: 600,
+          color: '#059669',
+          marginBottom: '0.5rem'
         }}>
           {step.title}
         </h4>
@@ -154,16 +157,16 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
       <div style={{ color: '#374151', marginBottom: '1rem' }}>
         {step.content}
       </div>
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         flexDirection: 'column',
         gap: '0.75rem',
         paddingTop: '0.75rem',
         borderTop: '1px solid #e5e7eb'
       }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '0.5rem'
@@ -712,91 +715,215 @@ interface TourProviderProps {
   children: React.ReactNode;
 }
 
+// Helper functions for localStorage fallback
+const getLocalStorageTours = (): { completed: TourId[]; dismissed: TourId[] } => {
+  try {
+    const completed = localStorage.getItem(TOUR_STORAGE_KEY);
+    const dismissed = localStorage.getItem(DISMISSED_TOURS_KEY);
+    return {
+      completed: completed ? JSON.parse(completed) : [],
+      dismissed: dismissed ? JSON.parse(dismissed) : [],
+    };
+  } catch {
+    console.error('[TourContext] Failed to read from localStorage');
+    return { completed: [], dismissed: [] };
+  }
+};
+
+const setLocalStorageTours = (completed: TourId[], dismissed: TourId[]) => {
+  try {
+    localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(completed));
+    localStorage.setItem(DISMISSED_TOURS_KEY, JSON.stringify(dismissed));
+    localStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
+  } catch {
+    console.error('[TourContext] Failed to write to localStorage');
+  }
+};
+
+const isStale = (): boolean => {
+  try {
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+    if (!lastSync) return true;
+    return Date.now() - parseInt(lastSync, 10) > TOUR_API_CONFIG.staleTimeMs;
+  } catch {
+    return true;
+  }
+};
+
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hasFeature } = useExperienceLevel();
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     dismissedTours: [],
     currentTour: null,
     isRunning: false,
     stepIndex: 0,
+    isLoading: true,
+    syncStatus: 'idle',
+    lastSyncError: null,
   });
 
   const tourDefinitions = useMemo(() => getTourDefinitions(t), [t]);
 
+  // Load tour preferences on mount and when user changes
   useEffect(() => {
-    loadCompletedTours();
+    loadTourPreferences();
+
+    return () => {
+      // Cleanup: abort any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [user?.id]);
 
-  const loadCompletedTours = async () => {
+  /**
+   * Load tour preferences from backend API with localStorage fallback
+   */
+  const loadTourPreferences = async () => {
+    // If no user, use localStorage only
     if (!user) {
-      const stored = localStorage.getItem(TOUR_STORAGE_KEY);
-      const dismissedStored = localStorage.getItem(DISMISSED_TOURS_KEY);
-      if (stored) {
-        try {
-          setTourState(prev => ({ ...prev, completedTours: JSON.parse(stored) }));
-        } catch {
-          console.error('Failed to parse stored tours');
-        }
-      }
-      if (dismissedStored) {
-        try {
-          setTourState(prev => ({ ...prev, dismissedTours: JSON.parse(dismissedStored) }));
-        } catch {
-          console.error('Failed to parse stored dismissed tours');
-        }
-      }
+      const local = getLocalStorageTours();
+      setTourState(prev => ({
+        ...prev,
+        completedTours: local.completed,
+        dismissedTours: local.dismissed,
+        isLoading: false,
+        syncStatus: 'idle',
+      }));
       return;
     }
 
+    // Start loading
+    setTourState(prev => ({
+      ...prev,
+      isLoading: true,
+      syncStatus: 'syncing',
+      lastSyncError: null,
+    }));
+
     try {
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('completed_tours, dismissed_tours')
-        .eq('id', user.id)
-        .single();
+      // Try to fetch from backend API with retry logic
+      const preferences = await retryTourApiCall(
+        () => tourPreferencesApi.getTourPreferences()
+      );
 
-      if (data?.completed_tours) {
-        setTourState(prev => ({ ...prev, completedTours: data.completed_tours as TourId[] }));
-      }
-      if (data?.dismissed_tours) {
-        setTourState(prev => ({ ...prev, dismissedTours: data.dismissed_tours as TourId[] }));
-      }
+      // Update state and localStorage with backend data
+      setTourState(prev => ({
+        ...prev,
+        completedTours: preferences.completed_tours as TourId[],
+        dismissedTours: preferences.dismissed_tours as TourId[],
+        isLoading: false,
+        syncStatus: 'synced',
+        lastSyncError: null,
+      }));
+
+      // Update localStorage for offline fallback
+      setLocalStorageTours(
+        preferences.completed_tours as TourId[],
+        preferences.dismissed_tours as TourId[]
+      );
+
+      console.log('[TourContext] Loaded preferences from backend:', preferences);
     } catch (error) {
-      console.error('Failed to load completed tours:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load tour preferences';
+      console.error('[TourContext] Failed to load from backend, using localStorage fallback:', errorMessage);
+
+      // Fall back to localStorage
+      const local = getLocalStorageTours();
+      setTourState(prev => ({
+        ...prev,
+        completedTours: local.completed,
+        dismissedTours: local.dismissed,
+        isLoading: false,
+        syncStatus: 'error',
+        lastSyncError: errorMessage,
+      }));
     }
   };
 
-  const saveCompletedTours = async (tours: TourId[]) => {
-    localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(tours));
+  /**
+   * Save completed tours to backend with localStorage fallback
+   */
+  const saveCompletedTours = async (tours: TourId[]): Promise<boolean> => {
+    // Always update localStorage immediately for responsiveness
+    setLocalStorageTours(tours, tourState.dismissedTours);
 
-    if (user) {
-      try {
-        await supabase
-          .from('user_profiles')
-          .update({ completed_tours: tours })
-          .eq('id', user.id);
-      } catch (error) {
-        console.error('Failed to save completed tours:', error);
-      }
+    if (!user) {
+      return true; // No user, localStorage-only mode
+    }
+
+    setTourState(prev => ({ ...prev, syncStatus: 'syncing' }));
+
+    try {
+      await retryTourApiCall(
+        () => tourPreferencesApi.updateTourPreferences({ completed_tours: tours })
+      );
+
+      setTourState(prev => ({
+        ...prev,
+        syncStatus: 'synced',
+        lastSyncError: null,
+      }));
+
+      console.log('[TourContext] Saved completed tours to backend');
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save completed tours';
+      console.error('[TourContext] Failed to save completed tours:', errorMessage);
+
+      setTourState(prev => ({
+        ...prev,
+        syncStatus: 'error',
+        lastSyncError: errorMessage,
+      }));
+
+      // Return false to indicate save failed, but state is already updated locally
+      return false;
     }
   };
 
-  const saveDismissedTours = async (tours: TourId[]) => {
-    localStorage.setItem(DISMISSED_TOURS_KEY, JSON.stringify(tours));
+  /**
+   * Save dismissed tours to backend with localStorage fallback
+   */
+  const saveDismissedTours = async (tours: TourId[]): Promise<boolean> => {
+    // Always update localStorage immediately for responsiveness
+    setLocalStorageTours(tourState.completedTours, tours);
 
-    if (user) {
-      try {
-        await supabase
-          .from('user_profiles')
-          .update({ dismissed_tours: tours })
-          .eq('id', user.id);
-      } catch (error) {
-        console.error('Failed to save dismissed tours:', error);
-      }
+    if (!user) {
+      return true; // No user, localStorage-only mode
+    }
+
+    setTourState(prev => ({ ...prev, syncStatus: 'syncing' }));
+
+    try {
+      await retryTourApiCall(
+        () => tourPreferencesApi.updateTourPreferences({ dismissed_tours: tours })
+      );
+
+      setTourState(prev => ({
+        ...prev,
+        syncStatus: 'synced',
+        lastSyncError: null,
+      }));
+
+      console.log('[TourContext] Saved dismissed tours to backend');
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save dismissed tours';
+      console.error('[TourContext] Failed to save dismissed tours:', errorMessage);
+
+      setTourState(prev => ({
+        ...prev,
+        syncStatus: 'error',
+        lastSyncError: errorMessage,
+      }));
+
+      return false;
     }
   };
 
@@ -856,7 +983,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
 
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       const { currentTour, completedTours } = tourState;
-      
+
       if (currentTour && status === STATUS.FINISHED && !completedTours.includes(currentTour)) {
         const newCompletedTours = [...completedTours, currentTour];
         setTourState(prev => ({
@@ -881,24 +1008,172 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     return tourState.dismissedTours.includes(tourId);
   }, [tourState.dismissedTours]);
 
+  /**
+   * Dismiss a tour - uses dedicated backend endpoint for atomic operation
+   */
   const dismissTour = useCallback(async (tourId: TourId) => {
     if (tourState.dismissedTours.includes(tourId)) return;
-    const newDismissed = [...tourState.dismissedTours, tourId];
-    setTourState(prev => ({ ...prev, dismissedTours: newDismissed }));
-    await saveDismissedTours(newDismissed);
-    endTour();
-  }, [tourState.dismissedTours, endTour]);
 
+    const newDismissed = [...tourState.dismissedTours, tourId];
+
+    // Optimistically update state
+    setTourState(prev => ({
+      ...prev,
+      dismissedTours: newDismissed,
+      syncStatus: 'syncing',
+    }));
+
+    // End the tour immediately
+    endTour();
+
+    // Update localStorage for immediate fallback
+    setLocalStorageTours(tourState.completedTours, newDismissed);
+
+    if (user) {
+      try {
+        // Use dedicated dismiss endpoint for atomic backend operation
+        const result = await retryTourApiCall(
+          () => tourPreferencesApi.dismissTour(tourId)
+        );
+
+        // Update state with backend response to ensure consistency
+        setTourState(prev => ({
+          ...prev,
+          completedTours: result.completed_tours as TourId[],
+          dismissedTours: result.dismissed_tours as TourId[],
+          syncStatus: 'synced',
+          lastSyncError: null,
+        }));
+
+        // Update localStorage with backend data
+        setLocalStorageTours(
+          result.completed_tours as TourId[],
+          result.dismissed_tours as TourId[]
+        );
+
+        console.log(`[TourContext] Tour '${tourId}' dismissed and synced to backend`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to dismiss tour';
+        console.error('[TourContext] Failed to sync dismiss to backend:', errorMessage);
+
+        setTourState(prev => ({
+          ...prev,
+          syncStatus: 'error',
+          lastSyncError: errorMessage,
+        }));
+
+        // State is already updated locally, so user experience is preserved
+      }
+    }
+  }, [tourState.dismissedTours, tourState.completedTours, endTour, user]);
+
+  /**
+   * Reset a specific tour - allows tour to show again
+   */
   const resetTour = useCallback(async (tourId: TourId) => {
     const newCompletedTours = tourState.completedTours.filter(t => t !== tourId);
-    setTourState(prev => ({ ...prev, completedTours: newCompletedTours }));
-    await saveCompletedTours(newCompletedTours);
-  }, [tourState.completedTours]);
+    const newDismissedTours = tourState.dismissedTours.filter(t => t !== tourId);
 
+    // Optimistically update state
+    setTourState(prev => ({
+      ...prev,
+      completedTours: newCompletedTours,
+      dismissedTours: newDismissedTours,
+      syncStatus: 'syncing',
+    }));
+
+    // Update localStorage immediately
+    setLocalStorageTours(newCompletedTours, newDismissedTours);
+
+    if (user) {
+      try {
+        // Use dedicated reset endpoint
+        const result = await retryTourApiCall(
+          () => tourPreferencesApi.resetTour(tourId)
+        );
+
+        setTourState(prev => ({
+          ...prev,
+          completedTours: result.completed_tours as TourId[],
+          dismissedTours: result.dismissed_tours as TourId[],
+          syncStatus: 'synced',
+          lastSyncError: null,
+        }));
+
+        setLocalStorageTours(
+          result.completed_tours as TourId[],
+          result.dismissed_tours as TourId[]
+        );
+
+        console.log(`[TourContext] Tour '${tourId}' reset and synced to backend`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to reset tour';
+        console.error('[TourContext] Failed to sync reset to backend:', errorMessage);
+
+        setTourState(prev => ({
+          ...prev,
+          syncStatus: 'error',
+          lastSyncError: errorMessage,
+        }));
+      }
+    }
+  }, [tourState.completedTours, tourState.dismissedTours, user]);
+
+  /**
+   * Reset all tours - clear all completed and dismissed
+   */
   const resetAllTours = useCallback(async () => {
-    setTourState(prev => ({ ...prev, completedTours: [] }));
-    await saveCompletedTours([]);
-  }, []);
+    // Optimistically update state
+    setTourState(prev => ({
+      ...prev,
+      completedTours: [],
+      dismissedTours: [],
+      syncStatus: 'syncing',
+    }));
+
+    // Clear localStorage immediately
+    setLocalStorageTours([], []);
+
+    if (user) {
+      try {
+        // Use dedicated reset-all endpoint
+        const result = await retryTourApiCall(
+          () => tourPreferencesApi.resetAllTours()
+        );
+
+        setTourState(prev => ({
+          ...prev,
+          completedTours: result.completed_tours as TourId[],
+          dismissedTours: result.dismissed_tours as TourId[],
+          syncStatus: 'synced',
+          lastSyncError: null,
+        }));
+
+        setLocalStorageTours(
+          result.completed_tours as TourId[],
+          result.dismissed_tours as TourId[]
+        );
+
+        console.log('[TourContext] All tours reset and synced to backend');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to reset all tours';
+        console.error('[TourContext] Failed to sync reset-all to backend:', errorMessage);
+
+        setTourState(prev => ({
+          ...prev,
+          syncStatus: 'error',
+          lastSyncError: errorMessage,
+        }));
+      }
+    }
+  }, [user]);
+
+  /**
+   * Manually refetch preferences from backend
+   */
+  const refetchPreferences = useCallback(async () => {
+    await loadTourPreferences();
+  }, [user?.id]);
 
   const currentSteps = tourState.currentTour ? tourDefinitions[tourState.currentTour] : [];
 
@@ -916,6 +1191,11 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         dismissTour,
         resetTour,
         resetAllTours,
+        // New sync status properties
+        isLoading: tourState.isLoading,
+        syncStatus: tourState.syncStatus,
+        lastSyncError: tourState.lastSyncError,
+        refetchPreferences,
       }}
     >
       {children}
@@ -955,10 +1235,13 @@ export const useTour = (): TourContextValue => {
 };
 
 export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
-  const { startTour, isTourCompleted, isRunning, dismissedTours } = useTour();
+  const { startTour, isTourCompleted, isRunning, dismissedTours, isLoading } = useTour();
   const { hasFeature } = useExperienceLevel();
 
   useEffect(() => {
+    // Don't auto-start while still loading preferences from backend
+    if (isLoading) return;
+
     // Only auto-start if:
     // 1. Tour not completed
     // 2. Tour not dismissed
@@ -970,5 +1253,5 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature]);
+  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature, isLoading]);
 };

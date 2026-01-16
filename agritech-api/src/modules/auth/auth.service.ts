@@ -11,6 +11,7 @@ import { SignupDto } from './dto/signup.dto';
 import { UsersService } from '../users/users.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { DemoDataService } from '../demo-data/demo-data.service';
+import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private usersService: UsersService,
     private organizationsService: OrganizationsService,
     private demoDataService: DemoDataService,
+    private adoptionService: AdoptionService,
   ) { }
 
   /**
@@ -489,6 +491,19 @@ export class AuthService {
 
       this.logger.log(
         `User ${email} signed up successfully with organization ${organizationName}`,
+      );
+
+      // Track user signup milestone
+      await this.adoptionService.recordMilestone(
+        userId,
+        MilestoneType.USER_SIGNUP,
+        organizationId,
+        {
+          email: email,
+          organization_name: organizationName,
+          signup_method: signupDto.invitedToOrganization ? 'invitation' : 'self_signup',
+          seller_type: signupDto.sellerType || 'individual',
+        },
       );
 
       return {

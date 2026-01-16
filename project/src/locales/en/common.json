@@ -66,8 +66,89 @@
     "noData": "No data available",
     "selectOption": "Select an option"
   },
+  "liveDashboard": {
+    "title": "Live Dashboard",
+    "pageTitle": "Live Dashboard",
+    "subtitle": "Real-time monitoring of concurrent users, active operations, and farm activities",
+    "live": "Live",
+    "autoRefresh": "Auto-refresh enabled",
+    "refresh": "Refresh Now",
+    "lastUpdated": "Last updated",
+    "pages": {
+      "dashboard": "Dashboard",
+      "tasks": "Tasks",
+      "parcels": "Parcels",
+      "harvests": "Harvests",
+      "inventory": "Inventory",
+      "workers": "Workers",
+      "analytics": "Analytics"
+    },
+    "summary": {
+      "concurrentUsers": "Online Users",
+      "activeOperations": "Active Operations",
+      "activeFarms": "Active Farms",
+      "activitiesLast24h": "Activities (24h)",
+      "peakUsage": "Peak Usage",
+      "mostActiveFeature": "Most Active Feature"
+    },
+    "concurrentUsers": {
+      "title": "Concurrent Users",
+      "online": "Online Now",
+      "activeNow": "Active users",
+      "activeUsers": "Active Users",
+      "noUsers": "No users currently online"
+    },
+    "operations": {
+      "title": "Active Operations",
+      "active": "active",
+      "currentOperations": "Current Operations",
+      "noOperations": "No active operations",
+      "types": {
+        "task": "Tasks",
+        "harvest": "Harvests",
+        "inventory": "Inventory",
+        "irrigation": "Irrigation",
+        "maintenance": "Maintenance"
+      },
+      "status": {
+        "in_progress": "In Progress",
+        "pending": "Pending",
+        "paused": "Paused"
+      }
+    },
+    "activities": {
+      "title": "Farm Activities",
+      "recentActivities": "Recent Activities",
+      "lastHour": "In the last hour",
+      "perFarm": "avg per farm",
+      "activityFeed": "Activity Feed",
+      "noActivities": "No recent activities"
+    },
+    "featureUsage": {
+      "title": "Feature Usage",
+      "realTime": "Real-time",
+      "mostPopular": "Most Popular",
+      "usages": "usages"
+    },
+    "heatmap": {
+      "title": "Activity Heat Map",
+      "subtitle": "Geographic distribution of farm activities",
+      "legend": "Legend",
+      "intensity": "Intensity",
+      "low": "Low",
+      "high": "High",
+      "activities": "Activities",
+      "heatmapLayer": "Heat Layer",
+      "satellite": "Satellite",
+      "street": "Street",
+      "all": "All",
+      "totalPoints": "Total Points",
+      "activeLocations": "Active locations"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
+    "liveDashboard": "Live Dashboard",
     "analyses": "Analyses",
     "soilAnalysis": "Soil Analysis",
     "parcels": "Parcels",

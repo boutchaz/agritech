@@ -1,7 +1,7 @@
-import { Controller, Get, Patch, Body, UseGuards, Request, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param, Delete, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UpdateUserProfileDto, UpdateUserRoleDto, UpdateUserStatusDto } from './dto';
 
 @ApiTags('users')
@@ -35,6 +35,80 @@ export class UsersController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async getUserOrganizations(@Request() req) {
         return this.usersService.getUserOrganizations(req.user.id);
+    }
+
+    // Tour Preferences Endpoints
+
+    @Get('me/tour-preferences')
+    @ApiOperation({ summary: 'Get current user tour preferences (completed and dismissed tours)' })
+    @ApiResponse({ status: 200, description: 'Tour preferences retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getTourPreferences(@Request() req) {
+        return this.usersService.getTourPreferences(req.user.id);
+    }
+
+    @Patch('me/tour-preferences')
+    @ApiOperation({ summary: 'Update user tour preferences' })
+    @ApiResponse({ status: 200, description: 'Tour preferences updated successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                completed_tours: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Array of completed tour IDs'
+                },
+                dismissed_tours: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Array of dismissed tour IDs'
+                }
+            }
+        }
+    })
+    async updateTourPreferences(
+        @Request() req,
+        @Body() body: { completed_tours?: string[]; dismissed_tours?: string[] }
+    ) {
+        return this.usersService.updateTourPreferences(req.user.id, body);
+    }
+
+    @Post('me/tours/:tourId/dismiss')
+    @ApiOperation({ summary: 'Dismiss a specific tour (mark as permanently skipped)' })
+    @ApiResponse({ status: 200, description: 'Tour dismissed successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async dismissTour(@Request() req, @Param('tourId') tourId: string) {
+        return this.usersService.dismissTour(req.user.id, tourId);
+    }
+
+    @Post('me/tours/:tourId/complete')
+    @ApiOperation({ summary: 'Mark a specific tour as completed' })
+    @ApiResponse({ status: 200, description: 'Tour marked as completed' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async completeTour(@Request() req, @Param('tourId') tourId: string) {
+        return this.usersService.completeTour(req.user.id, tourId);
+    }
+
+    @Post('me/tours/:tourId/reset')
+    @ApiOperation({ summary: 'Reset a specific tour (remove from completed and dismissed)' })
+    @ApiResponse({ status: 200, description: 'Tour reset successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async resetTour(@Request() req, @Param('tourId') tourId: string) {
+        return this.usersService.resetTour(req.user.id, tourId);
+    }
+
+    @Post('me/tours/reset-all')
+    @ApiOperation({ summary: 'Reset all tours (clear completed and dismissed)' })
+    @ApiResponse({ status: 200, description: 'All tours reset successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async resetAllTours(@Request() req) {
+        return this.usersService.resetAllTours(req.user.id);
     }
 
     // Organization Users Management Endpoints

@@ -1,0 +1,17 @@
+{
+  "category": "feature",
+  "description": "Build a live dashboard showing concurrent users, active operations, and current farm activities across all managed properties. Include geographic heat maps of where actions are taking place and which features are being used in real-time.\n\n**Rationale:** Provides immediate visibility into system utilization and helps identify peak usage patterns, enabling better resource allocation and support staffing decisions.",
+  "title": "Real-time Farm Activity Dashboard",
+  "status": "completed",
+  "id": "feature-1768582648363-u2dtdsm2m",
+  "descriptionHistory": [
+    {
+      "description": "Build a live dashboard showing concurrent users, active operations, and current farm activities across all managed properties. Include geographic heat maps of where actions are taking place and which features are being used in real-time.\n\n**Rationale:** Provides immediate visibility into system utilization and helps identify peak usage patterns, enabling better resource allocation and support staffing decisions.",
+      "timestamp": "2026-01-16T16:57:28.363Z",
+      "source": "initial"
+    }
+  ],
+  "branchName": "develop",
+  "startedAt": "2026-01-16T16:58:03.683Z",
+  "updatedAt": "2026-01-16T17:16:01.203Z"
+}

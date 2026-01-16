@@ -7,58 +7,87 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ReportFiltersDto, ReportType } from './dto';
+import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
 
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private adoptionService: AdoptionService,
+  ) {}
 
   /**
    * Generate report data based on type and filters
    */
-  async generateReport(organizationId: string, filters: ReportFiltersDto) {
+  async generateReport(organizationId: string, filters: ReportFiltersDto, userId?: string) {
     this.logger.log(`Generating report ${filters.report_type} for org ${organizationId}`);
 
     const supabase = this.databaseService.getAdminClient();
+
+    let reportResult: any;
 
     try {
       switch (filters.report_type) {
         // Analyses Reports
         case ReportType.ANALYSES_COMPLETE:
-          return await this.getAnalysesComplete(supabase, organizationId, filters);
+          reportResult = await this.getAnalysesComplete(supabase, organizationId, filters);
+          break;
 
         case ReportType.ANALYSES_SOIL_ONLY:
-          return await this.getAnalysesSoilOnly(supabase, organizationId, filters);
+          reportResult = await this.getAnalysesSoilOnly(supabase, organizationId, filters);
+          break;
 
         // Stock Reports
         case ReportType.STOCK_INVENTORY:
-          return await this.getStockInventory(supabase, organizationId);
+          reportResult = await this.getStockInventory(supabase, organizationId);
+          break;
 
         case ReportType.STOCK_MOVEMENTS:
-          return await this.getStockMovements(supabase, organizationId, filters);
+          reportResult = await this.getStockMovements(supabase, organizationId, filters);
+          break;
 
         // Infrastructure Reports
         case ReportType.INFRASTRUCTURE_COMPLETE:
-          return await this.getInfrastructureComplete(supabase, organizationId);
+          reportResult = await this.getInfrastructureComplete(supabase, organizationId);
+          break;
 
         // Personnel Reports
         case ReportType.EMPLOYEES:
-          return await this.getEmployees(supabase, organizationId);
+          reportResult = await this.getEmployees(supabase, organizationId);
+          break;
 
         case ReportType.DAY_LABORERS:
-          return await this.getDayLaborers(supabase, organizationId);
+          reportResult = await this.getDayLaborers(supabase, organizationId);
+          break;
 
         // Module-specific Reports
         case ReportType.FRUIT_TREES_FERTILIZATION:
-          return await this.getFruitTreesFertilization(supabase, organizationId, filters);
+          reportResult = await this.getFruitTreesFertilization(supabase, organizationId, filters);
+          break;
 
         case ReportType.FRUIT_TREES_PRUNING:
-          return await this.getFruitTreesPruning(supabase, organizationId, filters);
+          reportResult = await this.getFruitTreesPruning(supabase, organizationId, filters);
+          break;
 
         default:
           throw new BadRequestException(`Report type ${filters.report_type} not yet implemented`);
       }
+
+      // Track first report generated milestone
+      if (userId) {
+        await this.adoptionService.recordMilestone(
+          userId,
+          MilestoneType.FIRST_REPORT_GENERATED,
+          organizationId,
+          {
+            report_type: filters.report_type,
+          },
+        );
+      }
+
+      return reportResult;
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;

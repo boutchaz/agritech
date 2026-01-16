@@ -12,6 +12,7 @@ import { DeleteFarmDto } from './dto/delete-farm.dto';
 import { ImportFarmDto } from './dto/import-farm.dto';
 import { ListFarmsResponseDto, FarmDto } from './dto/list-farms.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class FarmsService {
@@ -21,6 +22,7 @@ export class FarmsService {
   constructor(
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
+    private adoptionService: AdoptionService,
   ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseServiceKey = this.configService.get<string>(
@@ -235,6 +237,18 @@ export class FarmsService {
     }
 
     this.logger.log(`Farm created successfully: ${newFarm.id}`);
+
+    // Track first farm created milestone
+    await this.adoptionService.recordMilestone(
+      userId,
+      MilestoneType.FIRST_FARM_CREATED,
+      organizationId,
+      {
+        farm_id: newFarm.id,
+        farm_name: newFarm.name,
+      },
+    );
+
     return newFarm;
   }
 

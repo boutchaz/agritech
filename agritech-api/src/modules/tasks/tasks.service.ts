@@ -8,6 +8,7 @@ import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
+import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class TasksService {
@@ -17,6 +18,7 @@ export class TasksService {
     private readonly databaseService: DatabaseService,
     private readonly accountingAutomationService: AccountingAutomationService,
     private readonly receptionBatchesService: ReceptionBatchesService,
+    private readonly adoptionService: AdoptionService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -272,6 +274,18 @@ export class TasksService {
     if (error) {
       throw new Error(`Failed to create task: ${error.message}`);
     }
+
+    // Track first task created milestone
+    await this.adoptionService.recordMilestone(
+      userId,
+      MilestoneType.FIRST_TASK_CREATED,
+      organizationId,
+      {
+        task_id: task.id,
+        task_title: task.title,
+        task_type: task.task_type,
+      },
+    );
 
     return {
       ...task,

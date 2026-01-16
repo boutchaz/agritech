@@ -66,8 +66,89 @@
     "noData": "لا توجد بيانات متاحة",
     "selectOption": "اختر خياراً"
   },
+  "liveDashboard": {
+    "title": "لوحة القيادة المباشرة",
+    "pageTitle": "لوحة القيادة المباشرة",
+    "subtitle": "مراقبة في الوقت الفعلي للمستخدمين المتصلين والعمليات النشطة والأنشطة الزراعية",
+    "live": "مباشر",
+    "autoRefresh": "التحديث التلقائي مفعل",
+    "refresh": "تحديث الآن",
+    "lastUpdated": "آخر تحديث",
+    "pages": {
+      "dashboard": "لوحة القيادة",
+      "tasks": "المهام",
+      "parcels": "القطع",
+      "harvests": "الحصاد",
+      "inventory": "المخزون",
+      "workers": "العمال",
+      "analytics": "التحليلات"
+    },
+    "summary": {
+      "concurrentUsers": "المستخدمون المتصلون",
+      "activeOperations": "العمليات النشطة",
+      "activeFarms": "المزارع النشطة",
+      "activitiesLast24h": "الأنشطة (24 ساعة)",
+      "peakUsage": "ذروة الاستخدام",
+      "mostActiveFeature": "الميزة الأكثر نشاطاً"
+    },
+    "concurrentUsers": {
+      "title": "المستخدمون المتصلون",
+      "online": "متصل الآن",
+      "activeNow": "المستخدمون النشطون",
+      "activeUsers": "المستخدمون النشطون",
+      "noUsers": "لا يوجد مستخدمون متصلون حالياً"
+    },
+    "operations": {
+      "title": "العمليات النشطة",
+      "active": "نشط",
+      "currentOperations": "العمليات الجارية",
+      "noOperations": "لا توجد عمليات نشطة",
+      "types": {
+        "task": "المهام",
+        "harvest": "الحصاد",
+        "inventory": "المخزون",
+        "irrigation": "الري",
+        "maintenance": "الصيانة"
+      },
+      "status": {
+        "in_progress": "قيد التنفيذ",
+        "pending": "معلق",
+        "paused": "متوقف مؤقتاً"
+      }
+    },
+    "activities": {
+      "title": "الأنشطة الزراعية",
+      "recentActivities": "الأنشطة الأخيرة",
+      "lastHour": "في الساعة الأخيرة",
+      "perFarm": "متوسط لكل مزرعة",
+      "activityFeed": "تدفق الأنشطة",
+      "noActivities": "لا توجد أنشطة حديثة"
+    },
+    "featureUsage": {
+      "title": "استخدام الميزات",
+      "realTime": "الوقت الفعلي",
+      "mostPopular": "الأكثر شعبية",
+      "usages": "استخدامات"
+    },
+    "heatmap": {
+      "title": "خريطة حرارية للأنشطة",
+      "subtitle": "التوزيع الجغرافي للأنشطة الزراعية",
+      "legend": "المفتاح",
+      "intensity": "الشدة",
+      "low": "منخفض",
+      "high": "عالي",
+      "activities": "الأنشطة",
+      "heatmapLayer": "طبقة حرارية",
+      "satellite": "القمر الصناعي",
+      "street": "الشارع",
+      "all": "الكل",
+      "totalPoints": "إجمالي النقاط",
+      "activeLocations": "المواقع النشطة"
+    }
+  },
   "nav": {
     "dashboard": "لوحة القيادة",
+    "liveDashboard": "لوحة القيادة المباشرة",
     "analyses": "التحاليل",
     "soilAnalysis": "تحليل التربة",
     "parcels": "القطع",

@@ -1,0 +1,32 @@
+{
+  "category": "feature",
+  "description": "Track user progression through key feature adoption paths (e.g., first login → profile setup → first operation created → first report generated). Visualize drop-off points and time-to-adoption metrics for each core feature.\n\n**Rationale:** Identifies friction points in the user journey and reveals which features drive engagement versus which are underutilized, enabling data-driven UX improvements.\n\n\nthis should be available only in backoffice not for saas project\n",
+  "title": "Feature Adoption Funnel Analytics",
+  "status": "completed",
+  "id": "feature-1768582659597-e67ovm7ar",
+  "descriptionHistory": [
+    {
+      "description": "Track user progression through key feature adoption paths (e.g., first login → profile setup → first operation created → first report generated). Visualize drop-off points and time-to-adoption metrics for each core feature.\n\n**Rationale:** Identifies friction points in the user journey and reveals which features drive engagement versus which are underutilized, enabling data-driven UX improvements.",
+      "timestamp": "2026-01-16T16:57:39.597Z",
+      "source": "initial"
+    },
+    {
+      "description": "Track user progression through key feature adoption paths (e.g., first login → profile setup → first operation created → first report generated). Visualize drop-off points and time-to-adoption metrics for each core feature.\n\n**Rationale:** Identifies friction points in the user journey and reveals which features drive engagement versus which are underutilized, enabling data-driven UX improvements.\n\n\nthis should be available only in backoffice not for saas project\n",
+      "timestamp": "2026-01-16T17:12:15.297Z",
+      "source": "edit"
+    }
+  ],
+  "branchName": "develop",
+  "startedAt": "2026-01-16T16:58:03.765Z",
+  "updatedAt": "2026-01-16T17:11:52.064Z",
+  "skipTests": false,
+  "model": "opus",
+  "thinkingLevel": "none",
+  "reasoningEffort": "none",
+  "imagePaths": [],
+  "textFilePaths": [],
+  "priority": 2,
+  "planningMode": "skip",
+  "requirePlanApproval": false,
+  "workMode": "custom"
+}

@@ -31,6 +31,7 @@ import { Route as AuthenticatedAnalyticsSubscriptionsRouteImport } from './route
 import { Route as AuthenticatedAnalyticsOverviewRouteImport } from './routes/_authenticated/analytics/overview'
 import { Route as AuthenticatedAnalyticsOrganizationsRouteImport } from './routes/_authenticated/analytics/organizations'
 import { Route as AuthenticatedAnalyticsEventsRouteImport } from './routes/_authenticated/analytics/events'
+import { Route as AuthenticatedAnalyticsAdoptionRouteImport } from './routes/_authenticated/analytics/adoption'
 import { Route as AuthenticatedAnalyticsOrganizationsOrgIdRouteImport } from './routes/_authenticated/analytics/organizations.$orgId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -160,6 +161,12 @@ const AuthenticatedAnalyticsEventsRoute =
     path: '/analytics/events',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAnalyticsAdoptionRoute =
+  AuthenticatedAnalyticsAdoptionRouteImport.update({
+    id: '/analytics/adoption',
+    path: '/analytics/adoption',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAnalyticsOrganizationsOrgIdRoute =
   AuthenticatedAnalyticsOrganizationsOrgIdRouteImport.update({
     id: '/$orgId',
@@ -171,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
   '/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
   '/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
   '/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
@@ -195,6 +203,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
   '/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
   '/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
   '/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
@@ -221,6 +230,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/jobs': typeof AuthenticatedJobsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
   '/_authenticated/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
   '/_authenticated/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
   '/_authenticated/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/jobs'
     | '/'
+    | '/analytics/adoption'
     | '/analytics/events'
     | '/analytics/organizations'
     | '/analytics/overview'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/jobs'
     | '/'
+    | '/analytics/adoption'
     | '/analytics/events'
     | '/analytics/organizations'
     | '/analytics/overview'
@@ -296,6 +308,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/jobs'
     | '/_authenticated/'
+    | '/_authenticated/analytics/adoption'
     | '/_authenticated/analytics/events'
     | '/_authenticated/analytics/organizations'
     | '/_authenticated/analytics/overview'
@@ -478,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalyticsEventsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/analytics/adoption': {
+      id: '/_authenticated/analytics/adoption'
+      path: '/analytics/adoption'
+      fullPath: '/analytics/adoption'
+      preLoaderRoute: typeof AuthenticatedAnalyticsAdoptionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/analytics/organizations/$orgId': {
       id: '/_authenticated/analytics/organizations/$orgId'
       path: '/$orgId'
@@ -506,6 +526,7 @@ const AuthenticatedAnalyticsOrganizationsRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedJobsRoute: typeof AuthenticatedJobsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAnalyticsAdoptionRoute: typeof AuthenticatedAnalyticsAdoptionRoute
   AuthenticatedAnalyticsEventsRoute: typeof AuthenticatedAnalyticsEventsRoute
   AuthenticatedAnalyticsOrganizationsRoute: typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
   AuthenticatedAnalyticsOverviewRoute: typeof AuthenticatedAnalyticsOverviewRoute
@@ -529,6 +550,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedJobsRoute: AuthenticatedJobsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAnalyticsAdoptionRoute: AuthenticatedAnalyticsAdoptionRoute,
   AuthenticatedAnalyticsEventsRoute: AuthenticatedAnalyticsEventsRoute,
   AuthenticatedAnalyticsOrganizationsRoute:
     AuthenticatedAnalyticsOrganizationsRouteWithChildren,

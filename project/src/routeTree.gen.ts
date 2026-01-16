@@ -36,6 +36,7 @@ import { Route as AuthenticatedmiscModuleIdRouteImport } from './routes/_authent
 import { Route as AuthenticatedinventoryStockRouteImport } from './routes/_authenticated/(inventory)/stock'
 import { Route as AuthenticatedinventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/reception-batches'
 import { Route as AuthenticatedinventoryInventoryRouteImport } from './routes/_authenticated/(inventory)/inventory'
+import { Route as AuthenticatedcoreLiveDashboardRouteImport } from './routes/_authenticated/(core)/live-dashboard'
 import { Route as AuthenticatedcoreDashboardRouteImport } from './routes/_authenticated/(core)/dashboard'
 import { Route as AuthenticatedcoreChatRouteImport } from './routes/_authenticated/(core)/chat'
 import { Route as AuthenticatedcoreAnalyticsRouteImport } from './routes/_authenticated/(core)/analytics'
@@ -260,6 +261,12 @@ const AuthenticatedinventoryInventoryRoute =
   AuthenticatedinventoryInventoryRouteImport.update({
     id: '/(inventory)/inventory',
     path: '/inventory',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedcoreLiveDashboardRoute =
+  AuthenticatedcoreLiveDashboardRouteImport.update({
+    id: '/(core)/live-dashboard',
+    path: '/live-dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedcoreDashboardRoute =
@@ -719,6 +726,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/chat': typeof AuthenticatedcoreChatRoute
   '/dashboard': typeof AuthenticatedcoreDashboardRoute
+  '/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/stock': typeof AuthenticatedinventoryStockRouteWithChildren
@@ -820,6 +828,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/chat': typeof AuthenticatedcoreChatRoute
   '/dashboard': typeof AuthenticatedcoreDashboardRoute
+  '/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/$moduleId': typeof AuthenticatedmiscModuleIdRoute
@@ -920,6 +929,7 @@ export interface FileRoutesById {
   '/_authenticated/(core)/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/_authenticated/(core)/chat': typeof AuthenticatedcoreChatRoute
   '/_authenticated/(core)/dashboard': typeof AuthenticatedcoreDashboardRoute
+  '/_authenticated/(core)/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/_authenticated/(inventory)/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/_authenticated/(inventory)/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/_authenticated/(inventory)/stock': typeof AuthenticatedinventoryStockRouteWithChildren
@@ -1024,6 +1034,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/chat'
     | '/dashboard'
+    | '/live-dashboard'
     | '/inventory'
     | '/reception-batches'
     | '/stock'
@@ -1125,6 +1136,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/chat'
     | '/dashboard'
+    | '/live-dashboard'
     | '/inventory'
     | '/reception-batches'
     | '/$moduleId'
@@ -1224,6 +1236,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(core)/analytics'
     | '/_authenticated/(core)/chat'
     | '/_authenticated/(core)/dashboard'
+    | '/_authenticated/(core)/live-dashboard'
     | '/_authenticated/(inventory)/inventory'
     | '/_authenticated/(inventory)/reception-batches'
     | '/_authenticated/(inventory)/stock'
@@ -1517,6 +1530,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof AuthenticatedinventoryInventoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(core)/live-dashboard': {
+      id: '/_authenticated/(core)/live-dashboard'
+      path: '/live-dashboard'
+      fullPath: '/live-dashboard'
+      preLoaderRoute: typeof AuthenticatedcoreLiveDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(core)/dashboard': {
@@ -2318,6 +2338,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
   AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
   AuthenticatedcoreDashboardRoute: typeof AuthenticatedcoreDashboardRoute
+  AuthenticatedcoreLiveDashboardRoute: typeof AuthenticatedcoreLiveDashboardRoute
   AuthenticatedinventoryInventoryRoute: typeof AuthenticatedinventoryInventoryRouteWithChildren
   AuthenticatedinventoryReceptionBatchesRoute: typeof AuthenticatedinventoryReceptionBatchesRoute
   AuthenticatedinventoryStockRoute: typeof AuthenticatedinventoryStockRouteWithChildren
@@ -2355,6 +2376,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
   AuthenticatedcoreChatRoute: AuthenticatedcoreChatRoute,
   AuthenticatedcoreDashboardRoute: AuthenticatedcoreDashboardRoute,
+  AuthenticatedcoreLiveDashboardRoute: AuthenticatedcoreLiveDashboardRoute,
   AuthenticatedinventoryInventoryRoute:
     AuthenticatedinventoryInventoryRouteWithChildren,
   AuthenticatedinventoryReceptionBatchesRoute:

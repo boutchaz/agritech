@@ -66,8 +66,89 @@
     "noData": "Aucune donnée disponible",
     "selectOption": "Sélectionnez une option"
   },
+  "liveDashboard": {
+    "title": "Tableau de bord en direct",
+    "pageTitle": "Tableau de bord en direct",
+    "subtitle": "Surveillance en temps réel des utilisateurs connectés, des opérations actives et des activités agricoles",
+    "live": "En direct",
+    "autoRefresh": "Actualisation automatique activée",
+    "refresh": "Actualiser",
+    "lastUpdated": "Dernière mise à jour",
+    "pages": {
+      "dashboard": "Tableau de bord",
+      "tasks": "Tâches",
+      "parcels": "Parcelles",
+      "harvests": "Récoltes",
+      "inventory": "Inventaire",
+      "workers": "Ouvriers",
+      "analytics": "Analytique"
+    },
+    "summary": {
+      "concurrentUsers": "Utilisateurs en ligne",
+      "activeOperations": "Opérations actives",
+      "activeFarms": "Fermes actives",
+      "activitiesLast24h": "Activités (24h)",
+      "peakUsage": "Pic d'utilisation",
+      "mostActiveFeature": "Fonctionnalité la plus active"
+    },
+    "concurrentUsers": {
+      "title": "Utilisateurs connectés",
+      "online": "En ligne maintenant",
+      "activeNow": "Utilisateurs actifs",
+      "activeUsers": "Utilisateurs actifs",
+      "noUsers": "Aucun utilisateur actuellement en ligne"
+    },
+    "operations": {
+      "title": "Opérations actives",
+      "active": "actives",
+      "currentOperations": "Opérations en cours",
+      "noOperations": "Aucune opération active",
+      "types": {
+        "task": "Tâches",
+        "harvest": "Récoltes",
+        "inventory": "Inventaire",
+        "irrigation": "Irrigation",
+        "maintenance": "Maintenance"
+      },
+      "status": {
+        "in_progress": "En cours",
+        "pending": "En attente",
+        "paused": "En pause"
+      }
+    },
+    "activities": {
+      "title": "Activités agricoles",
+      "recentActivities": "Activités récentes",
+      "lastHour": "Dans la dernière heure",
+      "perFarm": "moy. par ferme",
+      "activityFeed": "Fil d'activités",
+      "noActivities": "Aucune activité récente"
+    },
+    "featureUsage": {
+      "title": "Utilisation des fonctionnalités",
+      "realTime": "Temps réel",
+      "mostPopular": "Plus populaire",
+      "usages": "utilisations"
+    },
+    "heatmap": {
+      "title": "Carte thermique des activités",
+      "subtitle": "Distribution géographique des activités agricoles",
+      "legend": "Légende",
+      "intensity": "Intensité",
+      "low": "Faible",
+      "high": "Élevée",
+      "activities": "Activités",
+      "heatmapLayer": "Couche thermique",
+      "satellite": "Satellite",
+      "street": "Rue",
+      "all": "Tous",
+      "totalPoints": "Points totaux",
+      "activeLocations": "Emplacements actifs"
+    }
+  },
   "nav": {
     "dashboard": "Tableau de bord",
+    "liveDashboard": "Tableau de bord en direct",
     "analyses": "Analyses",
     "soilAnalysis": "Analyses de Sol",
     "parcels": "Parcelles",

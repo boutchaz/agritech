@@ -148,4 +148,47 @@ export const adminApi = {
     if (orgId) params.append('organization_id', orgId);
     return apiRequest<any[]>(`/api/v1/admin/events/daily-counts?${params}`);
   },
+
+  // Adoption Analytics
+  async getAdoptionDashboard(funnelName?: string) {
+    const params = new URLSearchParams();
+    if (funnelName) params.append('funnel', funnelName);
+    return apiRequest<any>(`/api/v1/admin/adoption/dashboard?${params}`);
+  },
+
+  async getAvailableFunnels() {
+    return apiRequest<string[]>('/api/v1/admin/adoption/funnels');
+  },
+
+  async getFunnelConversionRates(funnelName: string) {
+    return apiRequest<any[]>(`/api/v1/admin/adoption/funnels/${funnelName}/conversion-rates`);
+  },
+
+  async getTimeToMilestone(funnelName: string) {
+    return apiRequest<any[]>(`/api/v1/admin/adoption/funnels/${funnelName}/time-to-milestone`);
+  },
+
+  async getDropoffAnalysis(funnelName: string) {
+    return apiRequest<any[]>(`/api/v1/admin/adoption/funnels/${funnelName}/dropoffs`);
+  },
+
+  async getCohortAnalysis(funnelName: string, months?: number) {
+    const params = new URLSearchParams();
+    if (months) params.append('months', String(months));
+    return apiRequest<any[]>(`/api/v1/admin/adoption/funnels/${funnelName}/cohorts?${params}`);
+  },
+
+  async getDailyAdoptionTrend(funnelName: string, days?: number) {
+    const params = new URLSearchParams();
+    if (days) params.append('days', String(days));
+    return apiRequest<any[]>(`/api/v1/admin/adoption/funnels/${funnelName}/daily-trend?${params}`);
+  },
+
+  async getUserMilestones(userId: string) {
+    return apiRequest<any[]>(`/api/v1/admin/adoption/users/${userId}/milestones`);
+  },
+
+  async getMilestoneTypes() {
+    return apiRequest<string[]>('/api/v1/admin/adoption/milestone-types');
+  },
 };

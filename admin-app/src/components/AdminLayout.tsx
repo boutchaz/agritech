@@ -50,6 +50,7 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     children: [
       { label: 'Overview', href: '/analytics/overview' },
+      { label: 'User Adoption', href: '/analytics/adoption' },
       { label: 'Organizations', href: '/analytics/organizations' },
       { label: 'Subscriptions', href: '/analytics/subscriptions' },
       { label: 'Events', href: '/analytics/events' },

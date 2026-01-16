@@ -73,6 +73,7 @@ import { BiologicalAssetsModule } from './modules/biological-assets/biological-a
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
 import { QualityControlModule } from './modules/quality-control/quality-control.module';
+import { AdoptionModule } from './modules/adoption/adoption.module';
 
 @Module({
   imports: [
@@ -156,6 +157,7 @@ import { QualityControlModule } from './modules/quality-control/quality-control.
     // Admin & Analytics
     AdminModule,
     EventsModule,
+    AdoptionModule,
     MarketplaceModule,
     StrapiModule,
     DemoDataModule,
