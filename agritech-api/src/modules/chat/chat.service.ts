@@ -357,9 +357,19 @@ export class ChatService {
         `Chat generation failed: ${error.message}`,
         error.stack,
       );
-      throw new BadRequestException(
-        `Failed to generate response: ${error.message}`,
-      );
+      
+      // Provide more helpful error messages
+      let errorMessage = error.message || 'Failed to generate response';
+      
+      if (error.message?.includes('Z.ai API key') || error.message?.includes('not configured')) {
+        errorMessage = 'AI service is not properly configured. Please contact support.';
+      } else if (error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT')) {
+        errorMessage = 'The AI service took too long to respond. Please try again.';
+      } else if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
+        errorMessage = 'Unable to connect to the AI service. Please check your network connection.';
+      }
+      
+      throw new BadRequestException(errorMessage);
     }
   }
 
@@ -403,6 +413,8 @@ export class ChatService {
       month >= 9 && month <= 11 ? 'autumn' : 'winter';
 
     // Build all context in parallel
+    // CRITICAL: Always load farm and worker context for basic queries like "list farms" or "list workers"
+    // The AI routing might miss these, so we ensure they're always available
     const [
       organizationContext,
       farmContext,
@@ -416,23 +428,39 @@ export class ChatService {
       productionIntelligenceContext,
     ] = await Promise.all([
       this.getOrganizationContext(client, organizationId),
-      contextNeeds.farm
-        ? this.getFarmContext(client, organizationId)
-        : Promise.resolve(null),
-      contextNeeds.worker
-        ? this.getWorkerContext(client, organizationId)
-        : Promise.resolve(null),
+      // Always load farm context - it's needed for basic queries
+      this.getFarmContext(client, organizationId).catch(err => {
+        this.logger.error(`Failed to load farm context: ${err.message}`, err.stack);
+        return null;
+      }),
+      // Always load worker context - it's needed for basic queries
+      this.getWorkerContext(client, organizationId).catch(err => {
+        this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
+        return null;
+      }),
       contextNeeds.accounting
-        ? this.getAccountingContext(client, organizationId)
+        ? this.getAccountingContext(client, organizationId).catch(err => {
+            this.logger.warn(`Failed to load accounting context: ${err.message}`);
+            return null;
+          })
         : Promise.resolve(null),
       contextNeeds.inventory
-        ? this.getInventoryContext(client, organizationId)
+        ? this.getInventoryContext(client, organizationId).catch(err => {
+            this.logger.warn(`Failed to load inventory context: ${err.message}`);
+            return null;
+          })
         : Promise.resolve(null),
       contextNeeds.production
-        ? this.getProductionContext(client, organizationId)
+        ? this.getProductionContext(client, organizationId).catch(err => {
+            this.logger.warn(`Failed to load production context: ${err.message}`);
+            return null;
+          })
         : Promise.resolve(null),
       contextNeeds.supplierCustomer
-        ? this.getSupplierCustomerContext(client, organizationId)
+        ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
+            this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
+            return null;
+          })
         : Promise.resolve(null),
       (contextNeeds.satellite || contextNeeds.weather)
         ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
@@ -453,6 +481,9 @@ export class ChatService {
           })
         : Promise.resolve(null),
     ]);
+    
+    // Log what was loaded for debugging
+    this.logger.log(`Context loaded - Farms: ${farmContext?.farms_count || 0}, Workers: ${workerContext?.active_workers_count || 0}, Parcels: ${farmContext?.parcels_count || 0}`);
 
     return {
       organization: organizationContext,
@@ -670,388 +701,552 @@ Determine which modules are relevant based on the query's intent and content. Re
     client: any,
     organizationId: string,
   ): Promise<FarmContext> {
-    // Get farms
-    const { data: farms } = await client
-      .from('farms')
-      .select('id, name, location, size, size_unit, is_active, status')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true);
+    try {
+      // Get farms - include all farms, not just active ones
+      const { data: farms, error: farmsError } = await client
+        .from('farms')
+        .select('id, name, location, size, size_unit, is_active, status')
+        .eq('organization_id', organizationId);
+      
+      if (farmsError) {
+        this.logger.error(`Error fetching farms: ${farmsError.message}`);
+      }
 
-    // Get parcels summary with soil and irrigation info
-    const { data: parcels } = await client
-      .from('parcels')
-      .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(50);
+      // Get parcels summary with soil and irrigation info - include all parcels
+      const { data: parcels, error: parcelsError } = await client
+        .from('parcels')
+        .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type')
+        .eq('organization_id', organizationId)
+        .limit(50);
+      
+      if (parcelsError) {
+        this.logger.error(`Error fetching parcels: ${parcelsError.message}`);
+      }
 
-    // Get crop cycles with detailed information
-    const { data: cropCycles } = await client
-      .from('crop_cycles')
-      .select(`
-        id,
-        cycle_name,
-        crop_type,
-        variety_name,
-        status,
-        planting_date,
-        expected_harvest_date_start,
-        expected_harvest_date_end,
-        planted_area_ha,
-        parcel_id,
-        farm_id
-      `)
-      .eq('organization_id', organizationId)
-      .in('status', ['active', 'planned'])
-      .order('planting_date', { ascending: false })
-      .limit(20);
+      // Get crop cycles with detailed information - include all statuses
+      const { data: cropCycles, error: cropCyclesError } = await client
+        .from('crop_cycles')
+        .select(`
+          id,
+          cycle_name,
+          crop_type,
+          variety_name,
+          status,
+          planting_date,
+          expected_harvest_date_start,
+          expected_harvest_date_end,
+          planted_area_ha,
+          parcel_id,
+          farm_id
+        `)
+        .eq('organization_id', organizationId)
+        .order('planting_date', { ascending: false })
+        .limit(20);
+      
+      if (cropCyclesError) {
+        this.logger.error(`Error fetching crop cycles: ${cropCyclesError.message}`);
+      }
 
-    // Get structures
-    const { data: structures } = await client
-      .from('structures')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .limit(20);
+      // Get structures
+      const { data: structures, error: structuresError } = await client
+        .from('structures')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .limit(20);
+      
+      if (structuresError) {
+        this.logger.error(`Error fetching structures: ${structuresError.message}`);
+      }
 
-    return {
-      farms_count: farms?.length || 0,
-      farms:
-        farms?.map((f: any) => ({
-          id: f.id,
-          name: f.name,
-          area: f.size || 0,
-          location: f.location,
-        })) || [],
-      parcels_count: parcels?.length || 0,
-      parcels:
-        parcels?.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          area: `${p.area} ${p.area_unit}`,
-          crop: p.crop_type || 'N/A',
-          farm_id: p.farm_id,
-          soil_type: p.soil_type,
-          irrigation_type: p.irrigation_type,
-        })) || [],
-      active_crop_cycles: cropCycles?.length || 0,
-      crop_cycles:
-        cropCycles?.map((cc: any) => ({
-          id: cc.id,
-          cycle_name: cc.cycle_name,
-          crop_type: cc.crop_type,
-          variety_name: cc.variety_name,
-          status: cc.status,
-          planting_date: cc.planting_date,
-          expected_harvest_start: cc.expected_harvest_date_start,
-          expected_harvest_end: cc.expected_harvest_date_end,
-          planted_area_ha: cc.planted_area_ha,
-          parcel_id: cc.parcel_id,
-          farm_id: cc.farm_id,
-        })) || [],
-      structures_count: structures?.length || 0,
-    };
+      this.logger.log(`Loaded farm context: ${farms?.length || 0} farms, ${parcels?.length || 0} parcels, ${cropCycles?.length || 0} crop cycles`);
+
+      return {
+        farms_count: farms?.length || 0,
+        farms:
+          farms?.map((f: any) => ({
+            id: f.id,
+            name: f.name,
+            area: f.size || 0,
+            location: f.location,
+          })) || [],
+        parcels_count: parcels?.length || 0,
+        parcels:
+          parcels?.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            area: `${p.area} ${p.area_unit}`,
+            crop: p.crop_type || 'N/A',
+            farm_id: p.farm_id,
+            soil_type: p.soil_type,
+            irrigation_type: p.irrigation_type,
+          })) || [],
+        active_crop_cycles: cropCycles?.filter((cc: any) => cc.status === 'active' || cc.status === 'planned').length || 0,
+        crop_cycles:
+          cropCycles?.map((cc: any) => ({
+            id: cc.id,
+            cycle_name: cc.cycle_name,
+            crop_type: cc.crop_type,
+            variety_name: cc.variety_name,
+            status: cc.status,
+            planting_date: cc.planting_date,
+            expected_harvest_start: cc.expected_harvest_date_start,
+            expected_harvest_end: cc.expected_harvest_date_end,
+            planted_area_ha: cc.planted_area_ha,
+            parcel_id: cc.parcel_id,
+            farm_id: cc.farm_id,
+          })) || [],
+        structures_count: structures?.length || 0,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getFarmContext: ${error.message}`, error.stack);
+      // Return empty context instead of failing
+      return {
+        farms_count: 0,
+        farms: [],
+        parcels_count: 0,
+        parcels: [],
+        active_crop_cycles: 0,
+        crop_cycles: [],
+        structures_count: 0,
+      };
+    }
   }
 
   private async getWorkerContext(
     client: any,
     organizationId: string,
   ): Promise<WorkerContext> {
-    const { data: workers } = await client
-      .from('workers')
-      .select('id, first_name, last_name, worker_type, is_active, farm_id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(50);
+    try {
+      // Get all workers, not just active ones
+      const { data: workers, error: workersError } = await client
+        .from('workers')
+        .select('id, first_name, last_name, worker_type, is_active, farm_id')
+        .eq('organization_id', organizationId)
+        .limit(50);
+      
+      if (workersError) {
+        this.logger.error(`Error fetching workers: ${workersError.message}`);
+      }
 
-    const { data: tasks } = await client
-      .from('tasks')
-      .select('id, title, status, task_type, priority')
-      .eq('organization_id', organizationId)
-      .in('status', ['pending', 'assigned', 'in_progress'])
-      .limit(50);
+      const { data: tasks, error: tasksError } = await client
+        .from('tasks')
+        .select('id, title, status, task_type, priority')
+        .eq('organization_id', organizationId)
+        .in('status', ['pending', 'assigned', 'in_progress'])
+        .limit(50);
+      
+      if (tasksError) {
+        this.logger.error(`Error fetching tasks: ${tasksError.message}`);
+      }
 
-    const { data: workRecords } = await client
-      .from('work_records')
-      .select('id, work_date, amount_paid, payment_status')
-      .eq('organization_id', organizationId)
-      .gte(
-        'work_date',
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .limit(50);
+      const { data: workRecords, error: workRecordsError } = await client
+        .from('work_records')
+        .select('id, work_date, amount_paid, payment_status')
+        .eq('organization_id', organizationId)
+        .gte(
+          'work_date',
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .limit(50);
+      
+      if (workRecordsError) {
+        this.logger.error(`Error fetching work records: ${workRecordsError.message}`);
+      }
 
-    return {
-      active_workers_count: workers?.length || 0,
-      workers:
-        workers?.map((w: any) => ({
-          id: w.id,
-          name: `${w.first_name} ${w.last_name}`,
-          type: w.worker_type,
-          farm_id: w.farm_id,
-        })) || [],
-      pending_tasks_count: tasks?.length || 0,
-      tasks:
-        tasks?.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          type: t.task_type,
-        })) || [],
-      recent_work_records_count: workRecords?.length || 0,
-    };
+      this.logger.log(`Loaded worker context: ${workers?.length || 0} workers, ${tasks?.length || 0} tasks`);
+
+      return {
+        active_workers_count: workers?.filter((w: any) => w.is_active).length || 0,
+        workers:
+          workers?.map((w: any) => ({
+            id: w.id,
+            name: `${w.first_name} ${w.last_name}`,
+            type: w.worker_type,
+            farm_id: w.farm_id,
+          })) || [],
+        pending_tasks_count: tasks?.length || 0,
+        tasks:
+          tasks?.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            type: t.task_type,
+          })) || [],
+        recent_work_records_count: workRecords?.length || 0,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getWorkerContext: ${error.message}`, error.stack);
+      // Return empty context instead of failing
+      return {
+        active_workers_count: 0,
+        workers: [],
+        pending_tasks_count: 0,
+        tasks: [],
+        recent_work_records_count: 0,
+      };
+    }
   }
 
   private async getAccountingContext(
     client: any,
     organizationId: string,
   ): Promise<AccountingContext> {
-    // Get chart of accounts summary - FIXED: account_name → name
-    const { data: accounts } = await client
-      .from('accounts')
-      .select('id, name, account_type')
-      .eq('organization_id', organizationId)
-      .limit(50);
+    try {
+      // Get chart of accounts summary
+      const { data: accounts, error: accountsError } = await client
+        .from('accounts')
+        .select('id, name, account_type')
+        .eq('organization_id', organizationId)
+        .limit(50);
+      
+      if (accountsError) {
+        this.logger.error(`Error fetching accounts: ${accountsError.message}`);
+      }
 
-    // Get recent invoices
-    const { data: invoices } = await client
-      .from('invoices')
-      .select(
-        'id, invoice_number, invoice_type, status, grand_total, invoice_date',
-      )
-      .eq('organization_id', organizationId)
-      .gte(
-        'invoice_date',
-        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('invoice_date', { ascending: false })
-      .limit(30);
+      // Get recent invoices
+      const { data: invoices, error: invoicesError } = await client
+        .from('invoices')
+        .select(
+          'id, invoice_number, invoice_type, status, grand_total, invoice_date',
+        )
+        .eq('organization_id', organizationId)
+        .gte(
+          'invoice_date',
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('invoice_date', { ascending: false })
+        .limit(30);
+      
+      if (invoicesError) {
+        this.logger.error(`Error fetching invoices: ${invoicesError.message}`);
+      }
 
-    // Get recent payments - FIXED: payments → accounting_payments
-    const { data: payments } = await client
-      .from('accounting_payments')
-      .select('id, payment_date, amount, payment_method, status')
-      .eq('organization_id', organizationId)
-      .gte(
-        'payment_date',
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('payment_date', { ascending: false })
-      .limit(20);
+      // Get recent payments
+      const { data: payments, error: paymentsError } = await client
+        .from('accounting_payments')
+        .select('id, payment_date, amount, payment_method, status')
+        .eq('organization_id', organizationId)
+        .gte(
+          'payment_date',
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('payment_date', { ascending: false })
+        .limit(20);
+      
+      if (paymentsError) {
+        this.logger.error(`Error fetching payments: ${paymentsError.message}`);
+      }
 
-    // Get fiscal year - FIXED: is_active → is_current
-    const { data: fiscalYear } = await client
-      .from('fiscal_years')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_current', true)
-      .maybeSingle();
+      // Get fiscal year
+      const { data: fiscalYear, error: fiscalYearError } = await client
+        .from('fiscal_years')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_current', true)
+        .maybeSingle();
+      
+      if (fiscalYearError) {
+        this.logger.error(`Error fetching fiscal year: ${fiscalYearError.message}`);
+      }
 
-    return {
-      accounts_count: accounts?.length || 0,
-      accounts:
-        accounts?.map((a: any) => ({
-          id: a.id,
-          name: a.name,
-          type: a.account_type,
-          balance: 0, // Balance is calculated, not stored
-        })) || [],
-      recent_invoices_count: invoices?.length || 0,
-      invoices:
-        invoices?.map((i: any) => ({
-          number: i.invoice_number,
-          type: i.invoice_type,
-          status: i.status,
-          total: i.grand_total,
-          date: i.invoice_date,
-        })) || [],
-      recent_payments_count: payments?.length || 0,
-      payments:
-        payments?.map((p: any) => ({
-          date: p.payment_date,
-          amount: p.amount,
-          method: p.payment_method,
-          status: p.status,
-        })) || [],
-      current_fiscal_year: fiscalYear
-        ? {
-            name: fiscalYear.name,
-            start_date: fiscalYear.start_date,
-            end_date: fiscalYear.end_date,
-          }
-        : null,
-    };
+      this.logger.log(`Loaded accounting context: ${accounts?.length || 0} accounts, ${invoices?.length || 0} invoices, ${payments?.length || 0} payments`);
+
+      return {
+        accounts_count: accounts?.length || 0,
+        accounts:
+          accounts?.map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            type: a.account_type,
+            balance: 0, // Balance is calculated, not stored
+          })) || [],
+        recent_invoices_count: invoices?.length || 0,
+        invoices:
+          invoices?.map((i: any) => ({
+            number: i.invoice_number,
+            type: i.invoice_type,
+            status: i.status,
+            total: i.grand_total,
+            date: i.invoice_date,
+          })) || [],
+        recent_payments_count: payments?.length || 0,
+        payments:
+          payments?.map((p: any) => ({
+            date: p.payment_date,
+            amount: p.amount,
+            method: p.payment_method,
+            status: p.status,
+          })) || [],
+        current_fiscal_year: fiscalYear
+          ? {
+              name: fiscalYear.name,
+              start_date: fiscalYear.start_date,
+              end_date: fiscalYear.end_date,
+            }
+          : null,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getAccountingContext: ${error.message}`, error.stack);
+      return {
+        accounts_count: 0,
+        accounts: [],
+        recent_invoices_count: 0,
+        invoices: [],
+        recent_payments_count: 0,
+        payments: [],
+        current_fiscal_year: null,
+      };
+    }
   }
 
   private async getInventoryContext(
     client: any,
     organizationId: string,
   ): Promise<InventoryContext> {
-    // FIXED: item_name, item_code, stock_uom (removed current_stock as it's calculated)
-    const { data: items } = await client
-      .from('items')
-      .select('id, item_name, item_code, default_unit')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(50);
+    try {
+      // Get all items, not just active ones
+      const { data: items, error: itemsError } = await client
+        .from('items')
+        .select('id, item_name, item_code, default_unit')
+        .eq('organization_id', organizationId)
+        .limit(50);
+      
+      if (itemsError) {
+        this.logger.error(`Error fetching items: ${itemsError.message}`);
+      }
 
-    const { data: warehouses } = await client
-      .from('warehouses')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true);
+      // Get all warehouses, not just active ones
+      const { data: warehouses, error: warehousesError } = await client
+        .from('warehouses')
+        .select('*')
+        .eq('organization_id', organizationId);
+      
+      if (warehousesError) {
+        this.logger.error(`Error fetching warehouses: ${warehousesError.message}`);
+      }
 
-    const { data: stockEntries } = await client
-      .from('stock_entries')
-      .select('id, entry_type, entry_date')
-      .eq('organization_id', organizationId)
-      .gte(
-        'entry_date',
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('entry_date', { ascending: false })
-      .limit(20);
+      const { data: stockEntries, error: stockEntriesError } = await client
+        .from('stock_entries')
+        .select('id, entry_type, entry_date')
+        .eq('organization_id', organizationId)
+        .gte(
+          'entry_date',
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('entry_date', { ascending: false })
+        .limit(20);
+      
+      if (stockEntriesError) {
+        this.logger.error(`Error fetching stock entries: ${stockEntriesError.message}`);
+      }
 
-    return {
-      items_count: items?.length || 0,
-      items:
-        items?.map((i: any) => ({
-          id: i.id,
-          name: i.item_name,
-          code: i.item_code,
-          stock: 0, // Stock is calculated from stock_entries, not stored
-          unit: i.default_unit,
-        })) || [],
-      warehouses_count: warehouses?.length || 0,
-      warehouses:
-        warehouses?.map((w: any) => ({
-          id: w.id,
-          name: w.name,
-          location: w.location,
-        })) || [],
-      recent_stock_movements_count: stockEntries?.length || 0,
-    };
+      this.logger.log(`Loaded inventory context: ${items?.length || 0} items, ${warehouses?.length || 0} warehouses`);
+
+      return {
+        items_count: items?.length || 0,
+        items:
+          items?.map((i: any) => ({
+            id: i.id,
+            name: i.item_name,
+            code: i.item_code,
+            stock: 0, // Stock is calculated from stock_entries, not stored
+            unit: i.default_unit,
+          })) || [],
+        warehouses_count: warehouses?.length || 0,
+        warehouses:
+          warehouses?.map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            location: w.location,
+          })) || [],
+        recent_stock_movements_count: stockEntries?.length || 0,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getInventoryContext: ${error.message}`, error.stack);
+      return {
+        items_count: 0,
+        items: [],
+        warehouses_count: 0,
+        warehouses: [],
+        recent_stock_movements_count: 0,
+      };
+    }
   }
 
   private async getProductionContext(
     client: any,
     organizationId: string,
   ): Promise<ProductionContext> {
-    // FIXED: Removed crop_type (table has crop_id instead), added more accurate columns
-    const { data: harvests } = await client
-      .from('harvest_records')
-      .select('id, harvest_date, quantity, unit, quality_grade, status')
-      .eq('organization_id', organizationId)
-      .gte(
-        'harvest_date',
-        new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('harvest_date', { ascending: false })
-      .limit(30);
+    try {
+      const { data: harvests, error: harvestsError } = await client
+        .from('harvest_records')
+        .select('id, harvest_date, quantity, unit, quality_grade, status')
+        .eq('organization_id', organizationId)
+        .gte(
+          'harvest_date',
+          new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('harvest_date', { ascending: false })
+        .limit(30);
+      
+      if (harvestsError) {
+        this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
+      }
 
-    // FIXED: quality_control → quality_inspections
-    const { data: qualityChecks } = await client
-      .from('quality_inspections')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .gte(
-        'inspection_date',
-        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('inspection_date', { ascending: false })
-      .limit(20);
+      const { data: qualityChecks, error: qualityChecksError } = await client
+        .from('quality_inspections')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte(
+          'inspection_date',
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('inspection_date', { ascending: false })
+        .limit(20);
+      
+      if (qualityChecksError) {
+        this.logger.error(`Error fetching quality checks: ${qualityChecksError.message}`);
+      }
 
-    const { data: deliveries } = await client
-      .from('deliveries')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .gte(
-        'delivery_date',
-        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-      )
-      .order('delivery_date', { ascending: false })
-      .limit(20);
+      const { data: deliveries, error: deliveriesError } = await client
+        .from('deliveries')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte(
+          'delivery_date',
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('delivery_date', { ascending: false })
+        .limit(20);
+      
+      if (deliveriesError) {
+        this.logger.error(`Error fetching deliveries: ${deliveriesError.message}`);
+      }
 
-    return {
-      recent_harvests_count: harvests?.length || 0,
-      harvests:
-        harvests?.map((h: any) => ({
-          date: h.harvest_date,
-          crop: 'N/A', // Crop info requires join with crops table
-          quantity: `${h.quantity} ${h.unit}`,
-          quality: h.quality_grade || 'N/A',
-          status: h.status,
-        })) || [],
-      recent_quality_checks_count: qualityChecks?.length || 0,
-      recent_deliveries_count: deliveries?.length || 0,
-    };
+      this.logger.log(`Loaded production context: ${harvests?.length || 0} harvests, ${qualityChecks?.length || 0} quality checks, ${deliveries?.length || 0} deliveries`);
+
+      return {
+        recent_harvests_count: harvests?.length || 0,
+        harvests:
+          harvests?.map((h: any) => ({
+            date: h.harvest_date,
+            crop: 'N/A', // Crop info requires join with crops table
+            quantity: `${h.quantity} ${h.unit}`,
+            quality: h.quality_grade || 'N/A',
+            status: h.status,
+          })) || [],
+        recent_quality_checks_count: qualityChecks?.length || 0,
+        recent_deliveries_count: deliveries?.length || 0,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getProductionContext: ${error.message}`, error.stack);
+      return {
+        recent_harvests_count: 0,
+        harvests: [],
+        recent_quality_checks_count: 0,
+        recent_deliveries_count: 0,
+      };
+    }
   }
 
   private async getSupplierCustomerContext(
     client: any,
     organizationId: string,
   ): Promise<SupplierCustomerContext> {
-    const { data: suppliers } = await client
-      .from('suppliers')
-      .select('id, name, supplier_type, is_active')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(30);
+    try {
+      // Get all suppliers, not just active ones
+      const { data: suppliers, error: suppliersError } = await client
+        .from('suppliers')
+        .select('id, name, supplier_type, is_active')
+        .eq('organization_id', organizationId)
+        .limit(30);
+      
+      if (suppliersError) {
+        this.logger.error(`Error fetching suppliers: ${suppliersError.message}`);
+      }
 
-    const { data: customers } = await client
-      .from('customers')
-      .select('id, name, customer_type, is_active')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(30);
+      // Get all customers, not just active ones
+      const { data: customers, error: customersError } = await client
+        .from('customers')
+        .select('id, name, customer_type, is_active')
+        .eq('organization_id', organizationId)
+        .limit(30);
+      
+      if (customersError) {
+        this.logger.error(`Error fetching customers: ${customersError.message}`);
+      }
 
-    const { data: salesOrders } = await client
-      .from('sales_orders')
-      .select('id, order_number, order_date, total_amount, status')
-      .eq('organization_id', organizationId)
-      .in('status', ['draft', 'confirmed', 'partial'])
-      .order('order_date', { ascending: false })
-      .limit(20);
+      const { data: salesOrders, error: salesOrdersError } = await client
+        .from('sales_orders')
+        .select('id, order_number, order_date, total_amount, status')
+        .eq('organization_id', organizationId)
+        .in('status', ['draft', 'confirmed', 'partial'])
+        .order('order_date', { ascending: false })
+        .limit(20);
+      
+      if (salesOrdersError) {
+        this.logger.error(`Error fetching sales orders: ${salesOrdersError.message}`);
+      }
 
-    const { data: purchaseOrders } = await client
-      .from('purchase_orders')
-      .select('id, order_number, order_date, total_amount, status')
-      .eq('organization_id', organizationId)
-      .in('status', ['draft', 'confirmed', 'partial'])
-      .order('order_date', { ascending: false })
-      .limit(20);
+      const { data: purchaseOrders, error: purchaseOrdersError } = await client
+        .from('purchase_orders')
+        .select('id, order_number, order_date, total_amount, status')
+        .eq('organization_id', organizationId)
+        .in('status', ['draft', 'confirmed', 'partial'])
+        .order('order_date', { ascending: false })
+        .limit(20);
+      
+      if (purchaseOrdersError) {
+        this.logger.error(`Error fetching purchase orders: ${purchaseOrdersError.message}`);
+      }
 
-    return {
-      suppliers_count: suppliers?.length || 0,
-      suppliers:
-        suppliers?.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          type: s.supplier_type,
-        })) || [],
-      customers_count: customers?.length || 0,
-      customers:
-        customers?.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          type: c.customer_type,
-        })) || [],
-      pending_sales_orders_count: salesOrders?.length || 0,
-      sales_orders:
-        salesOrders?.map((o: any) => ({
-          number: o.order_number,
-          date: o.order_date,
-          total: o.total_amount,
-          status: o.status,
-        })) || [],
-      pending_purchase_orders_count: purchaseOrders?.length || 0,
-      purchase_orders:
-        purchaseOrders?.map((o: any) => ({
-          number: o.order_number,
-          date: o.order_date,
-          total: o.total_amount,
-          status: o.status,
-        })) || [],
-    };
+      this.logger.log(`Loaded supplier/customer context: ${suppliers?.length || 0} suppliers, ${customers?.length || 0} customers`);
+
+      return {
+        suppliers_count: suppliers?.length || 0,
+        suppliers:
+          suppliers?.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            type: s.supplier_type,
+          })) || [],
+        customers_count: customers?.length || 0,
+        customers:
+          customers?.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            type: c.customer_type,
+          })) || [],
+        pending_sales_orders_count: salesOrders?.length || 0,
+        sales_orders:
+          salesOrders?.map((o: any) => ({
+            number: o.order_number,
+            date: o.order_date,
+            total: o.total_amount,
+            status: o.status,
+          })) || [],
+        pending_purchase_orders_count: purchaseOrders?.length || 0,
+        purchase_orders:
+          purchaseOrders?.map((o: any) => ({
+            number: o.order_number,
+            date: o.order_date,
+            total: o.total_amount,
+            status: o.status,
+          })) || [],
+      };
+    } catch (error) {
+      this.logger.error(`Error in getSupplierCustomerContext: ${error.message}`, error.stack);
+      return {
+        suppliers_count: 0,
+        suppliers: [],
+        customers_count: 0,
+        customers: [],
+        pending_sales_orders_count: 0,
+        sales_orders: [],
+        pending_purchase_orders_count: 0,
+        purchase_orders: [],
+      };
+    }
   }
 
   private async getSatelliteWeatherContext(
@@ -1465,21 +1660,32 @@ Determine which modules are relevant based on the query's intent and content. Re
 - Consider seasonal factors and phenological stages in all recommendations
 - Compare performance across parcels, years, or benchmarks
 - Prioritize recommendations based on urgency and impact on yield/quality
+- **CRITICAL: When the user has no farm data, act as a helpful onboarding assistant and agricultural advisor**
 
 **Response Guidelines:**
+- **BE CONCISE AND DIRECT** - Answer the question directly, don't write essays
+- For simple queries like "list farms", "list workers", "show invoices" - provide a brief, direct answer first
+- If there's no data, say so briefly (e.g., "You have 0 farms registered" or "No workers found")
+- Only provide detailed explanations if the user asks follow-up questions or requests more information
 - Always base your responses on the provided context data
 - When providing recommendations, include:
   * Priority level (high/medium/low)
   * Category (irrigation, fertilization, soil, pruning, pest-control, general)
   * Specific dosages, methods, and timing guidance
   * Expected impact on yield/quality
-- If you don't have sufficient data, clearly state what information is missing and provide general best practices
+- **When there's no data:**
+  * Give a brief, direct answer first (e.g., "You have 0 farms" or "No workers registered")
+  * Then offer ONE sentence about how to add data (e.g., "You can add farms through the Farm Management module")
+  * Don't repeat the same information multiple times
+  * Don't write long paragraphs explaining what they need to do - be concise
+- If you don't have sufficient data, clearly state what information is missing briefly
 - Use professional agricultural terminology while remaining accessible
-- Be specific with references to actual data (parcel names, amounts, dates, indices)
+- Be specific with references to actual data (parcel names, amounts, dates, indices) when available
 - For complex analyses, break down your response clearly
 - Consider the current season and phenological stages when making timing recommendations
 - When interpreting satellite indices, relate them to recent farm tasks, weather, and crop stage
-- If the user asks for something that requires actions you cannot perform, explain what needs to be done`;
+- If the user asks for something that requires actions you cannot perform, explain what needs to be done briefly
+- **Remember: Users want quick answers, not long explanations unless they specifically ask for details**`;
   }
 
   private buildUserPrompt(
@@ -1545,7 +1751,7 @@ Timezone: ${context.organization.timezone}
 ====================================================
 FARM DATA
 ====================================================
-${context.farms ? `
+${context.farms && context.farms.farms_count > 0 ? `
 Farms: ${context.farms.farms_count}
 ${context.farms.farms.map((f) => `- ${f.name} (${f.area} ha${f.location ? `, ${f.location}` : ''})`).join('\n')}
 
@@ -1559,7 +1765,15 @@ Crop Cycle Details:
 ${context.farms.crop_cycles.slice(0, 10).map((cc) => `- ${cc.cycle_name} (${cc.crop_type}${cc.variety_name ? `, ${cc.variety_name}` : ''}): Status ${cc.status}, Planted ${cc.planting_date || 'N/A'}, Expected harvest ${cc.expected_harvest_start || 'N/A'} - ${cc.expected_harvest_end || 'N/A'}, Area: ${cc.planted_area_ha || 'N/A'} ha`).join('\n')}
 ` : ''}
 Structures: ${context.farms.structures_count}
-` : 'No farm data available.'}
+` : `⚠️ IMPORTANT: This organization has NO farm data registered yet (0 farms, 0 parcels).
+
+**CRITICAL: Be CONCISE and DIRECT.**
+- For simple queries like "list farms" or "list workers", answer directly: "You have 0 farms" or "No farms found"
+- Don't write long paragraphs - keep it brief
+- Only provide detailed explanations if the user explicitly asks for them
+- Don't repeat the same information multiple times
+- One sentence about how to add data is enough (e.g., "You can add farms through the Farm Management module")
+- Answer the question first, then optionally offer help if relevant`}
 
 ====================================================
 SATELLITE & WEATHER DATA
@@ -1698,13 +1912,26 @@ YOUR RESPONSE
 ====================================================
 Based on the above context, current date (${context.currentDate}), season (${context.currentSeason}), and the user's question, provide a helpful, accurate response with expert agricultural insights. 
 
+**CRITICAL INSTRUCTIONS:**
+${(!context.farms || context.farms.farms_count === 0) ? `
+⚠️ THIS USER HAS NO FARM DATA. You MUST:
+1. **Answer directly and concisely first** - If they ask "list farms", say "You have 0 farms registered" or "No farms found"
+2. **Don't write long paragraphs** - Keep responses brief unless they ask for details
+3. **Don't repeat yourself** - If you've already explained something, don't explain it again
+4. **Be helpful but concise** - One sentence about how to add data is enough (e.g., "You can add farms through the Farm Management module")
+5. **Only provide detailed guidance if they explicitly ask for it** - Don't assume they want a full tutorial
+6. Answer their questions directly - if they ask "list farms", list them (or say there are none), don't write an essay
+` : `
 When providing recommendations:
 - Include priority level (high/medium/low), category, specific dosages/methods, timing guidance, and expected impact
 - Consider the current season and phenological stages
 - Interpret satellite indices in context of recent tasks, weather, and crop stage
 - Reference specific data points (parcel names, dates, values)
 - If data is missing, acknowledge it and provide general best practices
-- For urgent issues (alerts, underperformance), prioritize actionable mitigation strategies`;
+- For urgent issues (alerts, underperformance), prioritize actionable mitigation strategies
+`}
+
+**REMEMBER: Users want quick, direct answers. Be concise unless they ask for details.**`;
   }
 
   private summarizeContext(context: BuiltContext) {
