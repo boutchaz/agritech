@@ -121,12 +121,19 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
   });
 
   const isAIReport = (report: GeneratedReport): boolean => {
-    return report.metadata?.type === 'ai_report' && !!report.metadata?.sections;
+    return report.metadata?.type === 'ai_report' || report.template_id === 'ai-generated';
+  };
+
+  const getAIReportSections = (report: GeneratedReport) => {
+    return report.metadata?.sections;
   };
 
   const handleViewAIReport = (report: GeneratedReport) => {
-    if (isAIReport(report)) {
+    const sections = getAIReportSections(report);
+    if (sections) {
       setViewingAIReport(report);
+    } else {
+      toast.error('Ce rapport IA ne contient pas de données de sections. Il a peut-être été généré avec une ancienne version.');
     }
   };
 
@@ -331,6 +338,11 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                             month: 'long',
                             day: 'numeric'
                           })}
+                          {' à '}
+                          {new Date(report.generated_at).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </span>
                       </span>
                       <span className="flex items-center space-x-1">
@@ -366,7 +378,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
         )}
       </div>
 
-      {viewingAIReport && viewingAIReport.metadata?.sections && (
+      {viewingAIReport && getAIReportSections(viewingAIReport) && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
           <div className="min-h-screen px-4 py-8">
             <div className="relative max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
@@ -379,10 +391,10 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   <AIReportExport
-                    sections={viewingAIReport.metadata.sections}
+                    sections={getAIReportSections(viewingAIReport)!}
                     parcelName={parcelData?.name || 'Parcelle'}
                     generatedAt={viewingAIReport.generated_at}
-                    provider={viewingAIReport.metadata.provider || 'unknown'}
+                    provider={viewingAIReport.metadata?.provider || 'unknown'}
                   />
                   <button
                     onClick={() => setViewingAIReport(null)}
@@ -394,7 +406,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <AIReportPreview
-                  sections={viewingAIReport.metadata.sections}
+                  sections={getAIReportSections(viewingAIReport)!}
                   generatedAt={viewingAIReport.generated_at}
                 />
               </div>

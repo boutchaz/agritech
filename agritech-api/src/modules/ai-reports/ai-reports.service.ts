@@ -1419,7 +1419,7 @@ export class AIReportsService {
       .insert({
         parcel_id: parcelId,
         template_id: 'ai-generated',
-        title: `Rapport IA - ${aggregatedData.parcel.name} - ${now.toLocaleDateString('fr-FR')}`,
+        title: `Rapport IA - ${aggregatedData.parcel.name} - ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
         status: 'completed',
         generated_at: now.toISOString(),
         generated_by: userId,

@@ -19,6 +19,42 @@ export interface ReportMetadata {
   includeCharts?: boolean;
   includeImages?: boolean;
   customFields?: Record<string, string | number | boolean>;
+  html_content?: string;
+  type?: 'ai_report' | 'traditional';
+  provider?: string;
+  sections?: AIReportSections;
+  health_score?: number;
+  recommendations_count?: number;
+  risk_alerts_count?: number;
+}
+
+export interface AIReportSections {
+  executiveSummary: string;
+  healthAssessment: {
+    overallScore: number;
+    soilHealth: string;
+    vegetationHealth: string;
+    waterStatus: string;
+  };
+  riskAlerts: Array<{
+    type: string;
+    severity: 'critical' | 'warning' | 'info';
+    description: string;
+    mitigationSteps?: string[];
+  }>;
+  recommendations: Array<{
+    title: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+    category: string;
+    timing?: string;
+  }>;
+  actionItems: Array<{
+    action: string;
+    priority: number;
+    deadline?: string;
+    estimatedImpact: string;
+  }>;
 }
 
 export interface GeneratedReport {
