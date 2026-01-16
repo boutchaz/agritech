@@ -107,7 +107,11 @@ export class OrdersService {
             if (itemsError) {
                 this.logger.error(`Failed to create order items: ${itemsError.message}`);
                 // Rollback order
-                await supabase.from('marketplace_orders').delete().eq('id', order.id);
+                await supabase
+                    .from('marketplace_orders')
+                    .delete()
+                    .eq('id', order.id)
+                    .eq('buyer_organization_id', userData.organization_id);
                 throw new HttpException('Failed to create order items', HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
@@ -196,7 +200,11 @@ export class OrdersService {
                 } catch (stockError) {
                     this.logger.error(`Stock deduction failed for order ${order.id}, item ${orderItem.id}: ${stockError.message}`);
                     // Rollback: Delete order and all items
-                    await supabase.from('marketplace_orders').delete().eq('id', order.id);
+                    await supabase
+                        .from('marketplace_orders')
+                        .delete()
+                        .eq('id', order.id)
+                        .eq('buyer_organization_id', userData.organization_id);
                     throw new HttpException(
                         stockError.message || 'Failed to deduct stock',
                         HttpStatus.BAD_REQUEST

@@ -117,7 +117,11 @@ export class AccountingAutomationService {
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
       // Rollback journal entry
-      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', journalEntry.id)
+        .eq('organization_id', organizationId);
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
@@ -244,7 +248,11 @@ export class AccountingAutomationService {
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
       // Rollback journal entry
-      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', journalEntry.id)
+        .eq('organization_id', organizationId);
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
@@ -447,7 +455,11 @@ export class AccountingAutomationService {
     if (itemsError) {
       this.logger.error(`Failed to create journal items for worker payment: ${itemsError.message}`);
       // Rollback journal entry
-      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', journalEntry.id)
+        .eq('organization_id', organizationId);
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
