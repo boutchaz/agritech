@@ -181,6 +181,87 @@ describe('OrdersService - Stock Deduction', () => {
             });
         });
 
+        it('should scope rollback deletes to buyer organization', async () => {
+            const mockCart = {
+                id: 'cart-123',
+                items: [
+                    {
+                        id: 'cart-item-1',
+                        listing_id: 'listing-1',
+                        item_id: null,
+                        seller_organization_id: 'org-seller',
+                        title: 'Test Product',
+                        quantity: 5,
+                        unit_price: 100,
+                        unit: 'kg',
+                        image_url: 'https://test.com/image.jpg',
+                    },
+                ],
+            };
+
+            const mockOrder = {
+                id: 'order-123',
+                buyer_organization_id: 'org-buyer',
+                seller_organization_id: 'org-seller',
+                status: 'pending',
+                total_amount: 500,
+            };
+
+            const mockSelect = jest.fn().mockReturnThis();
+            const mockEq = jest.fn().mockReturnThis();
+            const mockInsert = jest.fn().mockReturnThis();
+            const mockUpdate = jest.fn().mockReturnThis();
+            const mockDelete = jest.fn().mockReturnThis();
+
+            const deleteQuery = {
+                eq: jest.fn().mockReturnThis(),
+                then: jest.fn().mockImplementation((resolve: any) =>
+                    resolve({ data: null, error: null })
+                ),
+            };
+
+            mockSupabaseClient.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+            mockCartService.getCart.mockResolvedValue(mockCart);
+
+            mockSupabaseClient.from.mockImplementation((table: string) => {
+                if (table === 'auth_users_view') {
+                    return {
+                        select: jest.fn().mockReturnValue({
+                            eq: jest.fn().mockReturnValue({
+                                single: jest.fn().mockResolvedValue({ data: mockUserData, error: null }),
+                            }),
+                        }),
+                    };
+                }
+                if (table === 'marketplace_orders') {
+                    return {
+                        insert: jest.fn().mockReturnValue({
+                            select: jest.fn().mockReturnValue({
+                                single: jest.fn().mockResolvedValue({ data: mockOrder, error: null }),
+                            }),
+                        }),
+                        delete: jest.fn().mockReturnValue(deleteQuery),
+                    };
+                }
+                if (table === 'marketplace_order_items') {
+                    return {
+                        insert: jest.fn().mockReturnValue({
+                            select: jest.fn().mockResolvedValue({
+                                data: null,
+                                error: { message: 'Insert failed' },
+                            }),
+                        }),
+                    };
+                }
+                return { select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete, eq: mockEq };
+            });
+
+            await expect(ordersService.createOrder(mockToken, mockOrderDto as any))
+                .rejects.toThrow(HttpException);
+
+            expect(deleteQuery.eq).toHaveBeenCalledWith('buyer_organization_id', mockUserData.organization_id);
+        });
+
         it('should create stock_movement (OUT) for inventory items', async () => {
             const mockCart = {
                 id: 'cart-123',
