@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEmail, IsIn, Matches } from 'class-validator';
+import { IsOptional, IsString, IsEmail, IsIn, Matches, IsArray } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserProfileDto {
@@ -46,4 +46,24 @@ export class UpdateUserProfileDto {
   @IsOptional()
   @IsIn(['fr', 'en', 'ar', 'es'])
   language?: string;
+
+  @ApiPropertyOptional({
+    description: 'Array of completed tour IDs',
+    example: ['welcome', 'dashboard', 'farm-management'],
+    type: [String]
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  completed_tours?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Array of dismissed tour IDs (tours user explicitly skipped)',
+    example: ['welcome', 'full-app'],
+    type: [String]
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  dismissed_tours?: string[];
 }

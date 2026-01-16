@@ -6,6 +6,7 @@ import { SellHarvestDto, PaymentTerms } from './dto/sell-harvest.dto';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
+import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class HarvestsService {
@@ -15,6 +16,7 @@ export class HarvestsService {
     private readonly databaseService: DatabaseService,
     private readonly accountingAutomationService: AccountingAutomationService,
     private readonly receptionBatchesService: ReceptionBatchesService,
+    private readonly adoptionService: AdoptionService,
   ) {}
 
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
@@ -242,6 +244,19 @@ export class HarvestsService {
       // Log error but don't fail the harvest creation
       this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${receptionError.message}`, receptionError.stack);
     }
+
+    // Track first harvest recorded milestone
+    await this.adoptionService.recordMilestone(
+      userId,
+      MilestoneType.FIRST_HARVEST_RECORDED,
+      organizationId,
+      {
+        harvest_id: harvest.id,
+        lot_number: harvest.lot_number,
+        quantity: harvest.quantity,
+        unit: harvest.unit,
+      },
+    );
 
     return harvest;
   }

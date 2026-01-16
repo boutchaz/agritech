@@ -333,4 +333,306 @@ export class UsersService {
             throw new InternalServerErrorException('Failed to remove user from organization');
         }
     }
+
+    // =====================================================
+    // Tour Preferences Methods
+    // =====================================================
+
+    /**
+     * Get user's tour preferences (completed and dismissed tours)
+     */
+    async getTourPreferences(userId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { data, error } = await client
+                .from('user_profiles')
+                .select('completed_tours, dismissed_tours')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to get tour preferences: ${error.message}`);
+                throw new BadRequestException(`Failed to get tour preferences: ${error.message}`);
+            }
+
+            return {
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to get tour preferences: ${error.message}`);
+            throw new InternalServerErrorException('Failed to get tour preferences');
+        }
+    }
+
+    /**
+     * Update user's tour preferences
+     */
+    async updateTourPreferences(userId: string, preferences: { completed_tours?: string[]; dismissed_tours?: string[] }) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const updateData: any = {
+                updated_at: new Date().toISOString(),
+            };
+
+            if (preferences.completed_tours !== undefined) {
+                updateData.completed_tours = preferences.completed_tours;
+            }
+            if (preferences.dismissed_tours !== undefined) {
+                updateData.dismissed_tours = preferences.dismissed_tours;
+            }
+
+            const { data, error } = await client
+                .from('user_profiles')
+                .update(updateData)
+                .eq('id', userId)
+                .select('completed_tours, dismissed_tours')
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to update tour preferences: ${error.message}`);
+                throw new BadRequestException(`Failed to update tour preferences: ${error.message}`);
+            }
+
+            this.logger.log(`Tour preferences updated for user ${userId}`);
+            return {
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to update tour preferences: ${error.message}`);
+            throw new InternalServerErrorException('Failed to update tour preferences');
+        }
+    }
+
+    /**
+     * Dismiss a specific tour (add to dismissed_tours array)
+     */
+    async dismissTour(userId: string, tourId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            // First get current dismissed tours
+            const { data: profile, error: fetchError } = await client
+                .from('user_profiles')
+                .select('dismissed_tours')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) {
+                this.logger.error(`Failed to fetch user profile for dismiss: ${fetchError.message}`);
+                throw new BadRequestException(`Failed to dismiss tour: ${fetchError.message}`);
+            }
+
+            const currentDismissed = profile?.dismissed_tours || [];
+
+            // Only add if not already dismissed
+            if (currentDismissed.includes(tourId)) {
+                return {
+                    success: true,
+                    message: 'Tour already dismissed',
+                    dismissed_tours: currentDismissed,
+                };
+            }
+
+            const newDismissed = [...currentDismissed, tourId];
+
+            const { data, error } = await client
+                .from('user_profiles')
+                .update({
+                    dismissed_tours: newDismissed,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select('completed_tours, dismissed_tours')
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to dismiss tour: ${error.message}`);
+                throw new BadRequestException(`Failed to dismiss tour: ${error.message}`);
+            }
+
+            this.logger.log(`Tour '${tourId}' dismissed for user ${userId}`);
+            return {
+                success: true,
+                message: `Tour '${tourId}' dismissed successfully`,
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to dismiss tour: ${error.message}`);
+            throw new InternalServerErrorException('Failed to dismiss tour');
+        }
+    }
+
+    /**
+     * Mark a specific tour as completed (add to completed_tours array)
+     */
+    async completeTour(userId: string, tourId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            // First get current completed tours
+            const { data: profile, error: fetchError } = await client
+                .from('user_profiles')
+                .select('completed_tours')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) {
+                this.logger.error(`Failed to fetch user profile for complete: ${fetchError.message}`);
+                throw new BadRequestException(`Failed to complete tour: ${fetchError.message}`);
+            }
+
+            const currentCompleted = profile?.completed_tours || [];
+
+            // Only add if not already completed
+            if (currentCompleted.includes(tourId)) {
+                return {
+                    success: true,
+                    message: 'Tour already completed',
+                    completed_tours: currentCompleted,
+                };
+            }
+
+            const newCompleted = [...currentCompleted, tourId];
+
+            const { data, error } = await client
+                .from('user_profiles')
+                .update({
+                    completed_tours: newCompleted,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select('completed_tours, dismissed_tours')
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to complete tour: ${error.message}`);
+                throw new BadRequestException(`Failed to complete tour: ${error.message}`);
+            }
+
+            this.logger.log(`Tour '${tourId}' completed for user ${userId}`);
+            return {
+                success: true,
+                message: `Tour '${tourId}' completed successfully`,
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to complete tour: ${error.message}`);
+            throw new InternalServerErrorException('Failed to complete tour');
+        }
+    }
+
+    /**
+     * Reset a specific tour (remove from both completed and dismissed arrays)
+     */
+    async resetTour(userId: string, tourId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            // First get current tours
+            const { data: profile, error: fetchError } = await client
+                .from('user_profiles')
+                .select('completed_tours, dismissed_tours')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) {
+                this.logger.error(`Failed to fetch user profile for reset: ${fetchError.message}`);
+                throw new BadRequestException(`Failed to reset tour: ${fetchError.message}`);
+            }
+
+            const currentCompleted = profile?.completed_tours || [];
+            const currentDismissed = profile?.dismissed_tours || [];
+
+            // Remove tour from both arrays
+            const newCompleted = currentCompleted.filter((t: string) => t !== tourId);
+            const newDismissed = currentDismissed.filter((t: string) => t !== tourId);
+
+            const { data, error } = await client
+                .from('user_profiles')
+                .update({
+                    completed_tours: newCompleted,
+                    dismissed_tours: newDismissed,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select('completed_tours, dismissed_tours')
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to reset tour: ${error.message}`);
+                throw new BadRequestException(`Failed to reset tour: ${error.message}`);
+            }
+
+            this.logger.log(`Tour '${tourId}' reset for user ${userId}`);
+            return {
+                success: true,
+                message: `Tour '${tourId}' reset successfully`,
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to reset tour: ${error.message}`);
+            throw new InternalServerErrorException('Failed to reset tour');
+        }
+    }
+
+    /**
+     * Reset all tours for a user (clear both completed and dismissed arrays)
+     */
+    async resetAllTours(userId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { data, error } = await client
+                .from('user_profiles')
+                .update({
+                    completed_tours: [],
+                    dismissed_tours: [],
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select('completed_tours, dismissed_tours')
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to reset all tours: ${error.message}`);
+                throw new BadRequestException(`Failed to reset all tours: ${error.message}`);
+            }
+
+            this.logger.log(`All tours reset for user ${userId}`);
+            return {
+                success: true,
+                message: 'All tours reset successfully',
+                completed_tours: data?.completed_tours || [],
+                dismissed_tours: data?.dismissed_tours || [],
+            };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`Failed to reset all tours: ${error.message}`);
+            throw new InternalServerErrorException('Failed to reset all tours');
+        }
+    }
 }

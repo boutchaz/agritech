@@ -4,6 +4,7 @@ import {
   Query,
   UseGuards,
   Param,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -50,8 +51,10 @@ export class ReportsController {
   @ApiResponse({ status: 400, description: 'Invalid report type or filters' })
   async generateReport(
     @Param('organizationId') organizationId: string,
-    @Query() filters: ReportFiltersDto
+    @Query() filters: ReportFiltersDto,
+    @Request() req: any,
   ) {
-    return this.reportsService.generateReport(organizationId, filters);
+    const userId = req.user?.id;
+    return this.reportsService.generateReport(organizationId, filters, userId);
   }
 }

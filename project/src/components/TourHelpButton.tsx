@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw } from 'lucide-react';
+import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
 import { useAuth } from '@/components/MultiTenantAuthProvider';
@@ -109,7 +109,18 @@ export const TourHelpButton: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { startTour, isTourCompleted, resetTour, resetAllTours, isRunning, dismissedTours } = useTour();
+  const {
+    startTour,
+    isTourCompleted,
+    resetTour,
+    resetAllTours,
+    isRunning,
+    dismissedTours,
+    isLoading,
+    syncStatus,
+    lastSyncError,
+    refetchPreferences
+  } = useTour();
 
   // Detect mobile viewport
   useEffect(() => {
@@ -147,19 +158,63 @@ export const TourHelpButton: React.FC = () => {
     await resetAllTours();
   };
 
+  const handleRefresh = async () => {
+    await refetchPreferences();
+  };
+
+  // Sync status indicator component
+  const SyncStatusIndicator = () => {
+    if (syncStatus === 'syncing') {
+      return (
+        <div className="flex items-center gap-1 text-xs text-blue-600" title={t('helpCenter.syncing', 'Syncing...')}>
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span className="hidden sm:inline">{t('helpCenter.syncing', 'Syncing...')}</span>
+        </div>
+      );
+    }
+    if (syncStatus === 'error') {
+      return (
+        <div
+          className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700"
+          onClick={handleRefresh}
+          title={lastSyncError || t('helpCenter.syncError', 'Sync failed. Click to retry.')}
+        >
+          <CloudOff className="h-3 w-3" />
+          <span className="hidden sm:inline">{t('helpCenter.offline', 'Offline')}</span>
+        </div>
+      );
+    }
+    if (syncStatus === 'synced') {
+      return (
+        <div className="flex items-center gap-1 text-xs text-emerald-600" title={t('helpCenter.synced', 'Synced')}>
+          <Cloud className="h-3 w-3" />
+          <span className="hidden sm:inline">{t('helpCenter.synced', 'Synced')}</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       {isOpen && (
         <div className="fixed inset-x-4 bottom-20 sm:absolute sm:inset-auto sm:bottom-16 sm:right-0 sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
           <div className="p-4 bg-emerald-50 border-b border-emerald-100 shrink-0">
-            <h3 className="font-semibold text-emerald-800">{t('helpCenter.title')}</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-emerald-800">{t('helpCenter.title')}</h3>
+              <SyncStatusIndicator />
+            </div>
             <p className="text-sm text-emerald-600 mt-1">
               {t('helpCenter.subtitle')}
             </p>
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            {tours.map((tour) => {
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+              </div>
+            ) : tours.map((tour) => {
               const completed = isTourCompleted(tour.id);
               
               return (
