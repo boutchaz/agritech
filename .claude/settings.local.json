@@ -90,7 +90,8 @@
       "Bash(__NEW_LINE_5edf3063e1876351__ curl -s -X POST \"https://open.bigmodel.cn/api/paas/v4/chat/completions\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\n    \"\"model\"\": \"\"glm-4-plus\"\",\n    \"\"messages\"\": [{\"\"role\"\": \"\"user\"\", \"\"content\"\": \"\"Hello, respond with: Test successful!\"\"}],\n    \"\"max_tokens\"\": 50\n  }')",
       "Bash(npm install:*)",
       "Bash(pkill:*)",
-      "Bash(npm run start:*)"
+      "Bash(npm run start:*)",
+      "Bash(npm run db:migrate:*)"
     ],
     "deny": [],
     "ask": []

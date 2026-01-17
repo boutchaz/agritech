@@ -74,6 +74,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
 import { QualityControlModule } from './modules/quality-control/quality-control.module';
 import { AdoptionModule } from './modules/adoption/adoption.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { AdoptionModule } from './modules/adoption/adoption.module';
     OrganizationModulesModule,
     OrganizationUsersModule,
     RolesModule,
+    OnboardingModule,
 
     // Business logic modules
     SequencesModule,
